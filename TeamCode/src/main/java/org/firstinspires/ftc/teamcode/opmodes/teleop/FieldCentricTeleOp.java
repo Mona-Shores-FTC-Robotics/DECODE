@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.TeleopBindings;
 import org.firstinspires.ftc.teamcode.util.TelemetryPublisher;
 
-@TeleOp(name = "FieldCentricTeleOp", group = "TeleOp")
+@TeleOp(name = "FieldCentricTeleOp", group = "Field Centric TeleOp")
 public class FieldCentricTeleOp extends NextFTCOpMode {
 
     private Robot robot;
@@ -29,10 +29,10 @@ public class FieldCentricTeleOp extends NextFTCOpMode {
 
         GamepadEx driver = new GamepadEx(() -> gamepad1);
         bindings = new TeleopBindings(driver, robot.flywheel);
+        robot.drive.setRobotCentric(false);
+        robot.drive.setAutoHeadingEnabled(false); // manual rotation control for field-centric drive
 
         addComponents(BindingsComponent.INSTANCE, new SubsystemComponent(robot.drive, robot.flywheel));
-
-        // Manually initialise subsystems because the component was added after the framework preInit phase.
         robot.drive.initialize();
         robot.flywheel.initialize();
     }

@@ -41,7 +41,7 @@ public class Constants {
             .mass(5);
 
     public static MecanumConstants driveConstants = new MecanumConstants()
-            .maxPower(.3)
+            .maxPower(1.0)
             .rightFrontMotorName(HardwareNames.RF)
             .rightRearMotorName(HardwareNames.RB)
             .leftRearMotorName(HardwareNames.LB)
@@ -53,13 +53,13 @@ public class Constants {
             .useBrakeModeInTeleOp(true);
 
     public static PinpointConstants localizerConstants = new PinpointConstants()
-            .forwardPodY(3.25)
-            .strafePodX(5)
+            .forwardPodY(4.0)
+            .strafePodX(2.5)
             .distanceUnit(DistanceUnit.INCH)
             .hardwareMapName(HardwareNames.PINPOINT)
             .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
             .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED)
-            .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
+            .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 
@@ -75,12 +75,12 @@ public class Constants {
     public static class Speed {
         // Geometry (meters)
         public static double WHEEL_RADIUS_M = 0.048;           // 96 mm diameter
-        public static double TRACKWIDTH_M   = 0.34;            // left-right spacing
-        public static double WHEELBASE_M    = 0.34;            // front-back spacing
+        public static double TRACKWIDTH_M   = DistanceUnit.INCH.toMeters(14.25);         // left-right spacin
+        public static double WHEELBASE_M    = DistanceUnit.INCH.toMeters(4.75); // front-back spacing
 
         // Motor model
         public static double GEAR_RATIO    = 1.0;              // wheel revs per motor rev
-        public static double TICKS_PER_REV = 537.7;            // goBILDA 312 rpm motor
+        public static double TICKS_PER_REV = 383.6;         // goBILDA 435 rpm motor (FTC encoder counts per wheel rev)
 
         // Limits
         public static double MAX_VEL_MPS        = 1.6;
@@ -93,6 +93,10 @@ public class Constants {
         /** Convert wheel linear speed to motor ticks per second. */
         public static double mpsToTicksPerSec(double mps) {
             return mps * (TICKS_PER_REV * GEAR_RATIO) / (2.0 * Math.PI * WHEEL_RADIUS_M);
+        }
+
+        public static double ticksPerSecToMps(double ticksPerSec) {
+            return ticksPerSec * (2.0 * Math.PI * WHEEL_RADIUS_M) / (TICKS_PER_REV * GEAR_RATIO);
         }
 
         /** Effective radius for yaw coupling. */
@@ -110,6 +114,12 @@ public class Constants {
             this.rf = hw.get(DcMotorEx.class, HardwareNames.RF);
             this.lb = hw.get(DcMotorEx.class, HardwareNames.LB);
             this.rb = hw.get(DcMotorEx.class, HardwareNames.RB);
+
+            // Match the Pedro follower assumptions so direct velocity control shares the same axes.
+            this.lf.setDirection(DcMotorSimple.Direction.REVERSE);
+            this.lb.setDirection(DcMotorSimple.Direction.REVERSE);
+            this.rf.setDirection(DcMotorSimple.Direction.FORWARD);
+            this.rb.setDirection(DcMotorSimple.Direction.FORWARD);
         }
 
         public void setRunUsingEncoder() {

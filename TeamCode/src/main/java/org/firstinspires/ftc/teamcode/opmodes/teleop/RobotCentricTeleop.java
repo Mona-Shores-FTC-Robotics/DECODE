@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode.opmodes.teleop;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
-import dev.nextftc.core.components.BindingsComponent;
+import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
@@ -12,19 +12,21 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.bindings.TeleopBindings;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.util.PsiKitAdapter;
 import org.firstinspires.ftc.teamcode.util.TelemetryPublisher;
 
-@TeleOp(name = "TeleOp")
-public class Teleop extends NextFTCOpMode {
+@TeleOp(name = "Robot Centric TeleOp")
+public class RobotCentricTeleop extends NextFTCOpMode {
 
     private Robot robot;
     private DcMotorEx lf;
     private DcMotorEx lr;
     private DcMotorEx rf;
     private DcMotorEx rr;
-    private TeleopBindings bindings;
+    private TeleopBindings driveBindings;
+    private RobotTeleopHelper helper;
     private TelemetryPublisher pub;
     private PsiKitAdapter logger;
 
@@ -40,7 +42,8 @@ public class Teleop extends NextFTCOpMode {
 
         GamepadEx driver   = new GamepadEx(() -> gamepad1);
         GamepadEx operator = new GamepadEx(() -> gamepad2);
-        bindings = new TeleopBindings(driver, operator, robot);
+        driveBindings = new TeleopBindings(driver, robot.flywheel);
+        helper = new RobotTeleopHelper(driver, operator);
 
         logger = new PsiKitAdapter();
         logger.startSession();
@@ -48,7 +51,8 @@ public class Teleop extends NextFTCOpMode {
 
         // Configure drive BEFORE components so initialize() sees these settings.
         robot.drive.setDefaultMode(DriveSubsystem.DriveMode.NORMAL); // default mode
-        robot.drive.setRobotCentric(true); // field-centric
+        robot.drive.setRobotCentric(true);
+        robot.drive.setAutoHeadingEnabled(false); // disable auto-heading for manual rotation control
         robot.drive.setPose(0.0, 0.0, 0.0);
 
         // Register components so NextFTC handles initialize()/periodic()/stop()
@@ -59,23 +63,22 @@ public class Teleop extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        // Drive using “mode holds”: RB=SLOW, LB=NORMAL, else default (AUTO_HEADING)
-        double lx = gamepad1.left_stick_x;     // +left
-        double ly = gamepad1.left_stick_y;    // +forward
-        double rx = -gamepad1.right_stick_x;   // +CCW
+        BindingManager.update();
+        TeleopBindings.DriveRequest request = driveBindings.sampleDriveRequest();
 
-        boolean rb = gamepad1.right_bumper;    // SLOW (scaled)
-        boolean lb = gamepad1.left_bumper;     // NORMAL (no scaling)
+        double lx = -request.fieldX;           // +left
+        double ly = request.fieldY;            // +forward
+        double rx = -request.rotation;         // +CCW
 
-        robot.drive.driveWithModeHolds(lx, -ly, rx, rb, lb);
+        robot.drive.driveWithModeHolds(lx, ly, rx, request.precisionMode, request.normalModeHold);
 
         // Telemetry
         double currentRPM = robot.flywheel.getRpm();
 
         pub.publishDrive(
                 robot.drive,
-                lx, ly, -rx,              // publisher kept as before; adjust signs if needed
-                (rb)                      // “slow mode active” for the HUD (matches our holds)
+                request.fieldX, request.fieldY, request.rotation,
+                request.precisionMode
         );
 
         pub.publishFlywheel(
@@ -85,7 +88,7 @@ public class Teleop extends NextFTCOpMode {
                 robot.flywheel.getTargetRpm() - currentRPM
         );
 
-        bindings.publishHelp(telemetry);
+        helper.publishHelp(telemetry);
 
         Pose2D pose = robot.drive.getPose();
 
@@ -108,7 +111,8 @@ public class Teleop extends NextFTCOpMode {
         // SubsystemComponent will call stop; still fine to be explicit for hardware safety
         robot.flywheel.stop();
         robot.drive.shutdown();
-        bindings.reset();
+        driveBindings.reset();
+        helper.reset();
         logger.stopSession();
     }
 }

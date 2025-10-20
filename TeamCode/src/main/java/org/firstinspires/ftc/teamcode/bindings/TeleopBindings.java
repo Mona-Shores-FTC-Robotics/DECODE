@@ -20,12 +20,14 @@ public class TeleopBindings {
     private final Range fieldY;
     private final Range rotationCcw;
     private final Button precisionHold;
+    private final Button normalHold;
 
     public TeleopBindings(GamepadEx driver, FlywheelSubsystem flywheel) {
         fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND);
         fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND).negate();
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND).negate();
         precisionHold = driver.rightBumper();
+        normalHold = driver.leftBumper();
 
         driver.a().whenBecomesTrue(flywheel::stop);
         driver.b().whenBecomesTrue(() -> flywheel.setTargetRpm(Tuning.FLYWHEEL_RPM_LOW));
@@ -33,7 +35,7 @@ public class TeleopBindings {
     }
 
     public DriveRequest sampleDriveRequest() {
-        return new DriveRequest(fieldX.get(), fieldY.get(), rotationCcw.get(), precisionHold.get());
+        return new DriveRequest(fieldX.get(), fieldY.get(), rotationCcw.get(), precisionHold.get(), normalHold.get());
     }
 
     public void reset() {
@@ -45,12 +47,14 @@ public class TeleopBindings {
         public final double fieldY;
         public final double rotation;
         public final boolean precisionMode;
+        public final boolean normalModeHold;
 
-        private DriveRequest(double fieldX, double fieldY, double rotation, boolean precisionMode) {
+        private DriveRequest(double fieldX, double fieldY, double rotation, boolean precisionMode, boolean normalModeHold) {
             this.fieldX = fieldX;
             this.fieldY = fieldY;
             this.rotation = rotation;
             this.precisionMode = precisionMode;
+            this.normalModeHold = normalModeHold;
         }
     }
 }

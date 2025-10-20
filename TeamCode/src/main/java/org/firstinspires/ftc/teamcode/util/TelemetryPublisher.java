@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 
 
@@ -61,11 +62,52 @@ public class TelemetryPublisher {
         p.put("rx", rx);
         p.put("slowMode", slowMode);
         p.put("drive_mode", drive.getDriveMode().name());
+        p.put("cmd_forward", drive.getLastForwardCommand());
+        p.put("cmd_strafe", drive.getLastStrafeCommand());
+        p.put("cmd_turn", drive.getLastTurnCommand());
+        p.put("target_forward_ips", drive.getLastTargetForwardIps());
+        p.put("target_strafe_ips", drive.getLastTargetStrafeIps());
+        p.put("measured_forward_ips", drive.getLastMeasuredForwardIps());
+        p.put("measured_strafe_ips", drive.getLastMeasuredStrafeIps());
+
+        double lfPower = drive.getLfPower();
+        double rfPower = drive.getRfPower();
+        double lbPower = drive.getLbPower();
+        double rbPower = drive.getRbPower();
+        double lfVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getLfVelocityTicksPerSec()));
+        double rfVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getRfVelocityTicksPerSec()));
+        double lbVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getLbVelocityTicksPerSec()));
+        double rbVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getRbVelocityTicksPerSec()));
+        p.put("lf_power", lfPower);
+        p.put("rf_power", rfPower);
+        p.put("lb_power", lbPower);
+        p.put("rb_power", rbPower);
+        p.put("lf_vel_ips", lfVelIps);
+        p.put("rf_vel_ips", rfVelIps);
+        p.put("lb_vel_ips", lbVelIps);
+        p.put("rb_vel_ips", rbVelIps);
 
         Pose2D pose = drive.getPose();
-        p.put("x_in", pose.getX(DistanceUnit.INCH));
-        p.put("y_in", pose.getY(DistanceUnit.INCH));
-        p.put("heading_deg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
+        double xIn = pose.getX(DistanceUnit.INCH);
+        double yIn = pose.getY(DistanceUnit.INCH);
+        double headingRad = pose.getHeading(AngleUnit.RADIANS);
+        p.put("x_in", xIn);
+        p.put("y_in", yIn);
+        p.put("heading_deg", Math.toDegrees(headingRad));
+
+        var field = p.fieldOverlay();
+        field.setStroke("yellow");
+        field.strokeCircle(xIn, yIn, 1.5);
+        double arrowLen = 6.0;
+        double arrowX = xIn + arrowLen * Math.cos(headingRad);
+        double arrowY = yIn + arrowLen * Math.sin(headingRad);
+        field.strokeLine(xIn, yIn, arrowX, arrowY);
+        double leftX = arrowX - 2 * Math.cos(headingRad - Math.PI / 6);
+        double leftY = arrowY - 2 * Math.sin(headingRad - Math.PI / 6);
+        double rightX = arrowX - 2 * Math.cos(headingRad + Math.PI / 6);
+        double rightY = arrowY - 2 * Math.sin(headingRad + Math.PI / 6);
+        field.strokeLine(arrowX, arrowY, leftX, leftY);
+        field.strokeLine(arrowX, arrowY, rightX, rightY);
 
         // Send to the live dashboard
         dash.sendTelemetryPacket(p);
@@ -80,6 +122,21 @@ public class TelemetryPublisher {
             logger.recordNumber("drive_x_in", pose.getX(DistanceUnit.INCH));
             logger.recordNumber("drive_y_in", pose.getY(DistanceUnit.INCH));
             logger.recordNumber("drive_heading_deg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
+            logger.recordNumber("drive_cmd_forward", drive.getLastForwardCommand());
+            logger.recordNumber("drive_cmd_strafe", drive.getLastStrafeCommand());
+            logger.recordNumber("drive_cmd_turn", drive.getLastTurnCommand());
+            logger.recordNumber("drive_target_forward_ips", drive.getLastTargetForwardIps());
+            logger.recordNumber("drive_target_strafe_ips", drive.getLastTargetStrafeIps());
+            logger.recordNumber("drive_measured_forward_ips", drive.getLastMeasuredForwardIps());
+            logger.recordNumber("drive_measured_strafe_ips", drive.getLastMeasuredStrafeIps());
+            logger.recordNumber("drive_lf_power", lfPower);
+            logger.recordNumber("drive_rf_power", rfPower);
+            logger.recordNumber("drive_lb_power", lbPower);
+            logger.recordNumber("drive_rb_power", rbPower);
+            logger.recordNumber("drive_lf_vel_ips", lfVelIps);
+            logger.recordNumber("drive_rf_vel_ips", rfVelIps);
+            logger.recordNumber("drive_lb_vel_ips", lbVelIps);
+            logger.recordNumber("drive_rb_vel_ips", rbVelIps);
         }
     }
 
