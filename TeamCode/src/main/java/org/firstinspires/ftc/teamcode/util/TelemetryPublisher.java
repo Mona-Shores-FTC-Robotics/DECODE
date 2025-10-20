@@ -60,6 +60,7 @@ public class TelemetryPublisher {
         p.put("ly", ly);
         p.put("rx", rx);
         p.put("slowMode", slowMode);
+        p.put("drive_mode", drive.getDriveMode().name());
 
         Pose2D pose = drive.getPose();
         p.put("x_in", pose.getX(DistanceUnit.INCH));
@@ -75,6 +76,7 @@ public class TelemetryPublisher {
             logger.recordNumber("drive_ly", ly);
             logger.recordNumber("drive_rx", rx);
             logger.recordBoolean("drive_slowMode", slowMode);
+            logger.recordString("drive_mode", drive.getDriveMode().name());
             logger.recordNumber("drive_x_in", pose.getX(DistanceUnit.INCH));
             logger.recordNumber("drive_y_in", pose.getY(DistanceUnit.INCH));
             logger.recordNumber("drive_heading_deg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));

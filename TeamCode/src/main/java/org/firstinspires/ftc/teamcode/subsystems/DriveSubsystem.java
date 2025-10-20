@@ -3,107 +3,205 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.Range;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.teamcode.config.Tuning;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
+/**
+ * Wraps the PedroPathing {@link Follower} to provide field-centric driving for TeleOp.
+ * The subsystem owns the follower lifecycle so OpModes can simply call {@link #driveFieldCentric}.
+ */
 public class DriveSubsystem implements Subsystem {
 
-    public enum DriveMode { NORMAL, SLOW }
+    public enum DriveMode {
+        NORMAL,
+        PRECISION,
+        SLOW // legacy alias for slow mode support
+    }
+
+    private static final double ROTATION_DEADBAND = 0.03;
 
     private final Follower follower;
 
-    // Keep this simple to mirror LocalizationTest
-    public boolean poseIsMeters   = false;
-    public double  slowMultiplier = 0.20;     // Only used when SLOW is active
+    public double slowMultiplier = 0.20; // legacy compatibility for older TeleOp
 
-    private boolean robotCentric  = false;     // LocalizationTest passes true
-    private DriveMode defaultMode = DriveMode.NORMAL;
-    private DriveMode activeMode  = DriveMode.NORMAL;
-
+    private boolean poseIsMeters = false;
     private Pose teleopSeedPose = null;
+    private DriveMode defaultMode = DriveMode.NORMAL;
+    private boolean fieldCentricFlag = true;
 
-    public DriveSubsystem(HardwareMap hw) {
-        this.follower = Constants.createFollower(hw);
+    private double headingHoldTarget = 0.0;
+    private boolean headingHoldActive = false;
+
+    private double lastForwardCommand = 0.0;
+    private double lastStrafeCommand = 0.0;
+    private double lastTurnCommand = 0.0;
+    private DriveMode activeMode = DriveMode.NORMAL;
+
+    public DriveSubsystem(HardwareMap hardwareMap) {
+        this.follower = Constants.createFollower(hardwareMap);
     }
 
-    public void setTeleopSeedPose(Pose p) { this.teleopSeedPose = p; }
-    public void setDefaultMode(DriveMode mode) { this.defaultMode = mode; this.activeMode = mode; }
-    public void setRobotCentric(boolean rc) { this.robotCentric = rc; }
-    public boolean isRobotCentric() { return robotCentric; }
+    public void setTeleopSeedPose(Pose pose) {
+        this.teleopSeedPose = pose;
+    }
+
+    public void setPoseIsMeters(boolean poseIsMeters) {
+        this.poseIsMeters = poseIsMeters;
+    }
+
+    public boolean isPoseMeters() {
+        return poseIsMeters;
+    }
+
+    public void setDefaultMode(DriveMode mode) {
+        this.defaultMode = mode;
+        this.activeMode = mode;
+    }
+
+    /**
+     * Historical API used by earlier OpModes. Internally the Pedro follower expects
+     * {@code true} for field-centric mode, matching the behaviour of the legacy code.
+     */
+    public void setRobotCentric(boolean value) {
+        this.fieldCentricFlag = value;
+    }
+
+    public boolean isRobotCentric() {
+        return fieldCentricFlag;
+    }
 
     @Override
     public void initialize() {
-        if (follower.isBusy()) follower.breakFollowing();
+        if (follower.isBusy()) {
+            follower.breakFollowing();
+        }
 
         Pose seed = RobotState.takeHandoffPose();
-        if (seed == null) seed = (teleopSeedPose != null) ? teleopSeedPose : new Pose();
+        if (seed == null) {
+            seed = teleopSeedPose != null ? teleopSeedPose : new Pose();
+        }
 
         follower.setStartingPose(seed);
-        follower.update();            // warmup
-        follower.startTeleopDrive();  // same as LocalizationTest.start()
+        follower.update();
+        follower.startTeleopDrive();
+
+        headingHoldTarget = follower.getHeading();
+        headingHoldActive = false;
     }
 
     @Override
     public void periodic() {
-        follower.update();            // same as LocalizationTest.loop()
+        follower.update();
     }
 
-    public void shutdown() {
-        // Match Tuning.stopRobot behavior for safety on stop
+    public void stop() {
         follower.startTeleopDrive(true);
         follower.setTeleOpDrive(0, 0, 0, true);
     }
 
+    /** Legacy alias for older OpModes. */
+    public void shutdown() {
+        stop();
+    }
+
     /**
-     * Minimal drive, mirrors LocalizationTest mapping:
-     * LocalizationTest uses: setTeleOpDrive(-left_y, -left_x, -right_x, true)
+     * Drive the follower using field-centric inputs.
      *
-     * @param lx left stick X  (+left from driver)
-     * @param ly left stick Y  (+forward from driver)
-     * @param rx right stick X (+CCW from driver convention)
-     * @param rightBumperHeld enable SLOW when true
-     * @param leftBumperHeld  force NORMAL when true
+     * @param fieldX         translation along the field X axis (+right from driver perspective)
+     * @param fieldY         translation along the field Y axis (+forward away from driver wall)
+     * @param rotationInput  rotation command with positive meaning counter-clockwise
+     * @param precisionMode  when true applies {@link Tuning#SLOW_MULTIPLIER}
+     */
+    public void driveFieldCentric(double fieldX, double fieldY, double rotationInput, boolean precisionMode) {
+        double multiplier = precisionMode ? Tuning.SLOW_MULTIPLIER : 1.0;
+        DriveMode mode = precisionMode ? DriveMode.PRECISION : DriveMode.NORMAL;
+        driveFieldCentricScaled(fieldX, fieldY, rotationInput, multiplier, mode);
+    }
+
+    private void driveFieldCentricScaled(double fieldX, double fieldY, double rotationInput,
+                                         double multiplier, DriveMode mode) {
+        double forward = Range.clip(-fieldY * multiplier, -1.0, 1.0);
+        double strafeLeft = Range.clip(-fieldX * multiplier, -1.0, 1.0);
+        double turnCW = Range.clip(-computeRotationCommand(rotationInput) * multiplier, -1.0, 1.0);
+
+        follower.setTeleOpDrive(forward, strafeLeft, turnCW, fieldCentricFlag);
+
+        lastForwardCommand = forward;
+        lastStrafeCommand = strafeLeft;
+        lastTurnCommand = turnCW;
+        activeMode = mode;
+    }
+
+    private double computeRotationCommand(double rotationInput) {
+        if (Math.abs(rotationInput) > ROTATION_DEADBAND) {
+            headingHoldTarget = follower.getHeading();
+            headingHoldActive = false;
+            return rotationInput;
+        }
+
+        if (!headingHoldActive) {
+            headingHoldTarget = follower.getHeading();
+            headingHoldActive = true;
+        }
+
+        double error = AngleUnit.normalizeRadians(headingHoldTarget - follower.getHeading());
+        return Range.clip(error * Tuning.AUTO_HEADING_KP, -1.0, 1.0);
+    }
+
+    /**
+     * Compatibility helper for older OpModes that still call the legacy API.
      */
     public void driveWithModeHolds(double lx, double ly, double rx,
                                    boolean rightBumperHeld, boolean leftBumperHeld) {
+        DriveMode requested = defaultMode;
+        if (rightBumperHeld) {
+            requested = DriveMode.SLOW;
+        } else if (leftBumperHeld) {
+            requested = DriveMode.NORMAL;
+        }
 
-        if (rightBumperHeld)      activeMode = DriveMode.SLOW;
-        else if (leftBumperHeld)  activeMode = DriveMode.NORMAL;
-        else                      activeMode = defaultMode;
-
-        double mult = (activeMode == DriveMode.SLOW) ? slowMultiplier : 1.0;
-
-        // Exact sign pattern used by LocalizationTest
-        double forward     = ly * mult;
-        double strafeLeft  = -lx * mult;
-        double turnRight   = rx * mult;   // driver rx is CCW+, Pedro expects +turnRight
-
-        follower.setTeleOpDrive(forward, strafeLeft, turnRight, robotCentric);
+        double multiplier = requested == DriveMode.SLOW ? slowMultiplier : 1.0;
+        driveFieldCentricScaled(-lx, ly, -rx, multiplier,
+                requested == DriveMode.SLOW ? DriveMode.SLOW : requested);
     }
 
-    // Convenience API if you want a direct passthrough like LocalizationTest
     public void driveSimple(double lx, double ly, double rx) {
-        follower.setTeleOpDrive(-ly, -lx, -rx, robotCentric);
+        driveFieldCentricScaled(-lx, ly, -rx, 1.0, DriveMode.NORMAL);
     }
 
-    // Telemetry helpers
-    public DriveMode getActiveMode() { return activeMode; }
+    public DriveMode getDriveMode() {
+        return activeMode;
+    }
 
     public Pose2D getPose() {
-        Pose p = follower.getPose();
-        DistanceUnit du = poseIsMeters ? DistanceUnit.METER : DistanceUnit.INCH;
-        return new Pose2D(du, p.getX(), p.getY(), AngleUnit.RADIANS, follower.getHeading());
+        Pose pose = follower.getPose();
+        DistanceUnit unit = poseIsMeters ? DistanceUnit.METER : DistanceUnit.INCH;
+        return new Pose2D(unit, pose.getX(), pose.getY(), AngleUnit.RADIANS, follower.getHeading());
     }
 
-    public double getX()          { return follower.getPose().getX(); }
-    public double getY()          { return follower.getPose().getY(); }
-    public double getHeadingRad() { return follower.getHeading();     }
+    public double getHeadingRad() {
+        return follower.getHeading();
+    }
+
+    public double getLastForwardCommand() {
+        return lastForwardCommand;
+    }
+
+    public double getLastStrafeCommand() {
+        return lastStrafeCommand;
+    }
+
+    public double getLastTurnCommand() {
+        return lastTurnCommand;
+    }
 
     public void setPose(double x, double y, double headingRad) {
         follower.setStartingPose(new Pose(x, y, headingRad));
