@@ -95,19 +95,19 @@ public class TelemetryPublisher {
         p.put("y_in", yIn);
         p.put("heading_deg", Math.toDegrees(headingRad));
 
-        var field = p.fieldOverlay();
-        field.setStroke("yellow");
-        field.strokeCircle(xIn, yIn, 1.5);
-        double arrowLen = 6.0;
-        double arrowX = xIn + arrowLen * Math.cos(headingRad);
-        double arrowY = yIn + arrowLen * Math.sin(headingRad);
-        field.strokeLine(xIn, yIn, arrowX, arrowY);
-        double leftX = arrowX - 2 * Math.cos(headingRad - Math.PI / 6);
-        double leftY = arrowY - 2 * Math.sin(headingRad - Math.PI / 6);
-        double rightX = arrowX - 2 * Math.cos(headingRad + Math.PI / 6);
-        double rightY = arrowY - 2 * Math.sin(headingRad + Math.PI / 6);
-        field.strokeLine(arrowX, arrowY, leftX, leftY);
-        field.strokeLine(arrowX, arrowY, rightX, rightY);
+//        var field = p.fieldOverlay();
+//        field.setStroke("yellow");
+//        field.strokeCircle(xIn, yIn, 1.5);
+//        double arrowLen = 6.0;
+//        double arrowX = xIn + arrowLen * Math.cos(headingRad);
+//        double arrowY = yIn + arrowLen * Math.sin(headingRad);
+//        field.strokeLine(xIn, yIn, arrowX, arrowY);
+//        double leftX = arrowX - 2 * Math.cos(headingRad - Math.PI / 6);
+//        double leftY = arrowY - 2 * Math.sin(headingRad - Math.PI / 6);
+//        double rightX = arrowX - 2 * Math.cos(headingRad + Math.PI / 6);
+//        double rightY = arrowY - 2 * Math.sin(headingRad + Math.PI / 6);
+//        field.strokeLine(arrowX, arrowY, leftX, leftY);
+//        field.strokeLine(arrowX, arrowY, rightX, rightY);
 
         // Send to the live dashboard
         dash.sendTelemetryPacket(p);
