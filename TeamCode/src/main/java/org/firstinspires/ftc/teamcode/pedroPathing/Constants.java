@@ -29,19 +29,24 @@ public class Constants {
 
     // ========= Pedro follower and localization =========
     public static FollowerConstants followerConstants = new FollowerConstants()
+            .forwardZeroPowerAcceleration(-38.4116)
+            .lateralZeroPowerAcceleration(-77.6639)
             .useSecondaryTranslationalPIDF(true)
             .useSecondaryHeadingPIDF(true)
             .useSecondaryDrivePIDF(true)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0, 0, 0, 0))
-            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0, 0, 0, 0))
-            .headingPIDFCoefficients(new PIDFCoefficients(0, 0, 0.0, 0))
-            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(0, 0, 0.000, 0))
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0, 0, 0.0, 0, 0))
-            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0, 0, 0, 0, 0))
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.035, 0, 0, 0.07))
+            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.09, 0, 0, 0.015))
+            .headingPIDFCoefficients(new PIDFCoefficients(0.25, 0, 0.0, 0.07))
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(0.4, 0, 0.000, 0.025))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.003, 0, 0.0, 0.6, 0.05))
+            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.001, 0, 0.0, 0.6, 0.001))
+            .centripetalScaling(0.005)
             .mass(5);
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1.0)
+            .xVelocity(53.6882)
+            .yVelocity(39.9504)
             .rightFrontMotorName(HardwareNames.RF)
             .rightRearMotorName(HardwareNames.RB)
             .leftRearMotorName(HardwareNames.LB)
@@ -58,7 +63,7 @@ public class Constants {
             .distanceUnit(DistanceUnit.INCH)
             .hardwareMapName(HardwareNames.PINPOINT)
             .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
-            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED)
+            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
             .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
