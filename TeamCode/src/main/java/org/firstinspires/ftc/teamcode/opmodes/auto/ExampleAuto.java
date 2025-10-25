@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.auto.Alliance;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.util.AllianceLight;
 
 @Autonomous(name = "Example Auto", group = "Examples")
 public class ExampleAuto extends OpMode {
@@ -21,6 +22,7 @@ public class ExampleAuto extends OpMode {
 
     private int pathState;
     private Alliance activeAlliance = Alliance.BLUE;
+    private AllianceLight light;
 
     private Path scorePreload;
     private PathChain grabPickup1;
@@ -142,6 +144,7 @@ public class ExampleAuto extends OpMode {
     public void init() {
         pathTimer = new Timer();
         follower = Constants.createFollower(hardwareMap);
+        light = AllianceLight.onServo(hardwareMap, "indicator");
         applyAlliance(activeAlliance);
     }
 
@@ -178,6 +181,7 @@ public class ExampleAuto extends OpMode {
         FieldLayout layout = FieldLayout.forAlliance(alliance);
         buildPaths(layout);
         follower.setStartingPose(layout.startPose);
+        light.applyAlliance(alliance);
     }
 
     private static class FieldLayout {
