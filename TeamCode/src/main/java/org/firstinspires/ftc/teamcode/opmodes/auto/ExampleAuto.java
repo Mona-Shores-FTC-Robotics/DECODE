@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.opmodes.auto; // make sure this aligns with class location
+package org.firstinspires.ftc.teamcode.opmodes.auto; // keep package aligned with path
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
@@ -7,75 +7,67 @@ import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.auto.Alliance;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 @Autonomous(name = "Example Auto", group = "Examples")
 public class ExampleAuto extends OpMode {
 
     private Follower follower;
-    private Timer pathTimer, actionTimer, opmodeTimer;
+    private Timer pathTimer;
 
     private int pathState;
-    private final Pose startPose = new Pose(57, 9, Math.toRadians(90)); // Start Pose of our robot.
-    private final Pose scorePose = new Pose(57, 18, Math.toRadians(115)); // Scoring Pose of our robot. It is facing the goal at a 135 degree angle.
-    private final Pose pickup1Pose = new Pose(12, 12, Math.toRadians(180)); // Highest (First Set) of Artifacts from the Spike Mark.
-    private final Pose pickup2Pose = new Pose(24, 36, Math.toRadians(90)); // Middle (Second Set) of Artifacts from the Spike Mark.
-    private final Pose pickup3Pose = new Pose(24, 60, Math.toRadians(90)); // Lowest (Third Set) of Artifacts from the Spike Mark.
+    private Alliance activeAlliance = Alliance.BLUE;
 
+    private Path scorePreload;
+    private PathChain grabPickup1;
+    private PathChain scorePickup1;
+    private PathChain grabPickup2;
+    private PathChain scorePickup2;
+    private PathChain grabPickup3;
+    private PathChain scorePickup3;
 
+    public void buildPaths(FieldLayout layout) {
+        scorePreload = new Path(new BezierLine(layout.startPose, layout.scorePose));
+        scorePreload.setLinearHeadingInterpolation(
+                layout.startPose.getHeading(),
+                layout.scorePose.getHeading()
+        );
 
-
-
-      Path scorePreload;
-     PathChain grabPickup1, scorePickup1, grabPickup2, scorePickup2, grabPickup3, scorePickup3;
-
-     public void buildPaths() {
-        /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
-        scorePreload = new Path(new BezierLine(startPose, scorePose));
-        scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
-
-    /* Here is an example for Constant Interpolation
-    scorePreload.setConstantInterpolation(startPose.getHeading()); */
-
-        /* This is our grabPickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         grabPickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, pickup1Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), pickup1Pose.getHeading())
+                .addPath(new BezierLine(layout.scorePose, layout.pickup1Pose))
+                .setLinearHeadingInterpolation(layout.scorePose.getHeading(), layout.pickup1Pose.getHeading())
                 .build();
 
-        /* This is our scorePickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup1Pose, scorePose))
-                .setLinearHeadingInterpolation(pickup1Pose.getHeading(), scorePose.getHeading())
+                .addPath(new BezierLine(layout.pickup1Pose, layout.scorePose))
+                .setLinearHeadingInterpolation(layout.pickup1Pose.getHeading(), layout.scorePose.getHeading())
                 .build();
 
-        /* This is our grabPickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         grabPickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, pickup2Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), pickup2Pose.getHeading())
+                .addPath(new BezierLine(layout.scorePose, layout.pickup2Pose))
+                .setLinearHeadingInterpolation(layout.scorePose.getHeading(), layout.pickup2Pose.getHeading())
                 .build();
 
-        /* This is our scorePickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup2Pose, scorePose))
-                .setLinearHeadingInterpolation(pickup2Pose.getHeading(), scorePose.getHeading())
+                .addPath(new BezierLine(layout.pickup2Pose, layout.scorePose))
+                .setLinearHeadingInterpolation(layout.pickup2Pose.getHeading(), layout.scorePose.getHeading())
                 .build();
 
-        /* This is our grabPickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         grabPickup3 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, pickup3Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), pickup3Pose.getHeading())
+                .addPath(new BezierLine(layout.scorePose, layout.pickup3Pose))
+                .setLinearHeadingInterpolation(layout.scorePose.getHeading(), layout.pickup3Pose.getHeading())
                 .build();
 
-        /* This is our scorePickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup3 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup3Pose, scorePose))
-                .setLinearHeadingInterpolation(pickup3Pose.getHeading(), scorePose.getHeading())
+                .addPath(new BezierLine(layout.pickup3Pose, layout.scorePose))
+                .setLinearHeadingInterpolation(layout.pickup3Pose.getHeading(), layout.scorePose.getHeading())
                 .build();
     }
+
     public void autonomousPathUpdate() {
         switch (pathState) {
             case 0:
@@ -83,134 +75,153 @@ public class ExampleAuto extends OpMode {
                 setPathState(1);
                 break;
             case 1:
-
-            /* You could check for
-            - Follower State: "if(!follower.isBusy()) {}"
-            - Time: "if(pathTimer.getElapsedTimeSeconds() > 1) {}"
-            - Robot Position: "if(follower.getPose().getX() > 36) {}"
-            */
-
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
-                if(!follower.isBusy()) {
-                    /* Score Preload */
-
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup1,true);
+                if (!follower.isBusy()) {
+                    follower.followPath(grabPickup1, true);
                     setPathState(2);
                 }
                 break;
             case 2:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
-                if(!follower.isBusy()) {
-                    /* Grab Sample */
-
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(scorePickup1,true);
+                if (!follower.isBusy()) {
+                    follower.followPath(scorePickup1, true);
                     setPathState(3);
                 }
                 break;
             case 3:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
-                if(!follower.isBusy()) {
-                    /* Score Sample */
-
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup2,true);
+                if (!follower.isBusy()) {
+                    follower.followPath(grabPickup2, true);
                     setPathState(4);
                 }
                 break;
             case 4:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup2Pose's position */
-                if(!follower.isBusy()) {
-                    /* Grab Sample */
-
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(scorePickup2,true);
+                if (!follower.isBusy()) {
+                    follower.followPath(scorePickup2, true);
                     setPathState(5);
                 }
                 break;
             case 5:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
-                if(!follower.isBusy()) {
-                    /* Score Sample */
-
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup3,true);
+                if (!follower.isBusy()) {
+                    follower.followPath(grabPickup3, true);
                     setPathState(6);
                 }
                 break;
             case 6:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup3Pose's position */
-                if(!follower.isBusy()) {
-                    /* Grab Sample */
-
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
+                if (!follower.isBusy()) {
                     follower.followPath(scorePickup3, true);
                     setPathState(7);
                 }
                 break;
             case 7:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
-                if(!follower.isBusy()) {
-                    /* Set the state to a Case we won't use or define, so it just stops running an new paths */
+                if (!follower.isBusy()) {
                     setPathState(-1);
                 }
+                break;
+            default:
                 break;
         }
     }
 
-    /** These change the states of the paths and actions. It will also reset the timers of the individual switches **/
-    public void setPathState(int pState) {
-        pathState = pState;
+    public void setPathState(int state) {
+        pathState = state;
         pathTimer.resetTimer();
     }
 
-
-
-
-    /** This is the main loop of the OpMode, it will run repeatedly after clicking "Play". **/
     @Override
     public void loop() {
-
-        // These loop the movements of the robot, these must be called continuously in order to work
         follower.update();
         autonomousPathUpdate();
 
-        // Feedback to Driver Hub for debugging
         telemetry.addData("path state", pathState);
+        telemetry.addData("alliance", activeAlliance.displayName());
         telemetry.addData("x", follower.getPose().getX());
         telemetry.addData("y", follower.getPose().getY());
         telemetry.addData("heading", follower.getPose().getHeading());
         telemetry.update();
     }
 
-    /** This method is called once at the init of the OpMode. **/
     @Override
     public void init() {
         pathTimer = new Timer();
-        opmodeTimer = new Timer();
-        opmodeTimer.resetTimer();
-
-
         follower = Constants.createFollower(hardwareMap);
-        buildPaths();
-        follower.setStartingPose(startPose);
-
+        applyAlliance(activeAlliance);
     }
 
-    /** This method is called continuously after Init while waiting for "play". **/
     @Override
-    public void init_loop() {}
+    public void init_loop() {
+        Alliance desiredAlliance = activeAlliance;
+        if (gamepad1.x) {
+            desiredAlliance = Alliance.BLUE;
+        } else if (gamepad1.b) {
+            desiredAlliance = Alliance.RED;
+        }
 
-    /** This method is called once at the start of the OpMode.
-     * It runs all the setup actions, including building paths and starting the path system **/
+        if (desiredAlliance != activeAlliance) {
+            applyAlliance(desiredAlliance);
+        }
+
+        telemetry.addLine("Press X for Blue alliance or B for Red");
+        telemetry.addData("Selected alliance", activeAlliance.displayName());
+        telemetry.update();
+    }
+
     @Override
     public void start() {
-        opmodeTimer.resetTimer();
         setPathState(0);
     }
 
-    /** We do not use this because everything should automatically disable **/
     @Override
-    public void stop() {}
+    public void stop() {
+        // Nothing to clean up; follower stops itself when idle.
+    }
+
+    private void applyAlliance(Alliance alliance) {
+        activeAlliance = alliance;
+        FieldLayout layout = FieldLayout.forAlliance(alliance);
+        buildPaths(layout);
+        follower.setStartingPose(layout.startPose);
+    }
+
+    private static class FieldLayout {
+        final Pose startPose;
+        final Pose scorePose;
+        final Pose pickup1Pose;
+        final Pose pickup2Pose;
+        final Pose pickup3Pose;
+
+        FieldLayout(Pose startPose,
+                    Pose scorePose,
+                    Pose pickup1Pose,
+                    Pose pickup2Pose,
+                    Pose pickup3Pose) {
+            this.startPose = startPose;
+            this.scorePose = scorePose;
+            this.pickup1Pose = pickup1Pose;
+            this.pickup2Pose = pickup2Pose;
+            this.pickup3Pose = pickup3Pose;
+        }
+
+        static FieldLayout forAlliance(Alliance alliance) {
+            Pose blueStart = new Pose(57, 9, Math.toRadians(90));
+            Pose blueScore = new Pose(57, 18, Math.toRadians(115));
+            Pose bluePickup1 = new Pose(12, 12, Math.toRadians(180));
+            Pose bluePickup2 = new Pose(24, 36, Math.toRadians(90));
+            Pose bluePickup3 = new Pose(24, 60, Math.toRadians(90));
+
+            if (alliance == Alliance.RED) {
+                return new FieldLayout(
+                        mirrorPoseAcrossField(blueStart),
+                        mirrorPoseAcrossField(blueScore),
+                        mirrorPoseAcrossField(bluePickup1),
+                        mirrorPoseAcrossField(bluePickup2),
+                        mirrorPoseAcrossField(bluePickup3)
+                );
+            }
+
+            return new FieldLayout(blueStart, blueScore, bluePickup1, bluePickup2, bluePickup3);
+        }
+
+        private static Pose mirrorPoseAcrossField(Pose pose) {
+            double mirroredHeading = AngleUnit.normalizeRadians(Math.PI - pose.getHeading());
+            return new Pose(-pose.getX(), pose.getY(), mirroredHeading);
+        }
+    }
 }
