@@ -2,6 +2,9 @@ package org.firstinspires.ftc.teamcode.pedroPathing;
 
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+import com.bylazar.field.Style;
+import com.pedropathing.paths.PathChain;
+import com.pedropathing.geometry.Pose;
 import com.pedropathing.follower.Follower;
 
 /**
@@ -15,6 +18,10 @@ import com.pedropathing.follower.Follower;
 public final class PanelsBridge {
 
     private PanelsBridge() {}
+
+
+    private static final Style PREVIEW_BLUE = new Style("preview-blue", "#2196F3", 0.7);
+    private static final Style PREVIEW_RED = new Style("preview-red", "#F44336", 0.7);
 
     /**
      * Connects to the FTControl Panels process and applies Pedro's field offsets. Call this once
@@ -42,4 +49,23 @@ public final class PanelsBridge {
 
         Drawing.drawDebug(follower);
     }
+
+
+    public static void drawPreview(PathChain[] pathChains, Pose startPose, boolean isRed) {
+        if (pathChains == null) {
+            return;
+        }
+        Style style = isRed ? PREVIEW_RED : PREVIEW_BLUE;
+        for (PathChain chain : pathChains) {
+            if (chain == null) {
+                continue;
+            }
+            Drawing.drawPath(chain, style);
+        }
+        if (startPose != null) {
+            Drawing.drawRobot(startPose, style);
+        }
+        Drawing.sendPacket();
+    }
+
 }

@@ -48,6 +48,7 @@ public class PedroAutonomous extends OpMode {
         public static boolean mirrorUsingCenter = false;
     }
 
+    
     private Follower follower;
     private TelemetryManager panelsTelemetry;
     private Timer stepTimer;
@@ -63,7 +64,13 @@ public class PedroAutonomous extends OpMode {
     private PathChain pickupToStackEnd;
     private PathChain stackToScore;
     private FieldLayout currentLayout;
-    private boolean lastInitLoopY = false;
+        private boolean lastInitLoopY = false;
+    private boolean lastInitLoopLeftBumper = false;
+    private boolean lastInitLoopRightBumper = false;
+    private String pathToScoreSummary;
+    private String scoreToPickupSummary;
+    private String pickupToStackEndSummary;
+    private String stackToScoreSummary;
 
     @Override
     public void init() {
@@ -94,11 +101,24 @@ public class PedroAutonomous extends OpMode {
         }
         lastInitLoopY = yPressed;
 
+        boolean leftPreview = gamepad1.left_bumper;
+        if (leftPreview && !lastInitLoopLeftBumper) {
+            drawPreviewForAlliance(Alliance.BLUE);
+        }
+        lastInitLoopLeftBumper = leftPreview;
+
+        boolean rightPreview = gamepad1.right_bumper;
+        if (rightPreview && !lastInitLoopRightBumper) {
+            drawPreviewForAlliance(Alliance.RED);
+        }
+        lastInitLoopRightBumper = rightPreview;
+
         if (panelsTelemetry != null) {
             pushFieldPointPanels();
             panelsTelemetry.debug("Select alliance: X=Blue, B=Red");
             panelsTelemetry.debug("Active alliance: " + activeAlliance.displayName());
             panelsTelemetry.debug("Press Y to rebuild paths after tweaking points");
+            panelsTelemetry.debug("LB: preview blue, RB: preview red");
             panelsTelemetry.update(telemetry);
         }
         telemetry.addLine("Press X for Blue or B for Red alliance");
@@ -106,7 +126,20 @@ public class PedroAutonomous extends OpMode {
         telemetry.addLine("Press Y to rebuild paths after tweaking waypoints");
         telemetry.addData("Field width", Waypoints.fieldWidthIn);
         telemetry.addData("Mirror uses center", Waypoints.mirrorUsingCenter);
-        pushFieldPointTelemetry();
+        if (currentLayout != null) {
+            Pose start = currentLayout.pose(FieldPoint.START);
+            Pose launch = currentLayout.pose(FieldPoint.LAUNCH_FAR);
+            Pose setup = currentLayout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+            Pose parking = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS);
+            telemetry.addData("Start pose", formatPose(start));
+            telemetry.addData("Launch pose", formatPose(launch));
+            telemetry.addData("Setup pose", formatPose(setup));
+            telemetry.addData("Parking pose", formatPose(parking));
+            telemetry.addData("Path Start→Launch", pathToScoreSummary);
+            telemetry.addData("Path Launch→Setup", scoreToPickupSummary);
+            telemetry.addData("Path Setup→Parking", pickupToStackEndSummary);
+            telemetry.addData("Path Parking→Launch", stackToScoreSummary);
+        }
         telemetry.update();
     }
 
@@ -143,7 +176,20 @@ public class PedroAutonomous extends OpMode {
         telemetry.addData("step timer", getStepTimerSeconds());
         telemetry.addData("waiting for shot", isWaitingForShot());
         telemetry.addData("shot timer", getShotTimerSeconds());
-        pushFieldPointTelemetry();
+        if (currentLayout != null) {
+            Pose start = currentLayout.pose(FieldPoint.START);
+            Pose launch = currentLayout.pose(FieldPoint.LAUNCH_FAR);
+            Pose setup = currentLayout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+            Pose parking = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS);
+            telemetry.addData("Start pose", formatPose(start));
+            telemetry.addData("Launch pose", formatPose(launch));
+            telemetry.addData("Setup pose", formatPose(setup));
+            telemetry.addData("Parking pose", formatPose(parking));
+            telemetry.addData("Path Start→Launch", pathToScoreSummary);
+            telemetry.addData("Path Launch→Setup", scoreToPickupSummary);
+            telemetry.addData("Path Setup→Parking", pickupToStackEndSummary);
+            telemetry.addData("Path Parking→Launch", stackToScoreSummary);
+        }
         telemetry.update();
     }
 
@@ -206,43 +252,107 @@ public class PedroAutonomous extends OpMode {
         }
     }
 
+
+    private void drawPreviewForAlliance(Alliance alliance) {
+        FieldLayout layout = FieldLayout.forAlliance(alliance);
+        PathChain[] chains = createPreviewPathChains(layout);
+        PanelsBridge.drawPreview(chains, layout.pose(FieldPoint.START), alliance == Alliance.RED);
+    }
+
+    private PathChain[] createPreviewPathChains(FieldLayout layout) {
+        Pose start = layout.pose(FieldPoint.START);
+        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
+        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
+
+        PathChain previewToScore = follower.pathBuilder()
+                .addPath(new BezierLine(start, launch))
+                .setLinearHeadingInterpolation(start.getHeading(), launch.getHeading())
+                .build();
+
+        PathChain previewScoreToPickup = follower.pathBuilder()
+                .addPath(new BezierLine(launch, setup))
+                .setLinearHeadingInterpolation(launch.getHeading(), setup.getHeading())
+                .build();
+
+        PathChain previewPickupToStack = follower.pathBuilder()
+                .addPath(new BezierLine(setup, parking))
+                .setTangentHeadingInterpolation()
+                .build();
+
+        PathChain previewStackToScore = follower.pathBuilder()
+                .addPath(new BezierLine(parking, launch))
+                .setLinearHeadingInterpolation(parking.getHeading(), launch.getHeading())
+                .build();
+
+        return new PathChain[]{previewToScore, previewScoreToPickup, previewPickupToStack, previewStackToScore};
+    }
+
     private void applyAlliance(Alliance alliance) {
         activeAlliance = alliance;
         currentLayout = FieldLayout.forAlliance(alliance);
         follower.setStartingPose(currentLayout.pose(FieldPoint.START));
         buildPaths(currentLayout);
-        pushFieldPointTelemetry();
+        cachePathSummaries(currentLayout);
+        publishLayoutTelemetry(currentLayout);
         light.applyAlliance(alliance);
     }
 
+    private void cachePathSummaries(FieldLayout layout) {
+        Pose start = layout.pose(FieldPoint.START);
+        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
+        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
+
+        pathToScoreSummary = formatSegment("Start→Launch", start, launch);
+        scoreToPickupSummary = formatSegment("Launch→Setup", launch, setup);
+        pickupToStackEndSummary = formatSegment("Setup→Parking", setup, parking);
+        stackToScoreSummary = formatSegment("Parking→Launch", parking, launch);
+    }
+
+    private void publishLayoutTelemetry(FieldLayout layout) {
+        if (panelsTelemetry == null) {
+            return;
+        }
+        Pose start = layout.pose(FieldPoint.START);
+        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
+        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
+
+        panelsTelemetry.debug("Start pose", formatPose(start));
+        panelsTelemetry.debug("Launch pose", formatPose(launch));
+        panelsTelemetry.debug("Setup pose", formatPose(setup));
+        panelsTelemetry.debug("Parking pose", formatPose(parking));
+        panelsTelemetry.debug("Path Start→Launch", pathToScoreSummary);
+        panelsTelemetry.debug("Path Launch→Setup", scoreToPickupSummary);
+        panelsTelemetry.debug("Path Setup→Parking", pickupToStackEndSummary);
+        panelsTelemetry.debug("Path Parking→Launch", stackToScoreSummary);
+    }
+
     private void buildPaths(FieldLayout layout) {
+        Pose start = layout.pose(FieldPoint.START);
+        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
+        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
+
         pathToScore = follower.pathBuilder()
-                .addPath(new BezierLine(layout.pose(FieldPoint.START), layout.pose(FieldPoint.LAUNCH_FAR)))
-                .setLinearHeadingInterpolation(
-                        layout.pose(FieldPoint.START).getHeading(),
-                        layout.pose(FieldPoint.LAUNCH_FAR).getHeading()
-                )
+                .addPath(new BezierLine(start, launch))
+                .setLinearHeadingInterpolation(start.getHeading(), launch.getHeading())
                 .build();
 
         scoreToPickup = follower.pathBuilder()
-                .addPath(new BezierLine(layout.pose(FieldPoint.LAUNCH_FAR), layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS)))
-                .setLinearHeadingInterpolation(
-                        layout.pose(FieldPoint.LAUNCH_FAR).getHeading(),
-                        layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS).getHeading()
-                )
+                .addPath(new BezierLine(launch, setup))
+                .setLinearHeadingInterpolation(launch.getHeading(), setup.getHeading())
                 .build();
 
         pickupToStackEnd = follower.pathBuilder()
-                .addPath(new BezierLine(layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS), layout.pose(FieldPoint.PARKING_ARTIFACTS)))
+                .addPath(new BezierLine(setup, parking))
                 .setTangentHeadingInterpolation()
                 .build();
 
         stackToScore = follower.pathBuilder()
-                .addPath(new BezierLine(layout.pose(FieldPoint.PARKING_ARTIFACTS), layout.pose(FieldPoint.LAUNCH_FAR)))
-                .setLinearHeadingInterpolation(
-                        layout.pose(FieldPoint.PARKING_ARTIFACTS).getHeading(),
-                        layout.pose(FieldPoint.LAUNCH_FAR).getHeading()
-                )
+                .addPath(new BezierLine(parking, launch))
+                .setLinearHeadingInterpolation(parking.getHeading(), launch.getHeading())
                 .build();
     }
 
@@ -282,22 +392,15 @@ public class PedroAutonomous extends OpMode {
         return stepTimer != null ? stepTimer.getElapsedTimeSeconds() : 0.0;
     }
 
-    private void pushFieldPointTelemetry() {
-        if (currentLayout == null) {
-            return;
-        }
-        for (FieldPoint point : FieldPoint.values()) {
-            Pose pose = currentLayout.pose(point);
-            String label = "point " + point.name().toLowerCase(Locale.US);
-            telemetry.addData(label, poseToString(pose));
-        }
+    private static String formatSegment(String label, Pose start, Pose end) {
+        return label + ": " + formatPose(start) + " → " + formatPose(end);
     }
 
-    private static String poseToString(Pose pose) {
+    private static String formatPose(Pose pose) {
         if (pose == null) {
-            return "null";
+            return "(null)";
         }
-        return String.format(Locale.US, "(%.1f, %.1f, %.1f°)",
+        return String.format(Locale.US, "(%.3f, %.3f, %.1f°)",
                 pose.getX(), pose.getY(), Math.toDegrees(pose.getHeading()));
     }
 
@@ -305,10 +408,19 @@ public class PedroAutonomous extends OpMode {
         if (panelsTelemetry == null || currentLayout == null) {
             return;
         }
-        for (FieldPoint point : FieldPoint.values()) {
-            panelsTelemetry.debug("point " + point.name().toLowerCase(Locale.US),
-                    poseToString(currentLayout.pose(point)));
-        }
+        Pose start = currentLayout.pose(FieldPoint.START);
+        Pose launch = currentLayout.pose(FieldPoint.LAUNCH_FAR);
+        Pose setup = currentLayout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+        Pose parking = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS);
+
+        panelsTelemetry.debug("Start pose", formatPose(start));
+        panelsTelemetry.debug("Launch pose", formatPose(launch));
+        panelsTelemetry.debug("Setup pose", formatPose(setup));
+        panelsTelemetry.debug("Parking pose", formatPose(parking));
+        panelsTelemetry.debug("Path Start→Launch", pathToScoreSummary);
+        panelsTelemetry.debug("Path Launch→Setup", scoreToPickupSummary);
+        panelsTelemetry.debug("Path Setup→Parking", pickupToStackEndSummary);
+        panelsTelemetry.debug("Path Parking→Launch", stackToScoreSummary);
     }
 
     private enum RoutineStep {
@@ -397,7 +509,8 @@ public class PedroAutonomous extends OpMode {
         }
 
         Pose pose(FieldPoint point) {
-            return poses.get(point);
+            Pose stored = poses.get(point);
+            return stored == null ? null : new Pose(stored.getX(), stored.getY(), stored.getHeading());
         }
 
         static FieldLayout forAlliance(Alliance alliance) {
