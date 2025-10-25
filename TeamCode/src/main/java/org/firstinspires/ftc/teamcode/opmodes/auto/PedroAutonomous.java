@@ -49,46 +49,42 @@ public class PedroAutonomous extends OpMode {
 
   public static class Paths {
 
-    public PathChain ScorePosition;
-    public PathChain LinigupTopickup1;
+    public PathChain Path1;
+    public PathChain Path2;
     public PathChain Path3;
     public PathChain Path4;
 
     public Paths(Follower follower) {
-      ScorePosition = follower
+      Path1 = follower
         .pathBuilder()
         .addPath(
-          new BezierLine(new Pose(56.209, 8.982), new Pose(56.789, 15.646))
+          new BezierLine(new Pose(56.000, 8.000), new Pose(56.279, 19.817))
         )
-        .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(115))
+        .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(109))
         .build();
 
-      LinigupTopickup1 = follower
+      Path2 = follower
         .pathBuilder()
         .addPath(
-          new BezierCurve(
-            new Pose(56.789, 15.646),
-            new Pose(31.871, 16.225),
-            new Pose(23.759, 23.179)
-          )
+          new BezierLine(new Pose(56.279, 19.817), new Pose(23.780, 23.780))
         )
-        .setLinearHeadingInterpolation(Math.toRadians(115), Math.toRadians(90))
+        .setLinearHeadingInterpolation(Math.toRadians(109), Math.toRadians(90))
         .build();
 
       Path3 = follower
         .pathBuilder()
         .addPath(
-          new BezierLine(new Pose(23.759, 23.179), new Pose(23.759, 41.143))
+          new BezierLine(new Pose(23.780, 23.780), new Pose(23.516, 39.633))
         )
-        .setConstantHeadingInterpolation(Math.toRadians(90))
+        .setTangentHeadingInterpolation()
         .build();
 
       Path4 = follower
         .pathBuilder()
         .addPath(
-          new BezierLine(new Pose(23.759, 41.143), new Pose(56.789, 15.646))
+          new BezierLine(new Pose(23.516, 39.633), new Pose(56.279, 19.552))
         )
-        .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(115))
+        .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(109))
         .build();
     }
   }
