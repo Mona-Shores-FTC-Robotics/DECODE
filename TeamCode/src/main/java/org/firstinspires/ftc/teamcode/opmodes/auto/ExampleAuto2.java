@@ -113,8 +113,10 @@ public class ExampleAuto2 extends OpMode {
     }
 
     /**
-     * Simple pause step that emulates the shooter-ready callback described in the Pedro docs. Swap
-     * {@link #durationSeconds} with a hardware predicate once the launcher exists.
+     * Simple pause step that emulates the shooter-ready callback described in the Pedro docs. It
+     * pauses the follower via {@link Follower#pausePathFollowing()} so subsystems can run without
+     * motion, then resumes once the predicate clears. Swap {@link #durationSeconds} with a hardware
+     * predicate once the launcher exists.
      */
     private class WaitForShotStep implements AutoStep {
         private final String label;
@@ -149,10 +151,12 @@ public class ExampleAuto2 extends OpMode {
 
     private void beginFakeShotWindow() {
         waitingForShot = true;
+        follower.pausePathFollowing();
     }
 
     private void finishFakeShotWindow() {
         waitingForShot = false;
+        follower.resumePathFollowing();
     }
 
     private void buildPaths() {
@@ -190,9 +194,10 @@ public class ExampleAuto2 extends OpMode {
                 .build();
     }
 
-    private void queueFollow(Path path, String label) {
-        routineSteps.addLast(new FollowPathStep(label, () -> follower.followPath(path)));
+    private void queueFollow(PathChain chain, String label) {
+        routineSteps.addLast(new FollowPathStep(label, () -> follower.followPath(chain)));
     }
+
 
     private void queueFollow(PathChain chain, boolean holdEnd, String label) {
         routineSteps.addLast(new FollowPathStep(label, () -> follower.followPath(chain, holdEnd)));
@@ -216,16 +221,16 @@ public class ExampleAuto2 extends OpMode {
         queueFollow(scorePreload, "Score preload");
         queueShotPause("Wait to shoot preload");
 
-        queueFollow(grabPickup1, true, "Drive to pickup 1");
-        queueFollow(scorePickup1, true, "Return to score 1");
+        queueFollow(grabPickup1, "Drive to pickup 1");
+        queueFollow(scorePickup1, "Return to score 1");
         queueShotPause("Wait to shoot pickup 1");
 
-        queueFollow(grabPickup2, true, "Drive to pickup 2");
-        queueFollow(scorePickup2, true, "Return to score 2");
+        queueFollow(grabPickup2, "Drive to pickup 2");
+        queueFollow(scorePickup2, "Return to score 2");
         queueShotPause("Wait to shoot pickup 2");
 
-        queueFollow(grabPickup3, true, "Drive to pickup 3");
-        queueFollow(scorePickup3, true, "Return to score 3");
+        queueFollow(grabPickup3, "Drive to pickup 3");
+        queueFollow(scorePickup3, "Return to score 3");
         queueShotPause("Final wait to shoot");
 
         totalSteps = routineSteps.size();
