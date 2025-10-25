@@ -36,7 +36,7 @@ public class ExampleAuto2 extends OpMode {
     private Timer stepTimer;
     private Timer shotTimer;
 
-    private Path scorePreload;
+    private PathChain scorePreload;
     private PathChain grabPickup1;
     private PathChain scorePickup1;
     private PathChain grabPickup2;
@@ -160,8 +160,10 @@ public class ExampleAuto2 extends OpMode {
     }
 
     private void buildPaths() {
-        scorePreload = new Path(new BezierLine(startPose, scorePose));
-        scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
+        scorePreload = follower.pathBuilder()
+                .addPath(new BezierLine(startPose, scorePose))
+                .setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading())
+                .build();
 
         grabPickup1 = follower.pathBuilder()
                 .addPath(new BezierLine(scorePose, pickup1Pose))
