@@ -168,8 +168,8 @@ public class PedroAutonomous extends OpMode {
     private void applyAlliance(Alliance alliance) {
         activeAlliance = alliance;
         FieldLayout layout = FieldLayout.forAlliance(alliance);
-        buildPaths(layout);
         follower.setStartingPose(layout.pose(FieldPoint.START));
+        buildPaths(layout);
         light.applyAlliance(alliance);
     }
 
