@@ -338,9 +338,12 @@ public class PedroAutonomous extends OpMode {
             return new FieldLayout(blue);
         }
 
+        private static final double FIELD_WIDTH_IN = 144.0;
+
         private static Pose mirrorAcrossField(Pose pose) {
+            double mirroredX = FIELD_WIDTH_IN - pose.getX();
             double mirroredHeading = AngleUnit.normalizeRadians(Math.PI - pose.getHeading());
-            return new Pose(-pose.getX(), pose.getY(), mirroredHeading);
+            return new Pose(mirroredX, pose.getY(), mirroredHeading);
         }
     }
 }
