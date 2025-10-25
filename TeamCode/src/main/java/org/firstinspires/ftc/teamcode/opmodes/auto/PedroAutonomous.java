@@ -291,7 +291,9 @@ public class PedroAutonomous extends OpMode {
     private void applyAlliance(Alliance alliance) {
         activeAlliance = alliance;
         currentLayout = FieldLayout.forAlliance(alliance);
-        follower.setStartingPose(currentLayout.pose(FieldPoint.START));
+        Pose startPose = currentLayout.pose(FieldPoint.START);
+        follower.setStartingPose(startPose);
+        follower.setPose(startPose);
         buildPaths(currentLayout);
         cachePathSummaries(currentLayout);
         publishLayoutTelemetry(currentLayout);
