@@ -88,74 +88,69 @@ public final class PanelsBridge {
             return;
         }
 
-        if (drawPointRows(points, style)) {
+        if (isComponentArray(points)) {
+            drawFromComponents(points, style);
+        } else {
+            drawFromPointList(points, style);
+        }
+    }
+
+    private static void drawFromComponents(double[][] points, Style style) {
+        if (points.length < 2 || points[0] == null || points[1] == null) {
             return;
         }
 
-        drawComponentColumns(points, style);
+        int count = Math.min(points[0].length, points[1].length);
+        if (count < 2) {
+            return;
+        }
+
+        panelsField.setStyle(style);
+        panelsField.moveCursor(sanitize(points[0][0]), sanitize(points[1][0]));
+        for (int i = 1; i < count; i++) {
+            panelsField.line(sanitize(points[0][i]), sanitize(points[1][i]));
+        }
     }
 
-    private static boolean drawPointRows(double[][] points, Style style) {
-        int count = points.length;
-        if (count < 2) {
-            return false;
+    private static void drawFromPointList(double[][] points, Style style) {
+        if (points.length < 2) {
+            return;
         }
 
         double[] first = points[0];
         if (first == null || first.length < 2) {
-            return false;
+            return;
         }
 
-        double startX = sanitize(first[0]);
-        double startY = sanitize(first[1]);
-
         panelsField.setStyle(style);
-        panelsField.moveCursor(startX, startY);
-
-        boolean drewSegment = false;
-        for (int i = 1; i < count; i++) {
+        panelsField.moveCursor(sanitize(first[0]), sanitize(first[1]));
+        for (int i = 1; i < points.length; i++) {
             double[] point = points[i];
             if (point == null || point.length < 2) {
                 continue;
             }
-
-            double x = sanitize(point[0]);
-            double y = sanitize(point[1]);
-            panelsField.line(x, y);
-            drewSegment = true;
+            panelsField.line(sanitize(point[0]), sanitize(point[1]));
         }
-
-        return drewSegment;
     }
 
-    private static boolean drawComponentColumns(double[][] points, Style style) {
+    private static boolean isComponentArray(double[][] points) {
         if (points.length < 2) {
             return false;
         }
 
-        double[] xs = points[0];
-        double[] ys = points[1];
-        if (xs == null || ys == null) {
-            return false;
+        if (points[0] != null && points[1] != null) {
+            int xs = points[0].length;
+            int ys = points[1].length;
+            if (xs > 1 && ys > 1) {
+                return true;
+            }
         }
 
-        int limit = Math.min(xs.length, ys.length);
-        if (limit < 2) {
-            return false;
+        if (points.length == 2) {
+            return true;
         }
 
-        panelsField.setStyle(style);
-        panelsField.moveCursor(sanitize(xs[0]), sanitize(ys[0]));
-
-        boolean drewSegment = false;
-        for (int i = 1; i < limit; i++) {
-            double x = sanitize(xs[i]);
-            double y = sanitize(ys[i]);
-            panelsField.line(x, y);
-            drewSegment = true;
-        }
-
-        return drewSegment;
+        return false;
     }
 
     private static double sanitize(double value) {
