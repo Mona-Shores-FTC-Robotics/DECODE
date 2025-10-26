@@ -19,6 +19,7 @@ import org.firstinspires.ftc.teamcode.auto.Alliance;
 import org.firstinspires.ftc.teamcode.auto.AprilTagPoseUtil;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
+import org.firstinspires.ftc.teamcode.subsystems.FlywheelSubsystem;
 import org.firstinspires.ftc.teamcode.util.AllianceLight;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -34,6 +35,7 @@ import java.util.Map;
 public class PedroAutonomous extends OpMode {
 
     private static final double FAKE_SHOT_DURATION_SECONDS = 1.0;
+    private static final int AUTO_BURST_RINGS = 1;
     private static final int BLUE_ALLIANCE_TAG_ID = 20;
     private static final int RED_ALLIANCE_TAG_ID = 24;
     private static final double POSE_POSITION_TOLERANCE = 1.0; // inches
@@ -80,7 +82,7 @@ public class PedroAutonomous extends OpMode {
     private Follower follower;
     private TelemetryManager panelsTelemetry;
     private Timer stepTimer;
-    private ShootingController shootingController;
+    private FlywheelSubsystem flywheelSubsystem;
     private AllianceLight light;
     private VisionPortal visionPortal;
     private AprilTagProcessor aprilTagProcessor;
@@ -122,7 +124,9 @@ public class PedroAutonomous extends OpMode {
     public void init() {
         panelsTelemetry = PanelsBridge.preparePanels();
         follower = Constants.createFollower(hardwareMap);
-        shootingController = new TimedShootingController(FAKE_SHOT_DURATION_SECONDS);
+        flywheelSubsystem = new FlywheelSubsystem(hardwareMap);
+        flywheelSubsystem.initialize();
+        flywheelSubsystem.setSecondsPerRing(FAKE_SHOT_DURATION_SECONDS);
         stepTimer = new Timer();
         light = AllianceLight.onServo(hardwareMap, "indicator");
         initVision();
@@ -200,6 +204,9 @@ public class PedroAutonomous extends OpMode {
     @Override
     public void start() {
         allianceLocked = true;
+        if (flywheelSubsystem != null) {
+            flywheelSubsystem.requestSpinUp(FlywheelSubsystem.TargetRPM.HIGH);
+        }
         transitionTo(RoutineStep.DRIVE_TO_PRELOAD_SCORE);
     }
 
@@ -218,8 +225,11 @@ public class PedroAutonomous extends OpMode {
             panelsTelemetry.debug("Pose Y", follower.getPose().getY());
             panelsTelemetry.debug("Heading", follower.getPose().getHeading());
             panelsTelemetry.debug("Step timer", getStepTimerSeconds());
-            panelsTelemetry.debug("Waiting for shot", isWaitingForShot());
-            panelsTelemetry.debug("Shot timer", getShotTimerSeconds());
+            if (flywheelSubsystem != null) {
+                panelsTelemetry.debug("Flywheel state", flywheelSubsystem.getState());
+                panelsTelemetry.debug("Flywheel busy", isWaitingForShot());
+                panelsTelemetry.debug("Flywheel timer", getShotTimerSeconds());
+            }
             panelsTelemetry.update(telemetry);
         }
 
@@ -229,8 +239,9 @@ public class PedroAutonomous extends OpMode {
         telemetry.addData("y", follower.getPose().getY());
         telemetry.addData("heading", follower.getPose().getHeading());
         telemetry.addData("step timer", getStepTimerSeconds());
-        telemetry.addData("waiting for shot", isWaitingForShot());
-        telemetry.addData("shot timer", getShotTimerSeconds());
+        telemetry.addData("flywheel state", getFlywheelStateName());
+        telemetry.addData("flywheel busy", isWaitingForShot());
+        telemetry.addData("flywheel timer", getShotTimerSeconds());
         if (currentLayout != null) {
             Pose start = currentLayout.pose(FieldPoint.START);
             Pose launch = currentLayout.pose(FieldPoint.LAUNCH_FAR);
@@ -254,8 +265,8 @@ public class PedroAutonomous extends OpMode {
 
     @Override
     public void stop() {
-        if (shootingController != null) {
-            shootingController.stop();
+        if (flywheelSubsystem != null) {
+            flywheelSubsystem.abort();
         }
         shutdownVision();
     }
@@ -614,27 +625,31 @@ public class PedroAutonomous extends OpMode {
     }
 
     private void beginShootingRoutine() {
-        if (shootingController != null) {
-            shootingController.beginShooting();
+        if (flywheelSubsystem != null) {
+            flywheelSubsystem.requestBurst(AUTO_BURST_RINGS);
         }
     }
 
     private void updateShootingRoutine() {
-        if (shootingController != null) {
-            shootingController.update();
+        if (flywheelSubsystem != null) {
+            flywheelSubsystem.periodic();
         }
     }
 
     private boolean isWaitingForShot() {
-        return shootingController != null && shootingController.isShooting();
+        return flywheelSubsystem != null && flywheelSubsystem.isBusy();
     }
 
     private double getShotTimerSeconds() {
-        return shootingController != null ? shootingController.getElapsedTimeSeconds() : 0.0;
+        return flywheelSubsystem != null ? flywheelSubsystem.getStateElapsedSeconds() : 0.0;
     }
 
     private double getStepTimerSeconds() {
         return stepTimer != null ? stepTimer.getElapsedTimeSeconds() : 0.0;
+    }
+
+    private String getFlywheelStateName() {
+        return flywheelSubsystem != null ? flywheelSubsystem.getState().name() : "N/A";
     }
 
     private static String formatSegment(String label, Pose start, Pose end) {
@@ -711,52 +726,6 @@ public class PedroAutonomous extends OpMode {
 
         String getDisplayName() {
             return displayName;
-        }
-    }
-
-    private interface ShootingController {
-        void beginShooting();
-        void update();
-        boolean isShooting();
-        double getElapsedTimeSeconds();
-        void stop();
-    }
-
-    private static final class TimedShootingController implements ShootingController {
-        private final Timer shotTimer = new Timer();
-        private final double durationSeconds;
-        private boolean shooting;
-
-        TimedShootingController(double durationSeconds) {
-            this.durationSeconds = durationSeconds;
-        }
-
-        @Override
-        public void beginShooting() {
-            shooting = true;
-            shotTimer.resetTimer();
-        }
-
-        @Override
-        public void update() {
-            if (shooting && shotTimer.getElapsedTimeSeconds() >= durationSeconds) {
-                shooting = false;
-            }
-        }
-
-        @Override
-        public boolean isShooting() {
-            return shooting;
-        }
-
-        @Override
-        public double getElapsedTimeSeconds() {
-            return shooting ? shotTimer.getElapsedTimeSeconds() : 0.0;
-        }
-
-        @Override
-        public void stop() {
-            shooting = false;
         }
     }
 
