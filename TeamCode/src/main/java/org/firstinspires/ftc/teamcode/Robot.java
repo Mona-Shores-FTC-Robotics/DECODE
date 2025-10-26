@@ -67,7 +67,7 @@ public class Robot {
     }
 
     public void setAlliance(Alliance alliance) {
-        drive.setAlliance(alliance);
+//        drive.setAlliance(alliance);
         intake.setAlliance(alliance);
         lighting.setAlliance(alliance);
     }
