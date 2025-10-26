@@ -1,11 +1,14 @@
 package org.firstinspires.ftc.teamcode.pedroPathing;
 
+import com.bylazar.field.FieldManager;
+import com.bylazar.field.PanelsField;
+import com.bylazar.field.Style;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
-import com.bylazar.field.Style;
-import com.pedropathing.paths.PathChain;
-import com.pedropathing.geometry.Pose;
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
+import com.pedropathing.paths.Path;
+import com.pedropathing.paths.PathChain;
 
 /**
  * Utility hooks that expose Pedro's internal Panels drawing helpers to the rest of the codebase.
@@ -20,6 +23,7 @@ public final class PanelsBridge {
     private PanelsBridge() {}
 
 
+    private static final FieldManager panelsField = PanelsField.INSTANCE.getField();
     private static final Style PREVIEW_BLUE = new Style("preview-blue", "#2196F3", 0.7);
     private static final Style PREVIEW_RED = new Style("preview-red", "#F44336", 0.7);
 
@@ -60,12 +64,102 @@ public final class PanelsBridge {
             if (chain == null) {
                 continue;
             }
-            Drawing.drawPath(chain, style);
+            drawPreviewChain(chain, style);
         }
         if (startPose != null) {
             Drawing.drawRobot(startPose, style);
         }
         Drawing.sendPacket();
+    }
+
+    private static void drawPreviewChain(PathChain chain, Style style) {
+        for (int i = 0; i < chain.size(); i++) {
+            drawPreviewPath(chain.getPath(i), style);
+        }
+    }
+
+    private static void drawPreviewPath(Path path, Style style) {
+        if (path == null) {
+            return;
+        }
+
+        double[][] points = path.getPanelsDrawingPoints();
+        if (points == null || points.length == 0) {
+            return;
+        }
+
+        if (drawPointRows(points, style)) {
+            return;
+        }
+
+        drawComponentColumns(points, style);
+    }
+
+    private static boolean drawPointRows(double[][] points, Style style) {
+        int count = points.length;
+        if (count < 2) {
+            return false;
+        }
+
+        double[] first = points[0];
+        if (first == null || first.length < 2) {
+            return false;
+        }
+
+        double startX = sanitize(first[0]);
+        double startY = sanitize(first[1]);
+
+        panelsField.setStyle(style);
+        panelsField.moveCursor(startX, startY);
+
+        boolean drewSegment = false;
+        for (int i = 1; i < count; i++) {
+            double[] point = points[i];
+            if (point == null || point.length < 2) {
+                continue;
+            }
+
+            double x = sanitize(point[0]);
+            double y = sanitize(point[1]);
+            panelsField.line(x, y);
+            drewSegment = true;
+        }
+
+        return drewSegment;
+    }
+
+    private static boolean drawComponentColumns(double[][] points, Style style) {
+        if (points.length < 2) {
+            return false;
+        }
+
+        double[] xs = points[0];
+        double[] ys = points[1];
+        if (xs == null || ys == null) {
+            return false;
+        }
+
+        int limit = Math.min(xs.length, ys.length);
+        if (limit < 2) {
+            return false;
+        }
+
+        panelsField.setStyle(style);
+        panelsField.moveCursor(sanitize(xs[0]), sanitize(ys[0]));
+
+        boolean drewSegment = false;
+        for (int i = 1; i < limit; i++) {
+            double x = sanitize(xs[i]);
+            double y = sanitize(ys[i]);
+            panelsField.line(x, y);
+            drewSegment = true;
+        }
+
+        return drewSegment;
+    }
+
+    private static double sanitize(double value) {
+        return Double.isNaN(value) ? 0.0 : value;
     }
 
 }

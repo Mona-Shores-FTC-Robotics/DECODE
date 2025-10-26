@@ -44,8 +44,6 @@ public class PedroAutonomous extends OpMode {
         public static double parkingArtifactsX = 23.516;
         public static double parkingArtifactsY = 39.633;
         public static double parkingArtifactsHeadingDeg = 90.0;
-
-        public static boolean mirrorUsingCenter = false;
     }
 
     
@@ -113,33 +111,17 @@ public class PedroAutonomous extends OpMode {
         }
         lastInitLoopRightBumper = rightPreview;
 
-        if (panelsTelemetry != null) {
-            pushFieldPointPanels();
-            panelsTelemetry.debug("Select alliance: X=Blue, B=Red");
-            panelsTelemetry.debug("Active alliance: " + activeAlliance.displayName());
-            panelsTelemetry.debug("Press Y to rebuild paths after tweaking points");
-            panelsTelemetry.debug("LB: preview blue, RB: preview red");
-            panelsTelemetry.update(telemetry);
-        }
+//        if (panelsTelemetry != null) {
+//            pushFieldPointPanels();
+//            panelsTelemetry.debug("Select alliance: X=Blue, B=Red");
+//            panelsTelemetry.debug("Active alliance: " + activeAlliance.displayName());
+//            panelsTelemetry.debug("Press Y to rebuild paths after tweaking points");
+//            panelsTelemetry.debug("LB: preview blue, RB: preview red");
+//            panelsTelemetry.update(telemetry);
+//        }
         telemetry.addLine("Press X for Blue or B for Red alliance");
         telemetry.addData("Active alliance", activeAlliance.displayName());
         telemetry.addLine("Press Y to rebuild paths after tweaking waypoints");
-        telemetry.addData("Field width", Waypoints.fieldWidthIn);
-        telemetry.addData("Mirror uses center", Waypoints.mirrorUsingCenter);
-        if (currentLayout != null) {
-            Pose start = currentLayout.pose(FieldPoint.START);
-            Pose launch = currentLayout.pose(FieldPoint.LAUNCH_FAR);
-            Pose setup = currentLayout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
-            Pose parking = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS);
-            telemetry.addData("Start pose", formatPose(start));
-            telemetry.addData("Launch pose", formatPose(launch));
-            telemetry.addData("Setup pose", formatPose(setup));
-            telemetry.addData("Parking pose", formatPose(parking));
-            telemetry.addData("Path Start→Launch", pathToScoreSummary);
-            telemetry.addData("Path Launch→Setup", scoreToPickupSummary);
-            telemetry.addData("Path Setup→Parking", pickupToStackEndSummary);
-            telemetry.addData("Path Parking→Launch", stackToScoreSummary);
-        }
         telemetry.update();
     }
 
@@ -553,9 +535,7 @@ public class PedroAutonomous extends OpMode {
         }
 
         private static Pose mirrorAcrossField(Pose pose) {
-            double mirroredX = Waypoints.mirrorUsingCenter
-                    ? -pose.getX()
-                    : Waypoints.fieldWidthIn - pose.getX();
+            double mirroredX = Waypoints.fieldWidthIn - pose.getX();
             double mirroredHeading = AngleUnit.normalizeRadians(Math.PI - pose.getHeading());
             return new Pose(mirroredX, pose.getY(), mirroredHeading);
         }
