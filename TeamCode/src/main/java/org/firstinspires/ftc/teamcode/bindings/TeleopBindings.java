@@ -5,7 +5,6 @@ import dev.nextftc.bindings.Button;
 import dev.nextftc.bindings.Range;
 import dev.nextftc.ftc.GamepadEx;
 
-import org.firstinspires.ftc.teamcode.config.Tuning;
 import org.firstinspires.ftc.teamcode.subsystems.FlywheelSubsystem;
 
 /**
@@ -29,9 +28,9 @@ public class TeleopBindings {
         precisionHold = driver.rightBumper();
         normalHold = driver.leftBumper();
 
-        driver.a().whenBecomesTrue(flywheel::stop);
-        driver.b().whenBecomesTrue(() -> flywheel.setTargetRpm(Tuning.FLYWHEEL_RPM_LOW));
-        driver.x().whenBecomesTrue(() -> flywheel.setTargetRpm(Tuning.FLYWHEEL_RPM_HIGH));
+        driver.a().whenBecomesTrue(flywheel::abort);
+        driver.b().whenBecomesTrue(() -> flywheel.requestSpinUp(FlywheelSubsystem.TargetRPM.LOW));
+        driver.x().whenBecomesTrue(() -> flywheel.requestSpinUp(FlywheelSubsystem.TargetRPM.HIGH));
     }
 
     public DriveRequest sampleDriveRequest() {

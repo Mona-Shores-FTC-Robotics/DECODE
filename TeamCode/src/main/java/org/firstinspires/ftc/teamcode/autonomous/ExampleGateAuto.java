@@ -13,7 +13,7 @@ import com.qualcomm.robotcore.util.RobotLog;
 import org.firstinspires.ftc.teamcode.autonomous.TimelineModel.PickupPlan;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.Gate;
-import org.firstinspires.ftc.teamcode.subsystems.Intake;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.Shooter;
 import org.firstinspires.ftc.teamcode.util.InitMenu;
 
@@ -43,7 +43,7 @@ public class ExampleGateAuto extends OpMode {
     private Follower follower;
     private Shooter shooter;
     private Gate gate;
-    private Intake intake;
+    private IntakeSubsystem intake;
 
     private boolean isBlueAlliance;
     private List<PickupPlan> pickupPlans;
@@ -74,7 +74,7 @@ public class ExampleGateAuto extends OpMode {
         initMenu = new InitMenu();
         shooter = new Shooter(hardwareMap);
         gate = new Gate(hardwareMap);
-        intake = new Intake(hardwareMap);
+        intake = new IntakeSubsystem(hardwareMap);
         follower = createFollower();
         config = snapshotConfig();
         preview = GatePolicy.preview(
