@@ -20,26 +20,29 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
+import org.firstinspires.ftc.teamcode.util.ArtifactColor;
+import org.firstinspires.ftc.teamcode.util.DecodePatterns;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import com.bylazar.configurables.annotations.Configurable;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Pedro Pathing Autonomous", group = "Autonomous")
-public class Autonomous extends OpMode {
+public class AutonoOp extends OpMode {
 
     private static final double FAKE_SHOT_DURATION_SECONDS = 1.0;
     private static final int AUTO_BURST_RINGS = 1;
     private static final int BLUE_ALLIANCE_TAG_ID = 20;
     private static final int RED_ALLIANCE_TAG_ID = 24;
     private static final double POSE_POSITION_TOLERANCE = 1.0; // inches
-    private static final double POSE_HEADING_TOLERANCE = Math.toRadians(10.0);
-    private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
-    private static final Position CAMERA_POSITION = new Position(
+    private final double POSE_HEADING_TOLERANCE = Math.toRadians(10.0);
+    private final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
+    private final Position CAMERA_POSITION = new Position(
             DistanceUnit.INCH,
             0.0,   // X right
             7.0,   // Y forward
@@ -113,10 +116,15 @@ public class Autonomous extends OpMode {
     private boolean lastInitLoopX = false;
     private boolean lastInitLoopB = false;
     private boolean lastInitLoopA = false;
+    private boolean lastInitLoopDpadUp = false;
+    private boolean lastInitLoopDpadDown = false;
     private String pathToScoreSummary;
     private String scoreToPickupSummary;
     private String pickupToStackEndSummary;
     private String stackToScoreSummary;
+    private int manualDecodeIndex = -1;
+    private ArtifactColor[] activeDecodePattern = new ArtifactColor[0];
+    private boolean opModeStarted = false;
 
     @Override
     public void init() {
@@ -127,6 +135,7 @@ public class Autonomous extends OpMode {
         stepTimer = new Timer();
         lighting = new LightingSubsystem(hardwareMap);
         lighting.initialize();
+        lighting.indicateAllianceInit();
         initVision();
         allianceLocked = false;
         activeAlliance = DEFAULT_ALLIANCE;
@@ -173,6 +182,18 @@ public class Autonomous extends OpMode {
         }
         lastInitLoopRightBumper = rightPreview;
 
+        boolean dpadUp = gamepad1.dpad_up;
+        if (dpadUp && !lastInitLoopDpadUp) {
+            cycleManualDecodePattern();
+        }
+        lastInitLoopDpadUp = dpadUp;
+
+        boolean dpadDown = gamepad1.dpad_down;
+        if (dpadDown && !lastInitLoopDpadDown) {
+            clearManualDecodePattern();
+        }
+        lastInitLoopDpadDown = dpadDown;
+
         updateAllianceAndPoseFromAprilTags();
 
 //        if (panelsTelemetry != null) {
@@ -196,14 +217,22 @@ public class Autonomous extends OpMode {
         telemetry.addData("Detected start", formatPose(lastDetectedStartPose));
         telemetry.addData("Raw ftc XYZ", formatRawFtc());
         telemetry.addData("Raw robot XYZ", formatRawRobot());
+        telemetry.addData("Decode pattern", formatDecodePattern(activeDecodePattern));
+        telemetry.addLine("D-pad ↑ cycle decode pattern, ↓ to clear (testing)");
         telemetry.update();
     }
 
     @Override
     public void start() {
         allianceLocked = true;
+        opModeStarted = true;
+        if (activeDecodePattern.length > 0) {
+            lighting.showDecodePattern(activeDecodePattern);
+        } else {
+            lighting.indicateIdle();
+        }
         if (shooterSubsystem != null) {
-            shooterSubsystem.requestSpinUp(FlywheelSubsystem.TargetRPM.HIGH);
+            shooterSubsystem.requestSpinUp();
         }
         transitionTo(RoutineStep.DRIVE_TO_PRELOAD_SCORE);
     }
@@ -266,6 +295,7 @@ public class Autonomous extends OpMode {
         if (shooterSubsystem != null) {
             shooterSubsystem.abort();
         }
+        opModeStarted = false;
         shutdownVision();
     }
 
@@ -552,6 +582,34 @@ public class Autonomous extends OpMode {
         lastAppliedStartPose = copyPose(startPose);
     }
 
+    private void cycleManualDecodePattern() {
+        manualDecodeIndex = (manualDecodeIndex + 1) % DecodePatterns.PATTERNS.length;
+        applyDecodePattern(DecodePatterns.PATTERNS[manualDecodeIndex]);
+    }
+
+    private void clearManualDecodePattern() {
+        manualDecodeIndex = -1;
+        applyDecodePattern();
+    }
+
+    private void applyDecodePattern(ArtifactColor... pattern) {
+        if (pattern == null || pattern.length == 0) {
+            activeDecodePattern = new ArtifactColor[0];
+            if (lighting != null) {
+                if (opModeStarted) {
+                    lighting.indicateIdle();
+                } else {
+                    lighting.indicateAllianceInit();
+                }
+            }
+            return;
+        }
+        activeDecodePattern = Arrays.copyOf(pattern, pattern.length);
+        if (lighting != null) {
+            lighting.showDecodePattern(activeDecodePattern);
+        }
+    }
+
     private void cachePathSummaries(FieldLayout layout) {
         Pose start = layout.pose(FieldPoint.START);
         Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
@@ -652,6 +710,27 @@ public class Autonomous extends OpMode {
 
     private static String formatSegment(String label, Pose start, Pose end) {
         return label + ": " + formatPose(start) + " → " + formatPose(end);
+    }
+
+    private String formatDecodePattern(ArtifactColor[] pattern) {
+        if (pattern == null || pattern.length == 0) {
+            return "(none)";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (ArtifactColor color : pattern) {
+            char code;
+            if (color == ArtifactColor.GREEN) {
+                code = 'G';
+            } else if (color == ArtifactColor.PURPLE) {
+                code = 'P';
+            } else if (color == ArtifactColor.UNKNOWN) {
+                code = '?';
+            } else {
+                code = '-';
+            }
+            sb.append(code);
+        }
+        return sb.toString();
     }
 
     private static String formatPose(Pose pose) {

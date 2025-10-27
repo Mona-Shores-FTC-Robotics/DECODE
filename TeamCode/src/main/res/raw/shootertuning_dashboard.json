@@ -4,79 +4,231 @@
   "children": [
     {
       "type": "label",
-      "text": "Flywheel Gains"
+      "text": "Velocity PID"
     },
     {
       "type": "config",
       "title": "kF",
-      "config": "Constants",
-      "variable": "FLY_KF"
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$VelocityPID",
+      "variable": "kF"
     },
     {
       "type": "config",
       "title": "kP",
-      "config": "Constants",
-      "variable": "FLY_KP"
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$VelocityPID",
+      "variable": "kP"
+    },
+    {
+      "type": "config",
+      "title": "kI",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$VelocityPID",
+      "variable": "kI"
+    },
+    {
+      "type": "config",
+      "title": "kD",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$VelocityPID",
+      "variable": "kD"
     },
     {
       "type": "label",
-      "text": "RPM Presets"
+      "text": "Global Parameters"
     },
     {
       "type": "config",
-      "title": "TeleOp Low",
-      "config": "Tuning",
-      "variable": "FLYWHEEL_RPM_LOW"
+      "title": "Ticks / Rev",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$FlywheelParameters",
+      "variable": "ticksPerRev"
     },
     {
       "type": "config",
-      "title": "TeleOp High",
-      "config": "Tuning",
-      "variable": "FLYWHEEL_RPM_HIGH"
+      "title": "Gear Ratio",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$FlywheelParameters",
+      "variable": "gearRatio"
     },
     {
       "type": "config",
-      "title": "Wing Cycle",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$Presets",
-      "variable": "WING_RPM"
-    },
-    {
-      "type": "config",
-      "title": "Cycle Shots",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$Presets",
-      "variable": "DEFAULT_CYCLE_SHOTS"
+      "title": "RPM Tolerance",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$FlywheelParameters",
+      "variable": "rpmTolerance"
     },
     {
       "type": "label",
-      "text": "Gate Servo"
+      "text": "Timing"
     },
     {
       "type": "config",
-      "title": "Open",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.Gate",
-      "variable": "openPosition"
+      "title": "Min Spin-Up (ms)",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$Timing",
+      "variable": "minimalSpinUpMs"
     },
     {
       "type": "config",
-      "title": "Closed",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.Gate",
-      "variable": "closedPosition"
-    },
-    {
-      "type": "label",
-      "text": "Feed Timing"
-    },
-    {
-      "type": "config",
-      "title": "Feed Hold (ms)",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$FeedTiming",
-      "variable": "feedDurationMs"
+      "title": "Fallback Ready (ms)",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$Timing",
+      "variable": "fallbackReadyMs"
     },
     {
       "type": "config",
       "title": "Recovery (ms)",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$FeedTiming",
-      "variable": "recoveryDelayMs"
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$Timing",
+      "variable": "recoveryMs"
+    },
+    {
+      "type": "config",
+      "title": "Burst Spacing (ms)",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$Timing",
+      "variable": "burstSpacingMs"
+    },
+    {
+      "type": "label",
+      "text": "Left Flywheel"
+    },
+    {
+      "type": "config",
+      "title": "Launch RPM",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$LeftFlywheelConfig",
+      "variable": "launchRpm"
+    },
+    {
+      "type": "config",
+      "title": "Idle RPM",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$LeftFlywheelConfig",
+      "variable": "idleRpm"
+    },
+    {
+      "type": "config",
+      "title": "Motor Reversed",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$LeftFlywheelConfig",
+      "variable": "reversed"
+    },
+    {
+      "type": "label",
+      "text": "Left Feeder"
+    },
+    {
+      "type": "config",
+      "title": "Load Position",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$LeftFeederConfig",
+      "variable": "loadPosition"
+    },
+    {
+      "type": "config",
+      "title": "Fire Position",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$LeftFeederConfig",
+      "variable": "firePosition"
+    },
+    {
+      "type": "config",
+      "title": "Hold (ms)",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$LeftFeederConfig",
+      "variable": "holdMs"
+    },
+    {
+      "type": "config",
+      "title": "Servo Reversed",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$LeftFeederConfig",
+      "variable": "reversed"
+    },
+    {
+      "type": "label",
+      "text": "Center Flywheel"
+    },
+    {
+      "type": "config",
+      "title": "Launch RPM",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$CenterFlywheelConfig",
+      "variable": "launchRpm"
+    },
+    {
+      "type": "config",
+      "title": "Idle RPM",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$CenterFlywheelConfig",
+      "variable": "idleRpm"
+    },
+    {
+      "type": "config",
+      "title": "Motor Reversed",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$CenterFlywheelConfig",
+      "variable": "reversed"
+    },
+    {
+      "type": "label",
+      "text": "Center Feeder"
+    },
+    {
+      "type": "config",
+      "title": "Load Position",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$CenterFeederConfig",
+      "variable": "loadPosition"
+    },
+    {
+      "type": "config",
+      "title": "Fire Position",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$CenterFeederConfig",
+      "variable": "firePosition"
+    },
+    {
+      "type": "config",
+      "title": "Hold (ms)",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$CenterFeederConfig",
+      "variable": "holdMs"
+    },
+    {
+      "type": "config",
+      "title": "Servo Reversed",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$CenterFeederConfig",
+      "variable": "reversed"
+    },
+    {
+      "type": "label",
+      "text": "Right Flywheel"
+    },
+    {
+      "type": "config",
+      "title": "Launch RPM",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$RightFlywheelConfig",
+      "variable": "launchRpm"
+    },
+    {
+      "type": "config",
+      "title": "Idle RPM",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$RightFlywheelConfig",
+      "variable": "idleRpm"
+    },
+    {
+      "type": "config",
+      "title": "Motor Reversed",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$RightFlywheelConfig",
+      "variable": "reversed"
+    },
+    {
+      "type": "label",
+      "text": "Right Feeder"
+    },
+    {
+      "type": "config",
+      "title": "Load Position",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$RightFeederConfig",
+      "variable": "loadPosition"
+    },
+    {
+      "type": "config",
+      "title": "Fire Position",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$RightFeederConfig",
+      "variable": "firePosition"
+    },
+    {
+      "type": "config",
+      "title": "Hold (ms)",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$RightFeederConfig",
+      "variable": "holdMs"
+    },
+    {
+      "type": "config",
+      "title": "Servo Reversed",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$RightFeederConfig",
+      "variable": "reversed"
     }
   ]
 }

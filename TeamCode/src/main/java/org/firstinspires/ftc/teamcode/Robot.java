@@ -21,6 +21,7 @@ public class Robot {
         shooter = new ShooterSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
+        intake.addLaneColorListener(lighting);
         vision = new VisionSubsystem(hardwareMap);
     }
 }

@@ -43,6 +43,11 @@ public class TeleOp extends NextFTCOpMode {
     }
 
     @Override
+    public void onStart() {
+        robot.lighting.indicateIdle();
+    }
+
+    @Override
     public void onUpdate() {
         BindingManager.update();
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
