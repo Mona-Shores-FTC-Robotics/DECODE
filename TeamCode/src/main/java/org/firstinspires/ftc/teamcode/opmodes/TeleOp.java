@@ -42,7 +42,6 @@ public class TeleOp extends NextFTCOpMode {
         );
     }
 
-    @Override
     public void onStart() {
         robot.lighting.indicateIdle();
     }

@@ -27,12 +27,11 @@ public class VisionSubsystem implements Subsystem {
 
     public static Position CAMERA_POSITION = new Position(
             DistanceUnit.INCH,
-            0.0,   // X right
-            7.0,   // Y forward
-            8.5,   // Z up
+            3.0,   // X right
+            2.0,   // Y forward
+            9.2,   // Z up
             0
     );
-    //
     public static YawPitchRollAngles CAMERA_ORIENTATION = new YawPitchRollAngles(
             AngleUnit.DEGREES,
             0.0,   // yaw facing forward
@@ -80,6 +79,34 @@ public class VisionSubsystem implements Subsystem {
     @Override
     public void periodic() {
         // Nothing to do – the SDK handles processing on a background thread.
+    }
+
+    public void stop() {
+        if (visionPortal != null) {
+            visionPortal.close();
+            visionPortal = null;
+        }
+        aprilTagProcessor = null;
+        state = VisionState.OFF;
+    }
+
+    public VisionState getState() {
+        return state;
+    }
+
+    public boolean isStreaming() {
+        return state == VisionState.STREAMING;
+    }
+
+    public List<AprilTagDetection> getDetections() {
+        if (aprilTagProcessor == null) {
+            return Collections.emptyList();
+        }
+        List<AprilTagDetection> detections = aprilTagProcessor.getDetections();
+        if (detections == null || detections.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return Collections.unmodifiableList(detections);
     }
 
 }

@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Locale;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Pedro Pathing Autonomous", group = "Autonomous")
-public class AutonoOp extends OpMode {
+public class Autonomous extends OpMode {
 
     private static final double FAKE_SHOT_DURATION_SECONDS = 1.0;
     private static final int AUTO_BURST_RINGS = 1;

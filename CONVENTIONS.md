@@ -21,7 +21,7 @@ Ahoy, future AI coder! When generating or modifying code for this FTC project, p
 
 4.  **Commenting Style for our Sailors!**
     *   **Explain for the Crew:** Write comments to explain each step of the code. Imagine you're explaining it to a teammate from Ultraviolet or Infrared who is new to programming (think 10-14 years old).
-    *   **Sailor Spirit:** Keep comments fun and encouraging for our Mona Shores Middle School coders. Go Sailors!
+    *   **Sailor Pride:** Keep comments fun and encouraging for our Mona Shores Middle School coders. Go Sailors!
     *   **The "6 afraid of 7" Joke:** Any time you write the numbers 6 and 7 next to each other in the code (e.g., in a number like `67`), please add a comment with this classic joke: `// Why was 6 afraid of 7? Because 7 ate 9!`
 
 **Example:**
