@@ -54,6 +54,38 @@ public final class PanelsBridge {
         Drawing.drawDebug(follower);
     }
 
+    /**
+     * Draws the robot at its current pose on Panels, mirroring the behaviour used by the Pedro
+     * localization tuning OpModes.
+     *
+     * @param follower active Pedro follower instance
+     */
+    public static void drawCurrentPose(Follower follower) {
+        if (follower == null) {
+            return;
+        }
+
+        Drawing.drawRobot(follower.getPose());
+        Drawing.sendPacket();
+    }
+
+    /**
+     * Draws the robot and its pose history on Panels so the motion trail matches the tuning tools.
+     *
+     * @param follower active Pedro follower instance
+     */
+    public static void drawCurrentPoseWithHistory(Follower follower) {
+        if (follower == null) {
+            return;
+        }
+
+        if (follower.getPoseHistory() != null) {
+            Drawing.drawPoseHistory(follower.getPoseHistory());
+        }
+        Drawing.drawRobot(follower.getPose());
+        Drawing.sendPacket();
+    }
+
 
     public static void drawPreview(PathChain[] pathChains, Pose startPose, boolean isRed) {
         if (pathChains == null) {

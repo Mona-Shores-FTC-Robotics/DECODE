@@ -1,17 +1,26 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.auto.Alliance;
-import org.firstinspires.ftc.teamcode.util.AllianceLight;
 
 /**
- * Simple indicator light wrapper that exposes a state machine so OpModes can
- * request colours without touching the underlying servo hardware directly.
+ * goBILDA RGB Indicator Light wrapper. Exposes a simple state machine and keeps
+ * the servo-specific logic inside the subsystem so OpModes can request colours
+ * without touching hardware directly.
  */
+@Configurable
 public class LightingSubsystem implements Subsystem {
+
+    public void indicateBusy() {
+    }
+
+    public void indicateIdle() {
+    }
 
     public enum LightingState {
         OFF,
@@ -19,18 +28,23 @@ public class LightingSubsystem implements Subsystem {
         BUSY
     }
 
-    private final AllianceLight light;
+    public static double GREEN_POS = 0.500;
+    public static double PURPLE_POS = 0.722;
+    public static double RED_POS = 0.281;
+    public static double BLUE_POS = 0.611;
+
+    private final Servo led;
     private LightingState state = LightingState.OFF;
     private Alliance alliance = Alliance.UNKNOWN;
 
     public LightingSubsystem(HardwareMap hardwareMap) {
-        AllianceLight detected = null;
+        Servo detected = null;
         try {
-            detected = AllianceLight.onServo(hardwareMap, "indicator");
+            detected = hardwareMap.get(Servo.class, "indicator");
         } catch (IllegalArgumentException ignored) {
-            // Servo not configured – leave light null so calls become no-ops.
+            // Servo not configured – leave null so downstream calls no-op safely.
         }
-        light = detected;
+        led = detected;
     }
 
     @Override
@@ -43,41 +57,39 @@ public class LightingSubsystem implements Subsystem {
         // No periodic work required – kept for interface completeness.
     }
 
+    @Override
+    public void stop() {
+        indicateIdle();
+    }
+
     public void setAlliance(Alliance alliance) {
         this.alliance = alliance == null ? Alliance.UNKNOWN : alliance;
         applyAllianceColor();
     }
 
-    public Alliance getAlliance() {
-        return alliance;
-    }
-
-    public void indicateBusy() {
-        if (light != null) {
-            light.setRaw(AllianceLight.PURPLE_POS);
+    public void setRaw(double position) {
+        if (led == null) {
+            state = LightingState.OFF;
+            return;
         }
-        state = LightingState.BUSY;
-    }
-
-    public void indicateIdle() {
-        applyAllianceColor();
-    }
-
-    public LightingState getState() {
-        return state;
+        led.setPosition(clamp01(position));
     }
 
     private void applyAllianceColor() {
-        if (light == null) {
+        if (led == null) {
             state = LightingState.OFF;
             return;
         }
         if (alliance == Alliance.UNKNOWN) {
-            light.setRaw(AllianceLight.GREEN_POS);
+            setRaw(GREEN_POS);
             state = LightingState.OFF;
         } else {
-            light.applyAlliance(alliance);
+            setRaw(alliance == Alliance.RED ? RED_POS : BLUE_POS);
             state = LightingState.ALLIANCE;
         }
+    }
+
+    private static double clamp01(double value) {
+        return Math.max(0.0, Math.min(1.0, value));
     }
 }

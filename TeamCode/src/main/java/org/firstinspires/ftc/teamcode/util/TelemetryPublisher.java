@@ -12,12 +12,12 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 
 /**
  * TelemetryPublisher centralises the construction of telemetry packets for the
- * FTC Dashboard and AdvantageScope.  It publishes drive and flywheel state
+ * FTC Dashboard and AdvantageScope.  It publishes drive and shooter state
  * variables on every loop so that they can be graphed or visualised.
  *
  * <p>The FTC Dashboard library will automatically aggregate packets from
  * multiple calls in the same loop, so publishing from both drive and
- * flywheel in one OpMode is safe.</p>
+ * shooter in one OpMode is safe.</p>
  */
 public class TelemetryPublisher {
 
@@ -60,15 +60,8 @@ public class TelemetryPublisher {
         p.put("lx", lx);
         p.put("ly", ly);
         p.put("rx", rx);
-        p.put("slowMode", slowMode);
         p.put("drive_mode", drive.getDriveMode().name());
-        p.put("cmd_forward", drive.getLastForwardCommand());
-        p.put("cmd_strafe", drive.getLastStrafeCommand());
-        p.put("cmd_turn", drive.getLastTurnCommand());
-        p.put("target_forward_ips", drive.getLastTargetForwardIps());
-        p.put("target_strafe_ips", drive.getLastTargetStrafeIps());
-        p.put("measured_forward_ips", drive.getLastMeasuredForwardIps());
-        p.put("measured_strafe_ips", drive.getLastMeasuredStrafeIps());
+        p.put("slow_mode", slowMode);
 
         double lfPower = drive.getLfPower();
         double rfPower = drive.getRfPower();
@@ -122,13 +115,6 @@ public class TelemetryPublisher {
             logger.recordNumber("drive_x_in", pose.getX(DistanceUnit.INCH));
             logger.recordNumber("drive_y_in", pose.getY(DistanceUnit.INCH));
             logger.recordNumber("drive_heading_deg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
-            logger.recordNumber("drive_cmd_forward", drive.getLastForwardCommand());
-            logger.recordNumber("drive_cmd_strafe", drive.getLastStrafeCommand());
-            logger.recordNumber("drive_cmd_turn", drive.getLastTurnCommand());
-            logger.recordNumber("drive_target_forward_ips", drive.getLastTargetForwardIps());
-            logger.recordNumber("drive_target_strafe_ips", drive.getLastTargetStrafeIps());
-            logger.recordNumber("drive_measured_forward_ips", drive.getLastMeasuredForwardIps());
-            logger.recordNumber("drive_measured_strafe_ips", drive.getLastMeasuredStrafeIps());
             logger.recordNumber("drive_lf_power", lfPower);
             logger.recordNumber("drive_rf_power", rfPower);
             logger.recordNumber("drive_lb_power", lbPower);
@@ -141,28 +127,34 @@ public class TelemetryPublisher {
     }
 
     /**
-     * Publish flywheel telemetry.  Includes the target RPM, measured RPM,
+     * Publish shooter telemetry.  Includes the target RPM, measured RPM,
      * control error and applied power.
      *
      * @param targetRpm desired wheel speed
      * @param rpm       current measured speed
-     * @param power     last power sent to the motor
+     * @param power     last power sent to the motors
      * @param error     current error (target – measured)
      */
-    public void publishFlywheel(double targetRpm, double rpm, double power, double error) {
+    public void publishShooter(double targetRpm, double rpm, double power, double error) {
         TelemetryPacket p = new TelemetryPacket();
-        p.put("fly_target_rpm", targetRpm);
-        p.put("fly_rpm", rpm);
-        p.put("fly_err", error);
-        p.put("fly_power", power);
+        p.put("shooter_target_rpm", targetRpm);
+        p.put("shooter_rpm", rpm);
+        p.put("shooter_err", error);
+        p.put("shooter_power", power);
         dash.sendTelemetryPacket(p);
         if (logger != null) {
-            logger.recordNumber("fly_target_rpm", targetRpm);
-            logger.recordNumber("fly_rpm", rpm);
-            logger.recordNumber("fly_err", error);
-            logger.recordNumber("fly_power", power);
+            logger.recordNumber("shooter_target_rpm", targetRpm);
+            logger.recordNumber("shooter_rpm", rpm);
+            logger.recordNumber("shooter_err", error);
+            logger.recordNumber("shooter_power", power);
             // Flush immediately to minimise data loss if the robot shuts down
             logger.flush();
         }
+    }
+
+    /** @deprecated Use {@link #publishShooter(double, double, double, double)} instead. */
+    @Deprecated
+    public void publishFlywheel(double targetRpm, double rpm, double power, double error) {
+        publishShooter(targetRpm, rpm, power, error);
     }
 }

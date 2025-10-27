@@ -1,0 +1,82 @@
+{
+  "name": "ShooterTuning",
+  "type": "vertical",
+  "children": [
+    {
+      "type": "label",
+      "text": "Flywheel Gains"
+    },
+    {
+      "type": "config",
+      "title": "kF",
+      "config": "Constants",
+      "variable": "FLY_KF"
+    },
+    {
+      "type": "config",
+      "title": "kP",
+      "config": "Constants",
+      "variable": "FLY_KP"
+    },
+    {
+      "type": "label",
+      "text": "RPM Presets"
+    },
+    {
+      "type": "config",
+      "title": "TeleOp Low",
+      "config": "Tuning",
+      "variable": "FLYWHEEL_RPM_LOW"
+    },
+    {
+      "type": "config",
+      "title": "TeleOp High",
+      "config": "Tuning",
+      "variable": "FLYWHEEL_RPM_HIGH"
+    },
+    {
+      "type": "config",
+      "title": "Wing Cycle",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$Presets",
+      "variable": "WING_RPM"
+    },
+    {
+      "type": "config",
+      "title": "Cycle Shots",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$Presets",
+      "variable": "DEFAULT_CYCLE_SHOTS"
+    },
+    {
+      "type": "label",
+      "text": "Gate Servo"
+    },
+    {
+      "type": "config",
+      "title": "Open",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.Gate",
+      "variable": "openPosition"
+    },
+    {
+      "type": "config",
+      "title": "Closed",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.Gate",
+      "variable": "closedPosition"
+    },
+    {
+      "type": "label",
+      "text": "Feed Timing"
+    },
+    {
+      "type": "config",
+      "title": "Feed Hold (ms)",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$FeedTiming",
+      "variable": "feedDurationMs"
+    },
+    {
+      "type": "config",
+      "title": "Recovery (ms)",
+      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$FeedTiming",
+      "variable": "recoveryDelayMs"
+    }
+  ]
+}

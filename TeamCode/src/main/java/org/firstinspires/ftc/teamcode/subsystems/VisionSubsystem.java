@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import dev.nextftc.core.subsystems.Subsystem;
@@ -21,46 +22,49 @@ import java.util.List;
  * Wrapper around the FTC AprilTag pipeline so OpModes can query detections
  * without performing hardware setup directly.
  */
+@Configurable
 public class VisionSubsystem implements Subsystem {
+
+    public static Position CAMERA_POSITION = new Position(
+            DistanceUnit.INCH,
+            0.0,   // X right
+            7.0,   // Y forward
+            8.5,   // Z up
+            0
+    );
+    //
+    public static YawPitchRollAngles CAMERA_ORIENTATION = new YawPitchRollAngles(
+            AngleUnit.DEGREES,
+            0.0,   // yaw facing forward
+            -90.0, // pitch to horizontal
+            0.0,
+            0
+    );
+
+
+    private final HardwareMap hardwareMap;
 
     public enum VisionState {
         OFF,
         STREAMING
     }
 
-    private final HardwareMap hardwareMap;
-    private final Position cameraPosition;
-    private final YawPitchRollAngles cameraOrientation;
-
     private VisionPortal visionPortal;
     private AprilTagProcessor aprilTagProcessor;
     private VisionState state = VisionState.OFF;
 
-    public VisionSubsystem(HardwareMap hardwareMap,
-                           Position cameraPosition,
-                           YawPitchRollAngles cameraOrientation) {
+    public VisionSubsystem(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
-        this.cameraPosition = cameraPosition;
-        this.cameraOrientation = cameraOrientation;
     }
 
     @Override
     public void initialize() {
-        start();
-    }
-
-    @Override
-    public void periodic() {
-        // Nothing to do – the SDK handles processing on a background thread.
-    }
-
-    public void start() {
         if (visionPortal != null) {
             return;
         }
         aprilTagProcessor = new AprilTagProcessor.Builder()
                 .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
-                .setCameraPose(cameraPosition, cameraOrientation)
+                .setCameraPose(CAMERA_POSITION, CAMERA_ORIENTATION)
                 .build();
         VisionPortal.Builder builder = new VisionPortal.Builder().addProcessor(aprilTagProcessor);
         WebcamName webcam = hardwareMap.tryGet(WebcamName.class, "Webcam 1");
@@ -73,28 +77,9 @@ public class VisionSubsystem implements Subsystem {
         state = VisionState.STREAMING;
     }
 
-    public void stopStreaming() {
-        if (visionPortal != null) {
-            visionPortal.close();
-            visionPortal = null;
-        }
-        aprilTagProcessor = null;
-        state = VisionState.OFF;
+    @Override
+    public void periodic() {
+        // Nothing to do – the SDK handles processing on a background thread.
     }
 
-    public List<AprilTagDetection> getDetections() {
-        if (aprilTagProcessor == null) {
-            return Collections.emptyList();
-        }
-        List<AprilTagDetection> detections = aprilTagProcessor.getDetections();
-        return detections == null ? Collections.emptyList() : detections;
-    }
-
-    public AprilTagProcessor getAprilTagProcessor() {
-        return aprilTagProcessor;
-    }
-
-    public VisionState getState() {
-        return state;
-    }
 }

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.opmodes.auto;
+package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.follower.Follower;
@@ -6,7 +6,6 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
@@ -19,8 +18,8 @@ import org.firstinspires.ftc.teamcode.auto.Alliance;
 import org.firstinspires.ftc.teamcode.auto.AprilTagPoseUtil;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
-import org.firstinspires.ftc.teamcode.subsystems.FlywheelSubsystem;
-import org.firstinspires.ftc.teamcode.util.AllianceLight;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -29,10 +28,9 @@ import com.bylazar.configurables.annotations.Configurable;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
-@Autonomous(name = "Pedro Pathing Autonomous", group = "Autonomous")
-public class PedroAutonomous extends OpMode {
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Pedro Pathing Autonomous", group = "Autonomous")
+public class Autonomous extends OpMode {
 
     private static final double FAKE_SHOT_DURATION_SECONDS = 1.0;
     private static final int AUTO_BURST_RINGS = 1;
@@ -82,8 +80,8 @@ public class PedroAutonomous extends OpMode {
     private Follower follower;
     private TelemetryManager panelsTelemetry;
     private Timer stepTimer;
-    private FlywheelSubsystem flywheelSubsystem;
-    private AllianceLight light;
+    private ShooterSubsystem shooterSubsystem;
+    private LightingSubsystem lighting;
     private VisionPortal visionPortal;
     private AprilTagProcessor aprilTagProcessor;
 
@@ -124,11 +122,11 @@ public class PedroAutonomous extends OpMode {
     public void init() {
         panelsTelemetry = PanelsBridge.preparePanels();
         follower = Constants.createFollower(hardwareMap);
-        flywheelSubsystem = new FlywheelSubsystem(hardwareMap);
-        flywheelSubsystem.initialize();
-        flywheelSubsystem.setSecondsPerRing(FAKE_SHOT_DURATION_SECONDS);
+        shooterSubsystem = new ShooterSubsystem(hardwareMap);
+        shooterSubsystem.initialize();
         stepTimer = new Timer();
-        light = AllianceLight.onServo(hardwareMap, "indicator");
+        lighting = new LightingSubsystem(hardwareMap);
+        lighting.initialize();
         initVision();
         allianceLocked = false;
         activeAlliance = DEFAULT_ALLIANCE;
@@ -204,8 +202,8 @@ public class PedroAutonomous extends OpMode {
     @Override
     public void start() {
         allianceLocked = true;
-        if (flywheelSubsystem != null) {
-            flywheelSubsystem.requestSpinUp(FlywheelSubsystem.TargetRPM.HIGH);
+        if (shooterSubsystem != null) {
+            shooterSubsystem.requestSpinUp(FlywheelSubsystem.TargetRPM.HIGH);
         }
         transitionTo(RoutineStep.DRIVE_TO_PRELOAD_SCORE);
     }
@@ -225,8 +223,8 @@ public class PedroAutonomous extends OpMode {
             panelsTelemetry.debug("Pose Y", follower.getPose().getY());
             panelsTelemetry.debug("Heading", follower.getPose().getHeading());
             panelsTelemetry.debug("Step timer", getStepTimerSeconds());
-            if (flywheelSubsystem != null) {
-                panelsTelemetry.debug("Flywheel state", flywheelSubsystem.getState());
+            if (shooterSubsystem != null) {
+                panelsTelemetry.debug("Flywheel state", shooterSubsystem.getState());
                 panelsTelemetry.debug("Flywheel busy", isWaitingForShot());
                 panelsTelemetry.debug("Flywheel timer", getShotTimerSeconds());
             }
@@ -265,8 +263,8 @@ public class PedroAutonomous extends OpMode {
 
     @Override
     public void stop() {
-        if (flywheelSubsystem != null) {
-            flywheelSubsystem.abort();
+        if (shooterSubsystem != null) {
+            shooterSubsystem.abort();
         }
         shutdownVision();
     }
@@ -550,7 +548,7 @@ public class PedroAutonomous extends OpMode {
         buildPaths(currentLayout);
         cachePathSummaries(currentLayout);
         publishLayoutTelemetry(currentLayout);
-        light.applyAlliance(alliance);
+        lighting.setAlliance(alliance);
         lastAppliedStartPose = copyPose(startPose);
     }
 
@@ -625,23 +623,23 @@ public class PedroAutonomous extends OpMode {
     }
 
     private void beginShootingRoutine() {
-        if (flywheelSubsystem != null) {
-            flywheelSubsystem.requestBurst(AUTO_BURST_RINGS);
+        if (shooterSubsystem != null) {
+            shooterSubsystem.requestBurst(AUTO_BURST_RINGS);
         }
     }
 
     private void updateShootingRoutine() {
-        if (flywheelSubsystem != null) {
-            flywheelSubsystem.periodic();
+        if (shooterSubsystem != null) {
+            shooterSubsystem.periodic();
         }
     }
 
     private boolean isWaitingForShot() {
-        return flywheelSubsystem != null && flywheelSubsystem.isBusy();
+        return shooterSubsystem != null && shooterSubsystem.isBusy();
     }
 
     private double getShotTimerSeconds() {
-        return flywheelSubsystem != null ? flywheelSubsystem.getStateElapsedSeconds() : 0.0;
+        return shooterSubsystem != null ? shooterSubsystem.getStateElapsedSeconds() : 0.0;
     }
 
     private double getStepTimerSeconds() {
@@ -649,7 +647,7 @@ public class PedroAutonomous extends OpMode {
     }
 
     private String getFlywheelStateName() {
-        return flywheelSubsystem != null ? flywheelSubsystem.getState().name() : "N/A";
+        return shooterSubsystem != null ? shooterSubsystem.getState().name() : "N/A";
     }
 
     private static String formatSegment(String label, Pose start, Pose end) {
