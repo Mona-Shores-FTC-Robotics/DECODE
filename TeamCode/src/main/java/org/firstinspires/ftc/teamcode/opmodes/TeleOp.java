@@ -35,7 +35,10 @@ public class TeleOp extends NextFTCOpMode {
 
         addComponents(
                 BindingsComponent.INSTANCE,
-                new SubsystemComponent(robot.drive, robot.shooter, robot.intake, robot.lighting)
+                new SubsystemComponent(robot.drive),
+                new SubsystemComponent(robot.shooter),
+                new SubsystemComponent(robot.intake),
+                new SubsystemComponent(robot.lighting)
         );
     }
 
