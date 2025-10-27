@@ -13,7 +13,7 @@ import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.HardwareMap;
+import comsem.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
@@ -25,6 +25,37 @@ public class Constants {
         public static final String LB = "lb";
         public static final String RB = "rb";
         public static final String PINPOINT = "pinpoint";
+    }
+
+    /** Centralized naming conventions for consistency. */
+    public static final class Naming {
+        private Naming() {} // prevent instantiation
+
+        /**
+         * Prefix for all internal modules.
+         */
+        public static final String MODULE_PREFIX = "PP"; // PedroPathing
+
+        /**
+         * Names for different collections or groups of items.
+         */
+        public static final class CollectionNames {
+            private CollectionNames() {}
+
+            public static final String AUTONOMOUS_ROUTINES = "autonomous_routines";
+            public static final String TELEOP_CONFIGS = "teleop_configs";
+        }
+
+        /**
+         * Standardized field names used in data logging, telemetry, or configuration.
+         */
+        public static final class FieldNames {
+            private FieldNames() {}
+
+            public static final String MOTOR_POWER = "motor_power";
+            public static final String SERVO_POSITION = "servo_position";
+            public static final String SENSOR_VALUE = "sensor_value";
+        }
     }
 
     // ========= Pedro follower and localization =========
