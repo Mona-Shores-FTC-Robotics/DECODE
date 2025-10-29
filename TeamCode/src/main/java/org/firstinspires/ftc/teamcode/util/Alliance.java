@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.auto;
+package org.firstinspires.ftc.teamcode.util;
 
 /**
  * Represents the alliance a routine should run for.

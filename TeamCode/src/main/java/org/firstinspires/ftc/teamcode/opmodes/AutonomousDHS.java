@@ -8,177 +8,138 @@ import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
+import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.ftc.GamepadEx;
+
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
+import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.AllianceSelector;
+import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
-import org.firstinspires.ftc.teamcode.util.Alliance;
-import org.firstinspires.ftc.teamcode.util.ArtifactColor;
-import org.firstinspires.ftc.teamcode.util.DecodePatterns;
-import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.util.DecodePatternController;
 
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Pedro Pathing Autonomous", group = "Autonomous")
-public class Autonomous extends OpMode {
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Auto-Test", group = "Autonomous")
+public class AutonomousDHS extends OpMode {
 
     private static final int AUTO_BURST_RINGS = 1;
-    private static final double POSE_POSITION_TOLERANCE = 1.0; // inches
-    private final double POSE_HEADING_TOLERANCE = Math.toRadians(10.0);
-    private final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
+    private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
+    private static final double POSE_POSITION_TOLERANCE = 1.0; // inches
+    private static final double POSE_HEADING_TOLERANCE = Math.toRadians(10.0);
 
     private Robot robot;
     private Follower follower;
     private TelemetryManager panelsTelemetry;
-    private Timer stepTimer;
-    private ShooterSubsystem shooterSubsystem;
-    private LightingSubsystem lighting;
-    private VisionSubsystem vision;
+    private AllianceSelector allianceSelector;
 
-    private Alliance activeAlliance = DEFAULT_ALLIANCE;
+    private Timer stepTimer;
     private RoutineStep routineStep = RoutineStep.NOT_STARTED;
-    private boolean allianceLocked;
+
+    private FieldLayout currentLayout;
+    private Pose lastAppliedStartPose;
+    private Pose lastDetectedStartPose;
+    private VisionSubsystem.TagSnapshot lastTagSnapshot;
+    private Alliance activeAlliance = Alliance.BLUE;
 
     private PathChain pathToScore;
     private PathChain scoreToPickup;
     private PathChain pickupToStackEnd;
     private PathChain stackToScore;
-    private FieldLayout currentLayout;
-    private Pose lastAppliedStartPose;
-    private Pose lastDetectedStartPose;
-    private VisionSubsystem.TagSnapshot lastTagSnapshot;
-    private boolean manualAllianceOverride;
-    private Alliance manualAlliance = Alliance.UNKNOWN;
-    private boolean lastInitLoopY = false;
-    private boolean lastInitLoopLeftBumper = false;
-    private boolean lastInitLoopRightBumper = false;
-    private boolean lastInitLoopX = false;
-    private boolean lastInitLoopB = false;
-    private boolean lastInitLoopA = false;
-    private boolean lastInitLoopDpadUp = false;
-    private boolean lastInitLoopDpadDown = false;
+
     private String pathToScoreSummary;
     private String scoreToPickupSummary;
     private String pickupToStackEndSummary;
     private String stackToScoreSummary;
-    private int manualDecodeIndex = -1;
+
+    private final DecodePatternController decodeController = new DecodePatternController();
     private ArtifactColor[] activeDecodePattern = new ArtifactColor[0];
-    private boolean opModeStarted = false;
+    private boolean opModeStarted;
 
     @Override
     public void init() {
+        BindingManager.reset();
         robot = new Robot(hardwareMap);
-        shooterSubsystem = robot.shooter;
-        lighting = robot.lighting;
-        vision = robot.vision;
-        follower = robot.drive.getFollower();
-
         panelsTelemetry = PanelsBridge.preparePanels();
         stepTimer = new Timer();
 
-        robot.drive.initialize();
-        shooterSubsystem.initialize();
-        lighting.initialize();
-        vision.initialize();
+        robot.initialize();
+        follower = robot.drive.getFollower();
 
-        allianceLocked = false;
-        manualAllianceOverride = false;
-        manualAlliance = Alliance.UNKNOWN;
+        // Register init-phase controls with NextFTC (selector handles alliance overrides automatically).
+        GamepadEx driverPad = new GamepadEx(() -> gamepad1);
+        allianceSelector = new AllianceSelector(driverPad, DEFAULT_ALLIANCE);
+        driverPad.y().whenBecomesTrue(() -> applyAlliance(activeAlliance, lastAppliedStartPose));
+        driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
+        driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
+        driverPad.dpadUp().whenBecomesTrue(() -> applyDecodePattern(decodeController.cycleNext()));
+        driverPad.dpadDown().whenBecomesTrue(() -> applyDecodePattern(decodeController.clear()));
 
-        robot.setAlliance(DEFAULT_ALLIANCE);
-        applyAlliance(DEFAULT_ALLIANCE);
+        activeAlliance = allianceSelector.getSelectedAlliance();
+        applyAlliance(activeAlliance, null);
+        allianceSelector.applySelection(robot, robot.lighting);
+        applyDecodePattern(decodeController.current()); // default to alliance colour until a pattern is chosen
     }
 
     @Override
     public void init_loop() {
-        boolean xPressed = gamepad1.x;
-        if (xPressed && !lastInitLoopX) {
-            setManualAlliance(Alliance.BLUE);
-        }
-        lastInitLoopX = xPressed;
+        BindingManager.update();
 
-        boolean bPressed = gamepad1.b;
-        if (bPressed && !lastInitLoopB) {
-            setManualAlliance(Alliance.RED);
-        }
-        lastInitLoopB = bPressed;
+        // Blend camera detections with any driver override and apply the combined alliance immediately.
+        Optional<VisionSubsystem.TagSnapshot> snapshotOpt =
+                allianceSelector.updateFromVision(robot.vision);
 
-        boolean aPressed = gamepad1.a;
-        if (aPressed && !lastInitLoopA) {
-            clearManualAllianceOverride();
-        }
-        lastInitLoopA = aPressed;
+        allianceSelector.applySelection(robot, robot.lighting);
 
-        boolean yPressed = gamepad1.y;
-        if (yPressed && !lastInitLoopY) {
-            rebuildCurrentAllianceLayout();
-        }
-        lastInitLoopY = yPressed;
+        lastTagSnapshot = snapshotOpt.orElse(null);
+        Pose snapshotPose = lastTagSnapshot == null ? null : lastTagSnapshot.getRobotPose().orElse(null);
+        lastDetectedStartPose = snapshotPose == null ? null : copyPose(snapshotPose);
 
-        boolean leftPreview = gamepad1.left_bumper;
-        if (leftPreview && !lastInitLoopLeftBumper) {
-            drawPreviewForAlliance(Alliance.BLUE);
+        Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
+        if (selectedAlliance != activeAlliance) {
+            activeAlliance = selectedAlliance;
+            applyAlliance(activeAlliance, snapshotPose);
+        } else if (snapshotPose != null && shouldUpdateStartPose(snapshotPose)) {
+            applyAlliance(activeAlliance, snapshotPose);
         }
-        lastInitLoopLeftBumper = leftPreview;
 
-        boolean rightPreview = gamepad1.right_bumper;
-        if (rightPreview && !lastInitLoopRightBumper) {
-            drawPreviewForAlliance(Alliance.RED);
-        }
-        lastInitLoopRightBumper = rightPreview;
-
-        boolean dpadUp = gamepad1.dpad_up;
-        if (dpadUp && !lastInitLoopDpadUp) {
-            cycleManualDecodePattern();
-        }
-        lastInitLoopDpadUp = dpadUp;
-
-        boolean dpadDown = gamepad1.dpad_down;
-        if (dpadDown && !lastInitLoopDpadDown) {
-            clearManualDecodePattern();
-        }
-        lastInitLoopDpadDown = dpadDown;
-
-        updateAllianceAndPoseFromAprilTags();
-
-//        if (panelsTelemetry != null) {
-//            pushFieldPointPanels();
-//            panelsTelemetry.debug("Select alliance: X=Blue, B=Red");
-//            panelsTelemetry.debug("Active alliance: " + activeAlliance.displayName());
-//            panelsTelemetry.debug("Press Y to rebuild paths after tweaking points");
-//            panelsTelemetry.debug("LB: preview blue, RB: preview red");
-//            panelsTelemetry.update(telemetry);
-//        }
-        telemetry.addLine("Press X for Blue or B for Red alliance");
-        telemetry.addLine("Press A to return to AprilTag auto-select");
-        telemetry.addData("Active alliance", activeAlliance.displayName());
-        telemetry.addLine("Press Y to rebuild paths after tweaking waypoints");
-        telemetry.addData("Manual override", manualAllianceOverride);
-        if (manualAllianceOverride) {
-            telemetry.addData("Manual alliance", manualAlliance.displayName());
-        }
-        telemetry.addData("Detected alliance", lastTagSnapshot == null ? Alliance.UNKNOWN.displayName() : lastTagSnapshot.getAlliance().displayName());
-        telemetry.addData("Detected tag", lastTagSnapshot == null ? "none" : lastTagSnapshot.getTagId());
+        telemetry.addData("Selected alliance", selectedAlliance);
+        telemetry.addData("Active alliance", activeAlliance);
+        telemetry.addData("Detected alliance", allianceSelector.getDetectedAlliance());
+        telemetry.addData("Manual override", allianceSelector.isManualOverrideActive());
+        telemetry.addData("Detected tag", allianceSelector.getDetectedTagId() == -1 ? "none" : allianceSelector.getDetectedTagId());
+        telemetry.addData("Detected range", formatDouble(allianceSelector.getDetectedRange()));
+        telemetry.addData("Detected bearing", formatDouble(allianceSelector.getDetectedYaw()) + "°");
         telemetry.addData("Detected start", formatPose(lastDetectedStartPose));
+        telemetry.addData("Applied start", formatPose(lastAppliedStartPose));
+        telemetry.addData(" Layout start", currentLayout == null ? "(null)" : formatPose(currentLayout.pose(FieldPoint.START)));
         telemetry.addData("Raw ftc XYZ", formatRawFtc());
         telemetry.addData("Raw robot XYZ", formatRawRobot());
         telemetry.addData("Decode pattern", formatDecodePattern(activeDecodePattern));
-        telemetry.addLine("D-pad ↑ cycle decode pattern, ↓ to clear (testing)");
+        telemetry.addLine("D-pad Left/Right override alliance, Down returns to auto");
+        telemetry.addLine("LB/RB preview other alliance, Y rebuilds layout");
+        telemetry.addLine("D-pad Up cycles decode pattern, Down clears it");
         telemetry.update();
     }
 
     @Override
     public void start() {
-        allianceLocked = true;
+        BindingManager.reset();
         opModeStarted = true;
+        allianceSelector.lockSelection();
+        allianceSelector.applySelection(robot, robot.lighting);
+
+        LightingSubsystem lighting = robot.lighting;
         if (lighting != null) {
             if (activeDecodePattern.length > 0) {
                 lighting.showDecodePattern(activeDecodePattern);
@@ -186,14 +147,18 @@ public class Autonomous extends OpMode {
                 lighting.indicateIdle();
             }
         }
-        if (shooterSubsystem != null) {
-            shooterSubsystem.requestSpinUp();
+
+        ShooterSubsystem shooter = robot.shooter;
+        if (shooter != null) {
+            shooter.requestSpinUp();
         }
+
         transitionTo(RoutineStep.DRIVE_TO_PRELOAD_SCORE);
     }
 
     @Override
     public void loop() {
+        BindingManager.update();
         robot.drive.updateFollower();
         updateShootingRoutine();
         autonomousStep();
@@ -207,8 +172,9 @@ public class Autonomous extends OpMode {
             panelsTelemetry.debug("Pose Y", follower.getPose().getY());
             panelsTelemetry.debug("Heading", follower.getPose().getHeading());
             panelsTelemetry.debug("Step timer", getStepTimerSeconds());
-            if (shooterSubsystem != null) {
-                panelsTelemetry.debug("Flywheel state", shooterSubsystem.getState());
+            ShooterSubsystem shooter = robot.shooter;
+            if (shooter != null) {
+                panelsTelemetry.debug("Flywheel state", shooter.getState());
                 panelsTelemetry.debug("Flywheel busy", isWaitingForShot());
                 panelsTelemetry.debug("Flywheel timer", getShotTimerSeconds());
             }
@@ -238,8 +204,9 @@ public class Autonomous extends OpMode {
             telemetry.addData("Path Setup→Parking", pickupToStackEndSummary);
             telemetry.addData("Path Parking→Launch", stackToScoreSummary);
         }
-//        telemetry.addData("Detected tag", lastDetectedTagId == -1 ? "none" : lastDetectedTagId);
         telemetry.addData("Detected start", formatPose(lastDetectedStartPose));
+        telemetry.addData("Applied start", formatPose(lastAppliedStartPose));
+        telemetry.addData("Layout start", currentLayout == null ? "(null)" : formatPose(currentLayout.pose(FieldPoint.START)));
         telemetry.addData("Raw ftc XYZ", formatRawFtc());
         telemetry.addData("Raw robot XYZ", formatRawRobot());
         telemetry.update();
@@ -247,16 +214,16 @@ public class Autonomous extends OpMode {
 
     @Override
     public void stop() {
-        if (shooterSubsystem != null) {
-            shooterSubsystem.abort();
-        }
-        if (robot != null) {
-            robot.drive.stop();
-        }
         opModeStarted = false;
-        if (vision != null) {
-            vision.stop();
+        allianceSelector.unlockSelection();
+        BindingManager.reset();
+
+        ShooterSubsystem shooter = robot.shooter;
+        if (shooter != null) {
+            shooter.abort();
         }
+        robot.drive.stop();
+        robot.vision.stop();
     }
 
     private void autonomousStep() {
@@ -323,71 +290,6 @@ public class Autonomous extends OpMode {
         PanelsBridge.drawPreview(chains, layout.pose(FieldPoint.START), alliance == Alliance.RED);
     }
 
-    private void setManualAlliance(Alliance alliance) {
-        manualAllianceOverride = true;
-        manualAlliance = alliance;
-        Pose override = null;
-        if (lastTagSnapshot != null && lastTagSnapshot.getAlliance() == alliance && lastDetectedStartPose != null) {
-            override = lastDetectedStartPose;
-        } else if (lastAppliedStartPose != null) {
-            override = lastAppliedStartPose;
-        }
-        applyAlliance(alliance, override);
-    }
-
-    private void clearManualAllianceOverride() {
-        if (!manualAllianceOverride) {
-            return;
-        }
-        manualAllianceOverride = false;
-        manualAlliance = Alliance.UNKNOWN;
-        updateAllianceAndPoseFromAprilTags();
-        if (!manualAllianceOverride && lastAppliedStartPose != null) {
-            applyAlliance(activeAlliance, lastAppliedStartPose);
-        }
-    }
-
-    private void rebuildCurrentAllianceLayout() {
-        applyAlliance(activeAlliance, lastAppliedStartPose);
-    }
-
-    private void updateAllianceAndPoseFromAprilTags() {
-        if (allianceLocked || vision == null || !vision.isStreaming()) {
-            return;
-        }
-
-        Alliance requiredAlliance = manualAllianceOverride ? manualAlliance : null;
-        Optional<VisionSubsystem.TagSnapshot> snapshotOpt = vision.findAllianceSnapshot(requiredAlliance);
-        if (!snapshotOpt.isPresent()) {
-            lastTagSnapshot = null;
-            lastDetectedStartPose = null;
-            return;
-        }
-
-        VisionSubsystem.TagSnapshot snapshot = snapshotOpt.get();
-        lastTagSnapshot = snapshot;
-        Pose detectedPose = snapshot.getRobotPose().orElse(null);
-        lastDetectedStartPose = detectedPose == null ? null : copyPose(detectedPose);
-
-        Alliance detectedAlliance = snapshot.getAlliance();
-
-        if (manualAllianceOverride) {
-            if (detectedAlliance == manualAlliance && detectedPose != null && shouldUpdateStartPose(detectedPose)) {
-                applyAlliance(activeAlliance, detectedPose);
-            }
-            return;
-        }
-
-        if (detectedAlliance != activeAlliance) {
-            applyAlliance(detectedAlliance, detectedPose);
-            return;
-        }
-
-        if (detectedPose != null && shouldUpdateStartPose(detectedPose)) {
-            applyAlliance(activeAlliance, detectedPose);
-        }
-    }
-
     private boolean shouldUpdateStartPose(Pose candidate) {
         if (candidate == null) {
             return false;
@@ -439,19 +341,14 @@ public class Autonomous extends OpMode {
     }
 
     private void applyAlliance(Alliance alliance, Pose startOverride) {
-        activeAlliance = alliance;
-        if (robot != null) {
-            robot.setAlliance(alliance);
-        } else {
-            RobotState.setAlliance(alliance);
-            if (vision != null) {
-                vision.setAlliance(alliance);
-            }
-            if (lighting != null) {
-                lighting.setAlliance(alliance);
-            }
+        Alliance safeAlliance = alliance;
+        if (safeAlliance == null || safeAlliance == Alliance.UNKNOWN) {
+            safeAlliance = DEFAULT_ALLIANCE;
         }
-        currentLayout = AutoField.layoutForAlliance(alliance);
+        activeAlliance = safeAlliance;
+        robot.setAlliance(activeAlliance);
+
+        currentLayout = AutoField.layoutForAlliance(activeAlliance);
         if (startOverride != null) {
             currentLayout.overrideStart(startOverride);
         }
@@ -464,17 +361,8 @@ public class Autonomous extends OpMode {
         lastAppliedStartPose = copyPose(startPose);
     }
 
-    private void cycleManualDecodePattern() {
-        manualDecodeIndex = (manualDecodeIndex + 1) % DecodePatterns.PATTERNS.length;
-        applyDecodePattern(DecodePatterns.PATTERNS[manualDecodeIndex]);
-    }
-
-    private void clearManualDecodePattern() {
-        manualDecodeIndex = -1;
-        applyDecodePattern();
-    }
-
-    private void applyDecodePattern(ArtifactColor... pattern) {
+    private void applyDecodePattern(ArtifactColor[] pattern) {
+        LightingSubsystem lighting = robot.lighting;
         if (pattern == null || pattern.length == 0) {
             activeDecodePattern = new ArtifactColor[0];
             if (lighting != null) {
@@ -563,23 +451,27 @@ public class Autonomous extends OpMode {
     }
 
     private void beginShootingRoutine() {
-        if (shooterSubsystem != null) {
-            shooterSubsystem.requestBurst(AUTO_BURST_RINGS);
+        ShooterSubsystem shooter = robot.shooter;
+        if (shooter != null) {
+            shooter.requestBurst(AUTO_BURST_RINGS);
         }
     }
 
     private void updateShootingRoutine() {
-        if (shooterSubsystem != null) {
-            shooterSubsystem.periodic();
+        ShooterSubsystem shooter = robot.shooter;
+        if (shooter != null) {
+            shooter.periodic();
         }
     }
 
     private boolean isWaitingForShot() {
-        return shooterSubsystem != null && shooterSubsystem.isBusy();
+        ShooterSubsystem shooter = robot.shooter;
+        return shooter != null && shooter.isBusy();
     }
 
     private double getShotTimerSeconds() {
-        return shooterSubsystem != null ? shooterSubsystem.getStateElapsedSeconds() : 0.0;
+        ShooterSubsystem shooter = robot.shooter;
+        return shooter != null ? shooter.getStateElapsedSeconds() : 0.0;
     }
 
     private double getStepTimerSeconds() {
@@ -587,7 +479,8 @@ public class Autonomous extends OpMode {
     }
 
     private String getFlywheelStateName() {
-        return shooterSubsystem != null ? shooterSubsystem.getState().name() : "N/A";
+        ShooterSubsystem shooter = robot.shooter;
+        return shooter != null ? shooter.getState().name() : "N/A";
     }
 
     private static String formatSegment(String label, Pose start, Pose end) {
@@ -621,6 +514,13 @@ public class Autonomous extends OpMode {
         }
         return String.format(Locale.US, "(%.3f, %.3f, %.1f°)",
                 pose.getX(), pose.getY(), Math.toDegrees(pose.getHeading()));
+    }
+
+    private static String formatDouble(double value) {
+        if (Double.isNaN(value)) {
+            return "--";
+        }
+        return String.format(Locale.US, "%.2f", value);
     }
 
     private static Pose copyPose(Pose pose) {

@@ -3,9 +3,13 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.Vector;
+import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.RobotLog;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
@@ -14,14 +18,18 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import java.util.Optional;
 
-/**
- * Owns the Pedro follower and exposes a minimal API for commanding the drivetrain.
- * OpModes choose the frame (field vs robot-centric) and pass scaled stick values here.
- */
 @Configurable
 public class DriveSubsystem implements Subsystem {
+
+    private static final double AIM_KP = 1.5;
+    private static final double VISION_TIMEOUT_MS = 500.0;
+    private static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.0;
+    private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
+    private static final String LOG_TAG = "DriveSubsystem";
 
     public enum DriveMode {
         NORMAL,
@@ -29,11 +37,6 @@ public class DriveSubsystem implements Subsystem {
     }
 
     private static final double NORMAL_MULTIPLIER = 1.0;
-
-    /**
-     * Multiplier applied when slow mode is requested.
-     * Tunable via the live config system so drivers can adjust on the fly.
-     */
     public static double slowMultiplier = 0.35;
 
     private final Follower follower;
@@ -42,11 +45,16 @@ public class DriveSubsystem implements Subsystem {
     private final DcMotorEx motorRf;
     private final DcMotorEx motorLb;
     private final DcMotorEx motorRb;
+    private final VisionSubsystem vision;
+    private final ElapsedTime clock = new ElapsedTime();
+
+    private double lastGoodVisionAngle = Double.NaN;
+    private double lastVisionTimestamp = Double.NEGATIVE_INFINITY;
 
     private boolean robotCentric = false;
     private DriveMode activeMode = DriveMode.NORMAL;
 
-    public DriveSubsystem(HardwareMap hardwareMap) {
+    public DriveSubsystem(HardwareMap hardwareMap, VisionSubsystem vision) {
         follower = Constants.createFollower(hardwareMap);
         driveMotors = new Constants.Motors(hardwareMap);
         driveMotors.setRunUsingEncoder();
@@ -55,14 +63,11 @@ public class DriveSubsystem implements Subsystem {
         motorRf = driveMotors.rf;
         motorLb = driveMotors.lb;
         motorRb = driveMotors.rb;
+        this.vision = vision;
     }
 
     public void setRobotCentric(boolean enabled) {
         robotCentric = enabled;
-    }
-
-    public boolean isRobotCentric() {
-        return robotCentric;
     }
 
     @Override
@@ -88,7 +93,7 @@ public class DriveSubsystem implements Subsystem {
 
     public void stop() {
         follower.startTeleopDrive(true);
-        follower.setTeleOpDrive(0, 0, 0, true);
+        follower.setTeleOpDrive(0, 0, 0, robotCentric);
         driveMotors.stop();
 
         activeMode = DriveMode.NORMAL;
@@ -111,6 +116,33 @@ public class DriveSubsystem implements Subsystem {
         activeMode = slowMode ? DriveMode.SLOW : DriveMode.NORMAL;
     }
 
+    public void aimAndDrive(double fieldX, double fieldY, boolean slowMode) {
+        double multiplier = slowMode ? Range.clip(slowMultiplier, 0.0, 1.0) : NORMAL_MULTIPLIER;
+        double forward = Range.clip(fieldY * multiplier, -1.0, 1.0);
+        double strafeLeft = Range.clip(-fieldX * multiplier, -1.0, 1.0);
+        double nowMs = clock.milliseconds();
+        Optional<Double> visionAngle = vision.getAimAngle();
+
+        double targetHeading;
+        if (visionAngle.isPresent()) {
+            targetHeading = visionAngle.get();
+            lastGoodVisionAngle = targetHeading;
+            lastVisionTimestamp = nowMs;
+            maybeRelocalizeFromVision();
+        } else if (!Double.isNaN(lastGoodVisionAngle) && nowMs - lastVisionTimestamp <= VISION_TIMEOUT_MS) {
+            targetHeading = lastGoodVisionAngle;
+        } else {
+            Pose pose = follower.getPose();
+            Pose targetPose = vision.getTargetGoalPose().orElse(FieldConstants.BLUE_GOAL_TAG);
+            targetHeading = FieldConstants.getAimAngleTo(pose, targetPose);
+        }
+
+        double headingError = normalizeAngle(targetHeading - follower.getHeading());
+        double turn = Range.clip(AIM_KP * headingError, -1.0, 1.0);
+
+        follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
+    }
+
     // --- Telemetry accessors ------------------------------------------------
     public DriveMode getDriveMode() {
         return activeMode;
@@ -123,6 +155,22 @@ public class DriveSubsystem implements Subsystem {
 
     public Pose getFollowerPose() {
         return follower.getPose();
+    }
+
+    public Follower getFollower() {
+        return follower;
+    }
+
+    public void updateFollower() {
+        follower.update();
+    }
+
+    public void followPath(PathChain pathChain, boolean resetPose) {
+        follower.followPath(pathChain, resetPose);
+    }
+
+    public boolean isFollowerBusy() {
+        return follower.isBusy();
     }
 
     public double getLfPower() {
@@ -163,6 +211,53 @@ public class DriveSubsystem implements Subsystem {
 
     public void drawPoseWithHistoryOnPanels() {
         PanelsBridge.drawCurrentPoseWithHistory(follower);
+    }
+
+    private static double normalizeAngle(double angle) {
+        return Math.atan2(Math.sin(angle), Math.cos(angle));
+    }
+
+    private void maybeRelocalizeFromVision() {
+        if (!vision.shouldUpdateOdometry()) {
+            return;
+        }
+
+        double speed = getRobotSpeedInchesPerSecond();
+        if (speed > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
+            return;
+        }
+
+        Optional<Pose> tagPoseOpt = vision.getRobotPoseFromTag();
+        if (!tagPoseOpt.isPresent()) {
+            return;
+        }
+
+        Pose tagPose = tagPoseOpt.get();
+        Pose odomPose = follower.getPose();
+        double distance = distanceBetween(odomPose, tagPose);
+        if (distance > ODOMETRY_RELOCALIZE_DISTANCE_IN) {
+            return;
+        }
+
+        follower.setPose(tagPose);
+        vision.markOdometryUpdated();
+        RobotLog.dd(LOG_TAG, "Re-localized from AprilTag: (%.2f, %.2f, %.2f)", tagPose.getX(), tagPose.getY(), tagPose.getHeading());
+    }
+
+    private double getRobotSpeedInchesPerSecond() {
+        try {
+            Vector velocity = follower.getVelocity();
+            if (velocity == null) {
+                return Double.POSITIVE_INFINITY;
+            }
+            return Math.abs(velocity.getMagnitude());
+        } catch (Exception ignored) {
+            return Double.POSITIVE_INFINITY;
+        }
+    }
+
+    private static double distanceBetween(Pose a, Pose b) {
+        return Math.hypot(a.getX() - b.getX(), a.getY() - b.getY());
     }
 
 }

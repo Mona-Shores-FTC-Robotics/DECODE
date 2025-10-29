@@ -11,7 +11,7 @@ import dev.nextftc.ftc.NextFTCOpMode;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.auto.AprilTagPoseUtil;
+import org.firstinspires.ftc.teamcode.util.AprilTagPoseUtil;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
