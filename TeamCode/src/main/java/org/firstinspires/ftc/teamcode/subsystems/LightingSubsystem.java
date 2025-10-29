@@ -125,12 +125,6 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             case PURPLE:
                 setRaw(PURPLE_POS);
                 break;
-            case RED:
-                setRaw(RED_POS);
-                break;
-            case BLUE:
-                setRaw(BLUE_POS);
-                break;
             default:
                 applyAllianceColor();
                 break;
