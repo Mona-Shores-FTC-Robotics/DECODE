@@ -10,19 +10,16 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
+import java.util.EnumMap;
+import java.util.Map;
+
 /**
- * goBILDA RGB Indicator Light wrapper. Exposes a simple state machine and keeps
- * the servo-specific logic inside the subsystem so OpModes can request colours
- * without touching hardware directly.
+ * goBILDA RGB Indicator Light wrapper. Manages three lane-linked indicator servos so
+ * OpModes can coordinate colours without touching hardware directly. Missing servos are
+ * ignored gracefully, preserving compatibility with partial benches.
  */
 @Configurable
 public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorListener {
-
-    public void indicateBusy() {
-    }
-
-    public void indicateIdle() {
-    }
 
     public enum LightingState {
         OFF,
@@ -30,28 +27,64 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         BUSY
     }
 
+    /**
+     * Hardware names for the lane indicator servos. By default the class looks for a
+     * distinct servo per launcher lane, falling back to {@link #sharedServoName} if set.
+     */
+    public static String leftServoName = "indicator_left";
+    public static String centerServoName = "indicator_center";
+    public static String rightServoName = "indicator_right";
+    public static String sharedServoName = "indicator";
+
     public static double GREEN_POS = 0.500;
     public static double PURPLE_POS = 0.722;
     public static double RED_POS = 0.281;
     public static double BLUE_POS = 0.611;
+    /** Position that best represents an "off" state for the installed lights. */
+    public static double OFF_POS = 0.000;
+    /** Fallback colour used when marking the robot busy. */
+    public static double BUSY_POS = PURPLE_POS;
 
-    private final Servo led;
+    private final EnumMap<LauncherLane, LaneIndicator> laneIndicators = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
+
     private LightingState state = LightingState.OFF;
     private Alliance alliance = Alliance.UNKNOWN;
 
     public LightingSubsystem(HardwareMap hardwareMap) {
-        Servo detected = null;
-        try {
-            detected = hardwareMap.get(Servo.class, "indicator");
-        } catch (IllegalArgumentException ignored) {
-            // Servo not configured – leave null so downstream calls no-op safely.
+        Servo shared = tryGetServo(hardwareMap, sharedServoName);
+
+        laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(
+                resolveLaneServo(hardwareMap, leftServoName, shared)));
+        laneIndicators.put(LauncherLane.CENTER, new LaneIndicator(
+                resolveLaneServo(hardwareMap, centerServoName, shared)));
+        laneIndicators.put(LauncherLane.RIGHT, new LaneIndicator(
+                resolveLaneServo(hardwareMap, rightServoName, shared)));
+
+        for (LauncherLane lane : LauncherLane.values()) {
+            laneColors.put(lane, ArtifactColor.NONE);
         }
-        led = detected;
+    }
+
+    private static Servo resolveLaneServo(HardwareMap hardwareMap, String name, Servo fallback) {
+        Servo laneServo = tryGetServo(hardwareMap, name);
+        return laneServo != null ? laneServo : fallback;
+    }
+
+    private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(Servo.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     @Override
     public void initialize() {
-        applyAllianceColor();
+        indicateAllianceInit();
     }
 
     @Override
@@ -61,73 +94,157 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     public void setAlliance(Alliance alliance) {
         this.alliance = alliance == null ? Alliance.UNKNOWN : alliance;
-        applyAllianceColor();
+        if (state == LightingState.ALLIANCE || state == LightingState.OFF) {
+            updateLaneOutputs();
+        }
     }
 
-    public void setRaw(double position) {
-        if (led == null) {
-            state = LightingState.OFF;
-            return;
-        }
-        led.setPosition(clamp01(position));
+    public void indicateBusy() {
+        state = LightingState.BUSY;
+        updateLaneOutputs();
     }
 
-    private void applyAllianceColor() {
-        if (led == null) {
-            state = LightingState.OFF;
+    public void indicateIdle() {
+        state = LightingState.ALLIANCE;
+        updateLaneOutputs();
+    }
+
+    public void disable() {
+        resetLaneColors();
+        state = LightingState.OFF;
+        updateLaneOutputs();
+    }
+
+    public void setLaneColor(LauncherLane lane, ArtifactColor color) {
+        if (lane == null) {
             return;
         }
-        if (alliance == Alliance.UNKNOWN) {
-            setRaw(GREEN_POS);
-            state = LightingState.OFF;
-        } else {
-            setRaw(alliance == Alliance.RED ? RED_POS : BLUE_POS);
-            state = LightingState.ALLIANCE;
+        ArtifactColor normalized = color == null ? ArtifactColor.NONE : color;
+        ArtifactColor previous = laneColors.put(lane, normalized);
+        if (previous == normalized) {
+            return;
         }
+        applyLaneOutput(lane);
+    }
+
+    @Override
+    public void onLaneColorChanged(LauncherLane lane, ArtifactColor color) {
+        setLaneColor(lane, color);
+    }
+
+    public void clearLaneColors() {
+        if (resetLaneColors()) {
+            updateLaneOutputs();
+        }
+    }
+
+    public void indicateAllianceInit() {
+        resetLaneColors();
+        state = LightingState.ALLIANCE;
+        updateLaneOutputs();
+    }
+
+    public void showDecodePattern(ArtifactColor[] pattern) {
+        if (pattern == null || pattern.length == 0) {
+            if (resetLaneColors()) {
+                updateLaneOutputs();
+            } else {
+                updateLaneOutputs();
+            }
+            return;
+        }
+        resetLaneColors();
+        LauncherLane[] lanes = LauncherLane.values();
+        int limit = Math.min(pattern.length, lanes.length);
+        for (int i = 0; i < limit; i++) {
+            ArtifactColor normalized = pattern[i] == null ? ArtifactColor.NONE : pattern[i];
+            laneColors.put(lanes[i], normalized);
+        }
+        updateLaneOutputs();
+    }
+
+    private void updateLaneOutputs() {
+        for (LauncherLane lane : LauncherLane.values()) {
+            applyLaneOutput(lane);
+        }
+    }
+
+    private void applyLaneOutput(LauncherLane lane) {
+        LaneIndicator indicator = laneIndicators.get(lane);
+        if (indicator == null || !indicator.isPresent()) {
+            return;
+        }
+        ArtifactColor laneColor = laneColors.getOrDefault(lane, ArtifactColor.NONE);
+        double position = resolvePosition(laneColor);
+        indicator.apply(position);
+    }
+
+    private double resolvePosition(ArtifactColor laneColor) {
+        switch (laneColor) {
+            case GREEN:
+                return clamp01(GREEN_POS);
+            case PURPLE:
+                return clamp01(PURPLE_POS);
+            case NONE:
+            case UNKNOWN:
+            default:
+                return fallbackPosition();
+        }
+    }
+
+    private double fallbackPosition() {
+        switch (state) {
+            case BUSY:
+                return clamp01(BUSY_POS);
+            case ALLIANCE:
+                return alliancePosition();
+            case OFF:
+            default:
+                return clamp01(OFF_POS);
+        }
+    }
+
+    private double alliancePosition() {
+        if (alliance == Alliance.RED) {
+            return clamp01(RED_POS);
+        }
+        if (alliance == Alliance.BLUE) {
+            return clamp01(BLUE_POS);
+        }
+        return clamp01(GREEN_POS);
     }
 
     private static double clamp01(double value) {
         return Math.max(0.0, Math.min(1.0, value));
     }
 
-    @Override
-    public void onLaneColorChanged(LauncherLane lane, ArtifactColor color) {
-        if (color == null || led == null) {
-            return;
+    private boolean resetLaneColors() {
+        boolean touched = false;
+        for (Map.Entry<LauncherLane, ArtifactColor> entry : laneColors.entrySet()) {
+            if (entry.getValue() != ArtifactColor.NONE) {
+                entry.setValue(ArtifactColor.NONE);
+                touched = true;
+            }
         }
-        switch (color) {
-            case GREEN:
-                setRaw(GREEN_POS);
-                break;
-            case PURPLE:
-                setRaw(PURPLE_POS);
-                break;
-            default:
-                applyAllianceColor();
-                break;
-        }
+        return touched;
     }
 
-    public void indicateAllianceInit() {
-        applyAllianceColor();
-    }
+    private static final class LaneIndicator {
+        private final Servo servo;
 
-    public void showDecodePattern(ArtifactColor[] pattern) {
-        if (pattern == null || pattern.length == 0) {
-            applyAllianceColor();
-            return;
+        LaneIndicator(Servo servo) {
+            this.servo = servo;
         }
-        ArtifactColor primary = pattern[0];
-        switch (primary) {
-            case GREEN:
-                setRaw(GREEN_POS);
-                break;
-            case PURPLE:
-                setRaw(PURPLE_POS);
-                break;
-            default:
-                applyAllianceColor();
-                break;
+
+        boolean isPresent() {
+            return servo != null;
+        }
+
+        void apply(double position) {
+            if (servo == null) {
+                return;
+            }
+            servo.setPosition(clamp01(position));
         }
     }
 }

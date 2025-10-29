@@ -46,26 +46,31 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
         }
     }
 
-    private LightingSubsystem lighting;
     private TelemetryManager panelsTelemetry;
     private LaneActuator leftActuator;
     private LaneActuator centerActuator;
     private LaneActuator rightActuator;
+    private LaneLight leftLight;
+    private LaneLight centerLight;
+    private LaneLight rightLight;
     private TargetState currentState = TargetState.FIRST_LIMIT;
     private boolean lastRightBumper = false;
     private boolean lastLeftBumper = false;
 
     @Override
     public void runOpMode() {
-        lighting = new LightingSubsystem(hardwareMap);
         panelsTelemetry = PanelsBridge.preparePanels();
 
         leftActuator = new LaneActuator(LauncherLane.LEFT, BenchConfig.leftServoName, hardwareMap);
         centerActuator = new LaneActuator(LauncherLane.CENTER, BenchConfig.centerServoName, hardwareMap);
         rightActuator = new LaneActuator(LauncherLane.RIGHT, BenchConfig.rightServoName, hardwareMap);
 
-        lighting.initialize();
-        lighting.indicateIdle();
+        leftLight = new LaneLight(LauncherLane.LEFT, resolveLightName(LightingSubsystem.leftServoName), hardwareMap);
+        centerLight = new LaneLight(LauncherLane.CENTER, resolveLightName(LightingSubsystem.centerServoName), hardwareMap);
+        rightLight = new LaneLight(LauncherLane.RIGHT, resolveLightName(LightingSubsystem.rightServoName), hardwareMap);
+
+        telemetry.setAutoClear(false);
+        telemetry.clearAll();
         applyCurrentState();
         pushTelemetry();
 
@@ -75,9 +80,11 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
         waitForStart();
 
         if (isStopRequested()) {
-            lighting.disable();
+            disableLights();
             return;
         }
+
+        telemetry.clearAll();
 
         while (opModeIsActive()) {
             boolean rb = gamepad1.right_bumper;
@@ -96,12 +103,11 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
             lastRightBumper = rb;
             lastLeftBumper = lb;
 
-            lighting.periodic();
             pushTelemetry();
             idle();
         }
 
-        lighting.disable();
+        disableLights();
     }
 
     private void applyCurrentState() {
@@ -112,9 +118,9 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
         centerActuator.apply(position);
         rightActuator.apply(position);
 
-        lighting.setLaneColor(LauncherLane.LEFT, color);
-        lighting.setLaneColor(LauncherLane.CENTER, color);
-        lighting.setLaneColor(LauncherLane.RIGHT, color);
+        leftLight.apply(color);
+        centerLight.apply(color);
+        rightLight.apply(color);
     }
 
     private void refreshCurrentState() {
@@ -135,15 +141,16 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
     }
 
     private void pushTelemetry() {
+        telemetry.clearAll();
         double first = Range.clip(BenchConfig.firstLimitPosition, 0.0, 1.0);
         double second = Range.clip(BenchConfig.secondLimitPosition, 0.0, 1.0);
 
         telemetry.addData("State", currentState.displayName());
         telemetry.addData("First limit", "%.2f", first);
         telemetry.addData("Second limit", "%.2f", second);
-        telemetry.addLine(formatActuatorStatus(leftActuator));
-        telemetry.addLine(formatActuatorStatus(centerActuator));
-        telemetry.addLine(formatActuatorStatus(rightActuator));
+        telemetry.addLine(formatLaneStatus(leftActuator, leftLight));
+        telemetry.addLine(formatLaneStatus(centerActuator, centerLight));
+        telemetry.addLine(formatLaneStatus(rightActuator, rightLight));
         telemetry.update();
 
         if (panelsTelemetry != null) {
@@ -154,13 +161,35 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
         }
     }
 
-    private static String formatActuatorStatus(LaneActuator actuator) {
+    private static String formatLaneStatus(LaneActuator actuator, LaneLight light) {
+        String servoStatus;
         if (!actuator.isPresent()) {
-            return actuator.getLane().name() + ": missing (" + actuator.getName() + ")";
+            servoStatus = "servo missing (" + actuator.getName() + ")";
+        } else {
+            servoStatus = actuator.getServoPositionSummary() + " (" + actuator.getName() + ")";
         }
-        return actuator.getLane().name() + ": "
-                + actuator.getServoPositionSummary()
-                + " (" + actuator.getName() + ")";
+
+        String lightStatus;
+        if (!light.isPresent()) {
+            lightStatus = "light missing (" + light.getName() + ")";
+        } else {
+            lightStatus = light.getPositionSummary();
+        }
+
+        return actuator.getLane().name() + ": " + servoStatus + "; " + lightStatus;
+    }
+
+    private static String resolveLightName(String preferred) {
+        if (preferred != null && !preferred.isEmpty()) {
+            return preferred;
+        }
+        return LightingSubsystem.sharedServoName;
+    }
+
+    private void disableLights() {
+        leftLight.apply(ArtifactColor.NONE);
+        centerLight.apply(ArtifactColor.NONE);
+        rightLight.apply(ArtifactColor.NONE);
     }
 
     private static final class LaneActuator {
@@ -203,9 +232,78 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
 
         String getServoPositionSummary() {
             if (servo == null) {
-                return "n/a";
+                return "pos=n/a";
             }
             return String.format("pos=%.2f", servo.getPosition());
+        }
+    }
+
+    private static final class LaneLight {
+        private final LauncherLane lane;
+        private final String name;
+        private final Servo servo;
+
+        LaneLight(LauncherLane lane, String servoName, HardwareMap hardwareMap) {
+            this.lane = lane;
+            this.name = servoName == null ? "" : servoName;
+            this.servo = resolveServo(servoName, hardwareMap);
+        }
+
+        void apply(ArtifactColor color) {
+            if (servo == null) {
+                return;
+            }
+            servo.setPosition(resolvePosition(color));
+        }
+
+        boolean isPresent() {
+            return servo != null;
+        }
+
+        LauncherLane getLane() {
+            return lane;
+        }
+
+        String getName() {
+            return name.isEmpty() ? "(unset)" : name;
+        }
+
+        String getPositionSummary() {
+            if (servo == null) {
+                return "light pos=n/a";
+            }
+            return String.format("light pos=%.3f", servo.getPosition());
+        }
+
+        private static Servo resolveServo(String servoName, HardwareMap hardwareMap) {
+            if (servoName != null && !servoName.isEmpty()) {
+                try {
+                    return hardwareMap.get(Servo.class, servoName);
+                } catch (IllegalArgumentException ignored) {
+                    // fall through to shared lookup
+                }
+            }
+            if (LightingSubsystem.sharedServoName != null && !LightingSubsystem.sharedServoName.isEmpty()) {
+                try {
+                    return hardwareMap.get(Servo.class, LightingSubsystem.sharedServoName);
+                } catch (IllegalArgumentException ignored) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        private static double resolvePosition(ArtifactColor color) {
+            switch (color) {
+                case GREEN:
+                    return LightingSubsystem.GREEN_POS;
+                case PURPLE:
+                    return LightingSubsystem.PURPLE_POS;
+                case NONE:
+                case UNKNOWN:
+                default:
+                    return LightingSubsystem.OFF_POS;
+            }
         }
     }
 }
