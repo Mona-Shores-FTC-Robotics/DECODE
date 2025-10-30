@@ -150,7 +150,16 @@ public class DriveSubsystem implements Subsystem {
 
     public Pose2D getPose() {
         Pose pose = follower.getPose();
-        return new Pose2D(DistanceUnit.INCH, pose.getX(), pose.getY(), AngleUnit.RADIANS, follower.getHeading());
+        if (pose == null) {
+            return new Pose2D(DistanceUnit.INCH, 0.0, 0.0, AngleUnit.RADIANS, 0.0);
+        }
+        return new Pose2D(
+                DistanceUnit.INCH,
+                pose.getX(),
+                pose.getY(),
+                AngleUnit.RADIANS,
+                follower.getHeading()
+        );
     }
 
     public Pose getFollowerPose() {

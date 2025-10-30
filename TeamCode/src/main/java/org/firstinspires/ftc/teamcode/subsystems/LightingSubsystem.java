@@ -27,14 +27,10 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         BUSY
     }
 
-    /**
-     * Hardware names for the lane indicator servos. By default the class looks for a
-     * distinct servo per launcher lane, falling back to {@link #sharedServoName} if set.
-     */
+    /** Hardware names for the lane indicator servos. */
     public static String leftServoName = "indicator_left";
     public static String centerServoName = "indicator_center";
     public static String rightServoName = "indicator_right";
-    public static String sharedServoName = "indicator";
 
     public static double GREEN_POS = 0.500;
     public static double PURPLE_POS = 0.722;
@@ -52,23 +48,16 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private Alliance alliance = Alliance.UNKNOWN;
 
     public LightingSubsystem(HardwareMap hardwareMap) {
-        Servo shared = tryGetServo(hardwareMap, sharedServoName);
-
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(
-                resolveLaneServo(hardwareMap, leftServoName, shared)));
+                tryGetServo(hardwareMap, leftServoName)));
         laneIndicators.put(LauncherLane.CENTER, new LaneIndicator(
-                resolveLaneServo(hardwareMap, centerServoName, shared)));
+                tryGetServo(hardwareMap, centerServoName)));
         laneIndicators.put(LauncherLane.RIGHT, new LaneIndicator(
-                resolveLaneServo(hardwareMap, rightServoName, shared)));
+                tryGetServo(hardwareMap, rightServoName)));
 
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
         }
-    }
-
-    private static Servo resolveLaneServo(HardwareMap hardwareMap, String name, Servo fallback) {
-        Servo laneServo = tryGetServo(hardwareMap, name);
-        return laneServo != null ? laneServo : fallback;
     }
 
     private static Servo tryGetServo(HardwareMap hardwareMap, String name) {

@@ -1,16 +1,22 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.acmerobotics.dashboard.config.Config;
-import com.bylazar.telemetry.TelemetryManager;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.ServoController;
+import com.qualcomm.robotcore.hardware.ServoControllerEx;
+import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
+import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.ftc.GamepadEx;
+
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
+import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
@@ -24,9 +30,6 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
 
     @Config
     public static class BenchConfig {
-        public static String leftServoName = ShooterSubsystem.LeftFeederConfig.servoName;
-        public static String centerServoName = ShooterSubsystem.CenterFeederConfig.servoName;
-        public static String rightServoName = ShooterSubsystem.RightFeederConfig.servoName;
         public static double firstLimitPosition = 0.25;
         public static double secondLimitPosition = 0.75;
     }
@@ -36,55 +39,85 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
         SECOND_LIMIT;
 
         String displayName() {
-            switch (this) {
-                case FIRST_LIMIT:
-                    return "First limit";
-                case SECOND_LIMIT:
-                default:
-                    return "Second limit";
-            }
+            return this == FIRST_LIMIT ? "First limit" : "Second limit";
         }
     }
 
-    private TelemetryManager panelsTelemetry;
-    private LaneActuator leftActuator;
-    private LaneActuator centerActuator;
-    private LaneActuator rightActuator;
-    private LaneLight leftLight;
-    private LaneLight centerLight;
-    private LaneLight rightLight;
+    private ShooterSubsystem shooter;
+    private LightingSubsystem lighting;
+    private AllianceSelector allianceSelector;
+    private Alliance selectedAlliance = Alliance.BLUE;
+
+    private Servo leftFeeder;
+    private Servo centerFeeder;
+    private Servo rightFeeder;
+    private Servo leftIndicator;
+    private Servo centerIndicator;
+    private Servo rightIndicator;
+
     private TargetState currentState = TargetState.FIRST_LIMIT;
     private boolean lastRightBumper = false;
     private boolean lastLeftBumper = false;
 
     @Override
     public void runOpMode() {
-        panelsTelemetry = PanelsBridge.preparePanels();
+        shooter = new ShooterSubsystem(hardwareMap);
+        lighting = new LightingSubsystem(hardwareMap);
+        bindHardware(hardwareMap);
 
-        leftActuator = new LaneActuator(LauncherLane.LEFT, BenchConfig.leftServoName, hardwareMap);
-        centerActuator = new LaneActuator(LauncherLane.CENTER, BenchConfig.centerServoName, hardwareMap);
-        rightActuator = new LaneActuator(LauncherLane.RIGHT, BenchConfig.rightServoName, hardwareMap);
+        shooter.initialize();
+        lighting.initialize();
+        lighting.clearLaneColors();
 
-        leftLight = new LaneLight(LauncherLane.LEFT, resolveLightName(LightingSubsystem.leftServoName), hardwareMap);
-        centerLight = new LaneLight(LauncherLane.CENTER, resolveLightName(LightingSubsystem.centerServoName), hardwareMap);
-        rightLight = new LaneLight(LauncherLane.RIGHT, resolveLightName(LightingSubsystem.rightServoName), hardwareMap);
+        BindingManager.reset();
+        GamepadEx driverPad = new GamepadEx(() -> gamepad1);
+        allianceSelector = new AllianceSelector(driverPad, Alliance.BLUE);
+        allianceSelector.applySelection(null, lighting);
+        selectedAlliance = allianceSelector.getSelectedAlliance();
+        lighting.indicateAllianceInit();
 
         telemetry.setAutoClear(false);
         telemetry.clearAll();
-        applyCurrentState();
-        pushTelemetry();
 
-        telemetry.addLine("Ready: RB -> first limit, LB -> second limit");
-        telemetry.update();
+        while (!isStarted() && !isStopRequested()) {
+            BindingManager.update();
+            allianceSelector.updateFromVision(null);
+
+            Alliance currentAlliance = allianceSelector.getSelectedAlliance();
+            if (currentAlliance != selectedAlliance) {
+                selectedAlliance = currentAlliance;
+                allianceSelector.applySelection(null, lighting);
+                lighting.indicateAllianceInit();
+            }
+
+            telemetry.clearAll();
+            telemetry.addData("Alliance", selectedAlliance);
+            telemetry.addLine("D-pad Left = Blue, Right = Red, Down = Auto");
+            telemetry.addLine("Press START to begin diagnostic");
+            telemetry.update();
+
+            idle();
+        }
+
+        BindingManager.reset();
 
         waitForStart();
 
         if (isStopRequested()) {
-            disableLights();
+            lighting.disable();
             return;
         }
 
+        allianceSelector.lockSelection();
+        allianceSelector.applySelection(null, lighting);
+        lighting.indicateIdle();
+
         telemetry.clearAll();
+        telemetry.addLine("Ready: RB -> first limit, LB -> second limit");
+        telemetry.update();
+
+        applyCurrentState();
+        pushTelemetry();
 
         while (opModeIsActive()) {
             boolean rb = gamepad1.right_bumper;
@@ -103,31 +136,52 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
             lastRightBumper = rb;
             lastLeftBumper = lb;
 
+            lighting.periodic();
             pushTelemetry();
             idle();
         }
 
-        disableLights();
+        lighting.disable();
+    }
+
+    private void bindHardware(HardwareMap hardwareMap) {
+        leftFeeder = tryGetServo(hardwareMap, ShooterSubsystem.LeftFeederConfig.servoName);
+        centerFeeder = tryGetServo(hardwareMap, ShooterSubsystem.CenterFeederConfig.servoName);
+        rightFeeder = tryGetServo(hardwareMap, ShooterSubsystem.RightFeederConfig.servoName);
+
+        leftIndicator = tryGetServo(hardwareMap, LightingSubsystem.leftServoName);
+        centerIndicator = tryGetServo(hardwareMap, LightingSubsystem.centerServoName);
+        rightIndicator = tryGetServo(hardwareMap, LightingSubsystem.rightServoName);
+
+        forceStandardMode(leftFeeder);
+        forceStandardMode(centerFeeder);
+        forceStandardMode(rightFeeder);
+        forceStandardMode(leftIndicator);
+        forceStandardMode(centerIndicator);
+        forceStandardMode(rightIndicator);
     }
 
     private void applyCurrentState() {
         double position = resolveTargetPosition();
         ArtifactColor color = resolveTargetColor();
 
-        leftActuator.apply(position);
-        centerActuator.apply(position);
-        rightActuator.apply(position);
+        setFeederPosition(leftFeeder, position);
+        setFeederPosition(centerFeeder, position);
+        setFeederPosition(rightFeeder, position);
 
-        leftLight.apply(color);
-        centerLight.apply(color);
-        rightLight.apply(color);
+        lighting.setLaneColor(LauncherLane.LEFT, color);
+        lighting.setLaneColor(LauncherLane.CENTER, color);
+        lighting.setLaneColor(LauncherLane.RIGHT, color);
+        applyIndicatorColor(leftIndicator, color);
+        applyIndicatorColor(centerIndicator, color);
+        applyIndicatorColor(rightIndicator, color);
     }
 
     private void refreshCurrentState() {
         double position = resolveTargetPosition();
-        leftActuator.apply(position);
-        centerActuator.apply(position);
-        rightActuator.apply(position);
+        setFeederPosition(leftFeeder, position);
+        setFeederPosition(centerFeeder, position);
+        setFeederPosition(rightFeeder, position);
     }
 
     private double resolveTargetPosition() {
@@ -148,161 +202,89 @@ public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
         telemetry.addData("State", currentState.displayName());
         telemetry.addData("First limit", "%.2f", first);
         telemetry.addData("Second limit", "%.2f", second);
-        telemetry.addLine(formatLaneStatus(leftActuator, leftLight));
-        telemetry.addLine(formatLaneStatus(centerActuator, centerLight));
-        telemetry.addLine(formatLaneStatus(rightActuator, rightLight));
+        telemetry.addLine(formatLaneStatus("LEFT", ShooterSubsystem.LeftFeederConfig.servoName,
+                leftFeeder, LightingSubsystem.leftServoName, leftIndicator));
+        telemetry.addLine(formatLaneStatus("CENTER", ShooterSubsystem.CenterFeederConfig.servoName,
+                centerFeeder, LightingSubsystem.centerServoName, centerIndicator));
+        telemetry.addLine(formatLaneStatus("RIGHT", ShooterSubsystem.RightFeederConfig.servoName,
+                rightFeeder, LightingSubsystem.rightServoName, rightIndicator));
         telemetry.update();
 
-        if (panelsTelemetry != null) {
-            panelsTelemetry.debug("Bench state", currentState.displayName());
-            panelsTelemetry.debug("First limit", String.format("%.2f", first));
-            panelsTelemetry.debug("Second limit", String.format("%.2f", second));
-            panelsTelemetry.update(telemetry);
-        }
     }
 
-    private static String formatLaneStatus(LaneActuator actuator, LaneLight light) {
-        String servoStatus;
-        if (!actuator.isPresent()) {
-            servoStatus = "servo missing (" + actuator.getName() + ")";
-        } else {
-            servoStatus = actuator.getServoPositionSummary() + " (" + actuator.getName() + ")";
-        }
-
-        String lightStatus;
-        if (!light.isPresent()) {
-            lightStatus = "light missing (" + light.getName() + ")";
-        } else {
-            lightStatus = light.getPositionSummary();
-        }
-
-        return actuator.getLane().name() + ": " + servoStatus + "; " + lightStatus;
-    }
-
-    private static String resolveLightName(String preferred) {
-        if (preferred != null && !preferred.isEmpty()) {
-            return preferred;
-        }
-        return LightingSubsystem.sharedServoName;
-    }
-
-    private void disableLights() {
-        leftLight.apply(ArtifactColor.NONE);
-        centerLight.apply(ArtifactColor.NONE);
-        rightLight.apply(ArtifactColor.NONE);
-    }
-
-    private static final class LaneActuator {
-        private final LauncherLane lane;
-        private final String name;
-        private final Servo servo;
-
-        LaneActuator(LauncherLane lane, String servoName, HardwareMap hardwareMap) {
-            this.lane = lane;
-            this.name = servoName == null ? "" : servoName;
-            Servo resolved = null;
-            if (servoName != null && !servoName.isEmpty()) {
-                try {
-                    resolved = hardwareMap.get(Servo.class, servoName);
-                } catch (IllegalArgumentException ignored) {
-                    resolved = null;
-                }
-            }
-            this.servo = resolved;
-        }
-
-        void apply(double position) {
-            if (servo == null) {
-                return;
-            }
-            servo.setPosition(Range.clip(position, 0.0, 1.0));
-        }
-
-        boolean isPresent() {
-            return servo != null;
-        }
-
-        LauncherLane getLane() {
-            return lane;
-        }
-
-        String getName() {
-            return name.isEmpty() ? "(unset)" : name;
-        }
-
-        String getServoPositionSummary() {
-            if (servo == null) {
-                return "pos=n/a";
-            }
-            return String.format("pos=%.2f", servo.getPosition());
-        }
-    }
-
-    private static final class LaneLight {
-        private final LauncherLane lane;
-        private final String name;
-        private final Servo servo;
-
-        LaneLight(LauncherLane lane, String servoName, HardwareMap hardwareMap) {
-            this.lane = lane;
-            this.name = servoName == null ? "" : servoName;
-            this.servo = resolveServo(servoName, hardwareMap);
-        }
-
-        void apply(ArtifactColor color) {
-            if (servo == null) {
-                return;
-            }
-            servo.setPosition(resolvePosition(color));
-        }
-
-        boolean isPresent() {
-            return servo != null;
-        }
-
-        LauncherLane getLane() {
-            return lane;
-        }
-
-        String getName() {
-            return name.isEmpty() ? "(unset)" : name;
-        }
-
-        String getPositionSummary() {
-            if (servo == null) {
-                return "light pos=n/a";
-            }
-            return String.format("light pos=%.3f", servo.getPosition());
-        }
-
-        private static Servo resolveServo(String servoName, HardwareMap hardwareMap) {
-            if (servoName != null && !servoName.isEmpty()) {
-                try {
-                    return hardwareMap.get(Servo.class, servoName);
-                } catch (IllegalArgumentException ignored) {
-                    // fall through to shared lookup
-                }
-            }
-            if (LightingSubsystem.sharedServoName != null && !LightingSubsystem.sharedServoName.isEmpty()) {
-                try {
-                    return hardwareMap.get(Servo.class, LightingSubsystem.sharedServoName);
-                } catch (IllegalArgumentException ignored) {
-                    return null;
-                }
-            }
+    private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
+        if (name == null || name.isEmpty()) {
             return null;
         }
+        try {
+            return hardwareMap.get(Servo.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
 
-        private static double resolvePosition(ArtifactColor color) {
-            switch (color) {
-                case GREEN:
-                    return LightingSubsystem.GREEN_POS;
-                case PURPLE:
-                    return LightingSubsystem.PURPLE_POS;
-                case NONE:
-                case UNKNOWN:
-                default:
-                    return LightingSubsystem.OFF_POS;
+    private static void setFeederPosition(Servo servo, double position) {
+        if (servo == null) {
+            return;
+        }
+        servo.setPosition(Range.clip(position, 0.0, 1.0));
+    }
+
+    private void applyIndicatorColor(Servo servo, ArtifactColor color) {
+        if (servo == null) {
+            return;
+        }
+        double target;
+        switch (color) {
+            case GREEN:
+                target = LightingSubsystem.GREEN_POS;
+                break;
+            case PURPLE:
+                target = LightingSubsystem.PURPLE_POS;
+                break;
+            case NONE:
+            case UNKNOWN:
+            default:
+                target = LightingSubsystem.OFF_POS;
+                break;
+        }
+        servo.setPosition(Range.clip(target, 0.0, 1.0));
+    }
+
+    private static String formatLaneStatus(String label, String feederName, Servo feeder,
+                                           String indicatorName, Servo indicator) {
+        String feederStatus = feeder == null
+                ? "feeder missing (" + safeName(feederName) + ")"
+                : String.format("feeder %.3f (%s)", feeder.getPosition(), safeName(feederName));
+        String lightStatus = indicator == null
+                ? "light missing (" + safeName(indicatorName) + ")"
+                : String.format("light %.3f (%s)", indicator.getPosition(), safeName(indicatorName));
+        return label + ": " + feederStatus + "; " + lightStatus;
+    }
+
+    private static String safeName(String name) {
+        return (name == null || name.isEmpty()) ? "unset" : name;
+    }
+
+    private static void forceStandardMode(Servo servo) {
+        if (servo == null) {
+            return;
+        }
+        ServoController controller = servo.getController();
+        if (controller instanceof ServoControllerEx) {
+            ServoControllerEx controllerEx = (ServoControllerEx) controller;
+            controllerEx.setServoType(
+                    servo.getPortNumber(),
+                    ServoConfigurationType.getStandardServoType()
+            );
+        } else {
+            try {
+                ServoConfigurationType standard = ServoConfigurationType.getStandardServoType();
+                java.lang.reflect.Method method = controller.getClass().getMethod(
+                        "setServoType", int.class, ServoConfigurationType.class);
+                method.invoke(controller, servo.getPortNumber(), standard);
+            } catch (ReflectiveOperationException ignored) {
+                // No supported API – leave mode unchanged.
             }
         }
     }

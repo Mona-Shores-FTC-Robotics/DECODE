@@ -2,12 +2,6 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.bylazar.telemetry.TelemetryManager;
 
-import dev.nextftc.bindings.BindingManager;
-import dev.nextftc.core.components.BindingsComponent;
-import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.ftc.GamepadEx;
-import dev.nextftc.ftc.NextFTCOpMode;
-
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
@@ -15,10 +9,17 @@ import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
+import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.TelemetryPublisher;
 
-@com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "FieldCentricTeleOp", group = "Field Centric TeleOp")
-public class TeleOp extends NextFTCOpMode {
+import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.core.components.BindingsComponent;
+import dev.nextftc.core.components.SubsystemComponent;
+import dev.nextftc.ftc.GamepadEx;
+import dev.nextftc.ftc.NextFTCOpMode;
+
+@com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "TeleopTester", group = "Field Centric TeleOp")
+public class TeleOpTester extends NextFTCOpMode {
 
     private Robot robot;
     private DriverBindings driverBindings;
@@ -44,11 +45,13 @@ public class TeleOp extends NextFTCOpMode {
                 new SubsystemComponent(robot.intake),
                 new SubsystemComponent(robot.lighting)
         );
+
+        robot.lighting.clearLaneColors();
+        robot.lighting.setAlliance(Alliance.BLUE);
     }
 
     public void onStart() {
         panelsTelemetry = PanelsBridge.preparePanels();
-        robot.initialize();
         robot.lighting.indicateIdle();
     }
 
