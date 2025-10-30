@@ -1,14 +1,15 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
-import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
+import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
@@ -81,7 +82,8 @@ public class Autonomous extends OpMode {
         vision = robot.vision;
         follower = robot.drive.getFollower();
 
-        panelsTelemetry = PanelsBridge.preparePanels();
+        robot.logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), DEFAULT_ALLIANCE, "AutonomousInit");
+        panelsTelemetry = robot.telemetry.panelsTelemetry();
         stepTimer = new Timer();
 
         robot.drive.initialize();
@@ -173,12 +175,25 @@ public class Autonomous extends OpMode {
         telemetry.addData("Decode pattern", formatDecodePattern(activeDecodePattern));
         telemetry.addLine("D-pad ↑ cycle decode pattern, ↓ to clear (testing)");
         telemetry.update();
+
+        Pose2D pose = robot.drive.getPose();
+        if (pose != null) {
+            robot.logger.logNumber("Autonomous", "PoseX", pose.getX(DistanceUnit.INCH));
+            robot.logger.logNumber("Autonomous", "PoseY", pose.getY(DistanceUnit.INCH));
+            robot.logger.logNumber("Autonomous", "HeadingDeg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
+        }
+        robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
+        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
+        robot.logger.sampleSources();
+        robot.telemetry.updateDriverStation(telemetry);
     }
 
     @Override
     public void start() {
         allianceLocked = true;
         opModeStarted = true;
+        robot.logger.updateAlliance(activeAlliance);
+        robot.logger.logEvent("Autonomous", "Start");
         if (lighting != null) {
             if (activeDecodePattern.length > 0) {
                 lighting.showDecodePattern(activeDecodePattern);
@@ -243,6 +258,8 @@ public class Autonomous extends OpMode {
         telemetry.addData("Raw ftc XYZ", formatRawFtc());
         telemetry.addData("Raw robot XYZ", formatRawRobot());
         telemetry.update();
+        robot.logger.sampleSources();
+        robot.telemetry.updateDriverStation(telemetry);
     }
 
     @Override
@@ -257,6 +274,8 @@ public class Autonomous extends OpMode {
         if (vision != null) {
             vision.stop();
         }
+        robot.logger.logEvent("Autonomous", "Stop");
+        robot.logger.stopSession();
     }
 
     private void autonomousStep() {
@@ -442,6 +461,8 @@ public class Autonomous extends OpMode {
         activeAlliance = alliance;
         if (robot != null) {
             robot.setAlliance(alliance);
+            robot.logger.updateAlliance(alliance);
+            robot.logger.logEvent("Autonomous", "Alliance-" + alliance.name());
         } else {
             RobotState.setAlliance(alliance);
             if (vision != null) {

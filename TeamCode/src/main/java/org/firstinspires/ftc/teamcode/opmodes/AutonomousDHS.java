@@ -12,6 +12,7 @@ import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
@@ -70,7 +71,8 @@ public class AutonomousDHS extends OpMode {
     public void init() {
         BindingManager.reset();
         robot = new Robot(hardwareMap);
-        panelsTelemetry = PanelsBridge.preparePanels();
+        robot.logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), DEFAULT_ALLIANCE, "AutonomousInit");
+        panelsTelemetry = robot.telemetry.panelsTelemetry();
         stepTimer = new Timer();
 
         robot.initialize();
@@ -130,6 +132,17 @@ public class AutonomousDHS extends OpMode {
         telemetry.addLine("LB/RB preview other alliance, Y rebuilds layout");
         telemetry.addLine("D-pad Up cycles decode pattern, Down clears it");
         telemetry.update();
+
+        Pose2D pose = follower.getPose();
+        if (pose != null) {
+            robot.logger.logNumber("AutonomousDHS", "PoseX", pose.getX(DistanceUnit.INCH));
+            robot.logger.logNumber("AutonomousDHS", "PoseY", pose.getY(DistanceUnit.INCH));
+            robot.logger.logNumber("AutonomousDHS", "HeadingDeg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
+        }
+        robot.logger.logNumber("AutonomousDHS", "RoutineStep", routineStep.ordinal());
+        robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
+        robot.logger.sampleSources();
+        robot.telemetry.updateDriverStation(telemetry);
     }
 
     @Override
@@ -138,6 +151,8 @@ public class AutonomousDHS extends OpMode {
         opModeStarted = true;
         allianceSelector.lockSelection();
         allianceSelector.applySelection(robot, robot.lighting);
+        robot.logger.updateAlliance(activeAlliance);
+        robot.logger.logEvent("AutonomousDHS", "Start");
 
         LightingSubsystem lighting = robot.lighting;
         if (lighting != null) {
@@ -210,6 +225,17 @@ public class AutonomousDHS extends OpMode {
         telemetry.addData("Raw ftc XYZ", formatRawFtc());
         telemetry.addData("Raw robot XYZ", formatRawRobot());
         telemetry.update();
+
+        Pose2D pose = follower.getPose();
+        if (pose != null) {
+            robot.logger.logNumber("AutonomousDHS", "PoseX", pose.getX(DistanceUnit.INCH));
+            robot.logger.logNumber("AutonomousDHS", "PoseY", pose.getY(DistanceUnit.INCH));
+            robot.logger.logNumber("AutonomousDHS", "HeadingDeg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
+        }
+        robot.logger.logNumber("AutonomousDHS", "RoutineStep", routineStep.ordinal());
+        robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
+        robot.logger.sampleSources();
+        robot.telemetry.updateDriverStation(telemetry);
     }
 
     @Override
@@ -224,6 +250,8 @@ public class AutonomousDHS extends OpMode {
         }
         robot.drive.stop();
         robot.vision.stop();
+        robot.logger.logEvent("AutonomousDHS", "Stop");
+        robot.logger.stopSession();
     }
 
     private void autonomousStep() {
@@ -347,6 +375,8 @@ public class AutonomousDHS extends OpMode {
         }
         activeAlliance = safeAlliance;
         robot.setAlliance(activeAlliance);
+        robot.logger.updateAlliance(activeAlliance);
+        robot.logger.logEvent("AutonomousDHS", "Alliance-" + activeAlliance.name());
 
         currentLayout = AutoField.layoutForAlliance(activeAlliance);
         if (startOverride != null) {

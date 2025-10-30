@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
-import com.acmerobotics.dashboard.config.Config;
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -24,11 +24,11 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
  * Diagnostic driver-control OpMode for exercising the bench launcher servos and paired lane lights.
  * Right bumper commands the configured "first" limit, left bumper commands the "second" limit.
  */
-@Config
+@Configurable
 @TeleOp(name = "Bench Launcher Diagnostic", group = "Diagnostics")
 public class BenchLauncherDiagnosticTeleOp extends LinearOpMode {
 
-    @Config
+    @Configurable
     public static class BenchConfig {
         public static double firstLimitPosition = 0.25;
         public static double secondLimitPosition = 0.75;

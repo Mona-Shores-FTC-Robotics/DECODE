@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.util;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.bylazar.telemetry.TelemetryManager;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -9,60 +8,39 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 
-
 /**
- * TelemetryPublisher centralises the construction of telemetry packets for the
- * FTC Dashboard and AdvantageScope.  It publishes drive and shooter state
- * variables on every loop so that they can be graphed or visualised.
- *
- * <p>The FTC Dashboard library will automatically aggregate packets from
- * multiple calls in the same loop, so publishing from both drive and
- * shooter in one OpMode is safe.</p>
+ * TelemetryPublisher centralises the construction of telemetry lines for FTControl Panels
+ * (and optional PsiKit logging).  It publishes drive and shooter state values each loop so
+ * they can be graphed or inspected without keeping the FTC Dashboard dependency.
  */
 public class TelemetryPublisher {
 
-    private final FtcDashboard dash = FtcDashboard.getInstance();
+    private TelemetryManager panelsTelemetry;
     private final PsiKitAdapter logger;
 
-    /**
-     * Creates a TelemetryPublisher.  If a {@link PsiKitAdapter} is provided the
-     * publisher will log all values to a CSV file in addition to sending them
-     * to the FTC Dashboard.  Passing {@code null} disables file logging.
-     *
-     * @param logger an optional logger for persistent recordings
-     */
-    public TelemetryPublisher(PsiKitAdapter logger) {
+    public TelemetryPublisher(TelemetryManager panelsTelemetry, PsiKitAdapter logger) {
+        this.panelsTelemetry = panelsTelemetry;
         this.logger = logger;
     }
 
-    /**
-     * Convenience constructor that does not record to a file.  Only live
-     * dashboard telemetry will be produced.
-     */
+    public TelemetryPublisher(TelemetryManager panelsTelemetry) {
+        this(panelsTelemetry, null);
+    }
+
     public TelemetryPublisher() {
-        this(null);
+        this(null, null);
+    }
+
+    public void setTelemetryManager(TelemetryManager panelsTelemetry) {
+        this.panelsTelemetry = panelsTelemetry;
     }
 
     /**
-     * Publish drivetrain telemetry to the dashboard.  Includes joystick inputs,
-     * the current pose estimate and slow mode state.
-     *
-     * @param drive    the drive subsystem to read the pose from
-     * @param lx       left stick x
-     * @param ly       left stick y
-     * @param rx       right stick x (rotation)
-     * @param slowMode whether slow mode is active
+     * Publish drivetrain telemetry to Panels. Includes joystick inputs, pose, and motor stats.
      */
     public void publishDrive(DriveSubsystem drive,
                              double lx, double ly, double rx,
                              boolean slowMode) {
-        TelemetryPacket p = new TelemetryPacket();
-        p.put("lx", lx);
-        p.put("ly", ly);
-        p.put("rx", rx);
-        p.put("drive_mode", drive.getDriveMode().name());
-        p.put("slow_mode", slowMode);
-
         double lfPower = drive.getLfPower();
         double rfPower = drive.getRfPower();
         double lbPower = drive.getLbPower();
@@ -71,41 +49,30 @@ public class TelemetryPublisher {
         double rfVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getRfVelocityTicksPerSec()));
         double lbVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getLbVelocityTicksPerSec()));
         double rbVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getRbVelocityTicksPerSec()));
-        p.put("lf_power", lfPower);
-        p.put("rf_power", rfPower);
-        p.put("lb_power", lbPower);
-        p.put("rb_power", rbPower);
-        p.put("lf_vel_ips", lfVelIps);
-        p.put("rf_vel_ips", rfVelIps);
-        p.put("lb_vel_ips", lbVelIps);
-        p.put("rb_vel_ips", rbVelIps);
-
         Pose2D pose = drive.getPose();
-        double xIn = pose.getX(DistanceUnit.INCH);
-        double yIn = pose.getY(DistanceUnit.INCH);
-        double headingRad = pose.getHeading(AngleUnit.RADIANS);
-        p.put("x_in", xIn);
-        p.put("y_in", yIn);
-        p.put("heading_deg", Math.toDegrees(headingRad));
+        if (pose == null) {
+            pose = new Pose2D(DistanceUnit.INCH, 0.0, 0.0, AngleUnit.RADIANS, 0.0);
+        }
 
-//        var field = p.fieldOverlay();
-//        field.setStroke("yellow");
-//        field.strokeCircle(xIn, yIn, 1.5);
-//        double arrowLen = 6.0;
-//        double arrowX = xIn + arrowLen * Math.cos(headingRad);
-//        double arrowY = yIn + arrowLen * Math.sin(headingRad);
-//        field.strokeLine(xIn, yIn, arrowX, arrowY);
-//        double leftX = arrowX - 2 * Math.cos(headingRad - Math.PI / 6);
-//        double leftY = arrowY - 2 * Math.sin(headingRad - Math.PI / 6);
-//        double rightX = arrowX - 2 * Math.cos(headingRad + Math.PI / 6);
-//        double rightY = arrowY - 2 * Math.sin(headingRad + Math.PI / 6);
-//        field.strokeLine(arrowX, arrowY, leftX, leftY);
-//        field.strokeLine(arrowX, arrowY, rightX, rightY);
+        if (panelsTelemetry != null) {
+            panelsTelemetry.debug("drive/lx", lx);
+            panelsTelemetry.debug("drive/ly", ly);
+            panelsTelemetry.debug("drive/rx", rx);
+            panelsTelemetry.debug("drive/mode", drive.getDriveMode().name());
+            panelsTelemetry.debug("drive/slowMode", slowMode);
+            panelsTelemetry.debug("drive/lfPower", lfPower);
+            panelsTelemetry.debug("drive/rfPower", rfPower);
+            panelsTelemetry.debug("drive/lbPower", lbPower);
+            panelsTelemetry.debug("drive/rbPower", rbPower);
+            panelsTelemetry.debug("drive/lfVelIps", lfVelIps);
+            panelsTelemetry.debug("drive/rfVelIps", rfVelIps);
+            panelsTelemetry.debug("drive/lbVelIps", lbVelIps);
+            panelsTelemetry.debug("drive/rbVelIps", rbVelIps);
+            panelsTelemetry.debug("drive/xIn", pose.getX(DistanceUnit.INCH));
+            panelsTelemetry.debug("drive/yIn", pose.getY(DistanceUnit.INCH));
+            panelsTelemetry.debug("drive/headingDeg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
+        }
 
-        // Send to the live dashboard
-        dash.sendTelemetryPacket(p);
-
-        // Record to persistent log if enabled
         if (logger != null) {
             logger.recordNumber("drive_lx", lx);
             logger.recordNumber("drive_ly", ly);
@@ -127,27 +94,20 @@ public class TelemetryPublisher {
     }
 
     /**
-     * Publish shooter telemetry.  Includes the target RPM, measured RPM,
-     * control error and applied power.
-     *
-     * @param targetRpm desired wheel speed
-     * @param rpm       current measured speed
-     * @param power     last power sent to the motors
-     * @param error     current error (target – measured)
+     * Publish shooter telemetry. Includes target RPM, measured RPM, error, and power.
      */
     public void publishShooter(double targetRpm, double rpm, double power, double error) {
-        TelemetryPacket p = new TelemetryPacket();
-        p.put("shooter_target_rpm", targetRpm);
-        p.put("shooter_rpm", rpm);
-        p.put("shooter_err", error);
-        p.put("shooter_power", power);
-        dash.sendTelemetryPacket(p);
+        if (panelsTelemetry != null) {
+            panelsTelemetry.debug("shooter/targetRpm", targetRpm);
+            panelsTelemetry.debug("shooter/rpm", rpm);
+            panelsTelemetry.debug("shooter/error", error);
+            panelsTelemetry.debug("shooter/power", power);
+        }
         if (logger != null) {
             logger.recordNumber("shooter_target_rpm", targetRpm);
             logger.recordNumber("shooter_rpm", rpm);
             logger.recordNumber("shooter_err", error);
             logger.recordNumber("shooter_power", power);
-            // Flush immediately to minimise data loss if the robot shuts down
             logger.flush();
         }
     }

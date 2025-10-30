@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import android.graphics.Color;
 
-import com.acmerobotics.dashboard.config.Config;
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -23,7 +23,7 @@ import java.util.Map;
  * state machine so OpModes can request work and poll when it is complete without
  * touching timers or hardware directly.
  */
-@Config
+@Configurable
 public class IntakeSubsystem implements Subsystem {
 
     public enum IntakeState {
@@ -32,7 +32,7 @@ public class IntakeSubsystem implements Subsystem {
         FULL
     }
 
-    @Config
+    @Configurable
     public static class LaneSensorConfig {
         public static boolean enablePolling = true;
         public static String leftSensor = "lane_left_color";
@@ -191,6 +191,10 @@ public class IntakeSubsystem implements Subsystem {
             return;
         }
         sensorTimer.reset();
+        refreshLaneSensors();
+    }
+
+    public void refreshLaneSensors() {
         for (LauncherLane lane : LauncherLane.values()) {
             ColorSensor sensor = laneSensors.get(lane);
             if (sensor == null) {
@@ -325,6 +329,7 @@ public class IntakeSubsystem implements Subsystem {
     public interface LaneColorListener {
         void onLaneColorChanged(LauncherLane lane, ArtifactColor color);
     }
+
 
     private static int clamp(int value, int min, int max) {
         if (value < min) {
