@@ -145,6 +145,56 @@ public class IntakeSubsystem implements Subsystem {
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
     private boolean anyLaneSensorsPresent = false;
 
+    public static final class Inputs {
+        public IntakeState state = IntakeState.IDLE;
+        public int indexedCount;
+        public int maxIndexed;
+        public String alliance = Alliance.UNKNOWN.name();
+        public boolean anyLaneSensorsPresent;
+        public boolean sensorPollingEnabled;
+        public double sensorSamplePeriodMs;
+        public double timerMs;
+        public String leftColor = ArtifactColor.NONE.name();
+        public boolean leftSensorPresent;
+        public boolean leftDistanceAvailable;
+        public double leftDistanceCm;
+        public boolean leftWithinDistance;
+        public float leftHue;
+        public float leftSaturation;
+        public float leftValue;
+        public String leftDetectedColor = ArtifactColor.NONE.name();
+        public String leftHsvColor = ArtifactColor.NONE.name();
+        public int leftRawRed;
+        public int leftRawGreen;
+        public int leftRawBlue;
+        public String centerColor = ArtifactColor.NONE.name();
+        public boolean centerSensorPresent;
+        public boolean centerDistanceAvailable;
+        public double centerDistanceCm;
+        public boolean centerWithinDistance;
+        public float centerHue;
+        public float centerSaturation;
+        public float centerValue;
+        public String centerDetectedColor = ArtifactColor.NONE.name();
+        public String centerHsvColor = ArtifactColor.NONE.name();
+        public int centerRawRed;
+        public int centerRawGreen;
+        public int centerRawBlue;
+        public String rightColor = ArtifactColor.NONE.name();
+        public boolean rightSensorPresent;
+        public boolean rightDistanceAvailable;
+        public double rightDistanceCm;
+        public boolean rightWithinDistance;
+        public float rightHue;
+        public float rightSaturation;
+        public float rightValue;
+        public String rightDetectedColor = ArtifactColor.NONE.name();
+        public String rightHsvColor = ArtifactColor.NONE.name();
+        public int rightRawRed;
+        public int rightRawGreen;
+        public int rightRawBlue;
+    }
+
     public IntakeSubsystem(HardwareMap hardwareMap) {
         // Real implementation would bind motors here.
         for (LauncherLane lane : LauncherLane.values()) {
@@ -279,6 +329,24 @@ public class IntakeSubsystem implements Subsystem {
             state = IntakeState.FULL;
         }
         pollLaneSensorsIfNeeded();
+    }
+
+    public void populateInputs(Inputs inputs) {
+        if (inputs == null) {
+            return;
+        }
+        inputs.state = state;
+        inputs.indexedCount = indexedCount;
+        inputs.maxIndexed = maxIndexed;
+        inputs.alliance = alliance.name();
+        inputs.anyLaneSensorsPresent = anyLaneSensorsPresent;
+        inputs.sensorPollingEnabled = LaneSensorConfig.enablePolling;
+        inputs.sensorSamplePeriodMs = LaneSensorConfig.samplePeriodMs;
+        inputs.timerMs = timer.milliseconds();
+
+        populateLaneInputs(inputs, LauncherLane.LEFT);
+        populateLaneInputs(inputs, LauncherLane.CENTER);
+        populateLaneInputs(inputs, LauncherLane.RIGHT);
     }
 
     private void pollLaneSensorsIfNeeded() {
@@ -445,7 +513,6 @@ public class IntakeSubsystem implements Subsystem {
     public EnumMap<LauncherLane, ArtifactColor> getLaneColorSnapshot() {
         return new EnumMap<>(laneColors);
     }
-
     public LauncherLane[] planSequence(ArtifactColor... desiredPattern) {
         if (desiredPattern == null || desiredPattern.length == 0) {
             return new LauncherLane[0];
@@ -496,4 +563,58 @@ public class IntakeSubsystem implements Subsystem {
         }
         return value;
     }
+
+    private void populateLaneInputs(Inputs inputs, LauncherLane lane) {
+        LaneSample sample = getLaneSample(lane);
+        ArtifactColor laneColor = getLaneColor(lane);
+        switch (lane) {
+            case LEFT:
+                inputs.leftColor = laneColor.name();
+                inputs.leftSensorPresent = sample.sensorPresent;
+                inputs.leftDistanceAvailable = sample.distanceAvailable;
+                inputs.leftDistanceCm = sample.distanceCm;
+                inputs.leftWithinDistance = sample.withinDistance;
+                inputs.leftHue = sample.hue;
+                inputs.leftSaturation = sample.saturation;
+                inputs.leftValue = sample.value;
+                inputs.leftDetectedColor = sample.color.name();
+                inputs.leftHsvColor = sample.hsvColor.name();
+                inputs.leftRawRed = sample.rawRed;
+                inputs.leftRawGreen = sample.rawGreen;
+                inputs.leftRawBlue = sample.rawBlue;
+                break;
+            case CENTER:
+                inputs.centerColor = laneColor.name();
+                inputs.centerSensorPresent = sample.sensorPresent;
+                inputs.centerDistanceAvailable = sample.distanceAvailable;
+                inputs.centerDistanceCm = sample.distanceCm;
+                inputs.centerWithinDistance = sample.withinDistance;
+                inputs.centerHue = sample.hue;
+                inputs.centerSaturation = sample.saturation;
+                inputs.centerValue = sample.value;
+                inputs.centerDetectedColor = sample.color.name();
+                inputs.centerHsvColor = sample.hsvColor.name();
+                inputs.centerRawRed = sample.rawRed;
+                inputs.centerRawGreen = sample.rawGreen;
+                inputs.centerRawBlue = sample.rawBlue;
+                break;
+            case RIGHT:
+            default:
+                inputs.rightColor = laneColor.name();
+                inputs.rightSensorPresent = sample.sensorPresent;
+                inputs.rightDistanceAvailable = sample.distanceAvailable;
+                inputs.rightDistanceCm = sample.distanceCm;
+                inputs.rightWithinDistance = sample.withinDistance;
+                inputs.rightHue = sample.hue;
+                inputs.rightSaturation = sample.saturation;
+                inputs.rightValue = sample.value;
+                inputs.rightDetectedColor = sample.color.name();
+                inputs.rightHsvColor = sample.hsvColor.name();
+                inputs.rightRawRed = sample.rawRed;
+                inputs.rightRawGreen = sample.rawGreen;
+                inputs.rightRawBlue = sample.rawBlue;
+                break;
+        }
+    }
+
 }

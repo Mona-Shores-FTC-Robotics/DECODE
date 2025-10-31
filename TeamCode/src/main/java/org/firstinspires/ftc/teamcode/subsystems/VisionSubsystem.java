@@ -61,6 +61,33 @@ public class VisionSubsystem implements Subsystem {
     private Pose lastRobotPoseFromTag;
     private TagSnapshot lastSnapshot;
 
+    public static final class Inputs {
+        public VisionState state = VisionState.OFF;
+        public boolean portalActive;
+        public boolean streaming;
+        public boolean odometryUpdatePending;
+        public int detectionCount;
+        public String alliance = Alliance.UNKNOWN.name();
+        public double cameraX;
+        public double cameraY;
+        public double cameraZ;
+        public double cameraYaw;
+        public double cameraPitch;
+        public double cameraRoll;
+        public double tagPoseX;
+        public double tagPoseY;
+        public double tagPoseHeadingDeg;
+        public int lastTagId = -1;
+        public String lastTagAlliance = Alliance.UNKNOWN.name();
+        public double lastDecisionMargin;
+        public double lastFtcRange;
+        public double lastFtcBearing;
+        public double lastFtcYaw;
+        public double lastRobotEstimateX;
+        public double lastRobotEstimateY;
+        public double lastRobotEstimateYaw;
+    }
+
     public VisionSubsystem(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
     }
@@ -184,6 +211,57 @@ public class VisionSubsystem implements Subsystem {
 
     public Optional<TagSnapshot> getLastSnapshot() {
         return Optional.ofNullable(lastSnapshot);
+    }
+
+    public void populateInputs(Inputs inputs) {
+        if (inputs == null) {
+            return;
+        }
+        inputs.state = state;
+        inputs.portalActive = visionPortal != null;
+        inputs.streaming = state == VisionState.STREAMING;
+        inputs.odometryUpdatePending = odometryUpdatePending;
+        inputs.detectionCount = getDetections().size();
+        inputs.alliance = RobotState.getAlliance().name();
+        inputs.cameraX = CAMERA_POSITION == null ? Double.NaN : CAMERA_POSITION.x;
+        inputs.cameraY = CAMERA_POSITION == null ? Double.NaN : CAMERA_POSITION.y;
+        inputs.cameraZ = CAMERA_POSITION == null ? Double.NaN : CAMERA_POSITION.z;
+        inputs.cameraYaw = CAMERA_ORIENTATION == null ? Double.NaN : CAMERA_ORIENTATION.getYaw(AngleUnit.DEGREES);
+        inputs.cameraPitch = CAMERA_ORIENTATION == null ? Double.NaN : CAMERA_ORIENTATION.getPitch(AngleUnit.DEGREES);
+        inputs.cameraRoll = CAMERA_ORIENTATION == null ? Double.NaN : CAMERA_ORIENTATION.getRoll(AngleUnit.DEGREES);
+
+        if (lastRobotPoseFromTag != null) {
+            inputs.tagPoseX = lastRobotPoseFromTag.getX();
+            inputs.tagPoseY = lastRobotPoseFromTag.getY();
+            inputs.tagPoseHeadingDeg = Math.toDegrees(lastRobotPoseFromTag.getHeading());
+        } else {
+            inputs.tagPoseX = Double.NaN;
+            inputs.tagPoseY = Double.NaN;
+            inputs.tagPoseHeadingDeg = Double.NaN;
+        }
+
+        TagSnapshot snapshot = lastSnapshot;
+        if (snapshot != null) {
+            inputs.lastTagId = snapshot.getTagId();
+            inputs.lastTagAlliance = snapshot.getAlliance().name();
+            inputs.lastDecisionMargin = snapshot.getDecisionMargin();
+            inputs.lastFtcRange = snapshot.getFtcRange();
+            inputs.lastFtcBearing = snapshot.getFtcBearing();
+            inputs.lastFtcYaw = snapshot.getFtcYaw();
+            inputs.lastRobotEstimateX = snapshot.getRobotX();
+            inputs.lastRobotEstimateY = snapshot.getRobotY();
+            inputs.lastRobotEstimateYaw = snapshot.getRobotYaw();
+        } else {
+            inputs.lastTagId = -1;
+            inputs.lastTagAlliance = Alliance.UNKNOWN.name();
+            inputs.lastDecisionMargin = Double.NaN;
+            inputs.lastFtcRange = Double.NaN;
+            inputs.lastFtcBearing = Double.NaN;
+            inputs.lastFtcYaw = Double.NaN;
+            inputs.lastRobotEstimateX = Double.NaN;
+            inputs.lastRobotEstimateY = Double.NaN;
+            inputs.lastRobotEstimateYaw = Double.NaN;
+        }
     }
 
     public void setAlliance(Alliance alliance) {

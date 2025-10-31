@@ -42,25 +42,12 @@ dependencies {
     implementation 'dev.nextftc:bindings:1.0.1'
 
 
-    //FTC Dashboard
-    implementation('com.acmerobotics.dashboard:dashboard:0.5.0') {
-        exclude group: 'org.firstinspires.ftc'
-    }
-
     // Pedro Pathing
-    implementation('com.pedropathing:ftc:2.0.3') {
-        exclude group: "com.acmerobotics.dashboard"
-    }
-    implementation('com.pedropathing:telemetry:1.0.0') {
-        exclude group: "com.acmerobotics.dashboard"
-    }
+    implementation('com.pedropathing:ftc:2.0.3')
+    implementation('com.pedropathing:telemetry:1.0.0')
 
     //Panels
-    implementation('com.bylazar:fullpanels:1.0.8') {
-        exclude group: "com.acmerobotics.dashboard"
-    }
-
+    implementation('com.bylazar:fullpanels:1.0.8')
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
-
 
 }

@@ -20,8 +20,10 @@ public final class AllianceSelector {
     private final Button blueOverrideButton;
     private final Button redOverrideButton;
     private final Button autoOverrideButton;
+    private final Button defaultButton;
 
     private boolean manualOverride;
+    private boolean visionPreferred;
     private boolean selectionLocked;
     private Alliance manualAlliance = Alliance.UNKNOWN;
 
@@ -35,14 +37,17 @@ public final class AllianceSelector {
     public AllianceSelector(GamepadEx driver, Alliance defaultAlliance) {
         this.defaultAlliance = defaultAlliance;
         this.selectedAlliance = defaultAlliance == null ? Alliance.UNKNOWN : defaultAlliance;
+        this.visionPreferred = (defaultAlliance == null || defaultAlliance == Alliance.UNKNOWN);
 
         blueOverrideButton = driver.dpadLeft();
         redOverrideButton = driver.dpadRight();
         autoOverrideButton = driver.dpadDown();
+        defaultButton = driver.dpadUp();
 
         blueOverrideButton.whenBecomesTrue(() -> selectAllianceManually(Alliance.BLUE));
         redOverrideButton.whenBecomesTrue(() -> selectAllianceManually(Alliance.RED));
-        autoOverrideButton.whenBecomesTrue(this::clearManualOverride);
+        autoOverrideButton.whenBecomesTrue(this::enableVisionOverride);
+        defaultButton.whenBecomesTrue(this::clearManualOverride);
     }
 
     /**
@@ -51,16 +56,14 @@ public final class AllianceSelector {
      * @return snapshot data when a valid detection was found.
      */
     public Optional<VisionSubsystem.TagSnapshot> updateFromVision(VisionSubsystem vision) {
-        Alliance requiredAlliance = manualOverride ? manualAlliance : null;
-        Optional<VisionSubsystem.TagSnapshot> snapshotOpt =
-                vision == null ? Optional.empty() : vision.findAllianceSnapshot(requiredAlliance);
+        if (vision == null) {
+            clearDetection();
+            return Optional.empty();
+        }
 
+        Optional<VisionSubsystem.TagSnapshot> snapshotOpt = vision.findAllianceSnapshot(null);
         if (!snapshotOpt.isPresent()) {
-            detectedAlliance = Alliance.UNKNOWN;
-            detectedTagId = -1;
-            detectedRange = Double.NaN;
-            detectedYaw = Double.NaN;
-            lastSnapshot = null;
+            clearDetection();
         } else {
             VisionSubsystem.TagSnapshot snapshot = snapshotOpt.get();
             detectedAlliance = snapshot.getAlliance();
@@ -97,6 +100,7 @@ public final class AllianceSelector {
             return;
         }
         manualOverride = true;
+        visionPreferred = false;
         manualAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
         selectedAlliance = manualAlliance;
     }
@@ -106,7 +110,17 @@ public final class AllianceSelector {
             return;
         }
         manualOverride = false;
+        visionPreferred = false;
         manualAlliance = Alliance.UNKNOWN;
+        refreshSelectedAlliance();
+    }
+
+    public void enableVisionOverride() {
+        if (selectionLocked) {
+            return;
+        }
+        manualOverride = false;
+        visionPreferred = true;
         refreshSelectedAlliance();
     }
 
@@ -114,12 +128,12 @@ public final class AllianceSelector {
         if (selectionLocked) {
             return;
         }
-        if (!manualOverride) {
-            if (detectedAlliance != Alliance.UNKNOWN) {
-                selectedAlliance = detectedAlliance;
-            } else {
-                selectedAlliance = defaultAlliance;
-            }
+        if (manualOverride) {
+            selectedAlliance = manualAlliance;
+        } else if (visionPreferred && detectedAlliance != Alliance.UNKNOWN) {
+            selectedAlliance = detectedAlliance;
+        } else {
+            selectedAlliance = defaultAlliance;
         }
         if (selectedAlliance == null) {
             selectedAlliance = Alliance.UNKNOWN;
@@ -165,5 +179,17 @@ public final class AllianceSelector {
     public void unlockSelection() {
         selectionLocked = false;
         refreshSelectedAlliance();
+    }
+
+    private void clearDetection() {
+        detectedAlliance = Alliance.UNKNOWN;
+        detectedTagId = -1;
+        detectedRange = Double.NaN;
+        detectedYaw = Double.NaN;
+        lastSnapshot = null;
+    }
+
+    public boolean isVisionPreferred() {
+        return visionPreferred;
     }
 }

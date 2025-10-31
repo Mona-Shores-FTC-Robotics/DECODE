@@ -10,7 +10,6 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
@@ -177,12 +176,6 @@ public class Autonomous extends OpMode {
         telemetry.addLine("D-pad ↑ cycle decode pattern, ↓ to clear (testing)");
         telemetry.update();
 
-        Pose2D pose = robot.drive.getPose();
-        if (pose != null) {
-            robot.logger.logNumber("Autonomous", "PoseX", pose.getX(DistanceUnit.INCH));
-            robot.logger.logNumber("Autonomous", "PoseY", pose.getY(DistanceUnit.INCH));
-            robot.logger.logNumber("Autonomous", "HeadingDeg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
-        }
         robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
         robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
         robot.logger.sampleSources();

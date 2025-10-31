@@ -43,9 +43,24 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     private final EnumMap<LauncherLane, LaneIndicator> laneIndicators = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, Double> laneOutputs = new EnumMap<>(LauncherLane.class);
 
     private LightingState state = LightingState.OFF;
     private Alliance alliance = Alliance.UNKNOWN;
+
+    public static final class Inputs {
+        public LightingState state = LightingState.OFF;
+        public String alliance = Alliance.UNKNOWN.name();
+        public String leftColor = ArtifactColor.NONE.name();
+        public double leftOutput = OFF_POS;
+        public boolean leftIndicatorPresent;
+        public String centerColor = ArtifactColor.NONE.name();
+        public double centerOutput = OFF_POS;
+        public boolean centerIndicatorPresent;
+        public String rightColor = ArtifactColor.NONE.name();
+        public double rightOutput = OFF_POS;
+        public boolean rightIndicatorPresent;
+    }
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(
@@ -57,6 +72,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
+            laneOutputs.put(lane, OFF_POS);
         }
     }
 
@@ -79,6 +95,17 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     @Override
     public void periodic() {
         // No periodic work required – kept for interface completeness.
+    }
+
+    public void populateInputs(Inputs inputs) {
+        if (inputs == null) {
+            return;
+        }
+        inputs.state = state;
+        inputs.alliance = alliance.name();
+        populateLaneInputs(inputs, LauncherLane.LEFT);
+        populateLaneInputs(inputs, LauncherLane.CENTER);
+        populateLaneInputs(inputs, LauncherLane.RIGHT);
     }
 
     public void setAlliance(Alliance alliance) {
@@ -165,6 +192,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         }
         ArtifactColor laneColor = laneColors.getOrDefault(lane, ArtifactColor.NONE);
         double position = resolvePosition(laneColor);
+        laneOutputs.put(lane, position);
         indicator.apply(position);
     }
 
@@ -216,6 +244,31 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             }
         }
         return touched;
+    }
+
+    private void populateLaneInputs(Inputs inputs, LauncherLane lane) {
+        ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
+        double output = laneOutputs.getOrDefault(lane, OFF_POS);
+        LaneIndicator indicator = laneIndicators.get(lane);
+        boolean present = indicator != null && indicator.isPresent();
+        switch (lane) {
+            case LEFT:
+                inputs.leftColor = color.name();
+                inputs.leftOutput = output;
+                inputs.leftIndicatorPresent = present;
+                break;
+            case CENTER:
+                inputs.centerColor = color.name();
+                inputs.centerOutput = output;
+                inputs.centerIndicatorPresent = present;
+                break;
+            case RIGHT:
+            default:
+                inputs.rightColor = color.name();
+                inputs.rightOutput = output;
+                inputs.rightIndicatorPresent = present;
+                break;
+        }
     }
 
     private static final class LaneIndicator {

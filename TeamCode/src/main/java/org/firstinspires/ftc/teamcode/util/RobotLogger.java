@@ -4,12 +4,17 @@ import android.content.Context;
 
 import com.bylazar.telemetry.TelemetryManager;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Unified logging surface that mirrors FTControl Panels, AdvantageScope Lite, and optional PsiKit
@@ -55,6 +60,7 @@ public class RobotLogger {
     private final TelemetryService telemetryService;
     private final BlockingQueue<RobotLogEntry> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
     private final List<Source> sources = new CopyOnWriteArrayList<>();
+    private final Map<Class<?>, Field[]> inputFieldCache = new ConcurrentHashMap<>();
 
     private volatile boolean sessionActive = false;
     private volatile boolean workerRunning = false;
@@ -307,6 +313,51 @@ public class RobotLogger {
             default:
                 break;
         }
+    }
+
+    public void logInputs(String subsystem, Object inputs) {
+        if (inputs == null) {
+            return;
+        }
+        Field[] fields = inputFieldCache.computeIfAbsent(inputs.getClass(), this::introspectFields);
+        for (Field field : fields) {
+            Object value;
+            try {
+                value = field.get(inputs);
+            } catch (IllegalAccessException e) {
+                continue;
+            }
+            if (value == null) {
+                continue;
+            }
+            String key = field.getName();
+            if (value instanceof Number) {
+                logNumber(subsystem, key, ((Number) value).doubleValue());
+            } else if (value instanceof Boolean) {
+                logBoolean(subsystem, key, (Boolean) value);
+            } else if (value instanceof CharSequence) {
+                logString(subsystem, key, value.toString());
+            } else if (value instanceof Enum<?>) {
+                Enum<?> enumValue = (Enum<?>) value;
+                logString(subsystem, key, enumValue.name());
+            } else {
+                logString(subsystem, key, String.valueOf(value));
+            }
+        }
+    }
+
+    private Field[] introspectFields(Class<?> type) {
+        return Arrays.stream(type.getDeclaredFields())
+                .filter(field -> !Modifier.isStatic(field.getModifiers()))
+                .filter(field -> !field.isSynthetic())
+                .peek(field -> {
+                    try {
+                        field.setAccessible(true);
+                    } catch (Exception ignored) {
+                        // Ignore; best-effort exposure.
+                    }
+                })
+                .toArray(Field[]::new);
     }
 
     private static final class RobotLogEntry {

@@ -13,6 +13,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
+import org.firstinspires.ftc.teamcode.util.RobotLogger;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
@@ -27,6 +28,9 @@ public class VisionSubsystemLimelight implements Subsystem {
     private long lastSeenTimestamp = 0;
     private boolean odometryUpdatedForCurrentTag = false;
     private static final long ODOMETRY_RESET_TIMEOUT_MS = 3000;
+    private final Inputs inputs = new Inputs();
+    private RobotLogger logger;
+    private RobotLogger.Source loggerSource;
 
     public VisionSubsystemLimelight(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
@@ -97,4 +101,88 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     @Override
     public void periodic() {}
+
+    public void populateInputs(Inputs inputs) {
+        if (inputs == null) {
+            return;
+        }
+        LLResult result = limelight.getLatestResult();
+        List<LLResultTypes.FiducialResult> fiducials = result == null ? null : result.getFiducialResults();
+        boolean hasValid = result != null && fiducials != null && !fiducials.isEmpty();
+        inputs.hasValidTag = hasValid;
+        inputs.currentTagId = hasValid ? fiducials.get(0).getFiducialId() : -1;
+        inputs.lastSeenTagId = lastSeenTagId;
+        inputs.odometryUpdatedForCurrentTag = odometryUpdatedForCurrentTag;
+        inputs.timeSinceLastSeenMs = lastSeenTimestamp == 0
+                ? Double.POSITIVE_INFINITY
+                : Math.max(0.0, System.currentTimeMillis() - lastSeenTimestamp);
+
+        if (hasValid) {
+            LLResultTypes.FiducialResult fiducial = fiducials.get(0);
+            Pose3D pose = fiducial.getRobotPoseFieldSpace();
+            if (pose != null) {
+                inputs.lastPoseXInches = DistanceUnit.METER.toInches(pose.getPosition().x);
+                inputs.lastPoseYInches = DistanceUnit.METER.toInches(pose.getPosition().y);
+                inputs.lastPoseHeadingDeg = AngleUnit.normalizeDegrees(pose.getOrientation().getYaw());
+            } else {
+                inputs.lastPoseXInches = Double.NaN;
+                inputs.lastPoseYInches = Double.NaN;
+                inputs.lastPoseHeadingDeg = Double.NaN;
+            }
+            double tx = result.getTx();
+            double ty = result.getTy();
+            double ta = result.getTa();
+            inputs.lastTxDegrees = Double.isNaN(tx) ? Double.NaN : tx;
+            inputs.lastTyDegrees = Double.isNaN(ty) ? Double.NaN : ty;
+            inputs.lastTaPercent = Double.isNaN(ta) ? Double.NaN : ta;
+        } else {
+            inputs.lastPoseXInches = Double.NaN;
+            inputs.lastPoseYInches = Double.NaN;
+            inputs.lastPoseHeadingDeg = Double.NaN;
+            inputs.lastTxDegrees = Double.NaN;
+            inputs.lastTyDegrees = Double.NaN;
+            inputs.lastTaPercent = Double.NaN;
+        }
+    }
+
+    public void attachLogger(RobotLogger robotLogger) {
+        if (robotLogger == null || loggerSource != null) {
+            return;
+        }
+        logger = robotLogger;
+        loggerSource = new RobotLogger.Source() {
+            @Override
+            public String subsystem() {
+                return "VisionLimelight";
+            }
+
+            @Override
+            public void collect(RobotLogger.Frame frame) {
+                populateInputs(inputs);
+                logger.logInputs("VisionLimelight", inputs);
+            }
+        };
+        robotLogger.registerSource(loggerSource);
+    }
+
+    public void detachLogger() {
+        if (logger != null && loggerSource != null) {
+            logger.unregisterSource(loggerSource);
+            loggerSource = null;
+        }
+    }
+
+    public static final class Inputs {
+        public boolean hasValidTag;
+        public int currentTagId = -1;
+        public int lastSeenTagId = -1;
+        public double timeSinceLastSeenMs = Double.POSITIVE_INFINITY;
+        public boolean odometryUpdatedForCurrentTag;
+        public double lastPoseXInches = Double.NaN;
+        public double lastPoseYInches = Double.NaN;
+        public double lastPoseHeadingDeg = Double.NaN;
+        public double lastTxDegrees = Double.NaN;
+        public double lastTyDegrees = Double.NaN;
+        public double lastTaPercent = Double.NaN;
+    }
 }

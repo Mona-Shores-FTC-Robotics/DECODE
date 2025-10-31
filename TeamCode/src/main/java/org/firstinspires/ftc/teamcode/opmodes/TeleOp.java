@@ -6,51 +6,76 @@ import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
-import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
-import org.firstinspires.ftc.teamcode.util.TelemetryPublisher;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
+import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
-@com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "FieldCentricTeleOp", group = "Field Centric TeleOp")
+@com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "Decode Teleop", group = "TeleOp")
 public class TeleOp extends NextFTCOpMode {
 
     private Robot robot;
+    private GamepadEx driverPad;
+    private GamepadEx operatorPad;
     private DriverBindings driverBindings;
     private OperatorBindings operatorBindings;
-    private TelemetryPublisher telemetryPublisher;
-    private boolean lastShooterReady = false;
+    private LauncherCoordinator launcherCoordinator;
+    private AllianceSelector allianceSelector;
+    private Alliance selectedAlliance = Alliance.UNKNOWN;
 
     @Override
     public void onInit() {
         robot = new Robot(hardwareMap);
-        telemetryPublisher = robot.telemetry.publisher();
 
-        GamepadEx driverPad = new GamepadEx(() -> gamepad1);
-        GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
+        driverPad = new GamepadEx(() -> gamepad1);
+        operatorPad = new GamepadEx(() -> gamepad2);
         driverBindings = new DriverBindings(driverPad);
-        operatorBindings = new OperatorBindings(operatorPad, robot);
+        launcherCoordinator = new LauncherCoordinator(robot.shooter, robot.intake, robot.lighting);
+        operatorBindings = new OperatorBindings(operatorPad, robot, launcherCoordinator);
+        allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
         robot.drive.setRobotCentric(false);
 
         robot.initialize();
+        launcherCoordinator.initialize();
+        launcherCoordinator.enableAutoSpin(true);
+        launcherCoordinator.attachLogger(robot.logger);
+        allianceSelector.applySelection(robot, robot.lighting);
+        selectedAlliance = allianceSelector.getSelectedAlliance();
 
         addComponents(
                 BindingsComponent.INSTANCE,
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.shooter),
                 new SubsystemComponent(robot.intake),
-                new SubsystemComponent(robot.lighting)
+                new SubsystemComponent(robot.lighting),
+                new SubsystemComponent(robot.vision)
         );
+    }
+
+    @Override
+    public void onWaitForStart() {
+        BindingManager.update();
+        if (allianceSelector != null) {
+            selectedAlliance = RobotState.getAlliance();
+        }
+        telemetry.clear();
+        telemetry.addData("Alliance", selectedAlliance.displayName());
+        telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
+        telemetry.addLine("Press START when ready");
+        telemetry.update();
     }
 
     @Override
     public void onStartButtonPressed() {
         robot.logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), RobotState.getAlliance(), "TeleOp");
-        robot.lighting.indicateIdle();
+        if (allianceSelector != null) {
+            allianceSelector.lockSelection();
+            allianceSelector.applySelection(robot, robot.lighting);
+            selectedAlliance = allianceSelector.getSelectedAlliance();
+        }
     }
 
     @Override
@@ -59,51 +84,20 @@ public class TeleOp extends NextFTCOpMode {
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
 
         robot.drive.driveScaled(request.fieldX, request.fieldY, request.rotation, request.slowMode);
+        robot.intake.refreshLaneSensors();
 
-        PanelsBridge.drawFollowerDebug(robot.drive.getFollower());
-        if (robot.telemetry.panelsTelemetry() != null) {
-            robot.telemetry.panelsTelemetry().debug("Mode", "TeleOp");
-            robot.telemetry.panelsTelemetry().debug("DriveMode", robot.drive.getDriveMode());
-        }
-
-        double currentRpm = robot.shooter.getCurrentRpm();
-        telemetryPublisher.publishDrive(robot.drive, request.fieldX, request.fieldY, request.rotation, request.slowMode);
-        telemetryPublisher.publishShooter(
-                robot.shooter.getTargetRpm(),
-                currentRpm,
-                robot.shooter.getLastPower(),
-                robot.shooter.getTargetRpm() - currentRpm
+        robot.telemetry.publishLoopTelemetry(
+                robot.drive,
+                robot.shooter,
+                request,
+                launcherCoordinator,
+                selectedAlliance,
+                getRuntime(),
+                telemetry,
+                robot.logger,
+                "TeleOp"
         );
-
-        robot.logger.logNumber("Drive", "LX", request.fieldX);
-        robot.logger.logNumber("Drive", "LY", request.fieldY);
-        robot.logger.logNumber("Drive", "RX", request.rotation);
-        robot.logger.logNumber("Shooter", "RPM", currentRpm);
-        robot.logger.logNumber("Robot", "RuntimeSec", getRuntime());
-        boolean shooterReady = robot.shooter.atTarget();
-        if (shooterReady && !lastShooterReady) {
-            robot.logger.logEvent("Shooter", "Ready");
-        }
-        lastShooterReady = shooterReady;
         robot.logger.sampleSources();
-
-        Pose2D pose = robot.drive.getPose();
-        if (pose != null) {
-            telemetry.addData("Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
-                    pose.getX(DistanceUnit.INCH),
-                    pose.getY(DistanceUnit.INCH),
-                    pose.getHeading(AngleUnit.DEGREES));
-        } else {
-            telemetry.addData("Pose", "(unavailable)");
-        }
-        telemetry.addData("Shooter RPM", "%.0f / %.0f  %s",
-                currentRpm,
-                robot.shooter.getTargetRpm(),
-                robot.shooter.atTarget() ? "ready" : "spooling");
-        telemetry.addData("Drive Mode", robot.drive.getDriveMode());
-        telemetry.update();
-
-        robot.telemetry.updateDriverStation(telemetry);
     }
 
     @Override
@@ -116,6 +110,13 @@ public class TeleOp extends NextFTCOpMode {
         robot.shooter.abort();
         robot.intake.stop();
         robot.lighting.indicateIdle();
+        if (launcherCoordinator != null) {
+            launcherCoordinator.stop();
+        }
+        if (allianceSelector != null) {
+            allianceSelector.unlockSelection();
+        }
         robot.logger.stopSession();
     }
+
 }

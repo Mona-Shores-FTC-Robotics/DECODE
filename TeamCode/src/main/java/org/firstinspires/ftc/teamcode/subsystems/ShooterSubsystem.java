@@ -171,6 +171,46 @@ public class ShooterSubsystem implements Subsystem {
     private ShotRequest activeShot;
     private double lastShotCompletionMs = 0.0;
 
+    public static final class Inputs {
+        public ShooterState state = ShooterState.DISABLED;
+        public SpinMode requestedSpinMode = SpinMode.OFF;
+        public SpinMode effectiveSpinMode = SpinMode.OFF;
+        public FlywheelControlMode controlMode = FlywheelControlMode.SDK_PID;
+        public boolean busy;
+        public int queuedShots;
+        public double stateElapsedSec;
+        public String activeShotLane = "NONE";
+        public double activeShotAgeMs;
+        public double lastShotCompletionMs;
+        public double averageTargetRpm;
+        public double averageCurrentRpm;
+        public double averagePower;
+        public double leftTargetRpm;
+        public double leftCurrentRpm;
+        public double leftPower;
+        public boolean leftReady;
+        public double leftFeederPosition;
+        public double leftLaunchRpm;
+        public double leftIdleRpm;
+        public double leftRecoveryRemainingMs;
+        public double centerTargetRpm;
+        public double centerCurrentRpm;
+        public double centerPower;
+        public boolean centerReady;
+        public double centerFeederPosition;
+        public double centerLaunchRpm;
+        public double centerIdleRpm;
+        public double centerRecoveryRemainingMs;
+        public double rightTargetRpm;
+        public double rightCurrentRpm;
+        public double rightPower;
+        public boolean rightReady;
+        public double rightFeederPosition;
+        public double rightLaunchRpm;
+        public double rightIdleRpm;
+        public double rightRecoveryRemainingMs;
+    }
+
     public ShooterSubsystem(HardwareMap hardwareMap) {
         for (LauncherLane lane : LauncherLane.values()) {
             flywheels.put(lane, new Flywheel(lane, hardwareMap));
@@ -239,14 +279,6 @@ public class ShooterSubsystem implements Subsystem {
         applySpinMode(computeEffectiveSpinMode());
     }
 
-    public SpinMode getRequestedSpinMode() {
-        return requestedSpinMode;
-    }
-
-    public SpinMode getEffectiveSpinMode() {
-        return computeEffectiveSpinMode();
-    }
-
     public void requestSpinUp() {
         setSpinMode(SpinMode.FULL);
     }
@@ -282,6 +314,28 @@ public class ShooterSubsystem implements Subsystem {
 
     public int getQueuedShots() {
         return shotQueue.size() + (activeShot != null ? 1 : 0);
+    }
+
+    public void populateInputs(Inputs inputs) {
+        if (inputs == null) {
+            return;
+        }
+        inputs.state = state;
+        inputs.requestedSpinMode = requestedSpinMode;
+        inputs.effectiveSpinMode = computeEffectiveSpinMode();
+        inputs.controlMode = getFlywheelControlMode();
+        inputs.busy = isBusy();
+        inputs.queuedShots = getQueuedShots();
+        inputs.stateElapsedSec = getStateElapsedSeconds();
+        inputs.activeShotLane = activeShot == null ? "NONE" : activeShot.lane.name();
+        inputs.activeShotAgeMs = activeShot == null ? 0.0 : Math.max(0.0, clock.milliseconds() - activeShot.scheduledTimeMs);
+        inputs.lastShotCompletionMs = lastShotCompletionMs;
+        inputs.averageTargetRpm = getTargetRpm();
+        inputs.averageCurrentRpm = getCurrentRpm();
+        inputs.averagePower = getLastPower();
+        populateLane(inputs, LauncherLane.LEFT);
+        populateLane(inputs, LauncherLane.CENTER);
+        populateLane(inputs, LauncherLane.RIGHT);
     }
 
     public void shootLeft() {
@@ -420,6 +474,14 @@ public class ShooterSubsystem implements Subsystem {
     public double getLastPower(LauncherLane lane) {
         Flywheel flywheel = flywheels.get(lane);
         return flywheel == null ? 0.0 : flywheel.getAppliedPower();
+    }
+
+    public SpinMode getRequestedSpinMode() {
+        return requestedSpinMode;
+    }
+
+    public SpinMode getEffectiveSpinMode() {
+        return computeEffectiveSpinMode();
     }
 
     public void setLaunchRpm(LauncherLane lane, double rpm) {
@@ -704,6 +766,52 @@ public class ShooterSubsystem implements Subsystem {
             return 1.0;
         }
         return position;
+    }
+
+    private void populateLane(Inputs inputs, LauncherLane lane) {
+        double target = getTargetRpm(lane);
+        double current = getCurrentRpm(lane);
+        double power = getLastPower(lane);
+        boolean ready = isLaneReady(lane);
+        double feederPos = getFeederPosition(lane);
+        double launchRpm = getLaunchRpm(lane);
+        double idleRpm = getIdleRpm(lane);
+        double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
+        double remainingMs = Math.max(0.0, recoveryDeadline - clock.milliseconds());
+
+        switch (lane) {
+            case LEFT:
+                inputs.leftTargetRpm = target;
+                inputs.leftCurrentRpm = current;
+                inputs.leftPower = power;
+                inputs.leftReady = ready;
+                inputs.leftFeederPosition = feederPos;
+                inputs.leftLaunchRpm = launchRpm;
+                inputs.leftIdleRpm = idleRpm;
+                inputs.leftRecoveryRemainingMs = remainingMs;
+                break;
+            case CENTER:
+                inputs.centerTargetRpm = target;
+                inputs.centerCurrentRpm = current;
+                inputs.centerPower = power;
+                inputs.centerReady = ready;
+                inputs.centerFeederPosition = feederPos;
+                inputs.centerLaunchRpm = launchRpm;
+                inputs.centerIdleRpm = idleRpm;
+                inputs.centerRecoveryRemainingMs = remainingMs;
+                break;
+            case RIGHT:
+            default:
+                inputs.rightTargetRpm = target;
+                inputs.rightCurrentRpm = current;
+                inputs.rightPower = power;
+                inputs.rightReady = ready;
+                inputs.rightFeederPosition = feederPos;
+                inputs.rightLaunchRpm = launchRpm;
+                inputs.rightIdleRpm = idleRpm;
+                inputs.rightRecoveryRemainingMs = remainingMs;
+                break;
+        }
     }
 
     private static class ShotRequest {

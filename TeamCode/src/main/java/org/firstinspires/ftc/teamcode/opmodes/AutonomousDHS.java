@@ -134,12 +134,6 @@ public class AutonomousDHS extends OpMode {
         telemetry.addLine("D-pad Up cycles decode pattern, Down clears it");
         telemetry.update();
 
-        Pose pose = follower.getPose();
-        if (pose != null) {
-            robot.logger.logNumber("AutonomousDHS", "PoseX", pose.getX());
-            robot.logger.logNumber("AutonomousDHS", "PoseY", pose.getY());
-            robot.logger.logNumber("AutonomousDHS", "HeadingDeg", Math.toDegrees(pose.getHeading()));
-        }
         robot.logger.logNumber("AutonomousDHS", "RoutineStep", routineStep.ordinal());
         robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
         robot.logger.sampleSources();
@@ -227,12 +221,6 @@ public class AutonomousDHS extends OpMode {
         telemetry.addData("Raw robot XYZ", formatRawRobot());
         telemetry.update();
 
-        Pose pose = follower.getPose();
-        if (pose != null) {
-            robot.logger.logNumber("AutonomousDHS", "PoseX", pose.getX());
-            robot.logger.logNumber("AutonomousDHS", "PoseY", pose.getY());
-            robot.logger.logNumber("AutonomousDHS", "HeadingDeg", Math.toDegrees(pose.getHeading()));
-        }
         robot.logger.logNumber("AutonomousDHS", "RoutineStep", routineStep.ordinal());
         robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
         robot.logger.sampleSources();
