@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.bylazar.telemetry.TelemetryManager;
 
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.components.BindingsComponent;
@@ -8,11 +9,14 @@ import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 
+import java.util.Locale;
+
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
+import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
@@ -43,6 +47,7 @@ public class BenchLauncherSensorDiagnosticTeleOp extends NextFTCOpMode {
     private GamepadEx driverPad;
     private AllianceSelector allianceSelector;
     private Alliance selectedAlliance = Alliance.BLUE;
+    private TelemetryManager panelsTelemetry;
 
     @Override
     public void onInit() {
@@ -60,7 +65,6 @@ public class BenchLauncherSensorDiagnosticTeleOp extends NextFTCOpMode {
                 new SubsystemComponent(shooter),
                 new SubsystemComponent(intake),
                 new SubsystemComponent(lighting),
-                new SubsystemComponent(launcherCoordinator),
                 new SubsystemComponent(vision)
         );
 
@@ -69,7 +73,9 @@ public class BenchLauncherSensorDiagnosticTeleOp extends NextFTCOpMode {
         intake.initialize();
         lighting.initialize();
         vision.initialize();
+        launcherCoordinator.initialize();
         launcherCoordinator.enableAutoSpin(true);
+        panelsTelemetry = PanelsBridge.preparePanels();
         allianceSelector.applySelection(null, lighting);
         selectedAlliance = allianceSelector.getSelectedAlliance();
     }
@@ -94,9 +100,11 @@ public class BenchLauncherSensorDiagnosticTeleOp extends NextFTCOpMode {
         shooter.abort();
         shooter.homeAllFeeders();
         lighting.disable();
+        launcherCoordinator.stop();
         if (vision != null) {
             vision.stop();
         }
+        panelsTelemetry = null;
     }
 
     @Override
@@ -122,23 +130,62 @@ public class BenchLauncherSensorDiagnosticTeleOp extends NextFTCOpMode {
 
     private void pushTelemetry() {
         telemetry.clear();
-        telemetry.addLine("X/A/B: kick left/centre/right. Y: burst detected lanes.");
+        telemetry.addData("Info", "X/A/B kick lanes | Y burst all");
         telemetry.addData("Alliance", selectedAlliance);
-        telemetry.addData("Shooter state", shooter.getState());
-        telemetry.addData("Spin mode", shooter.getEffectiveSpinMode());
-        telemetry.addData("Queued shots", shooter.getQueuedShots());
+        telemetry.addData("Shooter", "%s | spin=%s | queued=%d",
+                shooter.getState(),
+                shooter.getEffectiveSpinMode(),
+                shooter.getQueuedShots());
+
         for (LauncherLane lane : LauncherLane.values()) {
-            ArtifactColor color = launcherCoordinator.getLaneColor(lane);
-            double feederPos = shooter.getFeederPosition(lane);
-            double rpm = shooter.getCurrentRpm(lane);
-            boolean ready = shooter.isLaneReady(lane);
-            telemetry.addData(lane.name(),
-                    "artifact=%s feeder=%.2f rpm=%.0f ready=%s",
-                    color.name(),
-                    feederPos,
-                    rpm,
-                    ready);
+            ArtifactColor artifact = launcherCoordinator.getLaneColor(lane);
+            IntakeSubsystem.LaneSample sample = intake.getLaneSample(lane);
+
+            String laneLabel = toTitleCase(lane.name());
+            String distanceText = "--";
+            double distanceValue = 0.0;
+            if (sample.sensorPresent && sample.distanceAvailable && !Double.isNaN(sample.distanceCm)) {
+                distanceValue = Math.round(sample.distanceCm * 10.0) / 10.0;
+                distanceText = String.format(Locale.US, "%.1fcm", distanceValue);
+            } else if (sample.sensorPresent && sample.distanceAvailable) {
+                distanceText = "n/a";
+            } else if (!sample.sensorPresent) {
+                distanceText = "no sensor";
+            }
+
+            double hueValue = sample.sensorPresent ? Math.round(sample.hue) : 0.0;
+            String hueText = sample.sensorPresent ? String.format(Locale.US, "%.0f°", hueValue) : "--";
+            String hueColor = sample.sensorPresent ? sample.hsvColor.name() : "NONE";
+            String artifactColor = artifact.name();
+
+            telemetry.addData(laneLabel,
+                    "dist=%s | hue=%s %s | artifact=%s",
+                    distanceText,
+                    hueText,
+                    hueColor,
+                    artifactColor);
+
+            if (panelsTelemetry != null) {
+                String prefix = "benchLauncher/" + lane.name().toLowerCase(Locale.US);
+                panelsTelemetry.debug(prefix + "/distance_cm", distanceValue);
+                panelsTelemetry.debug(prefix + "/hue_deg", hueValue);
+                panelsTelemetry.debug(prefix + "/hue_color", hueColor);
+                panelsTelemetry.debug(prefix + "/artifact", artifactColor);
+            }
         }
-        telemetry.update();
+
+        if (panelsTelemetry != null) {
+            panelsTelemetry.update(telemetry);
+        } else {
+            telemetry.update();
+        }
+    }
+
+    private static String toTitleCase(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        String lower = value.toLowerCase(Locale.US);
+        return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
 }

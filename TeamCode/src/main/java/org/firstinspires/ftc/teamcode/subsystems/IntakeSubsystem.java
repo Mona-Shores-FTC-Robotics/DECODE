@@ -4,6 +4,7 @@ import android.graphics.Color;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -17,6 +18,8 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 /**
  * Optional intake stub used by the autonomous routine. It now exposes a minimal
@@ -49,10 +52,84 @@ public class IntakeSubsystem implements Subsystem {
         public static double purpleHueMin = 260.0;
         public static double purpleHueMax = 330.0;
         public static double purpleHueWrapMax = 40.0;
+
+        public static boolean useDistance = true;
+        public static double presenceDistanceCm = 3.0;
     }
 
     public static double defaultRunTimeMs = 0.0;
     public static int maxIndexed = 3;
+
+    public static final class LaneSample {
+        public final boolean sensorPresent;
+        public final boolean distanceAvailable;
+        public final double distanceCm;
+        public final boolean withinDistance;
+        public final int rawRed;
+        public final int rawGreen;
+        public final int rawBlue;
+        public final int scaledRed;
+        public final int scaledGreen;
+        public final int scaledBlue;
+        public final float hue;
+        public final float saturation;
+        public final float value;
+        public final ArtifactColor hsvColor;
+        public final ArtifactColor color;
+
+        private LaneSample(boolean sensorPresent,
+                           boolean distanceAvailable,
+                           double distanceCm,
+                           boolean withinDistance,
+                           int rawRed, int rawGreen, int rawBlue,
+                           int scaledRed, int scaledGreen, int scaledBlue,
+                           float hue, float saturation, float value,
+                           ArtifactColor hsvColor,
+                           ArtifactColor color) {
+            this.sensorPresent = sensorPresent;
+            this.distanceAvailable = distanceAvailable;
+            this.distanceCm = distanceCm;
+            this.withinDistance = withinDistance;
+            this.rawRed = rawRed;
+            this.rawGreen = rawGreen;
+            this.rawBlue = rawBlue;
+            this.scaledRed = scaledRed;
+            this.scaledGreen = scaledGreen;
+            this.scaledBlue = scaledBlue;
+            this.hue = hue;
+            this.saturation = saturation;
+            this.value = value;
+            this.hsvColor = hsvColor == null ? ArtifactColor.NONE : hsvColor;
+            this.color = color == null ? ArtifactColor.NONE : color;
+        }
+
+        private static LaneSample absent() {
+            return new LaneSample(false, false, Double.NaN, false,
+                    0, 0, 0, 0, 0, 0,
+                    0.0f, 0.0f, 0.0f,
+                    ArtifactColor.NONE, ArtifactColor.NONE);
+        }
+
+        private static LaneSample present(boolean distanceAvailable,
+                                          double distanceCm,
+                                          boolean withinDistance,
+                                          int rawRed, int rawGreen, int rawBlue,
+                                          int scaledRed, int scaledGreen, int scaledBlue,
+                                          float hue, float saturation, float value,
+                                          ArtifactColor hsvColor,
+                                          ArtifactColor color) {
+            return new LaneSample(true,
+                    distanceAvailable,
+                    distanceCm,
+                    withinDistance,
+                    rawRed, rawGreen, rawBlue,
+                    scaledRed, scaledGreen, scaledBlue,
+                    hue, saturation, value,
+                    hsvColor, color);
+        }
+    }
+
+    private static final LaneSample ABSENT_SAMPLE = LaneSample.absent();
 
     private final ElapsedTime timer = new ElapsedTime();
     private final ElapsedTime sensorTimer = new ElapsedTime();
@@ -62,6 +139,9 @@ public class IntakeSubsystem implements Subsystem {
     private Alliance alliance = Alliance.UNKNOWN;
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ColorSensor> laneSensors = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, DistanceSensor> laneDistanceSensors = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, LaneSample> laneSamples = new EnumMap<>(LauncherLane.class);
+    private final float[] hsvBuffer = new float[3];
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
     private boolean anyLaneSensorsPresent = false;
 
@@ -69,6 +149,7 @@ public class IntakeSubsystem implements Subsystem {
         // Real implementation would bind motors here.
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
+            laneSamples.put(lane, ABSENT_SAMPLE);
         }
         bindLaneSensors(hardwareMap);
     }
@@ -76,8 +157,11 @@ public class IntakeSubsystem implements Subsystem {
     private void bindLaneSensors(HardwareMap hardwareMap) {
         anyLaneSensorsPresent = false;
         laneSensors.put(LauncherLane.LEFT, tryGetColorSensor(hardwareMap, LaneSensorConfig.leftSensor));
+        laneDistanceSensors.put(LauncherLane.LEFT, tryGetDistanceSensor(hardwareMap, LaneSensorConfig.leftSensor));
         laneSensors.put(LauncherLane.CENTER, tryGetColorSensor(hardwareMap, LaneSensorConfig.centerSensor));
+        laneDistanceSensors.put(LauncherLane.CENTER, tryGetDistanceSensor(hardwareMap, LaneSensorConfig.centerSensor));
         laneSensors.put(LauncherLane.RIGHT, tryGetColorSensor(hardwareMap, LaneSensorConfig.rightSensor));
+        laneDistanceSensors.put(LauncherLane.RIGHT, tryGetDistanceSensor(hardwareMap, LaneSensorConfig.rightSensor));
         for (ColorSensor sensor : laneSensors.values()) {
             if (sensor != null) {
                 anyLaneSensorsPresent = true;
@@ -97,11 +181,25 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
+    private static DistanceSensor tryGetDistanceSensor(HardwareMap hardwareMap, String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(DistanceSensor.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
     @Override
     public void initialize() {
         state = IntakeState.IDLE;
         indexedCount = 0;
         clearLaneColors();
+        for (LauncherLane lane : LauncherLane.values()) {
+            laneSamples.put(lane, ABSENT_SAMPLE);
+        }
         sensorTimer.reset();
     }
 
@@ -196,35 +294,78 @@ public class IntakeSubsystem implements Subsystem {
 
     public void refreshLaneSensors() {
         for (LauncherLane lane : LauncherLane.values()) {
-            ColorSensor sensor = laneSensors.get(lane);
-            if (sensor == null) {
-                continue;
-            }
-            ArtifactColor detected = classifyColor(sensor);
-            updateLaneColor(lane, detected);
+            LaneSample sample = sampleLane(lane);
+            laneSamples.put(lane, sample);
+            updateLaneColor(lane, sample.color);
         }
     }
 
-    private ArtifactColor classifyColor(ColorSensor sensor) {
-        int rawRed = sensor.red();
-        int rawGreen = sensor.green();
-        int rawBlue = sensor.blue();
-        int maxComponent = Math.max(rawRed, Math.max(rawGreen, rawBlue));
-        if (maxComponent <= 0) {
-            return ArtifactColor.NONE;
+    private LaneSample sampleLane(LauncherLane lane) {
+        ColorSensor colorSensor = laneSensors.get(lane);
+        DistanceSensor distanceSensor = laneDistanceSensors.get(lane);
+        if (colorSensor == null) {
+            return ABSENT_SAMPLE;
         }
-        float scale = 255.0f / maxComponent;
-        int scaledRed = Math.min(255, Math.round(rawRed * scale));
-        int scaledGreen = Math.min(255, Math.round(rawGreen * scale));
-        int scaledBlue = Math.min(255, Math.round(rawBlue * scale));
 
-        float[] hsv = new float[3];
-        Color.RGBToHSV(scaledRed, scaledGreen, scaledBlue, hsv);
-        float hue = hsv[0];
-        float saturation = hsv[1];
-        float value = hsv[2];
+        boolean distanceAvailable = distanceSensor != null;
+        double distanceCm = Double.NaN;
+        if (distanceAvailable) {
+            distanceCm = distanceSensor.getDistance(DistanceUnit.CM);
+        }
 
-        if (value < LaneSensorConfig.minValue || saturation < LaneSensorConfig.minSaturation) {
+        boolean distanceValid = distanceAvailable && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
+        boolean withinDistance;
+        if (!distanceAvailable || !LaneSensorConfig.useDistance) {
+            withinDistance = true;
+        } else if (!distanceValid) {
+            withinDistance = false;
+        } else {
+            withinDistance = distanceCm <= LaneSensorConfig.presenceDistanceCm;
+        }
+
+        int rawRed = colorSensor.red();
+        int rawGreen = colorSensor.green();
+        int rawBlue = colorSensor.blue();
+        int maxComponent = Math.max(rawRed, Math.max(rawGreen, rawBlue));
+        int scaledRed = 0;
+        int scaledGreen = 0;
+        int scaledBlue = 0;
+        float hue = 0.0f;
+        float saturation = 0.0f;
+        float value = 0.0f;
+
+        if (maxComponent > 0) {
+            float scale = maxComponent > 0 ? 255.0f / maxComponent : 0.0f;
+            scaledRed = Math.min(255, Math.round(rawRed * scale));
+            scaledGreen = Math.min(255, Math.round(rawGreen * scale));
+            scaledBlue = Math.min(255, Math.round(rawBlue * scale));
+
+            Color.RGBToHSV(scaledRed, scaledGreen, scaledBlue, hsvBuffer);
+            hue = hsvBuffer[0];
+            saturation = hsvBuffer[1];
+            value = hsvBuffer[2];
+        }
+
+        ArtifactColor hsvColor = classifyColorFromHsv(hue, saturation, value, maxComponent > 0);
+        ArtifactColor finalColor = hsvColor;
+        if (LaneSensorConfig.useDistance && distanceAvailable && !withinDistance) {
+            finalColor = ArtifactColor.NONE;
+        }
+
+        return LaneSample.present(
+                distanceAvailable,
+                distanceValid ? distanceCm : Double.NaN,
+                withinDistance,
+                rawRed, rawGreen, rawBlue,
+                scaledRed, scaledGreen, scaledBlue,
+                hue, saturation, value,
+                hsvColor,
+                finalColor
+        );
+    }
+
+    private ArtifactColor classifyColorFromHsv(float hue, float saturation, float value, boolean hasSignal) {
+        if (!hasSignal || value < LaneSensorConfig.minValue || saturation < LaneSensorConfig.minSaturation) {
             return ArtifactColor.NONE;
         }
 
@@ -284,6 +425,21 @@ public class IntakeSubsystem implements Subsystem {
 
     public ArtifactColor getLaneColor(LauncherLane lane) {
         return lane == null ? ArtifactColor.NONE : laneColors.getOrDefault(lane, ArtifactColor.NONE);
+    }
+
+    public LaneSample getLaneSample(LauncherLane lane) {
+        if (lane == null) {
+            return ABSENT_SAMPLE;
+        }
+        return laneSamples.getOrDefault(lane, ABSENT_SAMPLE);
+    }
+
+    public EnumMap<LauncherLane, LaneSample> getLaneSampleSnapshot() {
+        EnumMap<LauncherLane, LaneSample> copy = new EnumMap<>(LauncherLane.class);
+        for (LauncherLane lane : LauncherLane.values()) {
+            copy.put(lane, laneSamples.getOrDefault(lane, ABSENT_SAMPLE));
+        }
+        return copy;
     }
 
     public EnumMap<LauncherLane, ArtifactColor> getLaneColorSnapshot() {

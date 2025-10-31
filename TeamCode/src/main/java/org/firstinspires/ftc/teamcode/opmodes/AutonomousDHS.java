@@ -12,6 +12,7 @@ import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
@@ -133,11 +134,11 @@ public class AutonomousDHS extends OpMode {
         telemetry.addLine("D-pad Up cycles decode pattern, Down clears it");
         telemetry.update();
 
-        Pose2D pose = follower.getPose();
+        Pose pose = follower.getPose();
         if (pose != null) {
-            robot.logger.logNumber("AutonomousDHS", "PoseX", pose.getX(DistanceUnit.INCH));
-            robot.logger.logNumber("AutonomousDHS", "PoseY", pose.getY(DistanceUnit.INCH));
-            robot.logger.logNumber("AutonomousDHS", "HeadingDeg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
+            robot.logger.logNumber("AutonomousDHS", "PoseX", pose.getX());
+            robot.logger.logNumber("AutonomousDHS", "PoseY", pose.getY());
+            robot.logger.logNumber("AutonomousDHS", "HeadingDeg", Math.toDegrees(pose.getHeading()));
         }
         robot.logger.logNumber("AutonomousDHS", "RoutineStep", routineStep.ordinal());
         robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
@@ -226,11 +227,11 @@ public class AutonomousDHS extends OpMode {
         telemetry.addData("Raw robot XYZ", formatRawRobot());
         telemetry.update();
 
-        Pose2D pose = follower.getPose();
+        Pose pose = follower.getPose();
         if (pose != null) {
-            robot.logger.logNumber("AutonomousDHS", "PoseX", pose.getX(DistanceUnit.INCH));
-            robot.logger.logNumber("AutonomousDHS", "PoseY", pose.getY(DistanceUnit.INCH));
-            robot.logger.logNumber("AutonomousDHS", "HeadingDeg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
+            robot.logger.logNumber("AutonomousDHS", "PoseX", pose.getX());
+            robot.logger.logNumber("AutonomousDHS", "PoseY", pose.getY());
+            robot.logger.logNumber("AutonomousDHS", "HeadingDeg", Math.toDegrees(pose.getHeading()));
         }
         robot.logger.logNumber("AutonomousDHS", "RoutineStep", routineStep.ordinal());
         robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
