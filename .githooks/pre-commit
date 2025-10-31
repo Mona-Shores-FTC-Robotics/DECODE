@@ -7,7 +7,6 @@ build.gradle
 settings.gradle
 gradle.properties
 FtcRobotController/build.gradle
-TeamCode/build.gradle
 "
 
 if git rev-parse --verify HEAD >/dev/null 2>&1; then

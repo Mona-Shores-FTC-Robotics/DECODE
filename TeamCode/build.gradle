@@ -30,6 +30,7 @@ repositories {
     maven { url = 'https://maven.brott.dev/' }
     maven { url = 'https://maven.pedropathing.com' }
     maven { url = "https://mymaven.bylazar.com/releases" }
+    maven { url = "https://repo.dairy.foundation/releases"}
 }
 
 dependencies {
@@ -58,5 +59,8 @@ dependencies {
     implementation('com.bylazar:fullpanels:1.0.8') {
         exclude group: "com.acmerobotics.dashboard"
     }
+
+    implementation("page.j5155.AdvantageScope:lite:v26.0.0")
+
 
 }
