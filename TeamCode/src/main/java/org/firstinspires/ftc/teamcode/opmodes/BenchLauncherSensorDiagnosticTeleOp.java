@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
@@ -43,7 +43,7 @@ public class BenchLauncherSensorDiagnosticTeleOp extends NextFTCOpMode {
     private IntakeSubsystem intake;
     private LightingSubsystem lighting;
     private LauncherCoordinator launcherCoordinator;
-    private VisionSubsystem vision;
+    private VisionSubsystemLimelight vision;
     private GamepadEx driverPad;
     private AllianceSelector allianceSelector;
     private Alliance selectedAlliance = Alliance.BLUE;
@@ -55,7 +55,7 @@ public class BenchLauncherSensorDiagnosticTeleOp extends NextFTCOpMode {
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
         launcherCoordinator = new LauncherCoordinator(shooter, intake, lighting);
-        vision = new VisionSubsystem(hardwareMap);
+        vision = new VisionSubsystemLimelight(hardwareMap);
 
         driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, Alliance.BLUE);

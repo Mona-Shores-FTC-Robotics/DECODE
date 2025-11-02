@@ -89,6 +89,7 @@ public class TeleOp extends NextFTCOpMode {
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
                 robot.shooter,
+                robot.vision,
                 request,
                 launcherCoordinator,
                 selectedAlliance,

@@ -14,7 +14,7 @@ import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
@@ -42,7 +42,7 @@ public class Autonomous extends OpMode {
     private Timer stepTimer;
     private ShooterSubsystem shooterSubsystem;
     private LightingSubsystem lighting;
-    private VisionSubsystem vision;
+    private VisionSubsystemLimelight vision;
 
     private Alliance activeAlliance = DEFAULT_ALLIANCE;
     private RoutineStep routineStep = RoutineStep.NOT_STARTED;
@@ -55,7 +55,7 @@ public class Autonomous extends OpMode {
     private FieldLayout currentLayout;
     private Pose lastAppliedStartPose;
     private Pose lastDetectedStartPose;
-    private VisionSubsystem.TagSnapshot lastTagSnapshot;
+    private VisionSubsystemLimelight.TagSnapshot lastTagSnapshot;
     private boolean manualAllianceOverride;
     private Alliance manualAlliance = Alliance.UNKNOWN;
     private boolean lastInitLoopY = false;
@@ -370,14 +370,14 @@ public class Autonomous extends OpMode {
         }
 
         Alliance requiredAlliance = manualAllianceOverride ? manualAlliance : null;
-        Optional<VisionSubsystem.TagSnapshot> snapshotOpt = vision.findAllianceSnapshot(requiredAlliance);
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.findAllianceSnapshot(requiredAlliance);
         if (!snapshotOpt.isPresent()) {
             lastTagSnapshot = null;
             lastDetectedStartPose = null;
             return;
         }
 
-        VisionSubsystem.TagSnapshot snapshot = snapshotOpt.get();
+        VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
         lastTagSnapshot = snapshot;
         Pose detectedPose = snapshot.getRobotPose().orElse(null);
         lastDetectedStartPose = detectedPose == null ? null : copyPose(detectedPose);

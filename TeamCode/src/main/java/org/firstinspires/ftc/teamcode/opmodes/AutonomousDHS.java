@@ -18,7 +18,7 @@ import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
@@ -51,7 +51,7 @@ public class AutonomousDHS extends OpMode {
     private FieldLayout currentLayout;
     private Pose lastAppliedStartPose;
     private Pose lastDetectedStartPose;
-    private VisionSubsystem.TagSnapshot lastTagSnapshot;
+    private VisionSubsystemLimelight.TagSnapshot lastTagSnapshot;
     private Alliance activeAlliance = Alliance.BLUE;
 
     private PathChain pathToScore;
@@ -99,7 +99,7 @@ public class AutonomousDHS extends OpMode {
         BindingManager.update();
 
         // Blend camera detections with any driver override and apply the combined alliance immediately.
-        Optional<VisionSubsystem.TagSnapshot> snapshotOpt =
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt =
                 allianceSelector.updateFromVision(robot.vision);
 
         allianceSelector.applySelection(robot, robot.lighting);

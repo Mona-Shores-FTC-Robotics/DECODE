@@ -45,7 +45,7 @@ public class DriveSubsystem implements Subsystem {
     private final DcMotorEx motorRf;
     private final DcMotorEx motorLb;
     private final DcMotorEx motorRb;
-    private final VisionSubsystem vision;
+    private final VisionSubsystemLimelight vision;
     private final ElapsedTime clock = new ElapsedTime();
 
     private double lastGoodVisionAngle = Double.NaN;
@@ -88,7 +88,7 @@ public class DriveSubsystem implements Subsystem {
         public double visionSampleAgeMs;
     }
 
-    public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystem vision) {
+    public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
         follower = Constants.createFollower(hardwareMap);
         driveMotors = new Constants.Motors(hardwareMap);
         driveMotors.setRunUsingEncoder();

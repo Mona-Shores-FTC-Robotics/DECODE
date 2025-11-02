@@ -8,7 +8,7 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -20,7 +20,7 @@ public class Robot {
     public final ShooterSubsystem shooter;
     public final IntakeSubsystem intake;
     public final LightingSubsystem lighting;
-    public final VisionSubsystem vision;
+    public final VisionSubsystemLimelight vision;
     public final TelemetryService telemetry;
     public final RobotLogger logger;
 
@@ -28,7 +28,7 @@ public class Robot {
     private final ShooterSubsystem.Inputs shooterInputs = new ShooterSubsystem.Inputs();
     private final IntakeSubsystem.Inputs intakeInputs = new IntakeSubsystem.Inputs();
     private final LightingSubsystem.Inputs lightingInputs = new LightingSubsystem.Inputs();
-    private final VisionSubsystem.Inputs visionInputs = new VisionSubsystem.Inputs();
+    private final VisionSubsystemLimelight.Inputs visionInputs = new VisionSubsystemLimelight.Inputs();
 
     public Robot(HardwareMap hardwareMap) {
         this(hardwareMap, new TelemetryService(TelemetrySettings.enablePsiKitLogging));
@@ -37,7 +37,7 @@ public class Robot {
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
         telemetry = telemetryService == null ? new TelemetryService(TelemetrySettings.enablePsiKitLogging) : telemetryService;
         logger = new RobotLogger(telemetry);
-        vision = new VisionSubsystem(hardwareMap);
+        vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
         shooter = new ShooterSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap);

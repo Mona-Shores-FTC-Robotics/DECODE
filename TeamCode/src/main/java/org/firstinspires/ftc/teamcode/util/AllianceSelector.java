@@ -5,7 +5,7 @@ import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Optional;
@@ -32,7 +32,7 @@ public final class AllianceSelector {
     private int detectedTagId = -1;
     private double detectedRange = Double.NaN;
     private double detectedYaw = Double.NaN;
-    private VisionSubsystem.TagSnapshot lastSnapshot;
+    private VisionSubsystemLimelight.TagSnapshot lastSnapshot;
 
     public AllianceSelector(GamepadEx driver, Alliance defaultAlliance) {
         this.defaultAlliance = defaultAlliance;
@@ -55,17 +55,17 @@ public final class AllianceSelector {
      *
      * @return snapshot data when a valid detection was found.
      */
-    public Optional<VisionSubsystem.TagSnapshot> updateFromVision(VisionSubsystem vision) {
+    public Optional<VisionSubsystemLimelight.TagSnapshot> updateFromVision(VisionSubsystemLimelight vision) {
         if (vision == null) {
             clearDetection();
             return Optional.empty();
         }
 
-        Optional<VisionSubsystem.TagSnapshot> snapshotOpt = vision.findAllianceSnapshot(null);
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.findAllianceSnapshot(null);
         if (!snapshotOpt.isPresent()) {
             clearDetection();
         } else {
-            VisionSubsystem.TagSnapshot snapshot = snapshotOpt.get();
+            VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
             detectedAlliance = snapshot.getAlliance();
             detectedTagId = snapshot.getTagId();
             detectedRange = snapshot.getFtcRange();
@@ -156,7 +156,7 @@ public final class AllianceSelector {
         return selectedAlliance;
     }
 
-    public Optional<VisionSubsystem.TagSnapshot> getLastSnapshot() {
+    public Optional<VisionSubsystemLimelight.TagSnapshot> getLastSnapshot() {
         return Optional.ofNullable(lastSnapshot);
     }
 

@@ -47,7 +47,13 @@ dependencies {
     implementation('com.pedropathing:telemetry:1.0.0')
 
     //Panels
-    implementation('com.bylazar:fullpanels:1.0.8')
+    implementation('com.bylazar:fullpanels:1.0.9')
+
+    implementation('com.acmerobotics.dashboard:dashboard:0.5.1') {
+        exclude group: 'org.firstinspires.ftc'
+    }
+
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
+
 
 }

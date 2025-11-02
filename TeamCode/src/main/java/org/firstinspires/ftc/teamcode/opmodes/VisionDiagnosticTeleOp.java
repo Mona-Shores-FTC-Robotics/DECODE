@@ -1,23 +1,17 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.bylazar.telemetry.TelemetryManager;
-import com.pedropathing.geometry.Pose;
-
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.util.AprilTagPoseUtil;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
-import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
-import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-
-import java.util.List;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
+import org.firstinspires.ftc.teamcode.util.Alliance;
 
 /**
  * Minimal driving OpMode that leaves the vision portal running and mirrors its pose estimates to
@@ -65,35 +59,50 @@ public class VisionDiagnosticTeleOp extends NextFTCOpMode {
     }
 
     private void pushVisionTelemetry() {
-        VisionSubsystem vision = robot.vision;
-        List<AprilTagDetection> detections = vision.getDetections();
+        VisionSubsystemLimelight vision = robot.vision;
+        vision.findAllianceSnapshot(Alliance.UNKNOWN);
 
         telemetry.addData("Vision state", vision.getState());
-        telemetry.addData("Detections", detections.size());
+        telemetry.addData("Streaming", vision.isStreaming());
+        telemetry.addData("Has tag", vision.hasValidTag());
+        telemetry.addData("Current tag", vision.getCurrentTagId());
+        telemetry.addData("Odometry pending", vision.shouldUpdateOdometry());
 
         if (panelsTelemetry != null) {
             panelsTelemetry.debug("Vision state", vision.getState().name());
-            panelsTelemetry.debug("Detection count", detections.size());
+            panelsTelemetry.debug("Streaming", Boolean.toString(vision.isStreaming()));
+            panelsTelemetry.debug("Has tag", Boolean.toString(vision.hasValidTag()));
+            panelsTelemetry.debug("Current tag", Integer.toString(vision.getCurrentTagId()));
         }
 
-        for (int i = 0; i < detections.size(); i++) {
-            AprilTagDetection detection = detections.get(i);
-            String ftcString = formatFtcPose(detection);
-            String pedroString = formatPedroPose(detection);
-
-            telemetry.addLine(String.format("Tag %d id=%d  FTC=%s  Pedro=%s",
-                    i,
-                    detection.id,
-                    ftcString,
-                    pedroString));
+        vision.getLastSnapshot().ifPresent(snapshot -> {
+            telemetry.addData("Snapshot alliance", snapshot.getAlliance().displayName());
+            telemetry.addData("Snapshot id", snapshot.getTagId());
+            telemetry.addData("Range (in)", format(snapshot.getFtcRange()));
+            telemetry.addData("Bearing (deg)", format(snapshot.getFtcBearing()));
+            telemetry.addData("Yaw (deg)", format(snapshot.getFtcYaw()));
+            telemetry.addData("Robot pose", String.format("(%.1f, %.1f, %.1f°)",
+                    snapshot.getRobotX(),
+                    snapshot.getRobotY(),
+                    snapshot.getRobotYaw()));
+            telemetry.addData("tx/ty/ta", String.format("(%.2f°, %.2f°, %.2f)",
+                    snapshot.getTxDegrees(),
+                    snapshot.getTyDegrees(),
+                    snapshot.getTargetAreaPercent()));
 
             if (panelsTelemetry != null) {
-                panelsTelemetry.debug(
-                        "Tag " + detection.id,
-                        "FTC " + ftcString + "  Pedro " + pedroString
-                );
+                panelsTelemetry.debug("Snapshot alliance", snapshot.getAlliance().displayName());
+                panelsTelemetry.debug("Snapshot id", Integer.toString(snapshot.getTagId()));
+                panelsTelemetry.debug("Range (in)", format(snapshot.getFtcRange()));
+                panelsTelemetry.debug("Bearing (deg)", format(snapshot.getFtcBearing()));
+                panelsTelemetry.debug("Yaw (deg)", format(snapshot.getFtcYaw()));
+                panelsTelemetry.debug("Robot pose",
+                        String.format("(%.1f, %.1f, %.1f°)",
+                                snapshot.getRobotX(),
+                                snapshot.getRobotY(),
+                                snapshot.getRobotYaw()));
             }
-        }
+        });
 
         if (panelsTelemetry != null) {
             panelsTelemetry.update(telemetry);
@@ -101,33 +110,7 @@ public class VisionDiagnosticTeleOp extends NextFTCOpMode {
         telemetry.update();
     }
 
-    private static String formatFtcPose(AprilTagDetection detection) {
-        if (detection == null) {
-            return "(n/a)";
-        }
-        if (detection.ftcPose != null) {
-            return String.format("(%.1f, %.1f, %.1f°)",
-                    detection.ftcPose.x,
-                    detection.ftcPose.y,
-                    detection.ftcPose.yaw);
-        }
-        if (detection.robotPose != null) {
-            return String.format("(%.1f, %.1f, %.1f°)",
-                    detection.robotPose.getPosition().x,
-                    detection.robotPose.getPosition().y,
-                    detection.robotPose.getOrientation().getYaw(AngleUnit.DEGREES));
-        }
-        return "(n/a)";
-    }
-
-    private static String formatPedroPose(AprilTagDetection detection) {
-        Pose pose = AprilTagPoseUtil.toPedroPose(detection);
-        if (pose == null) {
-            return "(n/a)";
-        }
-        return String.format("(%.1f, %.1f, %.1f°)",
-                pose.getX(),
-                pose.getY(),
-                Math.toDegrees(pose.getHeading()));
+    private static String format(double value) {
+        return Double.isNaN(value) ? "--" : String.format("%.2f", value);
     }
 }
