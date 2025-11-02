@@ -31,6 +31,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     private RobotLogger logger;
     private RobotLogger.Source loggerSource;
     private boolean lastShooterReady = false;
+    private double lastPeriodicMs = 0.0;
 
     public LauncherCoordinator(ShooterSubsystem shooter,
                                IntakeSubsystem intake,
@@ -56,7 +57,9 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
 
     @Override
     public void periodic() {
+        long start = System.nanoTime();
         // Nothing required each cycle beyond spin maintenance handled on colour change.
+        lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
     public void stop() {
@@ -222,6 +225,10 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         inputs.shooterState = shooter.getState().name();
         inputs.shooterSpinMode = shooter.getEffectiveSpinMode().name();
         inputs.shooterQueuedShots = shooter.getQueuedShots();
+    }
+
+    public double getLastPeriodicMs() {
+        return lastPeriodicMs;
     }
 
     public void attachLogger(RobotLogger robotLogger) {

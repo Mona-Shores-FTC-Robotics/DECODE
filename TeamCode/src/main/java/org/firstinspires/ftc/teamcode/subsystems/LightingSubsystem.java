@@ -47,6 +47,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     private LightingState state = LightingState.OFF;
     private Alliance alliance = Alliance.UNKNOWN;
+    private double lastPeriodicMs = 0.0;
 
     public static final class Inputs {
         public LightingState state = LightingState.OFF;
@@ -94,7 +95,13 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     @Override
     public void periodic() {
+        long start = System.nanoTime();
         // No periodic work required – kept for interface completeness.
+        lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    public double getLastPeriodicMs() {
+        return lastPeriodicMs;
     }
 
     public void populateInputs(Inputs inputs) {

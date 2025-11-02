@@ -41,7 +41,7 @@ public class IntakeSubsystem implements Subsystem {
         public static String leftSensor = "lane_left_color";
         public static String centerSensor = "lane_center_color";
         public static String rightSensor = "lane_right_color";
-        public static double samplePeriodMs = 75.0;
+        public static double samplePeriodMs = 200.0;
 
         public static double minValue = 0.02;
         public static double minSaturation = 0.15;
@@ -144,6 +144,7 @@ public class IntakeSubsystem implements Subsystem {
     private final float[] hsvBuffer = new float[3];
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
     private boolean anyLaneSensorsPresent = false;
+    private double lastPeriodicMs = 0.0;
 
     public static final class Inputs {
         public IntakeState state = IntakeState.IDLE;
@@ -324,11 +325,17 @@ public class IntakeSubsystem implements Subsystem {
 
     @Override
     public void periodic() {
+        long start = System.nanoTime();
         if (state == IntakeState.INTAKING && timer.milliseconds() >= defaultRunTimeMs) {
             indexedCount = maxIndexed;
             state = IntakeState.FULL;
         }
         pollLaneSensorsIfNeeded();
+        lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    public double getLastPeriodicMs() {
+        return lastPeriodicMs;
     }
 
     public void populateInputs(Inputs inputs) {

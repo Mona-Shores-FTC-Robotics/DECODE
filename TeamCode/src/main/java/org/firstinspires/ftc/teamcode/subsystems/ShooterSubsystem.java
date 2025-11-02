@@ -170,6 +170,7 @@ public class ShooterSubsystem implements Subsystem {
     private ShooterState state = ShooterState.DISABLED;
     private ShotRequest activeShot;
     private double lastShotCompletionMs = 0.0;
+    private double lastPeriodicMs = 0.0;
 
     public static final class Inputs {
         public ShooterState state = ShooterState.DISABLED;
@@ -252,6 +253,7 @@ public class ShooterSubsystem implements Subsystem {
 
     @Override
     public void periodic() {
+        long start = System.nanoTime();
         double now = clock.milliseconds();
 
         for (Feeder feeder : feeders.values()) {
@@ -264,6 +266,7 @@ public class ShooterSubsystem implements Subsystem {
             flywheel.updateControl();
         }
         updateStateMachine(now, effectiveSpinMode);
+        lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
     public void toggleSpinUp() {
@@ -314,6 +317,10 @@ public class ShooterSubsystem implements Subsystem {
 
     public int getQueuedShots() {
         return shotQueue.size() + (activeShot != null ? 1 : 0);
+    }
+
+    public double getLastPeriodicMs() {
+        return lastPeriodicMs;
     }
 
     public void populateInputs(Inputs inputs) {

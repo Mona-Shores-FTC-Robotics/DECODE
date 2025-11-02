@@ -48,6 +48,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     private final Inputs inputs = new Inputs();
     private RobotLogger logger;
     private RobotLogger.Source loggerSource;
+    private double lastPeriodicMs = 0.0;
 
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
         this(hardwareMap, null);
@@ -67,7 +68,9 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     @Override
     public void periodic() {
+        long start = System.nanoTime();
         // Limelight handles processing internally; no periodic work needed.
+        lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
     public void stop() {
@@ -190,6 +193,10 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     public Alliance getAlliance() {
         return activeAlliance;
+    }
+
+    public double getLastPeriodicMs() {
+        return lastPeriodicMs;
     }
 
     public void attachLogger(RobotLogger robotLogger) {

@@ -6,6 +6,11 @@ import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+
+import java.util.Locale;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
@@ -17,6 +22,9 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "Decode Teleop", group = "TeleOp")
 public class TeleOp extends NextFTCOpMode {
 
+    private static final boolean ENABLE_LOGGING = false;
+    private static final long TELEMETRY_INTERVAL_NS = 200_000_000L; // 50 ms cadence (~20 Hz)
+
     private Robot robot;
     private GamepadEx driverPad;
     private GamepadEx operatorPad;
@@ -25,6 +33,7 @@ public class TeleOp extends NextFTCOpMode {
     private LauncherCoordinator launcherCoordinator;
     private AllianceSelector allianceSelector;
     private Alliance selectedAlliance = Alliance.UNKNOWN;
+    private long lastTelemetryNs = 0L;
 
     @Override
     public void onInit() {
@@ -41,7 +50,9 @@ public class TeleOp extends NextFTCOpMode {
         robot.initialize();
         launcherCoordinator.initialize();
         launcherCoordinator.enableAutoSpin(true);
-        launcherCoordinator.attachLogger(robot.logger);
+        if (ENABLE_LOGGING) {
+            launcherCoordinator.attachLogger(robot.logger);
+        }
         allianceSelector.applySelection(robot, robot.lighting);
         selectedAlliance = allianceSelector.getSelectedAlliance();
 
@@ -59,6 +70,9 @@ public class TeleOp extends NextFTCOpMode {
     public void onWaitForStart() {
         BindingManager.update();
         if (allianceSelector != null) {
+            allianceSelector.applySelection(robot, robot.lighting);
+            selectedAlliance = allianceSelector.getSelectedAlliance();
+        } else {
             selectedAlliance = RobotState.getAlliance();
         }
         telemetry.clear();
@@ -70,7 +84,9 @@ public class TeleOp extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
-        robot.logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), RobotState.getAlliance(), "TeleOp");
+        if (ENABLE_LOGGING) {
+            robot.logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), RobotState.getAlliance(), "TeleOp");
+        }
         if (allianceSelector != null) {
             allianceSelector.lockSelection();
             allianceSelector.applySelection(robot, robot.lighting);
@@ -81,24 +97,88 @@ public class TeleOp extends NextFTCOpMode {
     @Override
     public void onUpdate() {
         BindingManager.update();
+
+        long mainLoopStartNs = System.nanoTime();
+
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
-
+        long driveCallStartNs = System.nanoTime();
         robot.drive.driveScaled(request.fieldX, request.fieldY, request.rotation, request.slowMode);
-        robot.intake.refreshLaneSensors();
+        double driveCallMs = nanosToMs(System.nanoTime() - driveCallStartNs);
 
-        robot.telemetry.publishLoopTelemetry(
-                robot.drive,
-                robot.shooter,
-                robot.vision,
-                request,
-                launcherCoordinator,
-                selectedAlliance,
-                getRuntime(),
-                telemetry,
-                robot.logger,
-                "TeleOp"
-        );
-        robot.logger.sampleSources();
+        boolean telemetrySent = false;
+        double telemetryMsThisLoop = 0.0;
+        long nowNs = System.nanoTime();
+        if (nowNs - lastTelemetryNs >= TELEMETRY_INTERVAL_NS) {
+            long telemetryCallStartNs = nowNs;
+            robot.telemetry.publishLoopTelemetry(
+                    robot.drive,
+                    robot.shooter,
+                    robot.vision,
+                    request,
+                    launcherCoordinator,
+                    selectedAlliance,
+                    getRuntime(),
+                    null,
+                    ENABLE_LOGGING ? robot.logger : null,
+                    "TeleOp"
+            );
+            telemetryMsThisLoop = nanosToMs(System.nanoTime() - telemetryCallStartNs);
+            lastTelemetryNs = System.nanoTime();
+            telemetrySent = true;
+        }
+
+        Pose2D pose = robot.drive.getPose();
+
+        telemetry.addData("Alliance", selectedAlliance.displayName());
+        if (pose != null) {
+            telemetry.addData("Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
+                    pose.getX(DistanceUnit.INCH),
+                    pose.getY(DistanceUnit.INCH),
+                    pose.getHeading(AngleUnit.DEGREES));
+        } else {
+            telemetry.addData("Pose", "(unavailable)");
+        }
+
+        long mainloopEndNs = System.nanoTime();
+        double loopMs = nanosToMs(mainloopEndNs - mainLoopStartNs);
+        boolean showDiag = gamepad1.right_trigger > 0.5;
+        double drivePeriodicMs = robot.drive.getLastPeriodicMs();
+        double intakePeriodicMs = robot.intake.getLastPeriodicMs();
+        double shooterPeriodicMs = robot.shooter.getLastPeriodicMs();
+        double lightingPeriodicMs = robot.lighting.getLastPeriodicMs();
+        double launcherPeriodicMs = launcherCoordinator != null ? launcherCoordinator.getLastPeriodicMs() : 0.0;
+        double visionPeriodicMs = robot.vision.getLastPeriodicMs();
+        double totalLoopMs = loopMs
+                + drivePeriodicMs
+                + intakePeriodicMs
+                + shooterPeriodicMs
+                + lightingPeriodicMs
+                + launcherPeriodicMs
+                + visionPeriodicMs
+                + telemetryMsThisLoop;
+
+        telemetry.addData("Total Loop", "%.1f ms", totalLoopMs);
+        if (showDiag) {
+            telemetry.addData("Main Loop", "%.1f ms", loopMs);
+            telemetry.addData("Control Call", "%.1f ms", driveCallMs);
+            telemetry.addData("Drive periodic", "%.1f ms", drivePeriodicMs);
+            telemetry.addData("Intake periodic", "%.1f ms", intakePeriodicMs);
+            telemetry.addData("Shooter periodic", "%.1f ms", shooterPeriodicMs);
+            telemetry.addData("Lighting periodic", "%.1f ms", lightingPeriodicMs);
+            telemetry.addData("Launcher periodic", "%.1f ms", launcherPeriodicMs);
+            telemetry.addData("Vision periodic", "%.1f ms", visionPeriodicMs);
+            telemetry.addData("Telemetry publish", telemetrySent
+                    ? String.format(Locale.US, "%.1f ms", telemetryMsThisLoop)
+                    : "skipped");
+        } else {
+            telemetry.addData("Main Loop", "%.1f ms", loopMs);
+            telemetry.addData("Detail", "Hold RT for subsystem timings");
+        }
+
+        telemetry.update();
+        if (ENABLE_LOGGING) {
+            robot.logger.sampleSources();
+        }
     }
 
     @Override
@@ -117,7 +197,13 @@ public class TeleOp extends NextFTCOpMode {
         if (allianceSelector != null) {
             allianceSelector.unlockSelection();
         }
-        robot.logger.stopSession();
+        if (ENABLE_LOGGING) {
+            robot.logger.stopSession();
+        }
+    }
+
+    private static double nanosToMs(long nanos) {
+        return nanos / 1_000_000.0;
     }
 
 }

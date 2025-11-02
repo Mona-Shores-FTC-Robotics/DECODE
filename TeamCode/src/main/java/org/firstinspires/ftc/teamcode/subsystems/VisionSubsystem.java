@@ -60,6 +60,7 @@ public class VisionSubsystem implements Subsystem {
     private boolean odometryUpdatePending;
     private Pose lastRobotPoseFromTag;
     private TagSnapshot lastSnapshot;
+    private double lastPeriodicMs = 0.0;
 
     public static final class Inputs {
         public VisionState state = VisionState.OFF;
@@ -114,7 +115,9 @@ public class VisionSubsystem implements Subsystem {
 
     @Override
     public void periodic() {
+        long start = System.nanoTime();
         // Nothing to do – the SDK handles processing on a background thread.
+        lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
     public void stop() {
@@ -211,6 +214,10 @@ public class VisionSubsystem implements Subsystem {
 
     public Optional<TagSnapshot> getLastSnapshot() {
         return Optional.ofNullable(lastSnapshot);
+    }
+
+    public double getLastPeriodicMs() {
+        return lastPeriodicMs;
     }
 
     public void populateInputs(Inputs inputs) {

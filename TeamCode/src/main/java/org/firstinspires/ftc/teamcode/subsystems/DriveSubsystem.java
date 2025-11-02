@@ -159,9 +159,17 @@ public class DriveSubsystem implements Subsystem {
         follower.startTeleopDrive();
     }
 
+    private double lastPeriodicMs = 0.0;
+
     @Override
     public void periodic() {
+        long start = System.nanoTime();
         follower.update();
+        lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    public double getLastPeriodicMs() {
+        return lastPeriodicMs;
     }
 
     public void stop() {

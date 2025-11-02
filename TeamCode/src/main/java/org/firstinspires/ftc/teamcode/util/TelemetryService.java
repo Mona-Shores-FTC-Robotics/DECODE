@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.util;
 
+import android.os.SystemClock;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -31,6 +33,12 @@ public class TelemetryService {
 
     private TelemetryManager panelsTelemetry;
     private boolean sessionActive = false;
+    private long lastPanelsDrawMs = 0L;
+    private long lastDashboardPacketMs = 0L;
+
+    private static final boolean ENABLE_PANELS_DRAWING = false;
+    private static final long PANELS_DRAW_INTERVAL_MS = 50L;
+    private static final long DASHBOARD_PACKET_INTERVAL_MS = 50L;
 
     public TelemetryService(boolean enablePsiKitLogging) {
         this.enablePsiKitLogging = enablePsiKitLogging;
@@ -153,7 +161,14 @@ public class TelemetryService {
             visionAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
         }
 
-        PanelsBridge.drawFollowerDebug(drive.getFollower());
+        long nowMs = SystemClock.uptimeMillis();
+        boolean drawPanelsThisLoop = nowMs - lastPanelsDrawMs >= PANELS_DRAW_INTERVAL_MS;
+        boolean sendDashboardThisLoop = nowMs - lastDashboardPacketMs >= DASHBOARD_PACKET_INTERVAL_MS;
+
+        if (drawPanelsThisLoop && ENABLE_PANELS_DRAWING) {
+            PanelsBridge.drawFollowerDebug(drive.getFollower());
+            lastPanelsDrawMs = nowMs;
+        }
 
         TelemetryManager panels = panelsTelemetry();
         if (panels != null) {
@@ -202,31 +217,6 @@ public class TelemetryService {
 
             Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
             dsTelemetry.addData("Alliance", activeAlliance.displayName());
-            dsTelemetry.addData("Shooter RPM", "%.0f / %.0f  %s",
-                    currentRpm,
-                    targetRpm,
-                    shooterReady ? "ready" : "spooling");
-            dsTelemetry.addData("Drive Mode", drive.getDriveMode());
-            dsTelemetry.addData("Auto Spin", LauncherCoordinator.autoSpinEnabled ? "enabled" : "disabled");
-            dsTelemetry.addData("Runtime (s)", runtimeSec);
-            dsTelemetry.addData("Vision Has Tag", visionHasTag);
-            dsTelemetry.addData("Vision Tag", visionTagId);
-            dsTelemetry.addData("Vision Range (in)", formatValue(visionRangeIn, "%.1f"));
-            dsTelemetry.addData("Vision Bearing (deg)", formatValue(visionBearingDeg, "%.1f"));
-            dsTelemetry.addData("Vision Yaw (deg)", formatValue(visionYawDeg, "%.1f"));
-            if (Double.isNaN(visionPoseXIn) || Double.isNaN(visionPoseYIn) || Double.isNaN(visionHeadingRad)) {
-                dsTelemetry.addData("Vision Pose", "(--, --, --)");
-            } else {
-                dsTelemetry.addData("Vision Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
-                        visionPoseXIn,
-                        visionPoseYIn,
-                        Math.toDegrees(visionHeadingRad));
-            }
-            String txStr = Double.isNaN(visionTxDeg) ? "--" : String.format("%.2f°", visionTxDeg);
-            String tyStr = Double.isNaN(visionTyDeg) ? "--" : String.format("%.2f°", visionTyDeg);
-            String taStr = Double.isNaN(visionTaPercent) ? "--" : String.format("%.2f", visionTaPercent);
-            dsTelemetry.addData("Vision tx/ty/ta", String.format("(%s, %s, %s)", txStr, tyStr, taStr));
-            dsTelemetry.addData("Vision Odometry Pending", visionOdometryPending);
         }
 
         if (launcherCoordinator != null) {
@@ -238,37 +228,40 @@ public class TelemetryService {
             updateDriverStation(dsTelemetry);
         }
 
-        sendDashboardPacket(
-                drive,
-                requestX,
-                requestY,
-                requestRot,
-                slowMode,
-                pose != null,
-                poseXIn,
-                poseYIn,
-                headingRad,
-                headingDeg,
-                currentRpm,
-                targetRpm,
-                shooterReady,
-                launcherCoordinator,
-                alliance,
-                visionAlliance,
-                runtimeSec,
-                visionHasTag,
-                visionTagId,
-                visionRangeIn,
-                visionBearingDeg,
-                visionYawDeg,
-                visionPoseXIn,
-                visionPoseYIn,
-                visionHeadingRad,
-                visionTxDeg,
-                visionTyDeg,
-                visionTaPercent,
-                visionOdometryPending
-        );
+        if (sendDashboardThisLoop && enableDashboardTelemetry && dashboard != null) {
+            sendDashboardPacket(
+                    drive,
+                    requestX,
+                    requestY,
+                    requestRot,
+                    slowMode,
+                    pose != null,
+                    poseXIn,
+                    poseYIn,
+                    headingRad,
+                    headingDeg,
+                    currentRpm,
+                    targetRpm,
+                    shooterReady,
+                    launcherCoordinator,
+                    alliance,
+                    visionAlliance,
+                    runtimeSec,
+                    visionHasTag,
+                    visionTagId,
+                    visionRangeIn,
+                    visionBearingDeg,
+                    visionYawDeg,
+                    visionPoseXIn,
+                    visionPoseYIn,
+                    visionHeadingRad,
+                    visionTxDeg,
+                    visionTyDeg,
+                    visionTaPercent,
+                    visionOdometryPending
+            );
+            lastDashboardPacketMs = nowMs;
+        }
     }
 
     private FtcDashboard safelyGetDashboard() {

@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.components.BindingsComponent;
@@ -27,6 +28,7 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
  * Colour sensors light the indicators, the shooter spins when artefacts are present, and
  * X/A/B/Y trigger per-lane or burst feeds through the shooter subsystem.
  */
+@Disabled
 @Configurable
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp(
         name = "Bench Launcher Sensor Diagnostic",
