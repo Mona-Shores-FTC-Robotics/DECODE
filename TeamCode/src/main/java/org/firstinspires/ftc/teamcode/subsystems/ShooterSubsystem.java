@@ -130,7 +130,7 @@ public class ShooterSubsystem implements Subsystem {
     @Configurable
     public static class RightFlywheelConfig {
         public static String motorName = "shooter_right";
-        public static boolean reversed = false;
+        public static boolean reversed = true;
         public static double launchRpm = 4200.0;
         public static double idleRpm = 2600.0;
     }

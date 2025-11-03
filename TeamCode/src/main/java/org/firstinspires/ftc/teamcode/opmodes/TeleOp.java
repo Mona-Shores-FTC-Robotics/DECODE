@@ -177,6 +177,12 @@ public class TeleOp extends NextFTCOpMode {
                     ? String.format(Locale.US, "%.1f ms", telemetryMsThisLoop)
                     : "skipped");
             telemetry.addData("Intake power", "%.2f", robot.intake.getCurrentPower());
+            telemetry.addData("Intake roller",
+                    robot.intake.isRollerPresent()
+                            ? String.format(Locale.US, "%.2f (%s)",
+                            robot.intake.getRollerPosition(),
+                            robot.intake.isRollerActive() ? "active" : "idle")
+                            : "missing");
             if (operatorBindings != null && operatorBindings.isShooterDebugMode()) {
                 for (LauncherLane lane : LauncherLane.values()) {
                     LaneDebugState state = operatorBindings.getLaneDebugState(lane);

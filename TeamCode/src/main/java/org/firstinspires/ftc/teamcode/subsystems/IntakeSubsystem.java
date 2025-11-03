@@ -68,16 +68,16 @@ public class IntakeSubsystem implements Subsystem {
     @Configurable
     public static class MotorConfig {
         public static String motorName = "intake";
-        public static double defaultForwardPower = 1.0;
-        public static double defaultReversePower = -1.0;
+        public static double defaultForwardPower = .6;
+        public static double defaultReversePower = -.3;
         public static boolean brakeOnZero = true;
-        public static boolean reverseDirection = false;
+        public static boolean reverseDirection = true;
     }
 
     @Configurable
     public static class RollerConfig {
         public static String servoName = "intake_roller";
-        public static double activePosition = 0.5;
+        public static double activePosition = -1.0;
         public static double inactivePosition = 0.0;
     }
 
@@ -169,6 +169,7 @@ public class IntakeSubsystem implements Subsystem {
     private final DcMotorEx intakeMotor;
     private double appliedMotorPower = 0.0;
     private final Servo rollerServo;
+    private double lastRollerPosition = Double.NaN;
 
     public static final class Inputs {
         public IntakeState state = IntakeState.IDLE;
@@ -219,6 +220,9 @@ public class IntakeSubsystem implements Subsystem {
         public int rightRawGreen;
         public int rightRawBlue;
         public double motorPower;
+        public boolean rollerPresent;
+        public double rollerPosition;
+        public boolean rollerActive;
     }
 
     public IntakeSubsystem(HardwareMap hardwareMap) {
@@ -237,6 +241,7 @@ public class IntakeSubsystem implements Subsystem {
         }
         rollerServo = tryGetServo(hardwareMap, RollerConfig.servoName);
         if (rollerServo != null) {
+            lastRollerPosition = RollerConfig.activePosition;
             rollerServo.setPosition(RollerConfig.activePosition);
         }
         for (LauncherLane lane : LauncherLane.values()) {
@@ -305,6 +310,10 @@ public class IntakeSubsystem implements Subsystem {
         }
         sensorTimer.reset();
         setManualPower(0.0);
+        if (rollerServo != null) {
+            rollerServo.setPosition(RollerConfig.activePosition);
+            lastRollerPosition = RollerConfig.activePosition;
+        }
     }
 
     private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
@@ -395,6 +404,12 @@ public class IntakeSubsystem implements Subsystem {
         // Basic teleop mode: we no longer auto-stop when the timer elapses.
         // Full counting logic will be reintroduced when artifact indexing is required again.
         pollLaneSensorsIfNeeded();
+        if (rollerServo != null && Math.abs(rollerServo.getPosition() - RollerConfig.activePosition) > 1e-3) {
+            rollerServo.setPosition(RollerConfig.activePosition);
+            lastRollerPosition = RollerConfig.activePosition;
+        } else if (rollerServo != null) {
+            lastRollerPosition = rollerServo.getPosition();
+        }
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
@@ -419,6 +434,19 @@ public class IntakeSubsystem implements Subsystem {
         return appliedMotorPower;
     }
 
+    public boolean isRollerPresent() {
+        return rollerServo != null;
+    }
+
+    public double getRollerPosition() {
+        return rollerServo == null ? Double.NaN : lastRollerPosition;
+    }
+
+    public boolean isRollerActive() {
+        return rollerServo != null
+                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
+    }
+
     public void populateInputs(Inputs inputs) {
         if (inputs == null) {
             return;
@@ -432,6 +460,10 @@ public class IntakeSubsystem implements Subsystem {
         inputs.sensorSamplePeriodMs = LaneSensorConfig.samplePeriodMs;
         inputs.timerMs = timer.milliseconds();
         inputs.motorPower = appliedMotorPower;
+        inputs.rollerPresent = rollerServo != null;
+        inputs.rollerPosition = rollerServo != null ? lastRollerPosition : Double.NaN;
+        inputs.rollerActive = rollerServo != null
+                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
 
         populateLaneInputs(inputs, LauncherLane.LEFT);
         populateLaneInputs(inputs, LauncherLane.CENTER);
