@@ -17,6 +17,7 @@ import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
+import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 import java.util.ArrayList;
@@ -170,6 +171,7 @@ public class IntakeSubsystem implements Subsystem {
     private double appliedMotorPower = 0.0;
     private final Servo rollerServo;
     private double lastRollerPosition = Double.NaN;
+    private RobotMode robotMode = RobotMode.DEBUG;
 
     public static final class Inputs {
         public IntakeState state = IntakeState.IDLE;
@@ -398,17 +400,25 @@ public class IntakeSubsystem implements Subsystem {
         return alliance;
     }
 
+    public void setRobotMode(RobotMode mode) {
+        robotMode = RobotMode.orDefault(mode);
+    }
+
     @Override
     public void periodic() {
         long start = System.nanoTime();
-        // Basic teleop mode: we no longer auto-stop when the timer elapses.
-        // Full counting logic will be reintroduced when artifact indexing is required again.
-        pollLaneSensorsIfNeeded();
-        if (rollerServo != null && Math.abs(rollerServo.getPosition() - RollerConfig.activePosition) > 1e-3) {
-            rollerServo.setPosition(RollerConfig.activePosition);
-            lastRollerPosition = RollerConfig.activePosition;
-        } else if (rollerServo != null) {
-            lastRollerPosition = rollerServo.getPosition();
+        if (robotMode == RobotMode.MATCH) {
+            pollLaneSensorsIfNeeded();
+            if (rollerServo != null && Math.abs(rollerServo.getPosition() - RollerConfig.activePosition) > 1e-3) {
+                rollerServo.setPosition(RollerConfig.activePosition);
+                lastRollerPosition = RollerConfig.activePosition;
+            } else if (rollerServo != null) {
+                lastRollerPosition = rollerServo.getPosition();
+            }
+        } else {
+            if (rollerServo != null) {
+                lastRollerPosition = rollerServo.getPosition();
+            }
         }
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }

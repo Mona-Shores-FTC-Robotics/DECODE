@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.util.Range;
 import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.RobotMode;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -179,6 +180,7 @@ public class ShooterSubsystem implements Subsystem {
     private ShotRequest activeShot;
     private double lastShotCompletionMs = 0.0;
     private double lastPeriodicMs = 0.0;
+    private RobotMode robotMode = RobotMode.DEBUG;
 
     public static FlywheelControlMode getFlywheelControlMode() {
         FlywheelControlMode[] modes = FlywheelControlMode.values();
@@ -288,6 +290,10 @@ public class ShooterSubsystem implements Subsystem {
         }
         updateStateMachine(now, effectiveSpinMode);
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    public void setRobotMode(RobotMode mode) {
+        robotMode = RobotMode.orDefault(mode);
     }
 
     public void toggleSpinUp() {

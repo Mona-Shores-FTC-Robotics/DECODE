@@ -6,10 +6,10 @@ import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.util.TelemetryService;
@@ -23,6 +23,8 @@ public class Robot {
     public final VisionSubsystemLimelight vision;
     public final TelemetryService telemetry;
     public final RobotLogger logger;
+
+    private RobotMode robotMode = RobotMode.DEBUG;
 
     private final DriveSubsystem.Inputs driveInputs = new DriveSubsystem.Inputs();
     private final ShooterSubsystem.Inputs shooterInputs = new ShooterSubsystem.Inputs();
@@ -43,6 +45,7 @@ public class Robot {
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
         intake.addLaneColorListener(lighting);
+        applyRobotMode(robotMode);
         registerLoggingSources();
     }
 
@@ -58,6 +61,23 @@ public class Robot {
         lighting.initialize();
         intake.initialize();
         vision.initialize();
+    }
+
+    public void setRobotMode(RobotMode mode) {
+        robotMode = RobotMode.orDefault(mode);
+        applyRobotMode(robotMode);
+    }
+
+    public RobotMode getRobotMode() {
+        return robotMode;
+    }
+
+    private void applyRobotMode(RobotMode mode) {
+        drive.setRobotMode(mode);
+        shooter.setRobotMode(mode);
+        intake.setRobotMode(mode);
+        lighting.setRobotMode(mode);
+        vision.setRobotMode(mode);
     }
 
     private void registerLoggingSources() {

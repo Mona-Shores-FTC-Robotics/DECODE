@@ -19,6 +19,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
+import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
 
@@ -60,6 +61,7 @@ public class DriveSubsystem implements Subsystem {
     private double lastCommandForward = 0.0;
     private double lastCommandStrafeLeft = 0.0;
     private double lastCommandTurn = 0.0;
+    private RobotMode robotMode = RobotMode.DEBUG;
 
     public static final class Inputs {
         public double poseXInches;
@@ -141,6 +143,10 @@ public class DriveSubsystem implements Subsystem {
 
     public void setRobotCentric(boolean enabled) {
         robotCentric = enabled;
+    }
+
+    public void setRobotMode(RobotMode mode) {
+        robotMode = RobotMode.orDefault(mode);
     }
 
     @Override

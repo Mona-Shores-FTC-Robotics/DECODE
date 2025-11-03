@@ -228,9 +228,11 @@ public class TelemetryService {
                 displayTargetRpm - displayCurrentRpm
         );
 
+        boolean autoSpin = launcherCoordinator != null && launcherCoordinator.isAutoSpinEnabled();
+
         if (panels != null) {
             panels.debug("shooter/controlMode", controlMode);
-            panels.debug("shooter/autoSpin", LauncherCoordinator.autoSpinEnabled);
+            panels.debug("shooter/autoSpin", autoSpin);
             panels.debug("shooter/leftTargetRpm", leftTargetRpm);
             panels.debug("shooter/leftCurrentRpm", leftCurrentRpm);
             panels.debug("shooter/leftPower", leftPower);
@@ -269,7 +271,7 @@ public class TelemetryService {
                     "%s | ready=%s | autoSpin=%s",
                     controlMode,
                     shooterReady,
-                    LauncherCoordinator.autoSpinEnabled
+                    autoSpin
             );
             dsTelemetry.addData(
                     "Shooter Left",
@@ -322,6 +324,7 @@ public class TelemetryService {
                     headingRad,
                     headingDeg,
                     shooterReady,
+                    autoSpin,
                     launcherCoordinator,
                     alliance,
                     visionAlliance,
@@ -387,6 +390,7 @@ public class TelemetryService {
                                      double headingRad,
                                      double headingDeg,
                                      boolean shooterReady,
+                                     boolean autoSpin,
                                      LauncherCoordinator launcherCoordinator,
                                      Alliance alliance,
                                      Alliance visionAlliance,
@@ -479,9 +483,7 @@ public class TelemetryService {
         packet.put("shooter/right/isBang", rightBang);
         packet.put("shooter/right/isHold", rightHold);
         packet.put("shooter/right/isHybrid", rightHybrid);
-                if (launcherCoordinator != null) {
-            packet.put("lanes/autoSpinEnabled", LauncherCoordinator.autoSpinEnabled);
-        }
+        packet.put("lanes/autoSpinEnabled", autoSpin);
 
         Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
         packet.put("alliance/id", activeAlliance.name());

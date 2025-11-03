@@ -13,6 +13,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotLogger;
+import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.core.subsystems.Subsystem;
@@ -49,6 +50,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     private RobotLogger logger;
     private RobotLogger.Source loggerSource;
     private double lastPeriodicMs = 0.0;
+    private RobotMode robotMode = RobotMode.DEBUG;
 
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
         this(hardwareMap, null);
@@ -77,6 +79,10 @@ public class VisionSubsystemLimelight implements Subsystem {
         limelight.stop();
         state = VisionState.OFF;
         clearSnapshot();
+    }
+
+    public void setRobotMode(RobotMode mode) {
+        robotMode = RobotMode.orDefault(mode);
     }
 
     public VisionState getState() {

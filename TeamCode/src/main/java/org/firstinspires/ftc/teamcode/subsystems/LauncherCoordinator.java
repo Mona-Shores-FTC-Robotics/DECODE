@@ -9,6 +9,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotLogger;
+import org.firstinspires.ftc.teamcode.util.RobotMode;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -20,8 +21,6 @@ import java.util.Map;
 @Configurable
 public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColorListener {
 
-    public static boolean autoSpinEnabled = false;
-
     private final ShooterSubsystem shooter;
     private final IntakeSubsystem intake;
     private final LightingSubsystem lighting;
@@ -32,6 +31,8 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     private RobotLogger.Source loggerSource;
     private boolean lastShooterReady = false;
     private double lastPeriodicMs = 0.0;
+    private boolean autoSpinEnabled = false;
+    private RobotMode robotMode = RobotMode.DEBUG;
 
     public LauncherCoordinator(ShooterSubsystem shooter,
                                IntakeSubsystem intake,
@@ -48,10 +49,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     @Override
     public void initialize() {
         intake.addLaneColorListener(this);
-        if (lighting != null) {
-            intake.addLaneColorListener(lighting);
-            lightingRegistered = true;
-        }
+        refreshLightingRegistration();
         recomputeSpinMode();
     }
 
@@ -64,10 +62,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
 
     public void stop() {
         intake.removeLaneColorListener(this);
-        if (lighting != null && lightingRegistered) {
-            intake.removeLaneColorListener(lighting);
-            lightingRegistered = false;
-        }
+        removeLightingListener();
         detachLogger();
     }
 
@@ -93,6 +88,10 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         recomputeSpinMode();
     }
 
+    public boolean isAutoSpinEnabled() {
+        return autoSpinEnabled;
+    }
+
     public void requestKick(LauncherLane lane) {
         ArtifactColor color = getLaneColor(lane);
         if (color == ArtifactColor.NONE || color == ArtifactColor.UNKNOWN) {
@@ -114,7 +113,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     }
 
     private void recomputeSpinMode() {
-        if (!autoSpinEnabled) {
+        if (!autoSpinEnabled || robotMode != RobotMode.MATCH) {
             shooter.requestStandbySpin();
             return;
         }
@@ -255,6 +254,35 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         if (logger != null && loggerSource != null) {
             logger.unregisterSource(loggerSource);
             loggerSource = null;
+        }
+    }
+
+    public void setRobotMode(RobotMode mode) {
+        robotMode = RobotMode.orDefault(mode);
+        if (robotMode == RobotMode.DEBUG) {
+            enableAutoSpin(false);
+        }
+        refreshLightingRegistration();
+    }
+
+    private void refreshLightingRegistration() {
+        if (lighting == null) {
+            return;
+        }
+        if (robotMode == RobotMode.MATCH) {
+            if (!lightingRegistered) {
+                intake.addLaneColorListener(lighting);
+                lightingRegistered = true;
+            }
+        } else {
+            removeLightingListener();
+        }
+    }
+
+    private void removeLightingListener() {
+        if (lighting != null && lightingRegistered) {
+            intake.removeLaneColorListener(lighting);
+            lightingRegistered = false;
         }
     }
 
