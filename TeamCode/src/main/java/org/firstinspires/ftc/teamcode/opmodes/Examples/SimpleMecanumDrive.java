@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes.Examples;
 
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -34,8 +35,6 @@ public class SimpleMecanumDrive extends LinearOpMode {
             double y = -gamepad1.left_stick_y;  // Forward/Backward
             double x = gamepad1.left_stick_x;   // Left/Right (Strafe)
             double rx = gamepad1.right_stick_x; // Rotation
-
-
 
 
             // Calculate motor powers
