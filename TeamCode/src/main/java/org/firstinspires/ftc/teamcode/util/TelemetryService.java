@@ -18,6 +18,7 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 /**
  * Centralises telemetry output to FTControl Panels, the driver station, and optional PsiKit logging.
@@ -183,8 +184,34 @@ public class TelemetryService {
             panels.debug("Vision/OdometryPending", visionOdometryPending);
         }
 
-        double currentRpm = shooter.getCurrentRpm();
-        double targetRpm = shooter.getTargetRpm();
+        double leftTargetRpm = shooter.getTargetRpm(LauncherLane.LEFT);
+        double centerTargetRpm = shooter.getTargetRpm(LauncherLane.CENTER);
+        double rightTargetRpm = shooter.getTargetRpm(LauncherLane.RIGHT);
+        double leftCurrentRpm = shooter.getCurrentRpm(LauncherLane.LEFT);
+        double centerCurrentRpm = shooter.getCurrentRpm(LauncherLane.CENTER);
+        double rightCurrentRpm = shooter.getCurrentRpm(LauncherLane.RIGHT);
+        double leftPower = shooter.getLastPower(LauncherLane.LEFT);
+        double centerPower = shooter.getLastPower(LauncherLane.CENTER);
+        double rightPower = shooter.getLastPower(LauncherLane.RIGHT);
+        boolean leftReady = shooter.isLaneReady(LauncherLane.LEFT);
+        boolean centerReady = shooter.isLaneReady(LauncherLane.CENTER);
+        boolean rightReady = shooter.isLaneReady(LauncherLane.RIGHT);
+        String controlMode = ShooterSubsystem.getFlywheelControlMode().name();
+        String leftPhase = shooter.getPhaseName(LauncherLane.LEFT);
+        String centerPhase = shooter.getPhaseName(LauncherLane.CENTER);
+        String rightPhase = shooter.getPhaseName(LauncherLane.RIGHT);
+        boolean leftBang = "BANG".equals(leftPhase);
+        boolean leftHold = "HOLD".equals(leftPhase);
+        boolean leftHybrid = "HYBRID".equals(leftPhase);
+        boolean centerBang = "BANG".equals(centerPhase);
+        boolean centerHold = "HOLD".equals(centerPhase);
+        boolean centerHybrid = "HYBRID".equals(centerPhase);
+        boolean rightBang = "BANG".equals(rightPhase);
+        boolean rightHold = "HOLD".equals(rightPhase);
+        boolean rightHybrid = "HYBRID".equals(rightPhase);
+        double displayTargetRpm = Math.max(Math.max(leftTargetRpm, centerTargetRpm), rightTargetRpm);
+        double displayCurrentRpm = Math.max(Math.max(leftCurrentRpm, centerCurrentRpm), rightCurrentRpm);
+        double displayPower = Math.max(Math.max(leftPower, centerPower), rightPower);
 
         boolean shooterReady;
         if (launcherCoordinator != null) {
@@ -195,11 +222,31 @@ public class TelemetryService {
 
         publisher.publishDrive(drive, requestX, requestY, requestRot, slowMode);
         publisher.publishShooter(
-                targetRpm,
-                currentRpm,
-                shooter.getLastPower(),
-                targetRpm - currentRpm
+                displayTargetRpm,
+                displayCurrentRpm,
+                displayPower,
+                displayTargetRpm - displayCurrentRpm
         );
+
+        if (panels != null) {
+            panels.debug("shooter/controlMode", controlMode);
+            panels.debug("shooter/autoSpin", LauncherCoordinator.autoSpinEnabled);
+            panels.debug("shooter/leftTargetRpm", leftTargetRpm);
+            panels.debug("shooter/leftCurrentRpm", leftCurrentRpm);
+            panels.debug("shooter/leftPower", leftPower);
+            panels.debug("shooter/leftReady", leftReady);
+            panels.debug("shooter/centerTargetRpm", centerTargetRpm);
+            panels.debug("shooter/centerCurrentRpm", centerCurrentRpm);
+            panels.debug("shooter/centerPower", centerPower);
+            panels.debug("shooter/centerReady", centerReady);
+            panels.debug("shooter/rightTargetRpm", rightTargetRpm);
+            panels.debug("shooter/rightCurrentRpm", rightCurrentRpm);
+            panels.debug("shooter/rightPower", rightPower);
+            panels.debug("shooter/rightReady", rightReady);
+            panels.debug("shooter/leftPhase", leftPhase);
+            panels.debug("shooter/centerPhase", centerPhase);
+            panels.debug("shooter/rightPhase", rightPhase);
+        }
 
         if (logger != null) {
             logger.logNumber("Robot", "RuntimeSec", runtimeSec);
@@ -217,6 +264,40 @@ public class TelemetryService {
 
             Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
             dsTelemetry.addData("Alliance", activeAlliance.displayName());
+            dsTelemetry.addData(
+                    "Shooter Mode",
+                    "%s | ready=%s | autoSpin=%s",
+                    controlMode,
+                    shooterReady,
+                    LauncherCoordinator.autoSpinEnabled
+            );
+            dsTelemetry.addData(
+                    "Shooter Left",
+                    "T=%.0f  C=%.0f  P=%.2f  %s  %s",
+                    leftTargetRpm,
+                    leftCurrentRpm,
+                    leftPower,
+                    leftReady ? "READY" : "----",
+                    leftPhase
+            );
+            dsTelemetry.addData(
+                    "Shooter Center",
+                    "T=%.0f  C=%.0f  P=%.2f  %s  %s",
+                    centerTargetRpm,
+                    centerCurrentRpm,
+                    centerPower,
+                    centerReady ? "READY" : "----",
+                    centerPhase
+            );
+            dsTelemetry.addData(
+                    "Shooter Right",
+                    "T=%.0f  C=%.0f  P=%.2f  %s  %s",
+                    rightTargetRpm,
+                    rightCurrentRpm,
+                    rightPower,
+                    rightReady ? "READY" : "----",
+                    rightPhase
+            );
         }
 
         if (launcherCoordinator != null) {
@@ -240,8 +321,6 @@ public class TelemetryService {
                     poseYIn,
                     headingRad,
                     headingDeg,
-                    currentRpm,
-                    targetRpm,
                     shooterReady,
                     launcherCoordinator,
                     alliance,
@@ -258,7 +337,32 @@ public class TelemetryService {
                     visionTxDeg,
                     visionTyDeg,
                     visionTaPercent,
-                    visionOdometryPending
+                    visionOdometryPending,
+                    controlMode,
+                    leftTargetRpm,
+                    centerTargetRpm,
+                    rightTargetRpm,
+                    leftCurrentRpm,
+                    centerCurrentRpm,
+                    rightCurrentRpm,
+                    leftPower,
+                    centerPower,
+                    rightPower,
+                    leftReady,
+                    centerReady,
+                    rightReady,
+                    leftPhase,
+                    centerPhase,
+                    rightPhase,
+                    leftBang,
+                    leftHold,
+                    leftHybrid,
+                    centerBang,
+                    centerHold,
+                    centerHybrid,
+                    rightBang,
+                    rightHold,
+                    rightHybrid
             );
             lastDashboardPacketMs = nowMs;
         }
@@ -282,8 +386,6 @@ public class TelemetryService {
                                      double poseYIn,
                                      double headingRad,
                                      double headingDeg,
-                                     double currentRpm,
-                                     double targetRpm,
                                      boolean shooterReady,
                                      LauncherCoordinator launcherCoordinator,
                                      Alliance alliance,
@@ -300,7 +402,32 @@ public class TelemetryService {
                                      double visionTxDeg,
                                      double visionTyDeg,
                                      double visionTaPercent,
-                                     boolean visionOdometryPending) {
+                                     boolean visionOdometryPending,
+                                     String controlMode,
+                                     double leftTargetRpm,
+                                     double centerTargetRpm,
+                                     double rightTargetRpm,
+                                     double leftCurrentRpm,
+                                     double centerCurrentRpm,
+                                     double rightCurrentRpm,
+                                     double leftPower,
+                                     double centerPower,
+                                     double rightPower,
+                                     boolean leftReady,
+                                     boolean centerReady,
+                                     boolean rightReady,
+                                     String leftPhase,
+                                     String centerPhase,
+                                     String rightPhase,
+                                     boolean leftBang,
+                                     boolean leftHold,
+                                     boolean leftHybrid,
+                                     boolean centerBang,
+                                     boolean centerHold,
+                                     boolean centerHybrid,
+                                     boolean rightBang,
+                                     boolean rightHold,
+                                     boolean rightHybrid) {
         if (!enableDashboardTelemetry || dashboard == null) {
             return;
         }
@@ -326,10 +453,33 @@ public class TelemetryService {
         packet.put("drive/lbVelIps", lbVelIps);
         packet.put("drive/rbVelIps", rbVelIps);
 
-        packet.put("shooter/targetRpm", targetRpm);
-        packet.put("shooter/currentRpm", currentRpm);
         packet.put("shooter/ready", shooterReady);
-        if (launcherCoordinator != null) {
+        packet.put("shooter/controlMode", controlMode);
+        packet.put("shooter/left/targetRpm", leftTargetRpm);
+        packet.put("shooter/left/currentRpm", leftCurrentRpm);
+        packet.put("shooter/left/power", leftPower);
+        packet.put("shooter/left/ready", leftReady);
+        packet.put("shooter/center/targetRpm", centerTargetRpm);
+        packet.put("shooter/center/currentRpm", centerCurrentRpm);
+        packet.put("shooter/center/power", centerPower);
+        packet.put("shooter/center/ready", centerReady);
+        packet.put("shooter/right/targetRpm", rightTargetRpm);
+        packet.put("shooter/right/currentRpm", rightCurrentRpm);
+        packet.put("shooter/right/power", rightPower);
+        packet.put("shooter/right/ready", rightReady);
+        packet.put("shooter/left/phase", leftPhase);
+        packet.put("shooter/center/phase", centerPhase);
+        packet.put("shooter/right/phase", rightPhase);
+        packet.put("shooter/left/isBang", leftBang);
+        packet.put("shooter/left/isHold", leftHold);
+        packet.put("shooter/left/isHybrid", leftHybrid);
+        packet.put("shooter/center/isBang", centerBang);
+        packet.put("shooter/center/isHold", centerHold);
+        packet.put("shooter/center/isHybrid", centerHybrid);
+        packet.put("shooter/right/isBang", rightBang);
+        packet.put("shooter/right/isHold", rightHold);
+        packet.put("shooter/right/isHybrid", rightHybrid);
+                if (launcherCoordinator != null) {
             packet.put("lanes/autoSpinEnabled", LauncherCoordinator.autoSpinEnabled);
         }
 

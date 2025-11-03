@@ -4,34 +4,6 @@
   "children": [
     {
       "type": "label",
-      "text": "Velocity PID"
-    },
-    {
-      "type": "config",
-      "title": "kF",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$VelocityPID",
-      "variable": "kF"
-    },
-    {
-      "type": "config",
-      "title": "kP",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$VelocityPID",
-      "variable": "kP"
-    },
-    {
-      "type": "config",
-      "title": "kI",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$VelocityPID",
-      "variable": "kI"
-    },
-    {
-      "type": "config",
-      "title": "kD",
-      "config": "org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem$VelocityPID",
-      "variable": "kD"
-    },
-    {
-      "type": "label",
       "text": "Global Parameters"
     },
     {

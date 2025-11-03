@@ -4,9 +4,14 @@ import android.graphics.Color;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
@@ -59,6 +64,22 @@ public class IntakeSubsystem implements Subsystem {
 
     public static double defaultRunTimeMs = 0.0;
     public static int maxIndexed = 3;
+
+    @Configurable
+    public static class MotorConfig {
+        public static String motorName = "intake";
+        public static double defaultForwardPower = 1.0;
+        public static double defaultReversePower = -1.0;
+        public static boolean brakeOnZero = true;
+        public static boolean reverseDirection = false;
+    }
+
+    @Configurable
+    public static class RollerConfig {
+        public static String servoName = "intake_roller";
+        public static double activePosition = 0.5;
+        public static double inactivePosition = 0.0;
+    }
 
     public static final class LaneSample {
         public final boolean sensorPresent;
@@ -145,6 +166,9 @@ public class IntakeSubsystem implements Subsystem {
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
     private boolean anyLaneSensorsPresent = false;
     private double lastPeriodicMs = 0.0;
+    private final DcMotorEx intakeMotor;
+    private double appliedMotorPower = 0.0;
+    private final Servo rollerServo;
 
     public static final class Inputs {
         public IntakeState state = IntakeState.IDLE;
@@ -194,10 +218,27 @@ public class IntakeSubsystem implements Subsystem {
         public int rightRawRed;
         public int rightRawGreen;
         public int rightRawBlue;
+        public double motorPower;
     }
 
     public IntakeSubsystem(HardwareMap hardwareMap) {
-        // Real implementation would bind motors here.
+        intakeMotor = tryGetMotor(hardwareMap, MotorConfig.motorName);
+        if (intakeMotor != null) {
+            intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            if (MotorConfig.brakeOnZero) {
+                intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            } else {
+                intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+            }
+            if (MotorConfig.reverseDirection) {
+                intakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+            }
+            intakeMotor.setPower(0.0);
+        }
+        rollerServo = tryGetServo(hardwareMap, RollerConfig.servoName);
+        if (rollerServo != null) {
+            rollerServo.setPosition(RollerConfig.activePosition);
+        }
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
             laneSamples.put(lane, ABSENT_SAMPLE);
@@ -243,6 +284,17 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
+    private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(Servo.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
     @Override
     public void initialize() {
         state = IntakeState.IDLE;
@@ -252,6 +304,18 @@ public class IntakeSubsystem implements Subsystem {
             laneSamples.put(lane, ABSENT_SAMPLE);
         }
         sensorTimer.reset();
+        setManualPower(0.0);
+    }
+
+    private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(DcMotorEx.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     public void requestIntake() {
@@ -260,9 +324,11 @@ public class IntakeSubsystem implements Subsystem {
         }
         state = IntakeState.INTAKING;
         timer.reset();
+        setManualPower(MotorConfig.defaultForwardPower);
         if (defaultRunTimeMs <= 0.0) {
             indexedCount = maxIndexed;
             state = IntakeState.FULL;
+            setManualPower(0.0);
         }
     }
 
@@ -326,16 +392,31 @@ public class IntakeSubsystem implements Subsystem {
     @Override
     public void periodic() {
         long start = System.nanoTime();
-        if (state == IntakeState.INTAKING && timer.milliseconds() >= defaultRunTimeMs) {
-            indexedCount = maxIndexed;
-            state = IntakeState.FULL;
-        }
+        // Basic teleop mode: we no longer auto-stop when the timer elapses.
+        // Full counting logic will be reintroduced when artifact indexing is required again.
         pollLaneSensorsIfNeeded();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
     public double getLastPeriodicMs() {
         return lastPeriodicMs;
+    }
+
+    public void setManualPower(double normalizedPower) {
+        double power = Range.clip(normalizedPower, -1.0, 1.0);
+        appliedMotorPower = power;
+        if (intakeMotor != null) {
+            intakeMotor.setPower(power);
+        }
+        if (Math.abs(power) > 1e-3) {
+            state = IntakeState.INTAKING;
+        } else if (state != IntakeState.FULL) {
+            state = IntakeState.IDLE;
+        }
+    }
+
+    public double getCurrentPower() {
+        return appliedMotorPower;
     }
 
     public void populateInputs(Inputs inputs) {
@@ -350,6 +431,7 @@ public class IntakeSubsystem implements Subsystem {
         inputs.sensorPollingEnabled = LaneSensorConfig.enablePolling;
         inputs.sensorSamplePeriodMs = LaneSensorConfig.samplePeriodMs;
         inputs.timerMs = timer.milliseconds();
+        inputs.motorPower = appliedMotorPower;
 
         populateLaneInputs(inputs, LauncherLane.LEFT);
         populateLaneInputs(inputs, LauncherLane.CENTER);

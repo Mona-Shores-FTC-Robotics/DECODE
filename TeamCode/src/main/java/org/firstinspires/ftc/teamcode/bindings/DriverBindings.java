@@ -24,7 +24,7 @@ public class DriverBindings {
     public DriverBindings(GamepadEx driver) {
         fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND);
         fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND).negate();
-        rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND).negate();
+        rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
     }
 

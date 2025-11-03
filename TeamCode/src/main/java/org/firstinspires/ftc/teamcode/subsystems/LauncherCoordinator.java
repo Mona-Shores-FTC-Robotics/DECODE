@@ -20,7 +20,7 @@ import java.util.Map;
 @Configurable
 public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColorListener {
 
-    public static boolean autoSpinEnabled = true;
+    public static boolean autoSpinEnabled = false;
 
     private final ShooterSubsystem shooter;
     private final IntakeSubsystem intake;

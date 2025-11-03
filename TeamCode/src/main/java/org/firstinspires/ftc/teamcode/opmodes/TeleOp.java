@@ -14,16 +14,18 @@ import java.util.Locale;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
+import org.firstinspires.ftc.teamcode.bindings.OperatorBindings.LaneDebugState;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "Decode Teleop", group = "TeleOp")
 public class TeleOp extends NextFTCOpMode {
 
     private static final boolean ENABLE_LOGGING = false;
-    private static final long TELEMETRY_INTERVAL_NS = 200_000_000L; // 50 ms cadence (~20 Hz)
+    private static final long TELEMETRY_INTERVAL_NS = 50_000_000L; // 50 ms cadence (~20 Hz)
 
     private Robot robot;
     private GamepadEx driverPad;
@@ -49,7 +51,7 @@ public class TeleOp extends NextFTCOpMode {
 
         robot.initialize();
         launcherCoordinator.initialize();
-        launcherCoordinator.enableAutoSpin(true);
+        launcherCoordinator.enableAutoSpin(false);
         if (ENABLE_LOGGING) {
             launcherCoordinator.attachLogger(robot.logger);
         }
@@ -104,6 +106,10 @@ public class TeleOp extends NextFTCOpMode {
         long driveCallStartNs = System.nanoTime();
         robot.drive.driveScaled(request.fieldX, request.fieldY, request.rotation, request.slowMode);
         double driveCallMs = nanosToMs(System.nanoTime() - driveCallStartNs);
+
+        if (operatorBindings != null) {
+            operatorBindings.update(gamepad2.left_trigger, gamepad2.right_trigger);
+        }
 
         boolean telemetrySent = false;
         double telemetryMsThisLoop = 0.0;
@@ -170,6 +176,17 @@ public class TeleOp extends NextFTCOpMode {
             telemetry.addData("Telemetry publish", telemetrySent
                     ? String.format(Locale.US, "%.1f ms", telemetryMsThisLoop)
                     : "skipped");
+            telemetry.addData("Intake power", "%.2f", robot.intake.getCurrentPower());
+            if (operatorBindings != null && operatorBindings.isShooterDebugMode()) {
+                for (LauncherLane lane : LauncherLane.values()) {
+                    LaneDebugState state = operatorBindings.getLaneDebugState(lane);
+                    if (state != null) {
+                        String label = lane.name().toLowerCase(Locale.US);
+                        String status = state.enabled ? "ON" : "off";
+                        telemetry.addData("Shooter " + label, String.format(Locale.US, "%s %.0f rpm", status, state.targetRpm));
+                    }
+                }
+            }
         } else {
             telemetry.addData("Main Loop", "%.1f ms", loopMs);
             telemetry.addData("Detail", "Hold RT for subsystem timings");

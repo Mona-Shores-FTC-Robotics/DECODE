@@ -5,7 +5,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -34,9 +33,14 @@ public class ShooterSubsystem implements Subsystem {
     }
 
     public enum FlywheelControlMode {
-        SDK_PID,
-        BANG_BANG,
-        HYBRID
+        HYBRID,
+        BANG_BANG_HOLD
+    }
+
+    private enum ControlPhase {
+        BANG,
+        HYBRID,
+        HOLD
     }
 
     public enum ShooterState {
@@ -51,7 +55,7 @@ public class ShooterSubsystem implements Subsystem {
     @Configurable
     public static class FlywheelParameters {
         /** Encoder ticks per motor revolution (adjust for the selected motor). */
-        public static double ticksPerRev = 537.7;
+        public static double ticksPerRev = 28;
         /** Output wheel revolutions per motor revolution. */
         public static double gearRatio = 1.0;
         /** Acceptable RPM error when considering a lane ready to fire. */
@@ -71,36 +75,40 @@ public class ShooterSubsystem implements Subsystem {
     }
 
     @Configurable
-    public static class VelocityPID {
-        /**
-         * PIDF parameters applied to each flywheel motor while RUN_USING_ENCODER.
-         * Adjust on the dashboard to tune velocity control.
-         */
-        public static double kP = 0.0;
-        public static double kI = 0.0;
-        public static double kD = 0.0;
-        public static double kF = 0.0;
-    }
-
-    @Configurable
     public static class BangBangConfig {
         public static double highPower = 1.0;
-        public static double lowPower = 0.0;
-        public static double thresholdRpm = 40.0;
+        public static double lowPower = 0.3;
+        public static double enterBangThresholdRpm = 1200;
+        public static double exitBangThresholdRpm = 500;
+        public static double bangDeadbandRpm = 50;
     }
 
     @Configurable
-    public static class HybridConfig {
-        public static double bangEntryThresholdRpm = 150.0;
-        public static double bangExitThresholdRpm = 60.0;
-        public static double kP = 0.0005;
-        public static double kF = 0.12;
+    public static class HybridPidConfig {
+        public static double kP = 0.000075;
+        public static double kF = 0.32;
         public static double maxPower = 1.0;
     }
 
     @Configurable
-    public static class ControlConfig {
-        public static int flywheelModeIndex = FlywheelControlMode.SDK_PID.ordinal();
+    public static class HoldConfig {
+        public static double baseHoldPower = 0.32;
+        public static double rpmPowerGain = 0.000075;
+        public static double minHoldPower = 0.2;
+        public static double maxHoldPower = 1.0;
+    }
+
+    @Configurable
+    public static class FlywheelModeConfig {
+        public static int modeIndex = FlywheelControlMode.BANG_BANG_HOLD.ordinal();
+    }
+
+    @Configurable
+    public static class PhaseSwitchConfig {
+        public static int bangToHybridConfirmCycles = 3;
+        public static int bangToHoldConfirmCycles = 3;
+        public static int hybridToBangConfirmCycles = 2;
+        public static int holdToBangConfirmCycles = 2;
     }
 
     @Configurable
@@ -172,11 +180,36 @@ public class ShooterSubsystem implements Subsystem {
     private double lastShotCompletionMs = 0.0;
     private double lastPeriodicMs = 0.0;
 
+    public static FlywheelControlMode getFlywheelControlMode() {
+        FlywheelControlMode[] modes = FlywheelControlMode.values();
+        int index = FlywheelModeConfig.modeIndex;
+        if (index < 0) {
+            index = 0;
+        } else if (index >= modes.length) {
+            index = modes.length - 1;
+        }
+        return modes[index];
+    }
+
+    public static void setFlywheelControlMode(FlywheelControlMode mode) {
+        if (mode == null) {
+            return;
+        }
+        FlywheelModeConfig.modeIndex = mode.ordinal();
+    }
+
+    public String getPhaseName(LauncherLane lane) {
+        Flywheel flywheel = flywheels.get(lane);
+        return flywheel == null ? "UNKNOWN" : flywheel.getPhaseName();
+    }
+
+    private boolean debugOverrideEnabled = false;
+
     public static final class Inputs {
         public ShooterState state = ShooterState.DISABLED;
         public SpinMode requestedSpinMode = SpinMode.OFF;
         public SpinMode effectiveSpinMode = SpinMode.OFF;
-        public FlywheelControlMode controlMode = FlywheelControlMode.SDK_PID;
+        public String controlMode = FlywheelControlMode.HYBRID.name();
         public boolean busy;
         public int queuedShots;
         public double stateElapsedSec;
@@ -218,18 +251,6 @@ public class ShooterSubsystem implements Subsystem {
             feeders.put(lane, new Feeder(lane, hardwareMap));
             laneRecoveryDeadlineMs.put(lane, 0.0);
         }
-    }
-
-    public static FlywheelControlMode getFlywheelControlMode() {
-        int index = ControlConfig.flywheelModeIndex;
-        if (index < 0) {
-            index = 0;
-        }
-        FlywheelControlMode[] modes = FlywheelControlMode.values();
-        if (index >= modes.length) {
-            index = modes.length - 1;
-        }
-        return modes[index];
     }
 
     @Override
@@ -330,7 +351,7 @@ public class ShooterSubsystem implements Subsystem {
         inputs.state = state;
         inputs.requestedSpinMode = requestedSpinMode;
         inputs.effectiveSpinMode = computeEffectiveSpinMode();
-        inputs.controlMode = getFlywheelControlMode();
+        inputs.controlMode = getFlywheelControlMode().name();
         inputs.busy = isBusy();
         inputs.queuedShots = getQueuedShots();
         inputs.stateElapsedSec = getStateElapsedSeconds();
@@ -529,6 +550,37 @@ public class ShooterSubsystem implements Subsystem {
         applySpinMode(computeEffectiveSpinMode());
     }
 
+    public void debugSetLaneTargetRpm(LauncherLane lane, double rpm) {
+        if (lane == null) {
+            return;
+        }
+        Flywheel flywheel = flywheels.get(lane);
+        if (flywheel == null) {
+            return;
+        }
+        shotQueue.clear();
+        activeShot = null;
+        requestedSpinMode = SpinMode.OFF;
+        flywheel.commandCustom(rpm);
+    }
+
+    public double debugGetLaneTargetRpm(LauncherLane lane) {
+        Flywheel flywheel = flywheels.get(lane);
+        return flywheel == null ? 0.0 : flywheel.getTargetRpm();
+    }
+
+    public void setDebugOverrideEnabled(boolean enabled) {
+        debugOverrideEnabled = enabled;
+        if (!enabled) {
+            for (LauncherLane lane : LauncherLane.values()) {
+                Flywheel flywheel = flywheels.get(lane);
+                if (flywheel != null) {
+                    flywheel.commandCustom(0.0);
+                }
+            }
+        }
+    }
+
     private void scheduleShot(LauncherLane lane, double delayMs) {
         double when = clock.milliseconds() + Math.max(0.0, delayMs);
         shotQueue.addLast(new ShotRequest(lane, when));
@@ -604,6 +656,9 @@ public class ShooterSubsystem implements Subsystem {
     }
 
     private void applySpinMode(SpinMode mode) {
+        if (debugOverrideEnabled) {
+            return;
+        }
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel == null) {
@@ -838,7 +893,14 @@ public class ShooterSubsystem implements Subsystem {
 
         private double commandedRpm = 0.0;
         private boolean launchCommandActive = false;
-        private FlywheelControlMode appliedMode = null;
+        private ControlPhase phase = ControlPhase.BANG;
+        private int bangToHybridCounter = 0;
+        private int hybridToBangCounter = 0;
+        private int bangToHoldCounter = 0;
+        private int holdToBangCounter = 0;
+        private int lastPositionTicks = 0;
+        private double lastSampleTimeMs = Double.NaN;
+        private double estimatedTicksPerSec = 0.0;
 
         Flywheel(LauncherLane lane, HardwareMap hardwareMap) {
             this.lane = lane;
@@ -849,11 +911,16 @@ public class ShooterSubsystem implements Subsystem {
         void initialize() {
             commandedRpm = 0.0;
             launchCommandActive = false;
-            appliedMode = null;
+            phase = ControlPhase.BANG;
+            bangToHybridCounter = 0;
+            hybridToBangCounter = 0;
+            bangToHoldCounter = 0;
+            holdToBangCounter = 0;
             launchTimer.reset();
-            ensureControlMode();
             motor.setPower(0.0);
-            motor.setVelocity(0.0);
+            lastPositionTicks = motor.getCurrentPosition();
+            lastSampleTimeMs = clock.milliseconds();
+            estimatedTicksPerSec = 0.0;
         }
 
         void commandLaunch() {
@@ -868,8 +935,12 @@ public class ShooterSubsystem implements Subsystem {
             setTargetRpm(0.0);
         }
 
+        void commandCustom(double rpm) {
+            setTargetRpm(rpm);
+        }
+
         double getCurrentRpm() {
-            return ticksPerSecondToRpm(motor.getVelocity());
+            return Math.abs(ticksPerSecondToRpm(estimatedTicksPerSec));
         }
 
         double getTargetRpm() {
@@ -878,6 +949,10 @@ public class ShooterSubsystem implements Subsystem {
 
         double getAppliedPower() {
             return motor.getPower();
+        }
+
+        String getPhaseName() {
+            return phase.name();
         }
 
         boolean isAtLaunch() {
@@ -898,73 +973,100 @@ public class ShooterSubsystem implements Subsystem {
         }
 
         void updateControl() {
-            ensureControlMode();
-            FlywheelControlMode mode = ShooterSubsystem.getFlywheelControlMode();
-            if (mode == FlywheelControlMode.SDK_PID) {
-                return; // Built-in velocity loop already active.
-            }
+            updateVelocityEstimate();
+
             if (commandedRpm <= 0.0) {
                 motor.setPower(0.0);
+                phase = ControlPhase.BANG;
                 return;
             }
-            double currentRpm = getCurrentRpm();
-            double error = commandedRpm - currentRpm;
-            switch (mode) {
-                case BANG_BANG:
-                    applyBangBangControl(error);
+
+            double error = commandedRpm - getCurrentRpm();
+            double absError = Math.abs(error);
+
+            switch (phase) {
+                case BANG:
+                    if (getFlywheelControlMode() == FlywheelControlMode.BANG_BANG_HOLD) {
+                        if (absError <= BangBangConfig.exitBangThresholdRpm) {
+                            bangToHoldCounter++;
+                            if (bangToHoldCounter >= Math.max(1, PhaseSwitchConfig.bangToHoldConfirmCycles)) {
+                                phase = ControlPhase.HOLD;
+                                bangToHoldCounter = 0;
+                            }
+                        } else {
+                            bangToHoldCounter = 0;
+                        }
+                        bangToHybridCounter = 0;
+                    } else {
+                        if (absError <= BangBangConfig.exitBangThresholdRpm) {
+                            bangToHybridCounter++;
+                            if (bangToHybridCounter >= Math.max(1, PhaseSwitchConfig.bangToHybridConfirmCycles)) {
+                                phase = ControlPhase.HYBRID;
+                                bangToHybridCounter = 0;
+                            }
+                        } else {
+                            bangToHybridCounter = 0;
+                        }
+                        bangToHoldCounter = 0;
+                    }
+                    hybridToBangCounter = 0;
+                    holdToBangCounter = 0;
                     break;
                 case HYBRID:
-                    applyHybridControl(error);
+                    if (absError >= BangBangConfig.enterBangThresholdRpm) {
+                        hybridToBangCounter++;
+                        if (hybridToBangCounter >= Math.max(1, PhaseSwitchConfig.hybridToBangConfirmCycles)) {
+                            phase = ControlPhase.BANG;
+                            hybridToBangCounter = 0;
+                            bangToHybridCounter = 0;
+                        }
+                    } else {
+                        hybridToBangCounter = 0;
+                    }
+                    bangToHoldCounter = 0;
+                    holdToBangCounter = 0;
                     break;
-                case SDK_PID:
-                default:
+                case HOLD:
+                    if (absError >= BangBangConfig.enterBangThresholdRpm) {
+                        holdToBangCounter++;
+                        if (holdToBangCounter >= Math.max(1, PhaseSwitchConfig.holdToBangConfirmCycles)) {
+                            phase = ControlPhase.BANG;
+                            holdToBangCounter = 0;
+                            bangToHoldCounter = 0;
+                        }
+                    } else {
+                        holdToBangCounter = 0;
+                    }
+                    bangToHybridCounter = 0;
+                    hybridToBangCounter = 0;
                     break;
+            }
+
+            if (phase == ControlPhase.BANG) {
+                applyBangBangControl(error);
+            } else if (phase == ControlPhase.HYBRID) {
+                applyHybridControl(error);
+            } else {
+                applyHoldControl(error);
             }
         }
 
         private void setTargetRpm(double rpm) {
-            ensureControlMode();
             double sanitized = Math.max(0.0, rpm);
             commandedRpm = sanitized;
-            FlywheelControlMode mode = ShooterSubsystem.getFlywheelControlMode();
-            if (mode == FlywheelControlMode.SDK_PID) {
-                double ticksPerSecond = rpmToTicksPerSecond(sanitized);
-                motor.setVelocity(ticksPerSecond);
-                if (sanitized <= 0.0) {
-                    motor.setPower(0.0);
-                }
-            } else {
-                if (sanitized <= 0.0) {
-                    motor.setPower(0.0);
-                }
-            }
-            boolean launching = sanitized >= launchRpmFor(lane) && sanitized > 0.0;
-            if (launching && !launchCommandActive) {
+            launchCommandActive = sanitized > 0.0;
+            if (launchCommandActive) {
                 launchTimer.reset();
             }
-            launchCommandActive = launching;
-            if (!launching && sanitized <= 0.0) {
-                launchCommandActive = false;
-            }
-        }
-
-        private void ensureControlMode() {
-            FlywheelControlMode desired = ShooterSubsystem.getFlywheelControlMode();
-            if (desired == appliedMode) {
-                return;
-            }
-            if (desired == FlywheelControlMode.SDK_PID) {
-                motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                applyVelocityPidCoefficients();
-            } else {
-                motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                motor.setPower(0.0);
-            }
-            appliedMode = desired;
+            phase = ControlPhase.BANG;
+            bangToHybridCounter = 0;
+            hybridToBangCounter = 0;
+            bangToHoldCounter = 0;
+            holdToBangCounter = 0;
         }
 
         private void applyBangBangControl(double error) {
-            double threshold = Math.max(0.0, BangBangConfig.thresholdRpm);
+            double threshold = Math.max(0.0, BangBangConfig.bangDeadbandRpm);
             double high = Range.clip(BangBangConfig.highPower, -1.0, 1.0);
             double low = Range.clip(BangBangConfig.lowPower, -1.0, 1.0);
             if (error > threshold) {
@@ -977,48 +1079,43 @@ public class ShooterSubsystem implements Subsystem {
         }
 
         private void applyHybridControl(double error) {
-            double absError = Math.abs(error);
-            double entry = Math.max(0.0, HybridConfig.bangEntryThresholdRpm);
-            double exit = Math.max(0.0, HybridConfig.bangExitThresholdRpm);
-            if (absError > entry) {
-                applyBangBangControl(error);
-                return;
-            }
-            if (absError > exit && error > 0) {
-                applyBangBangControl(error);
-                return;
-            }
-            double kP = HybridConfig.kP;
-            double kF = HybridConfig.kF;
-            double maxPower = Range.clip(HybridConfig.maxPower, 0.0, 1.0);
-            double power = kF + kP * error;
-            power = Range.clip(power, 0.0, maxPower);
+            double power = HybridPidConfig.kF + HybridPidConfig.kP * error;
+            power = Range.clip(power, 0.0, Math.max(0.0, HybridPidConfig.maxPower));
             motor.setPower(power);
+        }
+
+        private void applyHoldControl(double error) {
+            double holdPower = HoldConfig.baseHoldPower + HoldConfig.rpmPowerGain * commandedRpm;
+            holdPower = Range.clip(holdPower, HoldConfig.minHoldPower, HoldConfig.maxHoldPower);
+            if (error < 0.0) {
+                motor.setPower(BangBangConfig.lowPower);
+            } else {
+                motor.setPower(holdPower);
+            }
         }
 
         private void configureMotor() {
             motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             if (motorReversedFor(lane)) {
                 motor.setDirection(DcMotorSimple.Direction.REVERSE);
             } else {
                 motor.setDirection(DcMotorSimple.Direction.FORWARD);
             }
-            applyVelocityPidCoefficients();
         }
 
-        private void applyVelocityPidCoefficients() {
-            PIDFCoefficients pidf = new PIDFCoefficients(
-                    VelocityPID.kP,
-                    VelocityPID.kI,
-                    VelocityPID.kD,
-                    VelocityPID.kF
-            );
-            try {
-                motor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, pidf);
-            } catch (RuntimeException ignored) {
-                // Some controllers do not support per-motor PIDF configuration.
+        private void updateVelocityEstimate() {
+            double nowMs = clock.milliseconds();
+            int position = motor.getCurrentPosition();
+            if (!Double.isNaN(lastSampleTimeMs)) {
+                double deltaMs = nowMs - lastSampleTimeMs;
+                if (deltaMs > 1.0) {
+                    double ticksPerSec = (position - lastPositionTicks) * 1000.0 / deltaMs;
+                    estimatedTicksPerSec = Math.abs(ticksPerSec);
+                }
             }
+            lastPositionTicks = position;
+            lastSampleTimeMs = nowMs;
         }
     }
 
