@@ -2,12 +2,12 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotLogger;
@@ -21,6 +21,7 @@ public class Robot {
     public final IntakeSubsystem intake;
     public final LightingSubsystem lighting;
     public final VisionSubsystemLimelight vision;
+    public final LauncherCoordinator launcherCoordinator;
     public final TelemetryService telemetry;
     public final RobotLogger logger;
 
@@ -44,7 +45,7 @@ public class Robot {
         shooter = new ShooterSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
-        intake.addLaneColorListener(lighting);
+        launcherCoordinator = new LauncherCoordinator(shooter, intake, lighting);
         applyRobotMode(robotMode);
         registerLoggingSources();
     }
@@ -61,6 +62,7 @@ public class Robot {
         lighting.initialize();
         intake.initialize();
         vision.initialize();
+        launcherCoordinator.initialize();
     }
 
     public void setRobotMode(RobotMode mode) {
@@ -78,6 +80,7 @@ public class Robot {
         intake.setRobotMode(mode);
         lighting.setRobotMode(mode);
         vision.setRobotMode(mode);
+        launcherCoordinator.setRobotMode(mode);
     }
 
     private void registerLoggingSources() {

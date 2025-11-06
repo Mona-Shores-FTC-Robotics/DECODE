@@ -10,18 +10,18 @@ import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 /**
- * Competition-oriented control scheme that keeps the intake running in reverse
- * by default and delegates launcher sequencing to the coordinator.
+ * Match-oriented operator bindings. Keeps the intake running in reverse by default,
+ * forwards when the operator pulls the trigger, and maps launcher commands to the
+ * standard match buttons.
  */
-public class MatchOperatorControls implements OperatorControls {
+public class OperatorBindings {
 
     private static final double TRIGGER_DEADBAND = 0.15;
-
     private static final double MATCH_BURST_SPACING_MS = 150.0;
 
     private final Robot robot;
     private final LauncherCoordinator launcherCoordinator;
-    private final Button spinUpToggle;
+    private final Button spinModeToggle;
     private final Button shootLeft;
     private final Button shootMiddle;
     private final Button shootRight;
@@ -29,27 +29,35 @@ public class MatchOperatorControls implements OperatorControls {
     private boolean manualIntakeActive = false;
     private boolean fullSpinRequested = false;
 
-    public MatchOperatorControls(GamepadEx operator, Robot robot, LauncherCoordinator launcherCoordinator) {
+    public OperatorBindings(GamepadEx operator,
+                            Robot robot,
+                            LauncherCoordinator launcherCoordinator) {
         this.robot = robot;
         this.launcherCoordinator = launcherCoordinator;
 
-        robot.shooter.setDebugOverrideEnabled(false);
-        robot.shooter.setSpinMode(ShooterSubsystem.SpinMode.HOLD);
-
-        spinUpToggle = operator.leftBumper();
+        spinModeToggle = operator.leftBumper();
         shootLeft = operator.x();
         shootMiddle = operator.y();
         shootRight = operator.b();
         shootAll = operator.a();
 
-        spinUpToggle.whenBecomesTrue(this::toggleSpinMode);
+        configureMatchBindings();
+    }
+
+    private void configureMatchBindings() {
+        if (launcherCoordinator != null) {
+            launcherCoordinator.enableAutoSpin(false);
+        }
+        robot.shooter.setDebugOverrideEnabled(false);
+        robot.shooter.setSpinMode(ShooterSubsystem.SpinMode.HOLD);
+
+        spinModeToggle.whenBecomesTrue(this::toggleSpinMode);
         shootLeft.whenBecomesTrue(() -> fireLane(LauncherLane.LEFT));
         shootMiddle.whenBecomesTrue(() -> fireLane(LauncherLane.CENTER));
         shootRight.whenBecomesTrue(() -> fireLane(LauncherLane.RIGHT));
-        shootAll.whenBecomesTrue(this::fireBurst);
+        shootAll.whenBecomesTrue(this::fireMatchBurst);
     }
 
-    @Override
     public void update(double reverseTrigger, double forwardTrigger) {
         double power = IntakeSubsystem.MotorConfig.defaultReversePower;
         boolean forwardActive = forwardTrigger > TRIGGER_DEADBAND;
@@ -58,8 +66,12 @@ public class MatchOperatorControls implements OperatorControls {
         }
 
         robot.intake.setManualPower(power);
-        if (manualIntakeActive != forwardActive) {
-            manualIntakeActive = forwardActive;
+        updateLighting(forwardActive);
+    }
+
+    private void updateLighting(boolean active) {
+        if (active != manualIntakeActive) {
+            manualIntakeActive = active;
             if (manualIntakeActive) {
                 robot.lighting.indicateBusy();
             } else {
@@ -70,33 +82,32 @@ public class MatchOperatorControls implements OperatorControls {
 
     private void toggleSpinMode() {
         fullSpinRequested = !fullSpinRequested;
-        if (fullSpinRequested) {
-            robot.shooter.setSpinMode(ShooterSubsystem.SpinMode.FULL);
-        } else {
-            robot.shooter.setSpinMode(ShooterSubsystem.SpinMode.HOLD);
-        }
+        robot.shooter.setSpinMode(fullSpinRequested
+                ? ShooterSubsystem.SpinMode.FULL
+                : ShooterSubsystem.SpinMode.HOLD);
     }
 
     private void fireLane(LauncherLane lane) {
         if (launcherCoordinator != null) {
             launcherCoordinator.requestKick(lane);
-        } else {
-            switch (lane) {
-                case LEFT:
-                    robot.shooter.shootLeft();
-                    break;
-                case CENTER:
-                    robot.shooter.shootMiddle();
-                    break;
-                case RIGHT:
-                default:
-                    robot.shooter.shootRight();
-                    break;
-            }
+            return;
+        }
+
+        switch (lane) {
+            case LEFT:
+                robot.shooter.shootLeft();
+                break;
+            case CENTER:
+                robot.shooter.shootMiddle();
+                break;
+            case RIGHT:
+            default:
+                robot.shooter.shootRight();
+                break;
         }
     }
 
-    private void fireBurst() {
+    private void fireMatchBurst() {
         if (launcherCoordinator != null) {
             launcherCoordinator.requestBurst(MATCH_BURST_SPACING_MS);
         } else {
@@ -104,22 +115,14 @@ public class MatchOperatorControls implements OperatorControls {
         }
     }
 
-    @Override
     public void reset() {
         robot.intake.stop();
         manualIntakeActive = false;
         robot.lighting.indicateIdle();
         fullSpinRequested = false;
         robot.shooter.setSpinMode(ShooterSubsystem.SpinMode.HOLD);
-    }
-
-    @Override
-    public boolean isShooterDebugMode() {
-        return false;
-    }
-
-    @Override
-    public LaneDebugState getLaneDebugState(LauncherLane lane) {
-        return null;
+        if (launcherCoordinator != null) {
+            launcherCoordinator.enableAutoSpin(false);
+        }
     }
 }

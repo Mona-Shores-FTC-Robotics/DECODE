@@ -20,6 +20,7 @@ public class DriverBindings {
     private final Range rotationCcw;
     private final Button slowHold;
     private final Button rampHold;
+    private final Button relocalizeRequest;
 
 
     public DriverBindings(GamepadEx driver) {
@@ -28,10 +29,18 @@ public class DriverBindings {
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
         rampHold = driver.leftBumper();
+        relocalizeRequest = driver.a();
     }
 
     public DriveRequest sampleDriveRequest() {
         return new DriveRequest(fieldX.get(), fieldY.get(), rotationCcw.get(), slowHold.get(), rampHold.get());
+    }
+
+    public void onRelocalizeRequested(Runnable action) {
+        if (action == null) {
+            return;
+        }
+        relocalizeRequest.whenBecomesTrue(action);
     }
 
     public static final class DriveRequest {
