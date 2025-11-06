@@ -142,11 +142,7 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
 
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
         long driveCallStartNs = System.nanoTime();
-        if (request.aimAssist) {
-            robot.drive.aimAndDrive(request.fieldX, request.fieldY, request.slowMode);
-        } else {
-            robot.drive.driveScaled(request.fieldX, request.fieldY, request.rotation, request.slowMode);
-        }
+        robot.drive.driveScaled(request.fieldX, request.fieldY, request.rotation, request.slowMode, request.rampMode);
         double driveCallMs = nanosToMs(System.nanoTime() - driveCallStartNs);
 
         if (operatorControls != null) {

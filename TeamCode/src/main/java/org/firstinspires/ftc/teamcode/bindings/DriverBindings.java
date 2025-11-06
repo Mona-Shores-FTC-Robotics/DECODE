@@ -19,7 +19,7 @@ public class DriverBindings {
     private final Range fieldY;
     private final Range rotationCcw;
     private final Button slowHold;
-    private final Button aimAssistHold;
+    private final Button rampHold;
 
 
     public DriverBindings(GamepadEx driver) {
@@ -27,11 +27,11 @@ public class DriverBindings {
         fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND).negate();
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
-        aimAssistHold = driver.leftBumper();
+        rampHold = driver.leftBumper();
     }
 
     public DriveRequest sampleDriveRequest() {
-        return new DriveRequest(fieldX.get(), fieldY.get(), rotationCcw.get(), slowHold.get(), aimAssistHold.get());
+        return new DriveRequest(fieldX.get(), fieldY.get(), rotationCcw.get(), slowHold.get(), rampHold.get());
     }
 
     public static final class DriveRequest {
@@ -39,14 +39,14 @@ public class DriverBindings {
         public final double fieldY;
         public final double rotation;
         public final boolean slowMode;
-        public final boolean aimAssist;
+        public final boolean rampMode;
 
-        private DriveRequest(double fieldX, double fieldY, double rotation, boolean slowMode, boolean aimAssist) {
+        private DriveRequest(double fieldX, double fieldY, double rotation, boolean slowMode, boolean rampMode) {
             this.fieldX = fieldX;
             this.fieldY = fieldY;
             this.rotation = rotation;
             this.slowMode = slowMode;
-            this.aimAssist = aimAssist;
+            this.rampMode = rampMode;
         }
     }
 }

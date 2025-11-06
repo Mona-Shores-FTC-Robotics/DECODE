@@ -38,7 +38,7 @@ public class DriveSubsystem implements Subsystem {
     }
 
     private static final double NORMAL_MULTIPLIER = 1.0;
-    public static double slowMultiplier = 0.35;
+    public static double slowMultiplier = 0.07;
 
     private final Follower follower;
     private final Constants.Motors driveMotors;
@@ -62,6 +62,12 @@ public class DriveSubsystem implements Subsystem {
     private double lastCommandStrafeLeft = 0.0;
     private double lastCommandTurn = 0.0;
     private RobotMode robotMode = RobotMode.DEBUG;
+    private boolean rampModeActive = false;
+    private double rampForward = 0.0;
+    private double rampStrafeLeft = 0.0;
+    private double rampTurn = 0.0;
+    private long lastRampUpdateNs = 0L;
+    public static double rampRatePerSec = 0.5;
 
     public static final class Inputs {
         public double poseXInches;
@@ -198,19 +204,65 @@ public class DriveSubsystem implements Subsystem {
      * @param slowMode      when true applies the configured slow multiplier
      */
     public void driveScaled(double fieldX , double fieldY , double rotationInput , boolean slowMode) {
+        driveScaled(fieldX, fieldY, rotationInput, slowMode, false);
+    }
+
+    public void driveScaled(double fieldX , double fieldY , double rotationInput , boolean slowMode, boolean rampMode) {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestRotation = rotationInput;
         lastRequestSlowMode = slowMode;
         double multiplier = slowMode ? Range.clip(slowMultiplier , 0.0 , 1.0) : NORMAL_MULTIPLIER;
-        double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
-        double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
-        double turnCW = Range.clip(- rotationInput * multiplier , - 1.0 , 1.0);
-        lastCommandForward = forward;
-        lastCommandStrafeLeft = strafeLeft;
-        lastCommandTurn = turnCW;
-        follower.setTeleOpDrive(forward , strafeLeft , turnCW , robotCentric);
+        double targetForward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
+        double targetStrafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
+        double targetTurnCW = Range.clip(- rotationInput * multiplier , - 1.0 , 1.0);
+
+        double appliedForward = targetForward;
+        double appliedStrafeLeft = targetStrafeLeft;
+        double appliedTurn = targetTurnCW;
+
+        if (rampMode) {
+            long now = System.nanoTime();
+            if (!rampModeActive) {
+                rampForward = lastCommandForward;
+                rampStrafeLeft = lastCommandStrafeLeft;
+                rampTurn = lastCommandTurn;
+                rampModeActive = true;
+                lastRampUpdateNs = now;
+            }
+            double dt = lastRampUpdateNs == 0L ? 0.0 : (now - lastRampUpdateNs) / 1_000_000_000.0;
+            lastRampUpdateNs = now;
+            if (dt <= 0.0) {
+                dt = 0.02;
+            }
+            double maxDelta = Math.max(0.0, rampRatePerSec) * dt;
+            rampForward = moveToward(rampForward, targetForward, maxDelta);
+            rampStrafeLeft = moveToward(rampStrafeLeft, targetStrafeLeft, maxDelta);
+            rampTurn = moveToward(rampTurn, targetTurnCW, maxDelta);
+            appliedForward = rampForward;
+            appliedStrafeLeft = rampStrafeLeft;
+            appliedTurn = rampTurn;
+        } else {
+            rampModeActive = false;
+            rampForward = appliedForward;
+            rampStrafeLeft = appliedStrafeLeft;
+            rampTurn = appliedTurn;
+            lastRampUpdateNs = System.nanoTime();
+        }
+
+        lastCommandForward = appliedForward;
+        lastCommandStrafeLeft = appliedStrafeLeft;
+        lastCommandTurn = appliedTurn;
+        follower.setTeleOpDrive(appliedForward , appliedStrafeLeft , appliedTurn , robotCentric);
         activeMode = slowMode ? DriveMode.SLOW : DriveMode.NORMAL;
+    }
+
+    private static double moveToward(double current, double target, double maxDelta) {
+        double delta = target - current;
+        if (Math.abs(delta) <= maxDelta) {
+            return target;
+        }
+        return current + Math.copySign(maxDelta, delta);
     }
 
     public void aimAndDrive(double fieldX , double fieldY , boolean slowMode) {
