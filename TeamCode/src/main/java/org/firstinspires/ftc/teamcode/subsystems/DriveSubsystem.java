@@ -28,11 +28,39 @@ import java.util.Optional;
 @Configurable
 public class DriveSubsystem implements Subsystem {
 
-    private static final double AIM_KP = 1.5;
     private static final double VISION_TIMEOUT_MS = 500.0;
     private static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.0;
     private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
     private static final String LOG_TAG = "DriveSubsystem";
+
+    @Configurable
+    public static class TeleOpDriveConfig {
+        public static double slowMultiplier = 0.07;
+        public static double rotationOverrideThreshold = 0.05;
+    }
+
+    @Configurable
+    public static class HeadingLockConfig {
+        public static double kP = 0.25;
+        public static double kI = 0.0;
+        public static double kD = 0.0;
+        public static double kF = 0.07;
+        public static double maxOutput = 1.0;
+    }
+
+    @Configurable
+    public static class AimAssistConfig {
+        public static double kP = 1.5;
+        public static double kMaxTurn = 1.0;
+    }
+
+    @Configurable
+    public static class RampConfig {
+        public static double forwardRatePerSec = 0.3;
+        public static double strafeRatePerSec = 0.3;
+        public static double turnRatePerSec = 0.6;
+        public static double fallbackDtSeconds = 0.02;
+    }
 
     public enum DriveMode {
         NORMAL,
@@ -40,7 +68,6 @@ public class DriveSubsystem implements Subsystem {
     }
 
     private static final double NORMAL_MULTIPLIER = 1.0;
-    public static double slowMultiplier = 0.07;
 
     private final Follower follower;
     private final Constants.Motors driveMotors;
@@ -56,8 +83,7 @@ public class DriveSubsystem implements Subsystem {
 
     public static boolean robotCentricConfig = true;
     private boolean robotCentric = robotCentricConfig;
-    private static final double ROTATION_OVERRIDE_THRESHOLD = 0.05;
-    private static final PIDFCoefficients HEADING_LOCK_COEFFICIENTS = new PIDFCoefficients(0.25, 0.0, 0.0, 0.07);
+    private static final double ROTATION_OVERRIDE_FALLBACK = 0.05;
     private DriveMode activeMode = DriveMode.NORMAL;
     private double lastRequestFieldX = 0.0;
     private double lastRequestFieldY = 0.0;
@@ -72,8 +98,7 @@ public class DriveSubsystem implements Subsystem {
     private double rampStrafeLeft = 0.0;
     private double rampTurn = 0.0;
     private long lastRampUpdateNs = 0L;
-    public static double rampRatePerSec = 0.5;
-    private final PIDFController headingLockController = new PIDFController(HEADING_LOCK_COEFFICIENTS);
+    private final PIDFController headingLockController = new PIDFController(currentHeadingLockCoefficients());
     private boolean headingLockEngaged = false;
     private boolean headingLockEnabled = false;
     private double headingLockTarget = Double.NaN;
@@ -121,49 +146,6 @@ public class DriveSubsystem implements Subsystem {
         motorLb = driveMotors.lb;
         motorRb = driveMotors.rb;
         this.vision = vision;
-    }
-
-    public void populateInputs(Inputs inputs) {
-        if (inputs == null) {
-            return;
-        }
-        Pose pose = follower.getPose();
-        if (pose != null) {
-            inputs.poseXInches = pose.getX();
-            inputs.poseYInches = pose.getY();
-            inputs.poseHeadingDeg = Math.toDegrees(follower.getHeading());
-        } else {
-            inputs.poseXInches = 0.0;
-            inputs.poseYInches = 0.0;
-            inputs.poseHeadingDeg = 0.0;
-        }
-        inputs.robotCentric = robotCentric;
-        inputs.driveMode = activeMode.name();
-        inputs.requestFieldX = lastRequestFieldX;
-        inputs.requestFieldY = lastRequestFieldY;
-        inputs.requestRotation = lastRequestRotation;
-        inputs.requestSlowMode = lastRequestSlowMode;
-        inputs.commandForward = lastCommandForward;
-        inputs.commandStrafeLeft = lastCommandStrafeLeft;
-        inputs.commandTurn = lastCommandTurn;
-        inputs.headingLockActive = headingLockEnabled;
-        inputs.headingLockTargetDeg = Double.isNaN(headingLockTarget) ? Double.NaN : Math.toDegrees(headingLockTarget);
-        inputs.headingLockErrorDeg = Math.toDegrees(lastHeadingLockError);
-        inputs.headingLockOutput = lastHeadingLockOutput;
-        inputs.followerBusy = follower.isBusy();
-        inputs.lfPower = motorLf.getPower();
-        inputs.rfPower = motorRf.getPower();
-        inputs.lbPower = motorLb.getPower();
-        inputs.rbPower = motorRb.getPower();
-        inputs.lfVelocityIps = ticksToInchesPerSecond(motorLf.getVelocity());
-        inputs.rfVelocityIps = ticksToInchesPerSecond(motorRf.getVelocity());
-        inputs.lbVelocityIps = ticksToInchesPerSecond(motorLb.getVelocity());
-        inputs.rbVelocityIps = ticksToInchesPerSecond(motorRb.getVelocity());
-        inputs.followerSpeedIps = followerVelocityIps();
-        inputs.lastVisionAngleDeg = Double.isNaN(lastGoodVisionAngle) ? Double.NaN : Math.toDegrees(lastGoodVisionAngle);
-        inputs.visionSampleAgeMs = lastVisionTimestamp == Double.NEGATIVE_INFINITY
-                ? Double.POSITIVE_INFINITY
-                : Math.max(0.0 , clock.milliseconds() - lastVisionTimestamp);
     }
 
     public void setRobotCentric(boolean enabled) {
@@ -220,11 +202,59 @@ public class DriveSubsystem implements Subsystem {
         lastHeadingLockOutput = 0.0;
     }
 
-    public void driveTeleOp(double fieldX, double fieldY, double rotationInput, boolean slowMode, boolean rampMode) {
+    public void populateInputs(Inputs inputs) {
+        if (inputs == null) {
+            return;
+        }
+        Pose pose = follower.getPose();
+        if (pose != null) {
+            inputs.poseXInches = pose.getX();
+            inputs.poseYInches = pose.getY();
+            inputs.poseHeadingDeg = Math.toDegrees(follower.getHeading());
+        } else {
+            inputs.poseXInches = 0.0;
+            inputs.poseYInches = 0.0;
+            inputs.poseHeadingDeg = 0.0;
+        }
+        inputs.robotCentric = robotCentric;
+        inputs.driveMode = activeMode.name();
+        inputs.requestFieldX = lastRequestFieldX;
+        inputs.requestFieldY = lastRequestFieldY;
+        inputs.requestRotation = lastRequestRotation;
+        inputs.requestSlowMode = lastRequestSlowMode;
+        inputs.commandForward = lastCommandForward;
+        inputs.commandStrafeLeft = lastCommandStrafeLeft;
+        inputs.commandTurn = lastCommandTurn;
+        inputs.headingLockActive = headingLockEnabled;
+        inputs.headingLockTargetDeg = Double.isNaN(headingLockTarget) ? Double.NaN : Math.toDegrees(headingLockTarget);
+        inputs.headingLockErrorDeg = Math.toDegrees(lastHeadingLockError);
+        inputs.headingLockOutput = lastHeadingLockOutput;
+        inputs.followerBusy = follower.isBusy();
+        inputs.lfPower = motorLf.getPower();
+        inputs.rfPower = motorRf.getPower();
+        inputs.lbPower = motorLb.getPower();
+        inputs.rbPower = motorRb.getPower();
+        inputs.lfVelocityIps = ticksToInchesPerSecond(motorLf.getVelocity());
+        inputs.rfVelocityIps = ticksToInchesPerSecond(motorRf.getVelocity());
+        inputs.lbVelocityIps = ticksToInchesPerSecond(motorLb.getVelocity());
+        inputs.rbVelocityIps = ticksToInchesPerSecond(motorRb.getVelocity());
+        inputs.followerSpeedIps = followerVelocityIps();
+        inputs.lastVisionAngleDeg = Double.isNaN(lastGoodVisionAngle) ? Double.NaN : Math.toDegrees(lastGoodVisionAngle);
+        inputs.visionSampleAgeMs = lastVisionTimestamp == Double.NEGATIVE_INFINITY
+                ? Double.POSITIVE_INFINITY
+                : Math.max(0.0 , clock.milliseconds() - lastVisionTimestamp);
+    }
+
+    public void driveTeleOp(double fieldX,
+                            double fieldY,
+                            double rotationInput,
+                            boolean slowMode,
+                            boolean rampMode,
+                            boolean headingHold) {
         if (robotCentric != robotCentricConfig) {
             setRobotCentric(robotCentricConfig);
         }
-        if (Math.abs(rotationInput) > ROTATION_OVERRIDE_THRESHOLD) {
+        if (!headingHold || Math.abs(rotationInput) > headingOverrideThreshold()) {
             headingLockEnabled = false;
             headingLockEngaged = false;
             driveScaled(fieldX, fieldY, rotationInput, slowMode, rampMode);
@@ -255,7 +285,8 @@ public class DriveSubsystem implements Subsystem {
         headingLockTarget = normalizeAngle(follower.getHeading());
         lastHeadingLockError = 0.0;
         lastHeadingLockOutput = 0.0;
-        double multiplier = slowMode ? Range.clip(slowMultiplier , 0.0 , 1.0) : NORMAL_MULTIPLIER;
+        double slowMultiplier = Range.clip(TeleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
+        double multiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
         double targetForward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
         double targetStrafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
         double targetTurnCW = Range.clip(- rotationInput * multiplier , - 1.0 , 1.0);
@@ -276,12 +307,17 @@ public class DriveSubsystem implements Subsystem {
             double dt = lastRampUpdateNs == 0L ? 0.0 : (now - lastRampUpdateNs) / 1_000_000_000.0;
             lastRampUpdateNs = now;
             if (dt <= 0.0) {
-                dt = 0.02;
+                dt = Math.max(0.0, RampConfig.fallbackDtSeconds);
             }
-            double maxDelta = Math.max(0.0, rampRatePerSec) * dt;
-            rampForward = moveToward(rampForward, targetForward, maxDelta);
-            rampStrafeLeft = moveToward(rampStrafeLeft, targetStrafeLeft, maxDelta);
-            rampTurn = moveToward(rampTurn, targetTurnCW, maxDelta);
+            double forwardRate = Math.max(0.0, RampConfig.forwardRatePerSec);
+            double strafeRate = Math.max(0.0, RampConfig.strafeRatePerSec);
+            double turnRate = Math.max(0.0, RampConfig.turnRatePerSec);
+            double maxForwardDelta = forwardRate * dt;
+            double maxStrafeDelta = strafeRate * dt;
+            double maxTurnDelta = turnRate * dt;
+            rampForward = moveToward(rampForward, targetForward, maxForwardDelta);
+            rampStrafeLeft = moveToward(rampStrafeLeft, targetStrafeLeft, maxStrafeDelta);
+            rampTurn = moveToward(rampTurn, targetTurnCW, maxTurnDelta);
             appliedForward = rampForward;
             appliedStrafeLeft = rampStrafeLeft;
             appliedTurn = rampTurn;
@@ -315,7 +351,8 @@ public class DriveSubsystem implements Subsystem {
         lastRequestSlowMode = slowMode;
         headingLockEnabled = true;
 
-        double multiplier = slowMode ? Range.clip(slowMultiplier , 0.0 , 1.0) : NORMAL_MULTIPLIER;
+        double slowMultiplier = Range.clip(TeleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
+        double multiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
         double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
         double turnCW = computeHeadingLockTurn();
@@ -337,9 +374,13 @@ public class DriveSubsystem implements Subsystem {
         }
         double error = normalizeAngle(headingLockTarget - follower.getHeading());
         lastHeadingLockError = error;
-        headingLockController.setCoefficients(HEADING_LOCK_COEFFICIENTS);
+        headingLockController.setCoefficients(currentHeadingLockCoefficients());
         headingLockController.updateError(error);
-        double output = Range.clip(headingLockController.run(), -1.0, 1.0);
+        double maxOutput = Math.max(0.0, HeadingLockConfig.maxOutput);
+        if (maxOutput < 1e-6) {
+            maxOutput = 0.0;
+        }
+        double output = Range.clip(headingLockController.run(), -maxOutput, maxOutput);
         lastHeadingLockOutput = output;
         return output;
     }
@@ -348,7 +389,8 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
-        double multiplier = slowMode ? Range.clip(slowMultiplier , 0.0 , 1.0) : NORMAL_MULTIPLIER;
+        double slowMultiplier = Range.clip(TeleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
+        double multiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
         double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
         double nowMs = clock.milliseconds();
@@ -369,7 +411,8 @@ public class DriveSubsystem implements Subsystem {
         }
 
         double headingError = normalizeAngle(targetHeading - follower.getHeading());
-        double turn = Range.clip(AIM_KP * headingError , - 1.0 , 1.0);
+        double maxTurn = Math.max(0.0, AimAssistConfig.kMaxTurn);
+        double turn = Range.clip(AimAssistConfig.kP * headingError , - maxTurn , maxTurn);
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
         lastCommandTurn = turn;
@@ -529,5 +572,22 @@ public class DriveSubsystem implements Subsystem {
         } catch (Exception ignored) {
             return 0.0;
         }
+    }
+
+    private static double headingOverrideThreshold() {
+        double threshold = Math.abs(TeleOpDriveConfig.rotationOverrideThreshold);
+        if (threshold < 1e-6) {
+            return ROTATION_OVERRIDE_FALLBACK;
+        }
+        return threshold;
+    }
+
+    private static PIDFCoefficients currentHeadingLockCoefficients() {
+        return new PIDFCoefficients(
+                HeadingLockConfig.kP,
+                HeadingLockConfig.kI,
+                HeadingLockConfig.kD,
+                HeadingLockConfig.kF
+        );
     }
 }

@@ -116,6 +116,8 @@ public class TelemetryService {
         double requestY = driveRequest != null ? driveRequest.fieldY : 0.0;
         double requestRot = driveRequest != null ? driveRequest.rotation : 0.0;
         boolean slowMode = driveRequest != null && driveRequest.slowMode;
+        boolean headingHold = driveRequest != null && driveRequest.headingHold;
+        boolean aimMode = driveRequest != null && driveRequest.aimMode;
         Pose2D pose = drive.getPose();
         double poseXIn = pose != null ? pose.getX(DistanceUnit.INCH) : 0.0;
         double poseYIn = pose != null ? pose.getY(DistanceUnit.INCH) : 0.0;
@@ -176,6 +178,8 @@ public class TelemetryService {
             String label = modeLabel == null || modeLabel.isEmpty() ? "Robot" : modeLabel;
             panels.debug("Mode", label);
             panels.debug("DriveMode", drive.getDriveMode());
+            panels.debug("Drive/AimMode", aimMode);
+            panels.debug("Drive/HeadingHoldRequest", headingHold);
             panels.debug("Vision/HasTag", visionHasTag);
             panels.debug("Vision/TagId", visionTagId);
             panels.debug("Vision/RangeIn", visionRangeIn);
@@ -220,7 +224,7 @@ public class TelemetryService {
             shooterReady = shooter.atTarget();
         }
 
-        publisher.publishDrive(drive, requestX, requestY, requestRot, slowMode);
+        publisher.publishDrive(drive, requestX, requestY, requestRot, slowMode, aimMode, headingHold);
         publisher.publishShooter(
                 displayTargetRpm,
                 displayCurrentRpm,
@@ -266,6 +270,8 @@ public class TelemetryService {
 
             Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
             dsTelemetry.addData("Alliance", activeAlliance.displayName());
+            dsTelemetry.addData("Drive Aim Assist", aimMode ? "vision-locked" : "manual");
+            dsTelemetry.addData("Drive Heading Hold", headingHold ? "engaged" : "free");
             dsTelemetry.addData(
                     "Shooter Mode",
                     "%s | ready=%s | autoSpin=%s",
@@ -318,6 +324,8 @@ public class TelemetryService {
                     requestY,
                     requestRot,
                     slowMode,
+                    aimMode,
+                    headingHold,
                     pose != null,
                     poseXIn,
                     poseYIn,
@@ -384,6 +392,8 @@ public class TelemetryService {
                                      double requestY,
                                      double requestRot,
                                      boolean slowMode,
+                                     boolean aimMode,
+                                     boolean headingHold,
                                      boolean poseValid,
                                      double poseXIn,
                                      double poseYIn,
@@ -442,6 +452,8 @@ public class TelemetryService {
         packet.put("drive/requestY", requestY);
         packet.put("drive/requestRot", requestRot);
         packet.put("drive/slowMode", slowMode);
+        packet.put("drive/aimMode", aimMode);
+        packet.put("drive/headingHold", headingHold);
         packet.put("drive/mode", drive.getDriveMode().name());
         packet.put("drive/lfPower", drive.getLfPower());
         packet.put("drive/rfPower", drive.getRfPower());

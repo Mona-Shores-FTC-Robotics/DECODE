@@ -40,7 +40,9 @@ public class TelemetryPublisher {
      */
     public void publishDrive(DriveSubsystem drive,
                              double lx, double ly, double rx,
-                             boolean slowMode) {
+                             boolean slowMode,
+                             boolean aimMode,
+                             boolean headingHold) {
         double lfPower = drive.getLfPower();
         double rfPower = drive.getRfPower();
         double lbPower = drive.getLbPower();
@@ -60,6 +62,8 @@ public class TelemetryPublisher {
             panelsTelemetry.debug("drive/rx", rx);
             panelsTelemetry.debug("drive/mode", drive.getDriveMode().name());
             panelsTelemetry.debug("drive/slowMode", slowMode);
+            panelsTelemetry.debug("drive/aimMode", aimMode);
+            panelsTelemetry.debug("drive/headingHoldRequested", headingHold);
             panelsTelemetry.debug("drive/lfPower", lfPower);
             panelsTelemetry.debug("drive/rfPower", rfPower);
             panelsTelemetry.debug("drive/lbPower", lbPower);
@@ -78,6 +82,8 @@ public class TelemetryPublisher {
             logger.recordNumber("drive_ly", ly);
             logger.recordNumber("drive_rx", rx);
             logger.recordBoolean("drive_slowMode", slowMode);
+            logger.recordBoolean("drive_aim_mode", aimMode);
+            logger.recordBoolean("drive_heading_hold_request", headingHold);
             logger.recordString("drive_mode", drive.getDriveMode().name());
             logger.recordNumber("drive_x_in", pose.getX(DistanceUnit.INCH));
             logger.recordNumber("drive_y_in", pose.getY(DistanceUnit.INCH));

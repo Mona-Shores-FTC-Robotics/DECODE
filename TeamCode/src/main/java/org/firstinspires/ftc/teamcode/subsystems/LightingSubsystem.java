@@ -79,17 +79,6 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         }
     }
 
-    private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
-        if (name == null || name.isEmpty()) {
-            return null;
-        }
-        try {
-            return hardwareMap.get(Servo.class, name);
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
-    }
-
     @Override
     public void initialize() {
         indicateAllianceInit();
@@ -257,6 +246,17 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             }
         }
         return touched;
+    }
+
+    private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(Servo.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private void populateLaneInputs(Inputs inputs, LauncherLane lane) {

@@ -21,6 +21,36 @@ import java.util.Map;
 @Configurable
 public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColorListener {
 
+    public enum ArtifactState {
+        EMPTY(0),
+        ONE(1),
+        TWO(2),
+        THREE(3);
+
+        private final int count;
+
+        ArtifactState(int count) {
+            this.count = count;
+        }
+
+        public int count() {
+            return count;
+        }
+
+        public static ArtifactState fromCount(int count) {
+            if (count <= 0) {
+                return EMPTY;
+            }
+            if (count == 1) {
+                return ONE;
+            }
+            if (count == 2) {
+                return TWO;
+            }
+            return THREE;
+        }
+    }
+
     private final ShooterSubsystem shooter;
     private final IntakeSubsystem intake;
     private final LightingSubsystem lighting;
@@ -32,6 +62,10 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     private boolean lastShooterReady = false;
     private double lastPeriodicMs = 0.0;
     private boolean autoSpinEnabled = false;
+    private boolean intakeAutomationEnabled = true;
+    private ArtifactState artifactState = ArtifactState.EMPTY;
+    private IntakeSubsystem.IntakeMode manualIntakeOverride = null;
+    private IntakeSubsystem.IntakeMode appliedIntakeMode = null;
     private RobotMode robotMode = RobotMode.DEBUG;
 
     public LauncherCoordinator(ShooterSubsystem shooter,
@@ -50,19 +84,26 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     public void initialize() {
         intake.addLaneColorListener(this);
         refreshLightingRegistration();
+        manualIntakeOverride = null;
+        appliedIntakeMode = null;
+        updateArtifactState();
+        applyIntakeMode();
         recomputeSpinMode();
     }
 
     @Override
     public void periodic() {
         long start = System.nanoTime();
-        // Nothing required each cycle beyond spin maintenance handled on colour change.
+        updateArtifactState();
+        applyIntakeMode();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
     public void stop() {
         intake.removeLaneColorListener(this);
         removeLightingListener();
+        clearIntakeOverride();
+        appliedIntakeMode = null;
         detachLogger();
     }
 
@@ -76,6 +117,8 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         if (lighting != null) {
             lighting.setLaneColor(lane, normalized);
         }
+        updateArtifactState();
+        applyIntakeMode();
         recomputeSpinMode();
     }
 
@@ -112,6 +155,57 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         }
     }
 
+    public ArtifactState getArtifactState() {
+        return artifactState;
+    }
+
+    public int getArtifactCount() {
+        return artifactState.count();
+    }
+
+    public void setIntakeAutomationEnabled(boolean enabled) {
+        if (intakeAutomationEnabled != enabled) {
+            intakeAutomationEnabled = enabled;
+            applyIntakeMode();
+        }
+    }
+
+    public boolean isIntakeAutomationEnabled() {
+        return intakeAutomationEnabled;
+    }
+
+    public void overrideIntakeMode(IntakeSubsystem.IntakeMode mode) {
+        if (mode == null) {
+            clearIntakeOverride();
+            return;
+        }
+        manualIntakeOverride = mode;
+        applyIntakeMode();
+    }
+
+    public void clearIntakeOverride() {
+        if (manualIntakeOverride != null) {
+            manualIntakeOverride = null;
+            applyIntakeMode();
+        }
+    }
+
+    public boolean isManualIntakeOverrideActive() {
+        return manualIntakeOverride != null;
+    }
+
+    public IntakeSubsystem.IntakeMode getRequestedIntakeMode() {
+        IntakeSubsystem.IntakeMode override = manualIntakeOverride;
+        return override != null ? override : computeAutomationIntakeMode();
+    }
+
+    public IntakeSubsystem.IntakeMode getAppliedIntakeMode() {
+        if (intake != null) {
+            return intake.getResolvedMode();
+        }
+        return appliedIntakeMode != null ? appliedIntakeMode : IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
+    }
+
     private void recomputeSpinMode() {
         if (!autoSpinEnabled || robotMode != RobotMode.MATCH) {
             shooter.requestStandbySpin();
@@ -129,6 +223,59 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
             shooter.requestSpinUp();
         } else {
             shooter.requestStandbySpin();
+        }
+    }
+
+    private void updateArtifactState() {
+        int count = 0;
+        for (LauncherLane lane : LauncherLane.values()) {
+            if (isArtifactPresent(lane)) {
+                count++;
+            }
+        }
+        artifactState = ArtifactState.fromCount(count);
+    }
+
+    private boolean isArtifactPresent(LauncherLane lane) {
+        ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
+        if (color != ArtifactColor.NONE && color != ArtifactColor.UNKNOWN) {
+            return true;
+        }
+        if (intake == null) {
+            return false;
+        }
+        IntakeSubsystem.LaneSample sample = intake.getLaneSample(lane);
+        if (sample == null || !sample.sensorPresent) {
+            return false;
+        }
+        if (sample.withinDistance) {
+            return true;
+        }
+        ArtifactColor hsvColor = sample.hsvColor;
+        return hsvColor != ArtifactColor.NONE && hsvColor != ArtifactColor.UNKNOWN;
+    }
+
+    private IntakeSubsystem.IntakeMode computeAutomationIntakeMode() {
+        if (!intakeAutomationEnabled) {
+            return intake != null ? intake.getMode() : IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
+        }
+        if (artifactState == ArtifactState.THREE) {
+            return IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
+        }
+        return IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
+    }
+
+    private void applyIntakeMode() {
+        if (intake == null) {
+            return;
+        }
+        IntakeSubsystem.IntakeMode desired = getRequestedIntakeMode();
+        if (desired == null) {
+            desired = IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
+        }
+        if (appliedIntakeMode != desired) {
+            intake.setMode(desired);
+            appliedIntakeMode = desired;
         }
     }
 
@@ -201,6 +348,18 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         }
         inputs.autoSpinEnabled = autoSpinEnabled;
         inputs.lightingRegistered = lightingRegistered;
+        inputs.artifactState = artifactState.name();
+        inputs.artifactCount = artifactState.count();
+        inputs.intakeAutomationEnabled = intakeAutomationEnabled;
+        inputs.intakeOverrideActive = manualIntakeOverride != null;
+        IntakeSubsystem.IntakeMode requestedMode = getRequestedIntakeMode();
+        IntakeSubsystem.IntakeMode appliedMode = getAppliedIntakeMode();
+        inputs.intakeRequestedMode = requestedMode == null
+                ? IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name()
+                : requestedMode.name();
+        inputs.intakeAppliedMode = appliedMode == null
+                ? IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name()
+                : appliedMode.name();
         boolean anyActive = false;
         for (LauncherLane lane : LauncherLane.values()) {
             ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
@@ -261,6 +420,9 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         robotMode = RobotMode.orDefault(mode);
         if (robotMode == RobotMode.DEBUG) {
             enableAutoSpin(false);
+            setIntakeAutomationEnabled(false);
+        } else {
+            setIntakeAutomationEnabled(true);
         }
         refreshLightingRegistration();
     }
@@ -289,6 +451,12 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     public static final class Inputs {
         public boolean autoSpinEnabled;
         public boolean lightingRegistered;
+        public String artifactState = ArtifactState.EMPTY.name();
+        public int artifactCount;
+        public boolean intakeAutomationEnabled;
+        public boolean intakeOverrideActive;
+        public String intakeRequestedMode = IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name();
+        public String intakeAppliedMode = IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name();
         public boolean anyActiveLanes;
         public String leftColor = ArtifactColor.NONE.name();
         public String centerColor = ArtifactColor.NONE.name();

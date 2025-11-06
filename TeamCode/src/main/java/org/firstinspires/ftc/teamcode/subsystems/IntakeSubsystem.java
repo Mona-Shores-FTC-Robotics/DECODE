@@ -23,22 +23,22 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 /**
- * Optional intake stub used by the autonomous routine. It now exposes a minimal
- * state machine so OpModes can request work and poll when it is complete without
- * touching timers or hardware directly.
+ * Hardware-facing intake wrapper. Handles motor power, roller servo, and lane sensor sampling
+ * while higher-level coordinators decide what the subsystem should do.
  */
 @Configurable
 public class IntakeSubsystem implements Subsystem {
 
-    public enum IntakeState {
-        IDLE,
-        INTAKING,
-        FULL
+    public enum IntakeMode {
+        PASSIVE_REVERSE,
+        ACTIVE_FORWARD,
+        STOPPED
     }
 
     @Configurable
@@ -63,9 +63,6 @@ public class IntakeSubsystem implements Subsystem {
         public static double presenceDistanceCm = 3.0;
     }
 
-    public static double defaultRunTimeMs = 0.0;
-    public static int maxIndexed = 3;
-
     @Configurable
     public static class MotorConfig {
         public static String motorName = "intake";
@@ -80,6 +77,12 @@ public class IntakeSubsystem implements Subsystem {
         public static String servoName = "intake_roller";
         public static double activePosition = -1.0;
         public static double inactivePosition = 0.0;
+    }
+
+    @Configurable
+    public static class ManualModeConfig {
+        public static boolean enableOverride = false;
+        public static String overrideMode = IntakeMode.PASSIVE_REVERSE.name();
     }
 
     public static final class LaneSample {
@@ -153,11 +156,8 @@ public class IntakeSubsystem implements Subsystem {
 
     private static final LaneSample ABSENT_SAMPLE = LaneSample.absent();
 
-    private final ElapsedTime timer = new ElapsedTime();
     private final ElapsedTime sensorTimer = new ElapsedTime();
 
-    private IntakeState state = IntakeState.IDLE;
-    private int indexedCount = 0;
     private Alliance alliance = Alliance.UNKNOWN;
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ColorSensor> laneSensors = new EnumMap<>(LauncherLane.class);
@@ -167,6 +167,8 @@ public class IntakeSubsystem implements Subsystem {
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
     private boolean anyLaneSensorsPresent = false;
     private double lastPeriodicMs = 0.0;
+    private IntakeMode intakeMode = IntakeMode.PASSIVE_REVERSE;
+    private IntakeMode appliedMode = null;
     private final DcMotorEx intakeMotor;
     private double appliedMotorPower = 0.0;
     private final Servo rollerServo;
@@ -175,14 +177,10 @@ public class IntakeSubsystem implements Subsystem {
     private RobotMode robotMode = RobotMode.DEBUG;
 
     public static final class Inputs {
-        public IntakeState state = IntakeState.IDLE;
-        public int indexedCount;
-        public int maxIndexed;
         public String alliance = Alliance.UNKNOWN.name();
         public boolean anyLaneSensorsPresent;
         public boolean sensorPollingEnabled;
         public double sensorSamplePeriodMs;
-        public double timerMs;
         public String leftColor = ArtifactColor.NONE.name();
         public boolean leftSensorPresent;
         public boolean leftDistanceAvailable;
@@ -223,6 +221,10 @@ public class IntakeSubsystem implements Subsystem {
         public int rightRawGreen;
         public int rightRawBlue;
         public double motorPower;
+        public String commandedMode = IntakeMode.PASSIVE_REVERSE.name();
+        public String appliedMode = IntakeMode.PASSIVE_REVERSE.name();
+        public boolean modeOverrideEnabled;
+        public String modeOverride = IntakeMode.PASSIVE_REVERSE.name();
         public boolean rollerPresent;
         public double rollerPosition;
         public boolean rollerActive;
@@ -255,6 +257,198 @@ public class IntakeSubsystem implements Subsystem {
         bindLaneSensors(hardwareMap);
     }
 
+    @Override
+    public void initialize() {
+        clearLaneColors();
+        for (LauncherLane lane : LauncherLane.values()) {
+            laneSamples.put(lane, ABSENT_SAMPLE);
+        }
+        sensorTimer.reset();
+        intakeMode = IntakeMode.PASSIVE_REVERSE;
+        appliedMode = null;
+        setManualPower(0.0);
+        if (rollerServo != null) {
+            rollerServo.setPosition(RollerConfig.inactivePosition);
+            lastRollerPosition = RollerConfig.inactivePosition;
+        }
+        rollerEnabled = false;
+    }
+
+    @Override
+    public void periodic() {
+        long start = System.nanoTime();
+        IntakeMode targetMode = resolveMode();
+        if (appliedMode != targetMode) {
+            applyModePower(targetMode);
+            appliedMode = targetMode;
+        }
+        if (robotMode == RobotMode.MATCH) {
+            pollLaneSensorsIfNeeded();
+        }
+        if (rollerServo != null) {
+            double target = rollerEnabled ? RollerConfig.activePosition : RollerConfig.inactivePosition;
+            rollerServo.setPosition(target);
+            lastRollerPosition = target;
+        }
+        lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    public void stop() {
+        setMode(IntakeMode.STOPPED);
+        setManualPower(0.0);
+        deactivateRoller();
+    }
+
+    public void setAlliance(Alliance alliance) {
+        this.alliance = alliance;
+    }
+
+    public Alliance getAlliance() {
+        return alliance;
+    }
+
+    public void setRobotMode(RobotMode mode) {
+        robotMode = RobotMode.orDefault(mode);
+    }
+
+    public void activateRoller() {
+        rollerEnabled = true;
+    }
+
+    public void deactivateRoller() {
+        rollerEnabled = false;
+        if (rollerServo != null) {
+            rollerServo.setPosition(RollerConfig.inactivePosition);
+            lastRollerPosition = RollerConfig.inactivePosition;
+        }
+    }
+
+    public double getLastPeriodicMs() {
+        return lastPeriodicMs;
+    }
+
+    public void setManualPower(double normalizedPower) {
+        double power = Range.clip(normalizedPower, -1.0, 1.0);
+        appliedMotorPower = power;
+        if (intakeMotor != null) {
+            intakeMotor.setPower(power);
+        }
+    }
+
+    public double getCurrentPower() {
+        return appliedMotorPower;
+    }
+
+    public IntakeMode getMode() {
+        return intakeMode;
+    }
+
+    public void setMode(IntakeMode mode) {
+        IntakeMode desired = mode == null ? IntakeMode.PASSIVE_REVERSE : mode;
+        if (intakeMode != desired) {
+            intakeMode = desired;
+            appliedMode = null;
+        }
+    }
+
+    public IntakeMode getResolvedMode() {
+        return resolveMode();
+    }
+
+    public boolean isRollerPresent() {
+        return rollerServo != null;
+    }
+
+    public double getRollerPosition() {
+        return rollerServo == null ? Double.NaN : lastRollerPosition;
+    }
+
+    public boolean isRollerActive() {
+        return rollerServo != null
+                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
+    }
+
+    public void populateInputs(Inputs inputs) {
+        if (inputs == null) {
+            return;
+        }
+        inputs.alliance = alliance.name();
+        inputs.anyLaneSensorsPresent = anyLaneSensorsPresent;
+        inputs.sensorPollingEnabled = LaneSensorConfig.enablePolling;
+        inputs.sensorSamplePeriodMs = LaneSensorConfig.samplePeriodMs;
+        inputs.motorPower = appliedMotorPower;
+        inputs.commandedMode = intakeMode.name();
+        inputs.appliedMode = resolveMode().name();
+        inputs.modeOverrideEnabled = ManualModeConfig.enableOverride;
+        inputs.modeOverride = ManualModeConfig.overrideMode;
+        inputs.rollerPresent = rollerServo != null;
+        inputs.rollerPosition = rollerServo != null ? lastRollerPosition : Double.NaN;
+        inputs.rollerActive = rollerServo != null
+                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
+
+        populateLaneInputs(inputs, LauncherLane.LEFT);
+        populateLaneInputs(inputs, LauncherLane.CENTER);
+        populateLaneInputs(inputs, LauncherLane.RIGHT);
+    }
+
+    private void pollLaneSensorsIfNeeded() {
+        if (!LaneSensorConfig.enablePolling || !anyLaneSensorsPresent) {
+            return;
+        }
+        if (sensorTimer.milliseconds() < LaneSensorConfig.samplePeriodMs) {
+            return;
+        }
+        sensorTimer.reset();
+        refreshLaneSensors();
+    }
+
+    private IntakeMode resolveMode() {
+        if (ManualModeConfig.enableOverride) {
+            IntakeMode override = parseMode(ManualModeConfig.overrideMode);
+            if (override != null) {
+                return override;
+            }
+        }
+        return intakeMode;
+    }
+
+    private void applyModePower(IntakeMode mode) {
+        if (mode == null) {
+            mode = IntakeMode.PASSIVE_REVERSE;
+        }
+        switch (mode) {
+            case ACTIVE_FORWARD:
+                setManualPower(MotorConfig.defaultForwardPower);
+                break;
+            case STOPPED:
+                setManualPower(0.0);
+                break;
+            case PASSIVE_REVERSE:
+            default:
+                setManualPower(MotorConfig.defaultReversePower);
+                break;
+        }
+    }
+
+    private static IntakeMode parseMode(String value) {
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
+        try {
+            return IntakeMode.valueOf(value.toUpperCase(Locale.US));
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    public void refreshLaneSensors() {
+        for (LauncherLane lane : LauncherLane.values()) {
+            LaneSample sample = sampleLane(lane);
+            laneSamples.put(lane, sample);
+            updateLaneColor(lane, sample.color);
+        }
+    }
+
     private void bindLaneSensors(HardwareMap hardwareMap) {
         anyLaneSensorsPresent = false;
         laneSensors.put(LauncherLane.LEFT, tryGetColorSensor(hardwareMap, LaneSensorConfig.leftSensor));
@@ -268,6 +462,17 @@ public class IntakeSubsystem implements Subsystem {
                 anyLaneSensorsPresent = true;
                 break;
             }
+        }
+    }
+
+    private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(DcMotorEx.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
         }
     }
 
@@ -301,213 +506,6 @@ public class IntakeSubsystem implements Subsystem {
             return hardwareMap.get(Servo.class, name);
         } catch (IllegalArgumentException ignored) {
             return null;
-        }
-    }
-
-    @Override
-    public void initialize() {
-        state = IntakeState.IDLE;
-        indexedCount = 0;
-        clearLaneColors();
-        for (LauncherLane lane : LauncherLane.values()) {
-            laneSamples.put(lane, ABSENT_SAMPLE);
-        }
-        sensorTimer.reset();
-        setManualPower(0.0);
-        if (rollerServo != null) {
-            rollerServo.setPosition(RollerConfig.inactivePosition);
-            lastRollerPosition = RollerConfig.inactivePosition;
-        }
-        rollerEnabled = false;
-    }
-
-    private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
-        if (name == null || name.isEmpty()) {
-            return null;
-        }
-        try {
-            return hardwareMap.get(DcMotorEx.class, name);
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
-    }
-
-    public void requestIntake() {
-        if (state == IntakeState.INTAKING) {
-            return;
-        }
-        state = IntakeState.INTAKING;
-        timer.reset();
-        setManualPower(MotorConfig.defaultForwardPower);
-        if (defaultRunTimeMs <= 0.0) {
-            indexedCount = maxIndexed;
-            state = IntakeState.FULL;
-            setManualPower(0.0);
-        }
-    }
-
-    /** Legacy name retained for existing OpModes. */
-    public void runIn() {
-        requestIntake();
-    }
-
-    /** Legacy name retained for existing OpModes. */
-    public void start() {
-        requestIntake();
-    }
-
-    public void stop() {
-        if (state != IntakeState.FULL) {
-            state = IntakeState.IDLE;
-        }
-        setManualPower(0.0);
-        deactivateRoller();
-    }
-
-    /** Legacy loop hook retained for compatibility. */
-    public void update() {
-        periodic();
-    }
-
-    public boolean isBusy() {
-        return state == IntakeState.INTAKING;
-    }
-
-    public boolean isFull() {
-        return indexedCount >= maxIndexed;
-    }
-
-    public void seedIndexedCount(int count) {
-        indexedCount = clamp(count, 0, maxIndexed);
-        if (indexedCount >= maxIndexed) {
-            state = IntakeState.FULL;
-        }
-    }
-
-    public void clearIndexed() {
-        indexedCount = 0;
-        state = IntakeState.IDLE;
-    }
-
-    public int getIndexedCount() {
-        return indexedCount;
-    }
-
-    public IntakeState getState() {
-        return state;
-    }
-
-    public void setAlliance(Alliance alliance) {
-        this.alliance = alliance;
-    }
-
-    public Alliance getAlliance() {
-        return alliance;
-    }
-
-    public void setRobotMode(RobotMode mode) {
-        robotMode = RobotMode.orDefault(mode);
-    }
-
-    public void activateRoller() {
-        rollerEnabled = true;
-    }
-
-    public void deactivateRoller() {
-        rollerEnabled = false;
-        if (rollerServo != null) {
-            rollerServo.setPosition(RollerConfig.inactivePosition);
-            lastRollerPosition = RollerConfig.inactivePosition;
-        }
-    }
-
-    @Override
-    public void periodic() {
-        long start = System.nanoTime();
-        if (robotMode == RobotMode.MATCH) {
-            pollLaneSensorsIfNeeded();
-        }
-        if (rollerServo != null) {
-            double target = rollerEnabled ? RollerConfig.activePosition : RollerConfig.inactivePosition;
-            rollerServo.setPosition(target);
-            lastRollerPosition = target;
-        }
-        lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
-    }
-
-    public double getLastPeriodicMs() {
-        return lastPeriodicMs;
-    }
-
-    public void setManualPower(double normalizedPower) {
-        double power = Range.clip(normalizedPower, -1.0, 1.0);
-        appliedMotorPower = power;
-        if (intakeMotor != null) {
-            intakeMotor.setPower(power);
-        }
-        if (Math.abs(power) > 1e-3) {
-            state = IntakeState.INTAKING;
-        } else if (state != IntakeState.FULL) {
-            state = IntakeState.IDLE;
-        }
-    }
-
-    public double getCurrentPower() {
-        return appliedMotorPower;
-    }
-
-    public boolean isRollerPresent() {
-        return rollerServo != null;
-    }
-
-    public double getRollerPosition() {
-        return rollerServo == null ? Double.NaN : lastRollerPosition;
-    }
-
-    public boolean isRollerActive() {
-        return rollerServo != null
-                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
-    }
-
-    public void populateInputs(Inputs inputs) {
-        if (inputs == null) {
-            return;
-        }
-        inputs.state = state;
-        inputs.indexedCount = indexedCount;
-        inputs.maxIndexed = maxIndexed;
-        inputs.alliance = alliance.name();
-        inputs.anyLaneSensorsPresent = anyLaneSensorsPresent;
-        inputs.sensorPollingEnabled = LaneSensorConfig.enablePolling;
-        inputs.sensorSamplePeriodMs = LaneSensorConfig.samplePeriodMs;
-        inputs.timerMs = timer.milliseconds();
-        inputs.motorPower = appliedMotorPower;
-        inputs.rollerPresent = rollerServo != null;
-        inputs.rollerPosition = rollerServo != null ? lastRollerPosition : Double.NaN;
-        inputs.rollerActive = rollerServo != null
-                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
-
-        populateLaneInputs(inputs, LauncherLane.LEFT);
-        populateLaneInputs(inputs, LauncherLane.CENTER);
-        populateLaneInputs(inputs, LauncherLane.RIGHT);
-    }
-
-    private void pollLaneSensorsIfNeeded() {
-        if (!LaneSensorConfig.enablePolling || !anyLaneSensorsPresent) {
-            return;
-        }
-        if (sensorTimer.milliseconds() < LaneSensorConfig.samplePeriodMs) {
-            return;
-        }
-        sensorTimer.reset();
-        refreshLaneSensors();
-    }
-
-    public void refreshLaneSensors() {
-        for (LauncherLane lane : LauncherLane.values()) {
-            LaneSample sample = sampleLane(lane);
-            laneSamples.put(lane, sample);
-            updateLaneColor(lane, sample.color);
         }
     }
 
@@ -696,16 +694,6 @@ public class IntakeSubsystem implements Subsystem {
         void onLaneColorChanged(LauncherLane lane, ArtifactColor color);
     }
 
-
-    private static int clamp(int value, int min, int max) {
-        if (value < min) {
-            return min;
-        }
-        if (value > max) {
-            return max;
-        }
-        return value;
-    }
 
     private void populateLaneInputs(Inputs inputs, LauncherLane lane) {
         LaneSample sample = getLaneSample(lane);

@@ -18,6 +18,8 @@ import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
@@ -30,8 +32,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
 
     private Robot robot;
-    private GamepadEx driverPad;
-    private GamepadEx operatorPad;
     private DriverBindings driverBindings;
     private OperatorBindings operatorBindings;
     private AllianceSelector allianceSelector;
@@ -45,19 +45,17 @@ public class DecodeTeleOp extends NextFTCOpMode {
     public void onInit() {
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
+        robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
+        robot.initialize();
 
-        driverPad = new GamepadEx(() -> gamepad1);
+        GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         driverBindings = new DriverBindings(driverPad);
         driverBindings.onRelocalizeRequested(this::handleVisionRelocalizeRequest);
 
-        operatorPad = new GamepadEx(() -> gamepad2);
-        operatorBindings = new OperatorBindings(operatorPad, robot, robot.launcherCoordinator);
+        GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
+        operatorBindings = new OperatorBindings(operatorPad, robot);
 
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
-
-        robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
-
-        robot.initialize();
 
         addComponents(
                 BindingsComponent.INSTANCE,
@@ -94,50 +92,30 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        BindingManager.update();
-        // Main loop: gather inputs, run drive, then publish telemetry/diagnostics.
         long mainLoopStartNs = System.nanoTime();
+        BindingManager.update();
 
-        // DriveSubsystem handles auto heading lock when the rotation stick is centered.
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
-        long driveCallStartNs = System.nanoTime();
-        robot.drive.driveTeleOp(request.fieldX, request.fieldY, request.rotation, request.slowMode, request.rampMode);
-        double driveCallMs = nanosToMs(System.nanoTime() - driveCallStartNs);
-
-        if (operatorBindings != null) {
-            operatorBindings.update(gamepad2.left_trigger, gamepad2.right_trigger);
-        }
-
-        boolean telemetrySent = false;
-        double telemetryMsThisLoop = 0.0;
-        long nowNs = System.nanoTime();
-        long nowMs = System.currentTimeMillis();
-        if (nowNs - lastTelemetryNs >= TELEMETRY_INTERVAL_NS) {
-            long telemetryCallStartNs = nowNs;
-            robot.telemetry.publishLoopTelemetry(
-                    robot.drive,
-                    robot.shooter,
-                    robot.vision,
-                    request,
-                    robot.launcherCoordinator,
-                    selectedAlliance,
-                    getRuntime(),
-                    null,
-                    robot.logger,
-                    "TeleOp"
+        if (request.aimMode) {
+            robot.drive.aimAndDrive(request.fieldX, request.fieldY, request.slowMode);
+        } else {
+            robot.drive.driveTeleOp(
+                    request.fieldX,
+                    request.fieldY,
+                    request.rotation,
+                    request.slowMode,
+                    request.rampMode,
+                    request.headingHold
             );
-            telemetryMsThisLoop = nanosToMs(System.nanoTime() - telemetryCallStartNs);
-            lastTelemetryNs = System.nanoTime();
-            telemetrySent = true;
         }
 
+        TelemetryTiming telemetryTiming = publishTelemetryIfNeeded(request);
         Pose2D pose = robot.drive.getPose();
 
         long mainloopEndNs = System.nanoTime();
         double loopMs = nanosToMs(mainloopEndNs - mainLoopStartNs);
-        LoopTiming loopTiming = buildLoopTiming(loopMs, driveCallMs, telemetryMsThisLoop, telemetrySent);
-        boolean showDiagnostics = diagnosticsRequested();
-        publishTelemetryDisplay(pose, nowMs, loopTiming, showDiagnostics);
+        LoopTiming loopTiming = buildLoopTiming(loopMs, telemetryTiming.telemetryMs, telemetryTiming.telemetrySent);
+        publishTelemetryDisplay(pose, telemetryTiming.wallClockMs, loopTiming, diagnosticsRequested());
     }
 
     @Override
@@ -193,7 +171,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     private void addLoopDiagnostics(LoopTiming timing) {
         telemetry.addData("Main Loop", "%.1f ms", timing.loopMs);
-        telemetry.addData("Control Call", "%.1f ms", timing.driveCallMs);
         telemetry.addData("Drive periodic", "%.1f ms", timing.driveMs);
         telemetry.addData("Intake periodic", "%.1f ms", timing.intakeMs);
         telemetry.addData("Shooter periodic", "%.1f ms", timing.shooterMs);
@@ -206,6 +183,13 @@ public class DecodeTeleOp extends NextFTCOpMode {
     }
 
     private void addIntakeTelemetry() {
+        telemetry.addData("Intake mode",
+                "%s (applied %s)%s",
+                robot.intake.getMode(),
+                robot.intake.getResolvedMode(),
+                IntakeSubsystem.ManualModeConfig.enableOverride
+                        ? " [override]"
+                        : "");
         telemetry.addData("Intake power", "%.2f", robot.intake.getCurrentPower());
         telemetry.addData("Intake roller",
                 robot.intake.isRollerPresent()
@@ -213,21 +197,58 @@ public class DecodeTeleOp extends NextFTCOpMode {
                         robot.intake.getRollerPosition(),
                         robot.intake.isRollerActive() ? "active" : "idle")
                         : "missing");
+        LauncherCoordinator coordinator = robot.launcherCoordinator;
+        if (coordinator != null) {
+            telemetry.addData("Artifacts",
+                    "%s (%d)",
+                    coordinator.getArtifactState(),
+                    coordinator.getArtifactCount());
+            telemetry.addData("Intake control",
+                    coordinator.isManualIntakeOverrideActive()
+                            ? String.format(Locale.US, "override -> %s", coordinator.getRequestedIntakeMode())
+                            : "automation");
+        }
     }
 
-    private LoopTiming buildLoopTiming(double loopMs, double driveCallMs, double telemetryMsThisLoop, boolean telemetrySent) {
+    private LoopTiming buildLoopTiming(double loopMs, double telemetryMsThisLoop, boolean telemetrySent) {
         double drivePeriodicMs = robot.drive.getLastPeriodicMs();
         double intakePeriodicMs = robot.intake.getLastPeriodicMs();
         double shooterPeriodicMs = robot.shooter.getLastPeriodicMs();
         double lightingPeriodicMs = robot.lighting.getLastPeriodicMs();
         double launcherPeriodicMs = robot.launcherCoordinator.getLastPeriodicMs();
         double visionPeriodicMs = robot.vision.getLastPeriodicMs();
-        return new LoopTiming(loopMs, driveCallMs, telemetryMsThisLoop, telemetrySent,
+        return new LoopTiming(loopMs, telemetryMsThisLoop, telemetrySent,
                 drivePeriodicMs, intakePeriodicMs, shooterPeriodicMs, lightingPeriodicMs, launcherPeriodicMs, visionPeriodicMs);
     }
 
     private boolean diagnosticsRequested() {
         return gamepad1.right_trigger > 0.5;
+    }
+
+    private TelemetryTiming publishTelemetryIfNeeded(DriverBindings.DriveRequest request) {
+        long nowNs = System.nanoTime();
+        long nowMs = System.currentTimeMillis();
+        double telemetryMsThisLoop = 0.0;
+        boolean telemetrySent = false;
+        if (nowNs - lastTelemetryNs >= TELEMETRY_INTERVAL_NS) {
+            long telemetryCallStartNs = nowNs;
+            robot.telemetry.publishLoopTelemetry(
+                    robot.drive,
+                    robot.shooter,
+                    robot.vision,
+                    request,
+                    robot.launcherCoordinator,
+                    selectedAlliance,
+                    getRuntime(),
+                    null,
+                    robot.logger,
+                    "TeleOp"
+            );
+            telemetryMsThisLoop = nanosToMs(System.nanoTime() - telemetryCallStartNs);
+            lastTelemetryNs = System.nanoTime();
+            telemetrySent = true;
+        }
+        return new TelemetryTiming(telemetrySent, telemetryMsThisLoop, nowMs);
     }
 
     private static double nanosToMs(long nanos) {
@@ -272,7 +293,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     private static final class LoopTiming {
         final double loopMs;
-        final double driveCallMs;
         final double telemetryMs;
         final boolean telemetrySent;
         final double driveMs;
@@ -283,7 +303,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
         final double visionMs;
 
         LoopTiming(double loopMs,
-                   double driveCallMs,
                    double telemetryMs,
                    boolean telemetrySent,
                    double driveMs,
@@ -293,7 +312,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                    double launcherMs,
                    double visionMs) {
             this.loopMs = loopMs;
-            this.driveCallMs = driveCallMs;
             this.telemetryMs = telemetryMs;
             this.telemetrySent = telemetrySent;
             this.driveMs = driveMs;
@@ -306,6 +324,20 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
         double totalMs() {
             return loopMs + driveMs + intakeMs + shooterMs + lightingMs + launcherMs + visionMs + telemetryMs;
+        }
+    }
+
+    private static final class TelemetryTiming {
+        final boolean telemetrySent;
+        final double telemetryMs;
+        final long wallClockMs;
+
+        TelemetryTiming(boolean telemetrySent,
+                        double telemetryMs,
+                        long wallClockMs) {
+            this.telemetrySent = telemetrySent;
+            this.telemetryMs = telemetryMs;
+            this.wallClockMs = wallClockMs;
         }
     }
 

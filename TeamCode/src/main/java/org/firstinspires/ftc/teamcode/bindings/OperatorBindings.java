@@ -16,7 +16,6 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
  */
 public class OperatorBindings {
 
-    private static final double TRIGGER_DEADBAND = 0.15;
     private static final double MATCH_BURST_SPACING_MS = 150.0;
 
     private final Robot robot;
@@ -26,20 +25,21 @@ public class OperatorBindings {
     private final Button shootMiddle;
     private final Button shootRight;
     private final Button shootAll;
+    private final Button intakeForwardHold;
     private boolean manualIntakeActive = false;
     private boolean fullSpinRequested = false;
 
     public OperatorBindings(GamepadEx operator,
-                            Robot robot,
-                            LauncherCoordinator launcherCoordinator) {
+                            Robot robot) {
         this.robot = robot;
-        this.launcherCoordinator = launcherCoordinator;
+        this.launcherCoordinator = robot.launcherCoordinator;
 
         spinModeToggle = operator.leftBumper();
         shootLeft = operator.x();
         shootMiddle = operator.y();
         shootRight = operator.b();
         shootAll = operator.a();
+        intakeForwardHold = operator.rightBumper();
 
         configureMatchBindings();
     }
@@ -50,23 +50,49 @@ public class OperatorBindings {
         }
         robot.shooter.setDebugOverrideEnabled(false);
         robot.shooter.setSpinMode(ShooterSubsystem.SpinMode.HOLD);
+        if (launcherCoordinator != null) {
+            launcherCoordinator.clearIntakeOverride();
+        } else {
+            robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+        }
+        syncLightingWithIntake();
 
         spinModeToggle.whenBecomesTrue(this::toggleSpinMode);
         shootLeft.whenBecomesTrue(() -> fireLane(LauncherLane.LEFT));
         shootMiddle.whenBecomesTrue(() -> fireLane(LauncherLane.CENTER));
         shootRight.whenBecomesTrue(() -> fireLane(LauncherLane.RIGHT));
         shootAll.whenBecomesTrue(this::fireMatchBurst);
+        intakeForwardHold.whenBecomesTrue(this::requestForwardIntake);
+        intakeForwardHold.whenBecomesFalse(this::releaseForwardIntake);
     }
 
-    public void update(double reverseTrigger, double forwardTrigger) {
-        double power = IntakeSubsystem.MotorConfig.defaultReversePower;
-        boolean forwardActive = forwardTrigger > TRIGGER_DEADBAND;
-        if (forwardActive) {
-            power = IntakeSubsystem.MotorConfig.defaultForwardPower;
+    private void requestForwardIntake() {
+        if (launcherCoordinator != null) {
+            launcherCoordinator.overrideIntakeMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
+        } else {
+            robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         }
+        syncLightingWithIntake();
+    }
 
-        robot.intake.setManualPower(power);
-        updateLighting(forwardActive);
+    private void releaseForwardIntake() {
+        if (launcherCoordinator != null) {
+            launcherCoordinator.clearIntakeOverride();
+        } else {
+            robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+        }
+        syncLightingWithIntake();
+    }
+
+    private void syncLightingWithIntake() {
+        IntakeSubsystem.IntakeMode appliedMode;
+        if (launcherCoordinator != null) {
+            appliedMode = launcherCoordinator.getAppliedIntakeMode();
+        } else {
+            appliedMode = robot.intake.getResolvedMode();
+        }
+        boolean intakeForward = appliedMode == IntakeSubsystem.IntakeMode.ACTIVE_FORWARD;
+        updateLighting(intakeForward);
     }
 
     private void updateLighting(boolean active) {
@@ -117,6 +143,9 @@ public class OperatorBindings {
 
     public void reset() {
         robot.intake.stop();
+        if (launcherCoordinator != null) {
+            launcherCoordinator.clearIntakeOverride();
+        }
         manualIntakeActive = false;
         robot.lighting.indicateIdle();
         fullSpinRequested = false;

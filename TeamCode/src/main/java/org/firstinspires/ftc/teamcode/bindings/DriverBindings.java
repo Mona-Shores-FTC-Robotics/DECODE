@@ -20,6 +20,8 @@ public class DriverBindings {
     private final Range rotationCcw;
     private final Button slowHold;
     private final Button rampHold;
+    private final Button headingHold;
+    private final Button aimHold;
     private final Button relocalizeRequest;
 
 
@@ -29,11 +31,21 @@ public class DriverBindings {
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
         rampHold = driver.leftBumper();
+        headingHold = driver.x();
+        aimHold = driver.b();
         relocalizeRequest = driver.a();
     }
 
     public DriveRequest sampleDriveRequest() {
-        return new DriveRequest(fieldX.get(), fieldY.get(), rotationCcw.get(), slowHold.get(), rampHold.get());
+        return new DriveRequest(
+                fieldX.get(),
+                fieldY.get(),
+                rotationCcw.get(),
+                slowHold.get(),
+                rampHold.get(),
+                headingHold.get(),
+                aimHold.get()
+        );
     }
 
     public void onRelocalizeRequested(Runnable action) {
@@ -49,13 +61,23 @@ public class DriverBindings {
         public final double rotation;
         public final boolean slowMode;
         public final boolean rampMode;
+        public final boolean headingHold;
+        public final boolean aimMode;
 
-        private DriveRequest(double fieldX, double fieldY, double rotation, boolean slowMode, boolean rampMode) {
+        private DriveRequest(double fieldX,
+                             double fieldY,
+                             double rotation,
+                             boolean slowMode,
+                             boolean rampMode,
+                             boolean headingHold,
+                             boolean aimMode) {
             this.fieldX = fieldX;
             this.fieldY = fieldY;
             this.rotation = rotation;
             this.slowMode = slowMode;
             this.rampMode = rampMode;
+            this.headingHold = headingHold;
+            this.aimMode = aimMode;
         }
     }
 }
