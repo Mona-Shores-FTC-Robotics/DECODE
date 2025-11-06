@@ -94,6 +94,7 @@ public class Robot {
             public void collect(RobotLogger.Frame frame) {
                 drive.populateInputs(driveInputs);
                 logger.logInputs("Drive", driveInputs);
+                drive.logPoseFusion(logger);
             }
         });
         logger.registerSource(new RobotLogger.Source() {

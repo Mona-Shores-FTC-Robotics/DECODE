@@ -98,6 +98,11 @@ public class VisionSubsystemLimelight implements Subsystem {
         return lastSnapshot != null;
     }
 
+    public long getLastPoseTimestampMs() {
+        refreshSnapshotIfStale();
+        return lastSnapshotTimestampMs;
+    }
+
     public int getCurrentTagId() {
         refreshSnapshotIfStale();
         return lastSnapshot == null ? -1 : lastSnapshot.getTagId();
