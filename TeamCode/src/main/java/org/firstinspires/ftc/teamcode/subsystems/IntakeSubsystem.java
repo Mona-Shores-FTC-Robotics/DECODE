@@ -171,6 +171,7 @@ public class IntakeSubsystem implements Subsystem {
     private double appliedMotorPower = 0.0;
     private final Servo rollerServo;
     private double lastRollerPosition = Double.NaN;
+    private boolean rollerEnabled = false;
     private RobotMode robotMode = RobotMode.DEBUG;
 
     public static final class Inputs {
@@ -243,9 +244,10 @@ public class IntakeSubsystem implements Subsystem {
         }
         rollerServo = tryGetServo(hardwareMap, RollerConfig.servoName);
         if (rollerServo != null) {
-            lastRollerPosition = RollerConfig.activePosition;
-            rollerServo.setPosition(RollerConfig.activePosition);
+            lastRollerPosition = RollerConfig.inactivePosition;
+            rollerServo.setPosition(RollerConfig.inactivePosition);
         }
+        rollerEnabled = false;
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
             laneSamples.put(lane, ABSENT_SAMPLE);
@@ -313,9 +315,10 @@ public class IntakeSubsystem implements Subsystem {
         sensorTimer.reset();
         setManualPower(0.0);
         if (rollerServo != null) {
-            rollerServo.setPosition(RollerConfig.activePosition);
-            lastRollerPosition = RollerConfig.activePosition;
+            rollerServo.setPosition(RollerConfig.inactivePosition);
+            lastRollerPosition = RollerConfig.inactivePosition;
         }
+        rollerEnabled = false;
     }
 
     private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
@@ -357,6 +360,8 @@ public class IntakeSubsystem implements Subsystem {
         if (state != IntakeState.FULL) {
             state = IntakeState.IDLE;
         }
+        setManualPower(0.0);
+        deactivateRoller();
     }
 
     /** Legacy loop hook retained for compatibility. */
@@ -404,21 +409,28 @@ public class IntakeSubsystem implements Subsystem {
         robotMode = RobotMode.orDefault(mode);
     }
 
+    public void activateRoller() {
+        rollerEnabled = true;
+    }
+
+    public void deactivateRoller() {
+        rollerEnabled = false;
+        if (rollerServo != null) {
+            rollerServo.setPosition(RollerConfig.inactivePosition);
+            lastRollerPosition = RollerConfig.inactivePosition;
+        }
+    }
+
     @Override
     public void periodic() {
         long start = System.nanoTime();
         if (robotMode == RobotMode.MATCH) {
             pollLaneSensorsIfNeeded();
-            if (rollerServo != null && Math.abs(rollerServo.getPosition() - RollerConfig.activePosition) > 1e-3) {
-                rollerServo.setPosition(RollerConfig.activePosition);
-                lastRollerPosition = RollerConfig.activePosition;
-            } else if (rollerServo != null) {
-                lastRollerPosition = rollerServo.getPosition();
-            }
-        } else {
-            if (rollerServo != null) {
-                lastRollerPosition = rollerServo.getPosition();
-            }
+        }
+        if (rollerServo != null) {
+            double target = rollerEnabled ? RollerConfig.activePosition : RollerConfig.inactivePosition;
+            rollerServo.setPosition(target);
+            lastRollerPosition = target;
         }
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }

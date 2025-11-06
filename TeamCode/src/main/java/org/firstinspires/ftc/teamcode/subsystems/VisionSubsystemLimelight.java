@@ -71,7 +71,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     @Override
     public void periodic() {
         long start = System.nanoTime();
-        // Limelight handles processing internally; no periodic work needed.
+        updateLatestSnapshot();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
@@ -175,10 +175,16 @@ public class VisionSubsystemLimelight implements Subsystem {
             inputs.lastPoseXInches = lastRobotPose.getX();
             inputs.lastPoseYInches = lastRobotPose.getY();
             inputs.lastPoseHeadingDeg = Math.toDegrees(lastRobotPose.getHeading());
+            inputs.poseXInches = inputs.lastPoseXInches;
+            inputs.poseYInches = inputs.lastPoseYInches;
+            inputs.poseHeadingDeg = inputs.lastPoseHeadingDeg;
         } else {
             inputs.lastPoseXInches = Double.NaN;
             inputs.lastPoseYInches = Double.NaN;
             inputs.lastPoseHeadingDeg = Double.NaN;
+            inputs.poseXInches = Double.NaN;
+            inputs.poseYInches = Double.NaN;
+            inputs.poseHeadingDeg = Double.NaN;
         }
 
         if (lastSnapshot != null) {
@@ -219,7 +225,40 @@ public class VisionSubsystemLimelight implements Subsystem {
             @Override
             public void collect(RobotLogger.Frame frame) {
                 populateInputs(inputs);
-                logger.logInputs("Vision", inputs);
+                logger.logBoolean("Vision", "hasTag", inputs.hasValidTag);
+                if (inputs.currentTagId >= 0) {
+                    logger.logNumber("Vision", "tagId", inputs.currentTagId);
+                }
+                logger.logBoolean("Vision", "odometryPending", inputs.odometryUpdatePending);
+                if (Double.isFinite(inputs.poseXInches)) {
+                    logger.logNumber("Vision", "poseXInches", inputs.poseXInches);
+                }
+                if (Double.isFinite(inputs.poseYInches)) {
+                    logger.logNumber("Vision", "poseYInches", inputs.poseYInches);
+                }
+                if (Double.isFinite(inputs.poseHeadingDeg)) {
+                    logger.logNumber("Vision", "poseHeadingDeg", inputs.poseHeadingDeg);
+                    if (Double.isFinite(inputs.poseXInches) && Double.isFinite(inputs.poseYInches)) {
+                        double headingRad = Math.toRadians(inputs.poseHeadingDeg);
+                        double poseXMeters = DistanceUnit.INCH.toMeters(inputs.poseXInches);
+                        double poseYMeters = DistanceUnit.INCH.toMeters(inputs.poseYInches);
+                        logger.logNumber("VisionPose", "poseX", poseXMeters);
+                        logger.logNumber("VisionPose", "poseY", poseYMeters);
+                        logger.logNumber("VisionPose", "poseHeading", headingRad);
+                    }
+                }
+                if (Double.isFinite(inputs.lastTxDegrees)) {
+                    logger.logNumber("Vision", "txDegrees", inputs.lastTxDegrees);
+                }
+                if (Double.isFinite(inputs.lastTyDegrees)) {
+                    logger.logNumber("Vision", "tyDegrees", inputs.lastTyDegrees);
+                }
+                if (Double.isFinite(inputs.lastTaPercent)) {
+                    logger.logNumber("Vision", "targetAreaPercent", inputs.lastTaPercent);
+                }
+                if (Double.isFinite(inputs.timeSinceLastSeenMs)) {
+                    logger.logNumber("Vision", "timeSinceLastSeenMs", inputs.timeSinceLastSeenMs);
+                }
             }
         };
         robotLogger.registerSource(loggerSource);
@@ -302,12 +341,33 @@ public class VisionSubsystemLimelight implements Subsystem {
         }
     }
 
+    private void updateLatestSnapshot() {
+        Alliance alliance = activeAlliance;
+        if (alliance == Alliance.UNKNOWN) {
+            alliance = RobotState.getAlliance();
+        }
+        TagSnapshot snapshot = selectSnapshot(alliance);
+        if (snapshot != null) {
+            onSnapshotUpdated(snapshot);
+        } else {
+            refreshSnapshotIfStale();
+        }
+    }
+
     private void clearSnapshot() {
         lastSnapshot = null;
         lastRobotPose = null;
         odometryUpdatePending = false;
         lastSnapshotTimestampMs = 0L;
         lastSeenTagId = -1;
+    }
+
+    public void overrideRobotPose(Pose pose) {
+        if (pose == null) {
+            return;
+        }
+        lastRobotPose = pose;
+        lastSnapshotTimestampMs = System.currentTimeMillis();
     }
 
     private static Alliance mapTagToAlliance(int tagId) {
@@ -330,6 +390,9 @@ public class VisionSubsystemLimelight implements Subsystem {
         public double lastPoseXInches = Double.NaN;
         public double lastPoseYInches = Double.NaN;
         public double lastPoseHeadingDeg = Double.NaN;
+        public double poseXInches = Double.NaN;
+        public double poseYInches = Double.NaN;
+        public double poseHeadingDeg = Double.NaN;
         public double lastTxDegrees = Double.NaN;
         public double lastTyDegrees = Double.NaN;
         public double lastTaPercent = Double.NaN;

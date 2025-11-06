@@ -52,7 +52,7 @@ public class DriveSubsystem implements Subsystem {
     private double lastGoodVisionAngle = Double.NaN;
     private double lastVisionTimestamp = Double.NEGATIVE_INFINITY;
 
-    private boolean robotCentric = false;
+    private boolean robotCentric = true;
     private DriveMode activeMode = DriveMode.NORMAL;
     private double lastRequestFieldX = 0.0;
     private double lastRequestFieldY = 0.0;
@@ -340,21 +340,31 @@ public class DriveSubsystem implements Subsystem {
             return;
         }
 
+        if (forceRelocalizeFromVision()) {
+            // Successful re-localization already recorded inside the helper.
+        }
+    }
+
+    /**
+     * Forces the follower pose to match the latest Limelight pose when available.
+     *
+     * @return {@code true} when the pose was updated.
+     */
+    public boolean forceRelocalizeFromVision() {
+        vision.findAllianceSnapshot(vision.getAlliance());
         Optional<Pose> tagPoseOpt = vision.getRobotPoseFromTag();
-        if (! tagPoseOpt.isPresent()) {
-            return;
+        if (!tagPoseOpt.isPresent()) {
+            return false;
         }
 
         Pose tagPose = tagPoseOpt.get();
-        Pose odomPose = follower.getPose();
-        double distance = distanceBetween(odomPose , tagPose);
-        if (distance > ODOMETRY_RELOCALIZE_DISTANCE_IN) {
-            return;
-        }
-
         follower.setPose(tagPose);
         vision.markOdometryUpdated();
-        RobotLog.dd(LOG_TAG , "Re-localized from AprilTag: (%.2f, %.2f, %.2f)" , tagPose.getX() , tagPose.getY() , tagPose.getHeading());
+        vision.overrideRobotPose(tagPose);
+        lastGoodVisionAngle = tagPose.getHeading();
+        lastVisionTimestamp = clock.milliseconds();
+        RobotLog.dd(LOG_TAG, "Forced re-localization from AprilTag: (%.2f, %.2f, %.2f)", tagPose.getX(), tagPose.getY(), Math.toDegrees(tagPose.getHeading()));
+        return true;
     }
 
     private double getRobotSpeedInchesPerSecond() {

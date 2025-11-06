@@ -11,12 +11,14 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
 import java.util.Locale;
+import java.util.Optional;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.bindings.OperatorControls;
 import org.firstinspires.ftc.teamcode.bindings.OperatorControls.LaneDebugState;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
@@ -39,6 +41,8 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
 
     private RobotMode robotMode = RobotMode.DEBUG;
     private long lastTelemetryNs = 0L;
+    private String visionRelocalizeStatus = "Press A to re-localize";
+    private long visionRelocalizeStatusMs = 0L;
 
     protected abstract RobotMode getDesiredRobotMode();
 
@@ -61,11 +65,12 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
         driverPad = new GamepadEx(() -> gamepad1);
         operatorPad = new GamepadEx(() -> gamepad2);
         driverBindings = new DriverBindings(driverPad);
+        driverPad.a().whenBecomesTrue(this::handleVisionRelocalizeRequest);
         launcherCoordinator = new LauncherCoordinator(robot.shooter, robot.intake, robot.lighting);
         launcherCoordinator.setRobotMode(robotMode);
         operatorControls = buildOperatorControls(operatorPad, robot, launcherCoordinator, robotMode);
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
-        robot.drive.setRobotCentric(false);
+        robot.drive.setRobotCentric(true);
 
         robot.initialize();
         launcherCoordinator.initialize();
@@ -73,8 +78,8 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
             launcherCoordinator.attachLogger(robot.logger);
         }
         configureForMode(robot, launcherCoordinator, robotMode);
-        allianceSelector.applySelection(robot, robot.lighting);
-        selectedAlliance = allianceSelector.getSelectedAlliance();
+        syncVisionDuringInit();
+        pushInitTelemetry();
 
         addComponents(
                 BindingsComponent.INSTANCE,
@@ -89,17 +94,31 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
     @Override
     public void onWaitForStart() {
         BindingManager.update();
-        if (allianceSelector != null) {
-            allianceSelector.applySelection(robot, robot.lighting);
-            selectedAlliance = allianceSelector.getSelectedAlliance();
-        } else {
-            selectedAlliance = RobotState.getAlliance();
-        }
+        syncVisionDuringInit();
+        pushInitTelemetry();
         telemetry.clear();
         telemetry.addData("Alliance", selectedAlliance.displayName());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");
         telemetry.update();
+    }
+
+    private void pushInitTelemetry() {
+        if (robot == null) {
+            return;
+        }
+        robot.telemetry.publishLoopTelemetry(
+                robot.drive,
+                robot.shooter,
+                robot.vision,
+                null,
+                launcherCoordinator,
+                selectedAlliance,
+                getRuntime(),
+                null,
+                null,
+                "TeleOpInit"
+        );
     }
 
     @Override
@@ -112,6 +131,7 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
             allianceSelector.applySelection(robot, robot.lighting);
             selectedAlliance = allianceSelector.getSelectedAlliance();
         }
+        robot.intake.activateRoller();
     }
 
     @Override
@@ -122,7 +142,11 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
 
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
         long driveCallStartNs = System.nanoTime();
-        robot.drive.driveScaled(request.fieldX, request.fieldY, request.rotation, request.slowMode);
+        if (request.aimAssist) {
+            robot.drive.aimAndDrive(request.fieldX, request.fieldY, request.slowMode);
+        } else {
+            robot.drive.driveScaled(request.fieldX, request.fieldY, request.rotation, request.slowMode);
+        }
         double driveCallMs = nanosToMs(System.nanoTime() - driveCallStartNs);
 
         if (operatorControls != null) {
@@ -132,6 +156,7 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
         boolean telemetrySent = false;
         double telemetryMsThisLoop = 0.0;
         long nowNs = System.nanoTime();
+        long nowMs = System.currentTimeMillis();
         if (nowNs - lastTelemetryNs >= TELEMETRY_INTERVAL_NS) {
             long telemetryCallStartNs = nowNs;
             robot.telemetry.publishLoopTelemetry(
@@ -161,6 +186,11 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
                     pose.getHeading(AngleUnit.DEGREES));
         } else {
             telemetry.addData("Pose", "(unavailable)");
+        }
+        if (nowMs - visionRelocalizeStatusMs <= 2000) {
+            telemetry.addData("Vision re-localize", visionRelocalizeStatus);
+        } else {
+            telemetry.addData("Vision re-localize", "Press A to sync with Limelight");
         }
 
         long mainloopEndNs = System.nanoTime();
@@ -231,6 +261,7 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
         robot.drive.stop();
         robot.shooter.abort();
         robot.intake.stop();
+        robot.intake.deactivateRoller();
         robot.lighting.indicateIdle();
         if (launcherCoordinator != null) {
             launcherCoordinator.stop();
@@ -245,5 +276,50 @@ abstract class DecodeTeleOpBase extends NextFTCOpMode {
 
     private static double nanosToMs(long nanos) {
         return nanos / 1_000_000.0;
+    }
+
+    private void handleVisionRelocalizeRequest() {
+        if (robot == null || robot.drive == null || robot.vision == null) {
+            return;
+        }
+        boolean tagVisible = robot.vision.hasValidTag();
+        boolean success = robot.drive.forceRelocalizeFromVision();
+        if (success) {
+            visionRelocalizeStatus = "Pose updated from Limelight";
+        } else if (!tagVisible) {
+            visionRelocalizeStatus = "No AprilTag visible";
+        } else {
+            visionRelocalizeStatus = "Vision pose unavailable";
+        }
+        visionRelocalizeStatusMs = System.currentTimeMillis();
+    }
+
+    private void syncVisionDuringInit() {
+        if (robot == null || robot.drive == null || robot.vision == null) {
+            selectedAlliance = RobotState.getAlliance();
+            return;
+        }
+
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = Optional.empty();
+        if (allianceSelector != null) {
+            snapshotOpt = allianceSelector.updateFromVision(robot.vision);
+            allianceSelector.applySelection(robot, robot.lighting);
+            selectedAlliance = allianceSelector.getSelectedAlliance();
+        } else {
+            snapshotOpt = robot.vision.findAllianceSnapshot(null);
+            selectedAlliance = RobotState.getAlliance();
+            if (snapshotOpt.isPresent()) {
+                Alliance detected = snapshotOpt.get().getAlliance();
+                if (detected != Alliance.UNKNOWN) {
+                    robot.setAlliance(detected);
+                    selectedAlliance = detected;
+                }
+            }
+        }
+
+        if (robot.vision.shouldUpdateOdometry() && robot.drive.forceRelocalizeFromVision()) {
+            visionRelocalizeStatus = "Pose synced from Limelight";
+            visionRelocalizeStatusMs = System.currentTimeMillis();
+        }
     }
 }

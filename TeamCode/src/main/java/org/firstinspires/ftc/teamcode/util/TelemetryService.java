@@ -500,56 +500,19 @@ public class TelemetryService {
         packet.put("vision/targetAreaPercent", visionTaPercent);
         packet.put("vision/odometryPending", visionOdometryPending);
 
-        packet.put("pose/x", poseXIn);
-        packet.put("pose/y", poseYIn);
-        packet.put("pose/headingDeg", headingDeg);
-        packet.put("pose/headingRad", headingRad);
-        packet.put("pose/heading", headingRad);
-        packet.put("pose/valid", poseValid);
-
-        double poseXMeters = DistanceUnit.INCH.toMeters(poseXIn);
-        double poseYMeters = DistanceUnit.INCH.toMeters(poseYIn);
-        packet.put("pose/meters/x", poseXMeters);
-        packet.put("pose/meters/y", poseYMeters);
-        packet.put("pose/meters/headingRad", headingRad);
-
-        packet.put("pose3d/xMeters", poseXMeters);
-        packet.put("pose3d/yMeters", poseYMeters);
-        packet.put("pose3d/zMeters", 0.0);
-        packet.put("pose3d/rollRad", 0.0);
-        packet.put("pose3d/pitchRad", 0.0);
-        packet.put("pose3d/yawRad", headingRad);
-
-        packet.put("Pose x", poseXIn); // Inches
-        packet.put("Pose y", poseYIn); // Inches
-        packet.put("Pose heading", headingRad); // Radians
+        packet.put("Pose/Pose x", poseXIn); // Inches
+        packet.put("Pose/Pose y", poseYIn); // Inches
+        packet.put("Pose/Pose heading", headingRad); // Radians
 
         boolean visionPoseValid = visionHasTag
                 && !Double.isNaN(visionPoseXIn)
                 && !Double.isNaN(visionPoseYIn)
                 && !Double.isNaN(visionHeadingRad);
-        packet.put("visionPose/valid", visionPoseValid);
-        packet.put("visionPose/x", visionPoseXIn);
-        packet.put("visionPose/y", visionPoseYIn);
-        packet.put("visionPose/headingRad", visionHeadingRad);
-
-        double visionPoseXMeters = DistanceUnit.INCH.toMeters(visionPoseXIn);
-        double visionPoseYMeters = DistanceUnit.INCH.toMeters(visionPoseYIn);
-        packet.put("visionPose/meters/x", visionPoseXMeters);
-        packet.put("visionPose/meters/y", visionPoseYMeters);
-        packet.put("visionPose/meters/headingRad", visionHeadingRad);
-
-        packet.put("visionPose3d/xMeters", visionPoseXMeters);
-        packet.put("visionPose3d/yMeters", visionPoseYMeters);
-        packet.put("visionPose3d/zMeters", 0.0);
-        packet.put("visionPose3d/rollRad", 0.0);
-        packet.put("visionPose3d/pitchRad", 0.0);
-        packet.put("visionPose3d/yawRad", visionHeadingRad);
 
         if (visionPoseValid) {
-            packet.put("Vision Pose x", visionPoseXIn);
-            packet.put("Vision Pose y", visionPoseYIn);
-            packet.put("Vision Pose heading (deg)", Math.toDegrees(visionHeadingRad));
+            packet.put("Pose/Vision Pose x", visionPoseXIn);
+            packet.put("Pose/Vision Pose y", visionPoseYIn);
+            packet.put("Pose/Vision Pose heading", visionHeadingRad);
         }
 
         Canvas overlay = packet.fieldOverlay();
@@ -564,7 +527,6 @@ public class TelemetryService {
         }
 
 // Alternatively, headings can be published in degrees
-        packet.put("Pose heading (deg)", 180.0); // Degrees
         if (visionPoseValid) {
             double visionHeadingLength = 6.0;
             double visionEndX = visionPoseXIn + Math.cos(visionHeadingRad) * visionHeadingLength;
