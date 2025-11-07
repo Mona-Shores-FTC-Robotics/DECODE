@@ -46,7 +46,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
-        robot.initialize();
+        robot.initializeForTeleOp();
 
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         driverBindings = new DriverBindings(driverPad);

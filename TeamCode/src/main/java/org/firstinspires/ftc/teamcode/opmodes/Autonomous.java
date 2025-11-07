@@ -8,6 +8,7 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.util.Range;
 
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.ftc.GamepadEx;
@@ -27,8 +28,8 @@ import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.DecodePatternController;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import com.pedropathing.paths.PathConstraints;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -43,10 +44,7 @@ public class Autonomous extends OpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public static double maxTransVel = 30.0;
-        public static double maxTransAccel = 30.0;
-        public static double maxAngVel = 1.0;
-        public static double maxAngAccel = 1.0;
+        public static double maxPathPower = 1.0;
     }
 
     private static final double POSE_POSITION_TOLERANCE = 1.0; // inches
@@ -80,18 +78,10 @@ public class Autonomous extends OpMode {
     private final DecodePatternController decodeController = new DecodePatternController();
     private ArtifactColor[] activeDecodePattern = new ArtifactColor[0];
     private boolean opModeStarted;
-    private PathConstraints originalPathConstraints;
 
     @Override
     public void init() {
         BindingManager.reset();
-        originalPathConstraints = Constants.pathConstraints;
-        Constants.pathConstraints = new PathConstraints(
-                AutoMotionConfig.maxTransVel,
-                AutoMotionConfig.maxTransAccel,
-                AutoMotionConfig.maxAngVel,
-                AutoMotionConfig.maxAngAccel
-        );
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
@@ -100,7 +90,7 @@ public class Autonomous extends OpMode {
         panelsTelemetry = robot.telemetry.panelsTelemetry();
         stepTimer = new Timer();
 
-        robot.initialize();
+        robot.initializeForAuto();
         follower = robot.drive.getFollower();
 
         // Register init-phase controls with NextFTC (selector handles alliance overrides automatically).
@@ -111,6 +101,7 @@ public class Autonomous extends OpMode {
         driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
         driverPad.dpadUp().whenBecomesTrue(() -> applyDecodePattern(decodeController.cycleNext()));
         driverPad.dpadDown().whenBecomesTrue(() -> applyDecodePattern(decodeController.clear()));
+        driverPad.a().whenBecomesTrue(this::applyLastDetectedStartPose);
 
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
@@ -137,9 +128,7 @@ public class Autonomous extends OpMode {
         Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
         if (selectedAlliance != activeAlliance) {
             activeAlliance = selectedAlliance;
-            applyAlliance(activeAlliance, snapshotPosePedro);
-        } else if (snapshotPosePedro != null && shouldUpdateStartPose(snapshotPosePedro)) {
-            applyAlliance(activeAlliance, snapshotPosePedro);
+            applyAlliance(activeAlliance, null);
         }
 
         publishInitTelemetry(selectedAlliance);
@@ -246,8 +235,8 @@ public class Autonomous extends OpMode {
         telemetry.addData("Raw robot XYZ", formatRawRobot());
         telemetry.update();
 
-        robot.logger.logNumber("AutonomousDHS", "RoutineStep", routineStep.ordinal());
-        robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
+        robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
+        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
         robot.logger.sampleSources();
         robot.telemetry.updateDriverStation(telemetry);
         robot.telemetry.publishLoopTelemetry(
@@ -275,13 +264,14 @@ public class Autonomous extends OpMode {
         if (shooter != null) {
             shooter.abort();
         }
+        Pose finalPose = follower == null ? null : copyPedroPose(follower.getPose());
+        if (finalPose != null) {
+            RobotState.setHandoffPose(finalPose);
+        }
         robot.drive.stop();
         robot.vision.stop();
         robot.logger.logEvent("AutonomousDHS", "Stop");
         robot.logger.stopSession();
-        if (originalPathConstraints != null) {
-            Constants.pathConstraints = originalPathConstraints;
-        }
     }
 
     private void autonomousStep() {
@@ -427,6 +417,17 @@ public class Autonomous extends OpMode {
         }
     }
 
+    private void applyLastDetectedStartPose() {
+        Pose candidate = lastDetectedStartPosePedro;
+        if (candidate == null) {
+            return;
+        }
+        if (!shouldUpdateStartPose(candidate)) {
+            return;
+        }
+        applyAlliance(activeAlliance, candidate);
+    }
+
     private void publishInitTelemetry(Alliance selectedAlliance) {
         telemetry.clear();
         Alliance detectedAlliance = allianceSelector.getDetectedAlliance();
@@ -474,7 +475,7 @@ public class Autonomous extends OpMode {
                 "Decode pattern: %s",
                 formatDecodePattern(activeDecodePattern)));
 
-        telemetry.addLine("Controls: D-pad ←/→ override, ↓ vision, LB/RB preview, Y rebuild, D-pad ↑ cycle decode, ↓ clear");
+        telemetry.addLine("Controls: D-pad ←/→ override, ↓ vision, LB/RB preview, Y rebuild, A apply tag pose, D-pad ↑ cycle decode, ↓ clear");
         telemetry.update();
     }
 
@@ -563,7 +564,8 @@ public class Autonomous extends OpMode {
     }
 
     private void startPath(PathChain pathChain, RoutineStep waitingStep) {
-        robot.drive.followPath(pathChain, true);
+        double maxPower = Range.clip(AutoMotionConfig.maxPathPower, 0.0, 1.0);
+        robot.drive.followPath(pathChain, maxPower, true);
         transitionTo(waitingStep);
     }
 

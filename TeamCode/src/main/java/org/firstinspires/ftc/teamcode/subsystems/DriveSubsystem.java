@@ -85,7 +85,7 @@ public class DriveSubsystem implements Subsystem {
     private double lastVisionTimestamp = Double.NEGATIVE_INFINITY;
     private long lastFusionVisionTimestampMs = 0L;
 
-    public static boolean robotCentricConfig = true;
+    public static boolean robotCentricConfig = false;
     private boolean robotCentric = robotCentricConfig;
     private static final double ROTATION_OVERRIDE_FALLBACK = 0.05;
     private DriveMode activeMode = DriveMode.NORMAL;
@@ -111,6 +111,8 @@ public class DriveSubsystem implements Subsystem {
     private boolean headingNudgeActive = false;
     private double headingNudgeTarget = Double.NaN;
     private static final double HEADING_NUDGE_TOLERANCE_RAD = Math.toRadians(2.0);
+    private boolean teleOpControlEnabled = false;
+    private boolean visionRelocalizationEnabled = false;
 
     public static final class Inputs {
         public double poseXInches;
@@ -178,6 +180,14 @@ public class DriveSubsystem implements Subsystem {
         robotMode = RobotMode.orDefault(mode);
     }
 
+    public void setTeleOpControlEnabled(boolean enabled) {
+        teleOpControlEnabled = enabled;
+    }
+
+    public void setVisionRelocalizationEnabled(boolean enabled) {
+        visionRelocalizationEnabled = enabled;
+    }
+
     @Override
     public void initialize() {
         if (follower.isBusy()) {
@@ -190,8 +200,13 @@ public class DriveSubsystem implements Subsystem {
         }
 
         follower.setStartingPose(seed);
+        follower.setPose(seed);
         follower.update();
-        follower.startTeleopDrive();
+        if (teleOpControlEnabled) {
+            follower.startTeleopDrive();
+        } else {
+            follower.breakFollowing();
+        }
         poseFusion.reset(seed, System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
     }
@@ -211,8 +226,12 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public void stop() {
-        follower.startTeleopDrive(true);
-        follower.setTeleOpDrive(0 , 0 , 0 , robotCentric);
+        if (teleOpControlEnabled) {
+            follower.startTeleopDrive(true);
+            follower.setTeleOpDrive(0 , 0 , 0 , robotCentric);
+        } else {
+            follower.breakFollowing();
+        }
         driveMotors.stop();
 
         activeMode = DriveMode.NORMAL;
@@ -531,7 +550,9 @@ public class DriveSubsystem implements Subsystem {
             targetHeading = visionAngle.get();
             lastGoodVisionAngle = targetHeading;
             lastVisionTimestamp = nowMs;
-            maybeRelocalizeFromVision();
+            if (visionRelocalizationEnabled) {
+                maybeRelocalizeFromVision();
+            }
         } else if (! Double.isNaN(lastGoodVisionAngle) && nowMs - lastVisionTimestamp <= VISION_TIMEOUT_MS) {
             targetHeading = lastGoodVisionAngle;
         } else {
@@ -582,8 +603,13 @@ public class DriveSubsystem implements Subsystem {
         follower.update();
     }
 
-    public void followPath(PathChain pathChain , boolean resetPose) {
-        follower.followPath(pathChain , resetPose);
+    public void followPath(PathChain pathChain , boolean holdPositionAtEnd) {
+        follower.followPath(pathChain , holdPositionAtEnd);
+    }
+
+    public void followPath(PathChain pathChain, double maxPower, boolean holdPositionAtEnd) {
+        double clippedPower = Range.clip(maxPower, 0.0, 1.0);
+        follower.followPath(pathChain, clippedPower, holdPositionAtEnd);
     }
 
     public boolean isFollowerBusy() {
@@ -643,6 +669,9 @@ public class DriveSubsystem implements Subsystem {
     }
 
     private void maybeRelocalizeFromVision() {
+        if (!visionRelocalizationEnabled) {
+            return;
+        }
         if (! vision.shouldUpdateOdometry()) {
             return;
         }
@@ -687,6 +716,10 @@ public class DriveSubsystem implements Subsystem {
 
         long visionTimestamp = vision.getLastPoseTimestampMs();
         if (visionTimestamp > 0L && visionTimestamp > lastFusionVisionTimestampMs) {
+            if (!visionRelocalizationEnabled) {
+                lastFusionVisionTimestampMs = visionTimestamp;
+                return;
+            }
             Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.getLastSnapshot();
             if (snapshotOpt.isPresent()) {
                 VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();

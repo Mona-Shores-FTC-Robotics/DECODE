@@ -56,7 +56,21 @@ public class Robot {
         lighting.setAlliance(alliance);
     }
 
-    public void initialize(){
+    public void initialize() {
+        initializeForTeleOp();
+    }
+
+    public void initializeForAuto() {
+        configureInitialization(false, false);
+    }
+
+    public void initializeForTeleOp() {
+        configureInitialization(true, true);
+    }
+
+    private void configureInitialization(boolean enableTeleOpControl, boolean enableVisionRelocalization) {
+        drive.setTeleOpControlEnabled(enableTeleOpControl);
+        drive.setVisionRelocalizationEnabled(enableVisionRelocalization);
         drive.initialize();
         shooter.initialize();
         lighting.initialize();
