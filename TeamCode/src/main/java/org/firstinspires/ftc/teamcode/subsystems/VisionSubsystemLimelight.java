@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.pedropathing.geometry.Pose;
+import org.firstinspires.ftc.teamcode.opmodes.Autonomous;
+import org.firstinspires.ftc.teamcode.util.AutoField;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -413,7 +415,8 @@ public class VisionSubsystemLimelight implements Subsystem {
         private final double ftcYaw;
         private final double ftcX;
         private final double ftcY;
-        private final Pose robotPose;
+        private final Pose pedroPose;
+        private final Pose ftcPose;
         private final double txDegrees;
         private final double tyDegrees;
         private final double targetAreaPercent;
@@ -432,16 +435,22 @@ public class VisionSubsystemLimelight implements Subsystem {
                 double xIn = DistanceUnit.METER.toInches(pose.getPosition().x);
                 double yIn = DistanceUnit.METER.toInches(pose.getPosition().y);
                 double headingDeg = pose.getOrientation() == null ? Double.NaN : pose.getOrientation().getYaw();
-                this.robotPose = Double.isNaN(xIn) || Double.isNaN(yIn) || Double.isNaN(headingDeg)
-                        ? null
-                        : new Pose(xIn, yIn, Math.toRadians(headingDeg));
+                if (Double.isNaN(xIn) || Double.isNaN(yIn) || Double.isNaN(headingDeg)) {
+                    this.pedroPose = null;
+                    this.ftcPose = null;
+                } else {
+                    this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg));
+                    Pose pedro = convertFtcToPedroPose(xIn, yIn, headingDeg);
+                    this.pedroPose = pedro;
+                }
                 this.ftcX = xIn;
                 this.ftcY = yIn;
                 this.ftcYaw = headingDeg;
                 this.ftcRange = Math.hypot(xIn, yIn);
                 this.ftcBearing = Math.toDegrees(Math.atan2(yIn, xIn));
             } else {
-                this.robotPose = null;
+                this.pedroPose = null;
+                this.ftcPose = null;
                 this.ftcX = Double.NaN;
                 this.ftcY = Double.NaN;
                 this.ftcYaw = Double.NaN;
@@ -475,19 +484,23 @@ public class VisionSubsystemLimelight implements Subsystem {
         }
 
         public Optional<Pose> getRobotPose() {
-            return Optional.ofNullable(robotPose);
+            return Optional.ofNullable(pedroPose);
         }
 
         public double getRobotX() {
-            return robotPose == null ? Double.NaN : robotPose.getX();
+            return pedroPose == null ? Double.NaN : pedroPose.getX();
         }
 
         public double getRobotY() {
-            return robotPose == null ? Double.NaN : robotPose.getY();
+            return pedroPose == null ? Double.NaN : pedroPose.getY();
         }
 
         public double getRobotYaw() {
-            return robotPose == null ? Double.NaN : Math.toDegrees(robotPose.getHeading());
+            return pedroPose == null ? Double.NaN : Math.toDegrees(pedroPose.getHeading());
+        }
+
+        public Optional<Pose> getFtcPose() {
+            return Optional.ofNullable(ftcPose);
         }
 
         public double getFtcRange() {
@@ -521,6 +534,14 @@ public class VisionSubsystemLimelight implements Subsystem {
         public double getTargetAreaPercent() {
             return targetAreaPercent;
         }
+    }
+
+    private static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
+        double halfField = AutoField.Waypoints.fieldWidthIn / 2.0;
+        double pedroX = ftcY + halfField;
+        double pedroY = halfField - ftcX;
+        double pedroHeading = AngleUnit.normalizeRadians(Math.toRadians(headingDeg) - Math.PI / 2.0);
+        return new Pose(pedroX, pedroY, pedroHeading);
     }
 
     private static double getTargetAreaSafe(LLResultTypes.FiducialResult fiducial) {

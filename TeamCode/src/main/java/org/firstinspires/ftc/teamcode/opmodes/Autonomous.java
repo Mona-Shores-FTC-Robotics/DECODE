@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
@@ -26,6 +27,8 @@ import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.DecodePatternController;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import com.pedropathing.paths.PathConstraints;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -37,6 +40,14 @@ public class Autonomous extends OpMode {
     private static final int AUTO_BURST_RINGS = 1;
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
+
+    @Configurable
+    public static class AutoMotionConfig {
+        public static double maxTransVel = 30.0;
+        public static double maxTransAccel = 30.0;
+        public static double maxAngVel = 1.0;
+        public static double maxAngAccel = 1.0;
+    }
 
     private static final double POSE_POSITION_TOLERANCE = 1.0; // inches
     private static final double POSE_HEADING_TOLERANCE = Math.toRadians(10.0);
@@ -50,8 +61,9 @@ public class Autonomous extends OpMode {
     private RoutineStep routineStep = RoutineStep.NOT_STARTED;
 
     private FieldLayout currentLayout;
-    private Pose lastAppliedStartPose;
-    private Pose lastDetectedStartPose;
+    private Pose lastAppliedStartPosePedro;
+    private Pose lastDetectedStartPosePedro;
+    private Pose lastDetectedStartPoseFtc;
     private VisionSubsystemLimelight.TagSnapshot lastTagSnapshot;
     private Alliance activeAlliance = Alliance.BLUE;
 
@@ -68,10 +80,18 @@ public class Autonomous extends OpMode {
     private final DecodePatternController decodeController = new DecodePatternController();
     private ArtifactColor[] activeDecodePattern = new ArtifactColor[0];
     private boolean opModeStarted;
+    private PathConstraints originalPathConstraints;
 
     @Override
     public void init() {
         BindingManager.reset();
+        originalPathConstraints = Constants.pathConstraints;
+        Constants.pathConstraints = new PathConstraints(
+                AutoMotionConfig.maxTransVel,
+                AutoMotionConfig.maxTransAccel,
+                AutoMotionConfig.maxAngVel,
+                AutoMotionConfig.maxAngAccel
+        );
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
@@ -86,7 +106,7 @@ public class Autonomous extends OpMode {
         // Register init-phase controls with NextFTC (selector handles alliance overrides automatically).
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, DEFAULT_ALLIANCE);
-        driverPad.y().whenBecomesTrue(() -> applyAlliance(activeAlliance, lastAppliedStartPose));
+        driverPad.y().whenBecomesTrue(() -> applyAlliance(activeAlliance, lastAppliedStartPosePedro));
         driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
         driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
         driverPad.dpadUp().whenBecomesTrue(() -> applyDecodePattern(decodeController.cycleNext()));
@@ -109,39 +129,38 @@ public class Autonomous extends OpMode {
         allianceSelector.applySelection(robot, robot.lighting);
 
         lastTagSnapshot = snapshotOpt.orElse(null);
-        Pose snapshotPose = lastTagSnapshot == null ? null : lastTagSnapshot.getRobotPose().orElse(null);
-        lastDetectedStartPose = snapshotPose == null ? null : copyPose(snapshotPose);
+        Pose snapshotPosePedro = lastTagSnapshot == null ? null : lastTagSnapshot.getRobotPose().orElse(null);
+        Pose snapshotPoseFtc = lastTagSnapshot == null ? null : lastTagSnapshot.getFtcPose().orElse(null);
+        lastDetectedStartPosePedro = snapshotPosePedro == null ? null : copyPedroPose(snapshotPosePedro);
+        lastDetectedStartPoseFtc = snapshotPoseFtc == null ? null : copyFtcPose(snapshotPoseFtc);
 
         Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
         if (selectedAlliance != activeAlliance) {
             activeAlliance = selectedAlliance;
-            applyAlliance(activeAlliance, snapshotPose);
-        } else if (snapshotPose != null && shouldUpdateStartPose(snapshotPose)) {
-            applyAlliance(activeAlliance, snapshotPose);
+            applyAlliance(activeAlliance, snapshotPosePedro);
+        } else if (snapshotPosePedro != null && shouldUpdateStartPose(snapshotPosePedro)) {
+            applyAlliance(activeAlliance, snapshotPosePedro);
         }
 
-        telemetry.addData("Selected alliance", selectedAlliance);
-        telemetry.addData("Active alliance", activeAlliance);
-        telemetry.addData("Detected alliance", allianceSelector.getDetectedAlliance());
-        telemetry.addData("Manual override", allianceSelector.isManualOverrideActive());
-        telemetry.addData("Detected tag", allianceSelector.getDetectedTagId() == -1 ? "none" : allianceSelector.getDetectedTagId());
-        telemetry.addData("Detected range", formatDouble(allianceSelector.getDetectedRange()));
-        telemetry.addData("Detected bearing", formatDouble(allianceSelector.getDetectedYaw()) + "°");
-        telemetry.addData("Detected start", formatPose(lastDetectedStartPose));
-        telemetry.addData("Applied start", formatPose(lastAppliedStartPose));
-        telemetry.addData(" Layout start", currentLayout == null ? "(null)" : formatPose(currentLayout.pose(FieldPoint.START)));
-        telemetry.addData("Raw ftc XYZ", formatRawFtc());
-        telemetry.addData("Raw robot XYZ", formatRawRobot());
-        telemetry.addData("Decode pattern", formatDecodePattern(activeDecodePattern));
-        telemetry.addLine("D-pad Left/Right override alliance, Down returns to auto");
-        telemetry.addLine("LB/RB preview other alliance, Y rebuilds layout");
-        telemetry.addLine("D-pad Up cycles decode pattern, Down clears it");
-        telemetry.update();
+        publishInitTelemetry(selectedAlliance);
 
         robot.logger.logNumber("AutonomousDHS", "RoutineStep", routineStep.ordinal());
         robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
         robot.logger.sampleSources();
         robot.telemetry.updateDriverStation(telemetry);
+        robot.telemetry.publishLoopTelemetry(
+                robot.drive,
+                robot.shooter,
+                robot.vision,
+                null,
+                robot.launcherCoordinator,
+                activeAlliance,
+                getRuntime(),
+                null,
+                robot.logger,
+                "AutonomousInit",
+                true
+        );
     }
 
     @Override
@@ -209,18 +228,20 @@ public class Autonomous extends OpMode {
             Pose launch = currentLayout.pose(FieldPoint.LAUNCH_FAR);
             Pose setup = currentLayout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
             Pose parking = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS);
-            telemetry.addData("Start pose", formatPose(start));
-            telemetry.addData("Launch pose", formatPose(launch));
-            telemetry.addData("Setup pose", formatPose(setup));
-            telemetry.addData("Parking pose", formatPose(parking));
+            telemetry.addData("Start pose (Pedro)", formatPosePedro(start));
+            telemetry.addData("Start pose (FTC)", formatPoseFtc(toFtcPose(start)));
+            telemetry.addData("Launch pose", formatPosePedro(launch));
+            telemetry.addData("Setup pose", formatPosePedro(setup));
+            telemetry.addData("Parking pose", formatPosePedro(parking));
             telemetry.addData("Path Start→Launch", pathToScoreSummary);
             telemetry.addData("Path Launch→Setup", scoreToPickupSummary);
             telemetry.addData("Path Setup→Parking", pickupToStackEndSummary);
             telemetry.addData("Path Parking→Launch", stackToScoreSummary);
         }
-        telemetry.addData("Detected start", formatPose(lastDetectedStartPose));
-        telemetry.addData("Applied start", formatPose(lastAppliedStartPose));
-        telemetry.addData("Layout start", currentLayout == null ? "(null)" : formatPose(currentLayout.pose(FieldPoint.START)));
+        telemetry.addData("AprilTag start (FTC)", formatPoseFtc(lastDetectedStartPoseFtc));
+        telemetry.addData("AprilTag start (Pedro)", formatPosePedro(lastDetectedStartPosePedro));
+        telemetry.addData("Applied start (Pedro)", formatPosePedro(lastAppliedStartPosePedro));
+        telemetry.addData("Applied start (FTC)", formatPoseFtc(toFtcPose(lastAppliedStartPosePedro)));
         telemetry.addData("Raw ftc XYZ", formatRawFtc());
         telemetry.addData("Raw robot XYZ", formatRawRobot());
         telemetry.update();
@@ -229,6 +250,19 @@ public class Autonomous extends OpMode {
         robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
         robot.logger.sampleSources();
         robot.telemetry.updateDriverStation(telemetry);
+        robot.telemetry.publishLoopTelemetry(
+                robot.drive,
+                robot.shooter,
+                robot.vision,
+                null,
+                robot.launcherCoordinator,
+                activeAlliance,
+                getRuntime(),
+                null,
+                robot.logger,
+                "Autonomous",
+                false
+        );
     }
 
     @Override
@@ -245,6 +279,9 @@ public class Autonomous extends OpMode {
         robot.vision.stop();
         robot.logger.logEvent("AutonomousDHS", "Stop");
         robot.logger.stopSession();
+        if (originalPathConstraints != null) {
+            Constants.pathConstraints = originalPathConstraints;
+        }
     }
 
     private void autonomousStep() {
@@ -302,10 +339,10 @@ public class Autonomous extends OpMode {
 
     private void drawPreviewForAlliance(Alliance alliance) {
         FieldLayout layout = AutoField.layoutForAlliance(alliance);
-        if (alliance == activeAlliance && lastAppliedStartPose != null) {
-            layout.overrideStart(lastAppliedStartPose);
-        } else if (lastTagSnapshot != null && lastTagSnapshot.getAlliance() == alliance && lastDetectedStartPose != null) {
-            layout.overrideStart(lastDetectedStartPose);
+        if (alliance == activeAlliance && lastAppliedStartPosePedro != null) {
+            layout.overrideStart(lastAppliedStartPosePedro);
+        } else if (lastTagSnapshot != null && lastTagSnapshot.getAlliance() == alliance && lastDetectedStartPosePedro != null) {
+            layout.overrideStart(lastDetectedStartPosePedro);
         }
         PathChain[] chains = createPreviewPathChains(layout);
         PanelsBridge.drawPreview(chains, layout.pose(FieldPoint.START), alliance == Alliance.RED);
@@ -315,14 +352,14 @@ public class Autonomous extends OpMode {
         if (candidate == null) {
             return false;
         }
-        if (lastAppliedStartPose == null) {
+        if (lastAppliedStartPosePedro == null) {
             return true;
         }
 
-        double dx = candidate.getX() - lastAppliedStartPose.getX();
-        double dy = candidate.getY() - lastAppliedStartPose.getY();
+        double dx = candidate.getX() - lastAppliedStartPosePedro.getX();
+        double dy = candidate.getY() - lastAppliedStartPosePedro.getY();
         double distance = Math.hypot(dx, dy);
-        double headingError = AngleUnit.normalizeRadians(candidate.getHeading() - lastAppliedStartPose.getHeading());
+        double headingError = AngleUnit.normalizeRadians(candidate.getHeading() - lastAppliedStartPosePedro.getHeading());
         headingError = Math.abs(headingError);
 
         return distance > POSE_POSITION_TOLERANCE || headingError > POSE_HEADING_TOLERANCE;
@@ -381,7 +418,64 @@ public class Autonomous extends OpMode {
         buildPaths(currentLayout);
         cachePathSummaries(currentLayout);
         publishLayoutTelemetry(currentLayout);
-        lastAppliedStartPose = copyPose(startPose);
+        lastAppliedStartPosePedro = copyPedroPose(startPose);
+        if (lastDetectedStartPosePedro == null) {
+            lastDetectedStartPosePedro = copyPedroPose(startPose);
+        }
+        if (lastDetectedStartPoseFtc == null) {
+            lastDetectedStartPoseFtc = toFtcPose(startPose);
+        }
+    }
+
+    private void publishInitTelemetry(Alliance selectedAlliance) {
+        telemetry.clear();
+        Alliance detectedAlliance = allianceSelector.getDetectedAlliance();
+        telemetry.addLine(String.format(Locale.US,
+                "Alliance sel=%s  active=%s  detected=%s%s",
+                selectedAlliance.displayName(),
+                activeAlliance.displayName(),
+                detectedAlliance.displayName(),
+                allianceSelector.isManualOverrideActive() ? " [override]" : ""));
+
+        int tagId = allianceSelector.getDetectedTagId();
+        telemetry.addLine(String.format(Locale.US,
+                "AprilTag: %s  range=%s in  bearing=%s°",
+                tagId == -1 ? "none" : tagId,
+                formatDouble(allianceSelector.getDetectedRange()),
+                formatDouble(allianceSelector.getDetectedYaw())));
+
+        Pose layoutStartPedro = currentLayout == null ? null : currentLayout.pose(FieldPoint.START);
+        telemetry.addLine(String.format(Locale.US,
+                "Layout start (Pedro): %s",
+                formatPosePedro(layoutStartPedro)));
+
+        Pose layoutStartFtc = layoutStartPedro == null ? null : toFtcPose(layoutStartPedro);
+        telemetry.addLine(String.format(Locale.US,
+                "Layout start (FTC):   %s",
+                formatPoseFtc(layoutStartFtc)));
+
+        telemetry.addLine(String.format(Locale.US,
+                "AprilTag (FTC):       %s",
+                formatPoseFtc(lastDetectedStartPoseFtc)));
+
+        telemetry.addLine(String.format(Locale.US,
+                "AprilTag (Pedro):     %s",
+                formatPosePedro(lastDetectedStartPosePedro)));
+
+        telemetry.addLine(String.format(Locale.US,
+                "Applied start:        %s",
+                formatPosePedro(lastAppliedStartPosePedro)));
+
+        telemetry.addLine(String.format(Locale.US,
+                "Applied start (FTC):  %s",
+                formatPoseFtc(toFtcPose(lastAppliedStartPosePedro))));
+
+        telemetry.addLine(String.format(Locale.US,
+                "Decode pattern: %s",
+                formatDecodePattern(activeDecodePattern)));
+
+        telemetry.addLine("Controls: D-pad ←/→ override, ↓ vision, LB/RB preview, Y rebuild, D-pad ↑ cycle decode, ↓ clear");
+        telemetry.update();
     }
 
     private void applyDecodePattern(ArtifactColor[] pattern) {
@@ -424,10 +518,10 @@ public class Autonomous extends OpMode {
         Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
         Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
 
-        panelsTelemetry.debug("Start pose", formatPose(start));
-        panelsTelemetry.debug("Launch pose", formatPose(launch));
-        panelsTelemetry.debug("Setup pose", formatPose(setup));
-        panelsTelemetry.debug("Parking pose", formatPose(parking));
+        panelsTelemetry.debug("Start pose", formatPosePedro(start));
+        panelsTelemetry.debug("Launch pose", formatPosePedro(launch));
+        panelsTelemetry.debug("Setup pose", formatPosePedro(setup));
+        panelsTelemetry.debug("Parking pose", formatPosePedro(parking));
         panelsTelemetry.debug("Path Start→Launch", pathToScoreSummary);
         panelsTelemetry.debug("Path Launch→Setup", scoreToPickupSummary);
         panelsTelemetry.debug("Path Setup→Parking", pickupToStackEndSummary);
@@ -507,7 +601,7 @@ public class Autonomous extends OpMode {
     }
 
     private static String formatSegment(String label, Pose start, Pose end) {
-        return label + ": " + formatPose(start) + " → " + formatPose(end);
+        return label + ": " + formatPosePedro(start) + " → " + formatPosePedro(end);
     }
 
     private String formatDecodePattern(ArtifactColor[] pattern) {
@@ -531,7 +625,15 @@ public class Autonomous extends OpMode {
         return sb.toString();
     }
 
-    private static String formatPose(Pose pose) {
+    private static String formatPosePedro(Pose pose) {
+        if (pose == null) {
+            return "(null)";
+        }
+        return String.format(Locale.US, "(%.3f, %.3f, %.1f°)",
+                pose.getX(), pose.getY(), Math.toDegrees(pose.getHeading()));
+    }
+
+    private static String formatPoseFtc(Pose pose) {
         if (pose == null) {
             return "(null)";
         }
@@ -546,11 +648,29 @@ public class Autonomous extends OpMode {
         return String.format(Locale.US, "%.2f", value);
     }
 
-    private static Pose copyPose(Pose pose) {
+    private static Pose copyPedroPose(Pose pose) {
         if (pose == null) {
             return null;
         }
         return new Pose(pose.getX(), pose.getY(), pose.getHeading());
+    }
+
+    private static Pose copyFtcPose(Pose pose) {
+        if (pose == null) {
+            return null;
+        }
+        return new Pose(pose.getX(), pose.getY(), pose.getHeading());
+    }
+
+    public static Pose toFtcPose(Pose pedroPose) {
+        if (pedroPose == null) {
+            return null;
+        }
+        double halfField = AutoField.Waypoints.fieldWidthIn / 2.0;
+        double ftcX = halfField - pedroPose.getY();
+        double ftcY = pedroPose.getX() - halfField;
+        double heading = AngleUnit.normalizeRadians(pedroPose.getHeading() + Math.PI / 2.0);
+        return new Pose(ftcX, ftcY, heading);
     }
 
     private String formatRawFtc() {
@@ -588,10 +708,10 @@ public class Autonomous extends OpMode {
         Pose setup = currentLayout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
         Pose parking = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS);
 
-        panelsTelemetry.debug("Start pose", formatPose(start));
-        panelsTelemetry.debug("Launch pose", formatPose(launch));
-        panelsTelemetry.debug("Setup pose", formatPose(setup));
-        panelsTelemetry.debug("Parking pose", formatPose(parking));
+        panelsTelemetry.debug("Start pose", formatPosePedro(start));
+        panelsTelemetry.debug("Launch pose", formatPosePedro(launch));
+        panelsTelemetry.debug("Setup pose", formatPosePedro(setup));
+        panelsTelemetry.debug("Parking pose", formatPosePedro(parking));
         panelsTelemetry.debug("Path Start→Launch", pathToScoreSummary);
         panelsTelemetry.debug("Path Launch→Setup", scoreToPickupSummary);
         panelsTelemetry.debug("Path Setup→Parking", pickupToStackEndSummary);

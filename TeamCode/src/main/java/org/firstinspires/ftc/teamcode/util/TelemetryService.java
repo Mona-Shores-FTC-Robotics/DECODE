@@ -88,9 +88,7 @@ public class TelemetryService {
     }
 
     public void updateDriverStation(Telemetry telemetry) {
-        if (panelsTelemetry != null) {
-            panelsTelemetry.update(telemetry);
-        }
+        // Driver station output is handled directly by the caller.
     }
 
     /**
@@ -111,7 +109,8 @@ public class TelemetryService {
                                      double runtimeSec,
                                      Telemetry dsTelemetry,
                                      RobotLogger logger,
-                                     String modeLabel) {
+                                     String modeLabel,
+                                     boolean suppressDriveTelemetry) {
         double requestX = driveRequest != null ? driveRequest.fieldX : 0.0;
         double requestY = driveRequest != null ? driveRequest.fieldY : 0.0;
         double requestRot = driveRequest != null ? driveRequest.rotation : 0.0;
@@ -148,9 +147,9 @@ public class TelemetryService {
                 visionRangeIn = snapshot.getFtcRange();
                 visionBearingDeg = snapshot.getFtcBearing();
                 visionYawDeg = snapshot.getFtcYaw();
-                visionPoseXIn = snapshot.getRobotX();
-                visionPoseYIn = snapshot.getRobotY();
-                double snapshotYawDeg = snapshot.getRobotYaw();
+                visionPoseXIn = snapshot.getFtcX();
+                visionPoseYIn = snapshot.getFtcY();
+                double snapshotYawDeg = snapshot.getFtcYaw();
                 visionHeadingRad = Double.isNaN(snapshotYawDeg) ? Double.NaN : Math.toRadians(snapshotYawDeg);
                 visionTxDeg = snapshot.getTxDegrees();
                 visionTyDeg = snapshot.getTyDegrees();
@@ -174,7 +173,7 @@ public class TelemetryService {
         }
 
         TelemetryManager panels = panelsTelemetry();
-        if (panels != null) {
+        if (!suppressDriveTelemetry && panels != null) {
             String label = modeLabel == null || modeLabel.isEmpty() ? "Robot" : modeLabel;
             panels.debug("Mode", label);
             panels.debug("DriveMode", drive.getDriveMode());
@@ -224,7 +223,9 @@ public class TelemetryService {
             shooterReady = shooter.atTarget();
         }
 
-        publisher.publishDrive(drive, requestX, requestY, requestRot, slowMode, aimMode, headingHold);
+        if (!suppressDriveTelemetry) {
+            publisher.publishDrive(drive, requestX, requestY, requestRot, slowMode, aimMode, headingHold);
+        }
         publisher.publishShooter(
                 displayTargetRpm,
                 displayCurrentRpm,
@@ -258,7 +259,7 @@ public class TelemetryService {
             logger.logNumber("Robot", "RuntimeSec", runtimeSec);
         }
 
-        if (dsTelemetry != null) {
+        if (dsTelemetry != null && !suppressDriveTelemetry) {
             if (pose != null) {
                 dsTelemetry.addData("Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
                         poseXIn,
