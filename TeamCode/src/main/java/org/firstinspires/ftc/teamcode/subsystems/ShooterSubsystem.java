@@ -117,7 +117,7 @@ public class ShooterSubsystem implements Subsystem {
         public static String motorName = "shooter_left";
         public static boolean reversed = false;
         public static double launchRpm = 4200.0;
-        public static double idleRpm = 2600.0;
+        public static double idleRpm = 0;
     }
 
     @Configurable
@@ -125,7 +125,7 @@ public class ShooterSubsystem implements Subsystem {
         public static String motorName = "shooter_center";
         public static boolean reversed = false;
         public static double launchRpm = 4200.0;
-        public static double idleRpm = 2600.0;
+        public static double idleRpm = 0;
     }
 
     @Configurable
@@ -133,7 +133,7 @@ public class ShooterSubsystem implements Subsystem {
         public static String motorName = "shooter_right";
         public static boolean reversed = true;
         public static double launchRpm = 4200.0;
-        public static double idleRpm = 2600.0;
+        public static double idleRpm = 0;
     }
 
     @Configurable

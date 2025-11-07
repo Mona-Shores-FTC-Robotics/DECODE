@@ -272,6 +272,10 @@ public class TelemetryService {
             dsTelemetry.addData("Alliance", activeAlliance.displayName());
             dsTelemetry.addData("Drive Aim Assist", aimMode ? "vision-locked" : "manual");
             dsTelemetry.addData("Drive Heading Hold", headingHold ? "engaged" : "free");
+            dsTelemetry.addData("Drive Turn Cmd",
+                    "%.2f (lock %.2f)",
+                    drive.getLastCommandTurn(),
+                    drive.getHeadingLockOutput());
             dsTelemetry.addData(
                     "Shooter Mode",
                     "%s | ready=%s | autoSpin=%s",
@@ -455,6 +459,8 @@ public class TelemetryService {
         packet.put("drive/aimMode", aimMode);
         packet.put("drive/headingHold", headingHold);
         packet.put("drive/mode", drive.getDriveMode().name());
+        packet.put("drive/commandTurn", drive.getLastCommandTurn());
+        packet.put("drive/headingLockOutput", drive.getHeadingLockOutput());
         packet.put("drive/lfPower", drive.getLfPower());
         packet.put("drive/rfPower", drive.getRfPower());
         packet.put("drive/lbPower", drive.getLbPower());

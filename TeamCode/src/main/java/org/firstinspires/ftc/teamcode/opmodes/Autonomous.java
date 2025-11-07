@@ -14,6 +14,7 @@ import dev.nextftc.ftc.GamepadEx;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
+import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
@@ -24,6 +25,7 @@ import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.DecodePatternController;
+import org.firstinspires.ftc.teamcode.util.RobotMode;
 
 import java.util.Arrays;
 import java.util.Locale;
@@ -34,6 +36,7 @@ public class Autonomous extends OpMode {
 
     private static final int AUTO_BURST_RINGS = 1;
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
+    private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
 
     private static final double POSE_POSITION_TOLERANCE = 1.0; // inches
     private static final double POSE_HEADING_TOLERANCE = Math.toRadians(10.0);
@@ -70,6 +73,9 @@ public class Autonomous extends OpMode {
     public void init() {
         BindingManager.reset();
         robot = new Robot(hardwareMap);
+        robot.setRobotMode(ACTIVE_MODE);
+        robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
+        robot.telemetry.startSession();
         robot.logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), DEFAULT_ALLIANCE, "AutonomousInit");
         panelsTelemetry = robot.telemetry.panelsTelemetry();
         stepTimer = new Timer();
@@ -145,7 +151,7 @@ public class Autonomous extends OpMode {
         allianceSelector.lockSelection();
         allianceSelector.applySelection(robot, robot.lighting);
         robot.logger.updateAlliance(activeAlliance);
-        robot.logger.logEvent("AutonomousDHS", "Start");
+        robot.logger.logEvent("Autonomous", "Start");
 
         LightingSubsystem lighting = robot.lighting;
         if (lighting != null) {

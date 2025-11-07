@@ -108,6 +108,9 @@ public class DriveSubsystem implements Subsystem {
     private double headingLockTarget = Double.NaN;
     private double lastHeadingLockError = 0.0;
     private double lastHeadingLockOutput = 0.0;
+    private boolean headingNudgeActive = false;
+    private double headingNudgeTarget = Double.NaN;
+    private static final double HEADING_NUDGE_TOLERANCE_RAD = Math.toRadians(2.0);
 
     public static final class Inputs {
         public double poseXInches;
@@ -221,6 +224,8 @@ public class DriveSubsystem implements Subsystem {
         headingLockTarget = Double.NaN;
         lastHeadingLockError = 0.0;
         lastHeadingLockOutput = 0.0;
+        headingNudgeActive = false;
+        headingNudgeTarget = Double.NaN;
     }
 
     public void populateInputs(Inputs inputs) {
@@ -307,10 +312,21 @@ public class DriveSubsystem implements Subsystem {
                             boolean slowMode,
                             boolean rampMode,
                             boolean headingHold) {
+        if (headingNudgeActive) {
+            if (runHeadingNudge()) {
+                return;
+            }
+        }
         if (robotCentric != robotCentricConfig) {
             setRobotCentric(robotCentricConfig);
         }
         if (!headingHold || Math.abs(rotationInput) > headingOverrideThreshold()) {
+            if (!headingHold) {
+                cancelHeadingNudge();
+            }
+            if (Math.abs(rotationInput) > headingOverrideThreshold()) {
+                cancelHeadingNudge();
+            }
             headingLockEnabled = false;
             headingLockEngaged = false;
             driveScaled(fieldX, fieldY, rotationInput, slowMode, rampMode);
@@ -336,6 +352,7 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldY = fieldY;
         lastRequestRotation = rotationInput;
         lastRequestSlowMode = slowMode;
+        cancelHeadingNudge();
         headingLockEnabled = false;
         headingLockEngaged = false;
         headingLockTarget = normalizeAngle(follower.getHeading());
@@ -385,6 +402,7 @@ public class DriveSubsystem implements Subsystem {
             lastRampUpdateNs = System.nanoTime();
         }
 
+
         lastCommandForward = appliedForward;
         lastCommandStrafeLeft = appliedStrafeLeft;
         lastCommandTurn = appliedTurn;
@@ -400,6 +418,53 @@ public class DriveSubsystem implements Subsystem {
         return current + Math.copySign(maxDelta, delta);
     }
 
+    public void queueHeadingNudgeDegrees(double degrees) {
+        queueHeadingNudgeRadians(Math.toRadians(degrees));
+    }
+
+    public void queueHeadingNudgeRadians(double radians) {
+        double currentHeading = follower.getHeading();
+        headingNudgeTarget = normalizeAngle(currentHeading + radians);
+        headingNudgeActive = true;
+        headingLockTarget = headingNudgeTarget;
+        headingLockEnabled = true;
+        headingLockEngaged = true;
+    }
+
+    public void cancelHeadingNudge() {
+        headingNudgeActive = false;
+        headingNudgeTarget = Double.NaN;
+    }
+
+    public boolean isHeadingNudgeActive() {
+        return headingNudgeActive;
+    }
+
+    private boolean runHeadingNudge() {
+        if (!headingNudgeActive) {
+            return false;
+        }
+        headingLockTarget = headingNudgeTarget;
+        double error = Math.abs(normalizeAngle(headingNudgeTarget - follower.getHeading()));
+        if (error <= HEADING_NUDGE_TOLERANCE_RAD) {
+            cancelHeadingNudge();
+            headingLockEnabled = false;
+            headingLockEngaged = false;
+            headingLockTarget = Double.NaN;
+            follower.setTeleOpDrive(0 , 0 , 0 , robotCentric);
+            lastCommandForward = 0.0;
+            lastCommandStrafeLeft = 0.0;
+            lastCommandTurn = 0.0;
+            return false;
+        }
+        double turnCW = computeHeadingLockTurn();
+        lastCommandForward = 0.0;
+        lastCommandStrafeLeft = 0.0;
+        lastCommandTurn = turnCW;
+        follower.setTeleOpDrive(0 , 0 , turnCW , robotCentric);
+        return true;
+    }
+
     private void driveWithHeadingLock(double fieldX, double fieldY, boolean slowMode) {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
@@ -412,6 +477,14 @@ public class DriveSubsystem implements Subsystem {
         double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
         double turnCW = computeHeadingLockTurn();
+
+        double maxTranslationMag = Math.max(0.0, 1.0 - Math.abs(turnCW));
+        double translationMag = Math.hypot(forward, strafeLeft);
+        if (translationMag > maxTranslationMag && translationMag > 1e-6) {
+            double scale = maxTranslationMag / translationMag;
+            forward *= scale;
+            strafeLeft *= scale;
+        }
 
         rampModeActive = false;
         lastCommandForward = forward;
@@ -436,9 +509,10 @@ public class DriveSubsystem implements Subsystem {
         if (maxOutput < 1e-6) {
             maxOutput = 0.0;
         }
-        double output = Range.clip(headingLockController.run(), -maxOutput, maxOutput);
-        lastHeadingLockOutput = output;
-        return output;
+        double pidOutputCcw = Range.clip(headingLockController.run(), -maxOutput, maxOutput);
+        double turnCommandCw = -pidOutputCcw;
+        lastHeadingLockOutput = turnCommandCw;
+        return turnCommandCw;
     }
 
     public void aimAndDrive(double fieldX , double fieldY , boolean slowMode) {
@@ -530,6 +604,14 @@ public class DriveSubsystem implements Subsystem {
 
     public double getRbPower() {
         return motorRb.getPower();
+    }
+
+    public double getLastCommandTurn() {
+        return lastCommandTurn;
+    }
+
+    public double getHeadingLockOutput() {
+        return lastHeadingLockOutput;
     }
 
     public double getLfVelocityTicksPerSec() {
