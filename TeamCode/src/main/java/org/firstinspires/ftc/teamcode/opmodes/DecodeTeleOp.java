@@ -46,6 +46,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
+        robot.launcherCoordinator.lockIntake();
         robot.initializeForTeleOp();
 
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
@@ -82,6 +83,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
+        robot.launcherCoordinator.unlockIntake();
+        robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
         if (allianceSelector != null) {
             allianceSelector.lockSelection();
             allianceSelector.applySelection(robot, robot.lighting);

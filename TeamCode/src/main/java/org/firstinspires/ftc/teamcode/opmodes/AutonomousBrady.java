@@ -15,6 +15,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
@@ -93,6 +94,8 @@ public class AutonomousBrady extends OpMode {
         panelsTelemetry = robot.telemetry.panelsTelemetry();
         stepTimer = new Timer();
 
+        robot.launcherCoordinator.lockIntake();
+        robot.launcherCoordinator.setIntakeAutomationEnabled(false);
         robot.initializeForAuto();
         follower = robot.drive.getFollower();
 
@@ -177,6 +180,9 @@ public class AutonomousBrady extends OpMode {
                 lighting.indicateIdle();
             }
         }
+
+        robot.launcherCoordinator.setIntakeAutomationEnabled(true);
+        robot.launcherCoordinator.unlockIntake();
 
         ShooterSubsystem shooter = robot.shooter;
         if (shooter != null) {

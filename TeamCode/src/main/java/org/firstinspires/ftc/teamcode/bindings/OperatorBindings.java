@@ -52,8 +52,6 @@ public class OperatorBindings {
         robot.shooter.setSpinMode(ShooterSubsystem.SpinMode.HOLD);
         if (launcherCoordinator != null) {
             launcherCoordinator.clearIntakeOverride();
-        } else {
-            robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
         }
         syncLightingWithIntake();
 

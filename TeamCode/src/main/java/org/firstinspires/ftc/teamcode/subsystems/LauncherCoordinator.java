@@ -64,8 +64,9 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     private boolean autoSpinEnabled = false;
     private boolean intakeAutomationEnabled = true;
     private ArtifactState artifactState = ArtifactState.EMPTY;
-    private IntakeSubsystem.IntakeMode manualIntakeOverride = null;
-    private IntakeSubsystem.IntakeMode appliedIntakeMode = null;
+    private IntakeSubsystem.IntakeMode manualIntakeOverride = IntakeSubsystem.IntakeMode.STOPPED;
+    private IntakeSubsystem.IntakeMode appliedIntakeMode = IntakeSubsystem.IntakeMode.STOPPED;
+    private boolean intakeLocked = false;
     private RobotMode robotMode = RobotMode.DEBUG;
 
     public LauncherCoordinator(ShooterSubsystem shooter,
@@ -195,8 +196,25 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     }
 
     public IntakeSubsystem.IntakeMode getRequestedIntakeMode() {
+        if (intakeLocked) {
+            return IntakeSubsystem.IntakeMode.STOPPED;
+        }
         IntakeSubsystem.IntakeMode override = manualIntakeOverride;
         return override != null ? override : computeAutomationIntakeMode();
+    }
+
+    public void lockIntake() {
+        if (!intakeLocked) {
+            intakeLocked = true;
+            applyIntakeMode();
+        }
+    }
+
+    public void unlockIntake() {
+        if (intakeLocked) {
+            intakeLocked = false;
+            applyIntakeMode();
+        }
     }
 
     public IntakeSubsystem.IntakeMode getAppliedIntakeMode() {
@@ -271,7 +289,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         }
         IntakeSubsystem.IntakeMode desired = getRequestedIntakeMode();
         if (desired == null) {
-            desired = IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
+            desired = IntakeSubsystem.IntakeMode.STOPPED;
         }
         if (appliedIntakeMode != desired) {
             intake.setMode(desired);

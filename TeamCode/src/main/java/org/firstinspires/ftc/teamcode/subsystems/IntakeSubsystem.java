@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
+import static org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.IntakeMode.STOPPED;
+
 import android.graphics.Color;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -66,8 +69,8 @@ public class IntakeSubsystem implements Subsystem {
     @Configurable
     public static class MotorConfig {
         public static String motorName = "intake";
-        public static double defaultForwardPower = .6;
-        public static double defaultReversePower = -.3;
+        public static double defaultForwardPower = -.6;
+        public static double defaultReversePower = .3;
         public static boolean brakeOnZero = true;
         public static boolean reverseDirection = true;
     }
@@ -75,14 +78,14 @@ public class IntakeSubsystem implements Subsystem {
     @Configurable
     public static class RollerConfig {
         public static String servoName = "intake_roller";
-        public static double activePosition = -1.0;
-        public static double inactivePosition = 0.0;
+        public static double activePosition = 1.0;
+        public static double inactivePosition = 0.5;
     }
 
     @Configurable
     public static class ManualModeConfig {
         public static boolean enableOverride = false;
-        public static String overrideMode = IntakeMode.PASSIVE_REVERSE.name();
+        public static String overrideMode = STOPPED.name();
     }
 
     public static final class LaneSample {
@@ -167,7 +170,7 @@ public class IntakeSubsystem implements Subsystem {
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
     private boolean anyLaneSensorsPresent = false;
     private double lastPeriodicMs = 0.0;
-    private IntakeMode intakeMode = IntakeMode.PASSIVE_REVERSE;
+    private IntakeMode intakeMode = IntakeMode.STOPPED;
     private IntakeMode appliedMode = null;
     private final DcMotorEx intakeMotor;
     private double appliedMotorPower = 0.0;
@@ -221,10 +224,10 @@ public class IntakeSubsystem implements Subsystem {
         public int rightRawGreen;
         public int rightRawBlue;
         public double motorPower;
-        public String commandedMode = IntakeMode.PASSIVE_REVERSE.name();
-        public String appliedMode = IntakeMode.PASSIVE_REVERSE.name();
+        public String commandedMode = IntakeMode.STOPPED.name();
+        public String appliedMode = IntakeMode.STOPPED.name();
         public boolean modeOverrideEnabled;
-        public String modeOverride = IntakeMode.PASSIVE_REVERSE.name();
+        public String modeOverride = IntakeMode.STOPPED.name();
         public boolean rollerPresent;
         public double rollerPosition;
         public boolean rollerActive;
@@ -264,8 +267,8 @@ public class IntakeSubsystem implements Subsystem {
             laneSamples.put(lane, ABSENT_SAMPLE);
         }
         sensorTimer.reset();
-        intakeMode = IntakeMode.PASSIVE_REVERSE;
-        appliedMode = null;
+        intakeMode = IntakeMode.STOPPED;
+        appliedMode = IntakeMode.STOPPED;
         setManualPower(0.0);
         if (rollerServo != null) {
             rollerServo.setPosition(RollerConfig.inactivePosition);
@@ -276,6 +279,7 @@ public class IntakeSubsystem implements Subsystem {
 
     @Override
     public void periodic() {
+
         long start = System.nanoTime();
         IntakeMode targetMode = resolveMode();
         if (appliedMode != targetMode) {
@@ -344,7 +348,7 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     public void setMode(IntakeMode mode) {
-        IntakeMode desired = mode == null ? IntakeMode.PASSIVE_REVERSE : mode;
+        IntakeMode desired = mode == null ? IntakeMode.STOPPED : mode;
         if (intakeMode != desired) {
             intakeMode = desired;
             appliedMode = null;
@@ -414,7 +418,7 @@ public class IntakeSubsystem implements Subsystem {
 
     private void applyModePower(IntakeMode mode) {
         if (mode == null) {
-            mode = IntakeMode.PASSIVE_REVERSE;
+            mode = IntakeMode.STOPPED;
         }
         switch (mode) {
             case ACTIVE_FORWARD:
@@ -424,8 +428,9 @@ public class IntakeSubsystem implements Subsystem {
                 setManualPower(0.0);
                 break;
             case PASSIVE_REVERSE:
-            default:
                 setManualPower(MotorConfig.defaultReversePower);
+                break;
+            default:
                 break;
         }
     }
