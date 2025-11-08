@@ -11,9 +11,6 @@ import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.Range;
 
-import dev.nextftc.bindings.BindingManager;
-import dev.nextftc.ftc.GamepadEx;
-
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
@@ -30,14 +27,16 @@ import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.DecodePatternController;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Autonomous", group = "Autonomous")
-public class Autonomous extends OpMode {
+import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.ftc.GamepadEx;
+
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Autonomous 2", group = "Autonomous")
+public class AutonomousRedo extends OpMode {
 
     private static final int AUTO_BURST_RINGS = 1;
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
@@ -45,7 +44,7 @@ public class Autonomous extends OpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public static double maxPathPower = .12;
+        public static double maxPathPower = .1;
         public static double placeholderShotDelaySec = 1.0;
     }
 
@@ -110,13 +109,12 @@ public class Autonomous extends OpMode {
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
         applyDecodePattern(decodeController.current()); // default to alliance colour until a pattern is chosen
-
-
     }
 
     @Override
     public void init_loop() {
         BindingManager.update();
+        robot.drive.updateFollower();
 
         // Blend camera detections with any driver override and apply the combined alliance immediately.
         Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt =
@@ -128,7 +126,7 @@ public class Autonomous extends OpMode {
         Pose snapshotPosePedro = lastTagSnapshot == null ? null : lastTagSnapshot.getRobotPose().orElse(null);
         Pose snapshotPoseFtc = lastTagSnapshot == null ? null : lastTagSnapshot.getFtcPose().orElse(null);
         lastDetectedStartPosePedro = snapshotPosePedro == null ? null : copyPedroPose(snapshotPosePedro);
-        lastDetectedStartPoseFtc = snapshotPoseFtc == null ? null : copyFtcPose(snapshotPoseFtc);
+        lastDetectedStartPoseFtc = snapshotPoseFtc == null  ? null : copyFtcPose(snapshotPoseFtc);
 
         Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
         if (selectedAlliance != activeAlliance) {
@@ -190,15 +188,11 @@ public class Autonomous extends OpMode {
     public void loop() {
         BindingManager.update();
         robot.drive.updateFollower();
-        updateShootingRoutine();
+
         autonomousStep();
-
-
         robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
         robot.logger.logString("Autonomous", "RoutineStepName", routineStep.name());
-        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
         robot.logger.sampleSources();
-        robot.telemetry.updateDriverStation(telemetry);
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
@@ -212,8 +206,9 @@ public class Autonomous extends OpMode {
                 robot.logger,
                 "Autonomous",
                 false,
-                null
-        );
+                null);
+
+
     }
 
     @Override
@@ -241,48 +236,11 @@ public class Autonomous extends OpMode {
             case DRIVE_TO_PRELOAD_SCORE:
                 startPath(pathToScore, RoutineStep.DRIVE_TO_PICKUP);
                 break;
-//            case WAIT_FOR_PRELOAD_SCORE_PATH:
-//                if (!robot.drive.isFollowerBusy()) {
-//                    beginShootingRoutine();
-//                    transitionTo(RoutineStep.WAIT_FOR_PRELOAD_SHOT);
-//                }
-//                break;
-//            case WAIT_FOR_PRELOAD_SHOT:
-//                if (!isWaitingForShot()) {
-//                    transitionTo(RoutineStep.DRIVE_TO_PICKUP);
-//                }
-//                break;
+//
             case DRIVE_TO_PICKUP:
                 if (!robot.drive.isFollowerBusy()) {
-                    startPath(scoreToPickup, RoutineStep.WAIT_FOR_PICKUP_PATH);
+                    startPath(scoreToPickup, RoutineStep.FINISHED);
                 }
-                break;
-            case WAIT_FOR_PICKUP_PATH:
-                if (!robot.drive.isFollowerBusy()) {
-                    transitionTo(RoutineStep.DRIVE_THROUGH_STACK);
-                }
-                break;
-            case DRIVE_THROUGH_STACK:
-                if (!robot.drive.isFollowerBusy()) {
-                    startPath(pickupToStackEnd, RoutineStep.WAIT_FOR_STACK_PATH);
-                }
-                break;
-            case WAIT_FOR_STACK_PATH:
-                if (!robot.drive.isFollowerBusy()) {
-                    transitionTo(RoutineStep.DRIVE_BACK_TO_SCORE);
-                }
-                break;
-            case DRIVE_BACK_TO_SCORE:
-                if (!robot.drive.isFollowerBusy()) {
-                    startPath(stackToScore, RoutineStep.WAIT_FOR_RETURN_TO_SCORE);
-                }
-                break;
-            case WAIT_FOR_RETURN_TO_SCORE:
-                if (!robot.drive.isFollowerBusy()) {
-                    transitionTo(RoutineStep.WAIT_FOR_FINAL_SHOT);
-                }
-                break;
-            case WAIT_FOR_FINAL_SHOT:
                 break;
             case NOT_STARTED:
             case FINISHED:
@@ -332,7 +290,7 @@ public class Autonomous extends OpMode {
 
         PathChain previewScoreToPickup = follower.pathBuilder()
                 .addPath(new BezierLine(launch, setup))
-                .setLinearHeadingInterpolation(launch.getHeading(), setup.getHeading())
+                .setTangentHeadingInterpolation()
                 .build();
 
         PathChain previewPickupToStack = follower.pathBuilder()
@@ -497,28 +455,16 @@ public class Autonomous extends OpMode {
         Pose start = layout.pose(FieldPoint.START);
         Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
         Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
-        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
 
         pathToScore = follower.pathBuilder()
                 .addPath(new BezierLine(start, launch))
-                .setLinearHeadingInterpolation(start.getHeading(), launch.getHeading())
                 .build();
 
         scoreToPickup = follower.pathBuilder()
                 .addPath(new BezierLine(launch, setup))
-                .setLinearHeadingInterpolation(launch.getHeading(), setup.getHeading())
                 .build();
 
-        pickupToStackEnd = follower.pathBuilder()
-                .addPath(new BezierLine(setup, parking))
-                .setTangentHeadingInterpolation()
-                .build();
-
-        stackToScore = follower.pathBuilder()
-                .addPath(new BezierLine(parking, launch))
-                .setLinearHeadingInterpolation(parking.getHeading(), launch.getHeading())
-                .build();
-    }
+       }
 
     private void transitionTo(RoutineStep nextStep) {
         routineStep = nextStep;

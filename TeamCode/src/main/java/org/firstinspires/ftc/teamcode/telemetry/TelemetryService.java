@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.util;
+package org.firstinspires.ftc.teamcode.telemetry;
 
 import android.os.SystemClock;
 
@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.bylazar.telemetry.TelemetryManager;
+import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -18,7 +19,9 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
+import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.PoseTransforms;
 
 /**
  * Centralises telemetry output to FTControl Panels, the driver station, and optional PsiKit logging.
@@ -31,6 +34,8 @@ public class TelemetryService {
     private final PsiKitAdapter psiKitLogger;
     private final TelemetryPublisher publisher;
     private final FtcDashboard dashboard;
+    private volatile String routineStepName = "";
+    private volatile double routineStepOrdinal = Double.NaN;
 
     private TelemetryManager panelsTelemetry;
     private boolean sessionActive = false;
@@ -87,6 +92,11 @@ public class TelemetryService {
         return panelsTelemetry;
     }
 
+    public void setRoutineStepTelemetry(String stepName, double stepOrdinal) {
+        routineStepName = stepName == null ? "" : stepName;
+        routineStepOrdinal = stepOrdinal;
+    }
+
     public void updateDriverStation(Telemetry telemetry) {
         // Driver station output is handled directly by the caller.
     }
@@ -110,58 +120,35 @@ public class TelemetryService {
                                      Telemetry dsTelemetry,
                                      RobotLogger logger,
                                      String modeLabel,
-                                     boolean suppressDriveTelemetry) {
+                                     boolean suppressDriveTelemetry,
+                                     Pose poseOverride) {
         double requestX = driveRequest != null ? driveRequest.fieldX : 0.0;
         double requestY = driveRequest != null ? driveRequest.fieldY : 0.0;
         double requestRot = driveRequest != null ? driveRequest.rotation : 0.0;
         boolean slowMode = driveRequest != null && driveRequest.slowMode;
         boolean headingHold = driveRequest != null && driveRequest.headingHold;
         boolean aimMode = driveRequest != null && driveRequest.aimMode;
+        Pose pedroPose = poseOverride != null ? poseOverride : drive.getFollowerPose();
         Pose2D pose = drive.getPose();
+        if (poseOverride != null) {
+            pose = new Pose2D(
+                    DistanceUnit.INCH,
+                    poseOverride.getX(),
+                    poseOverride.getY(),
+                    AngleUnit.RADIANS,
+                    poseOverride.getHeading()
+            );
+        }
+        Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
+        double ftcXIn = ftcPose != null ? ftcPose.getX() : Double.NaN;
+        double ftcYIn = ftcPose != null ? ftcPose.getY() : Double.NaN;
+        double ftcHeadingRad = ftcPose != null ? ftcPose.getHeading() : Double.NaN;
         double poseXIn = pose != null ? pose.getX(DistanceUnit.INCH) : 0.0;
         double poseYIn = pose != null ? pose.getY(DistanceUnit.INCH) : 0.0;
         double headingDeg = pose != null ? pose.getHeading(AngleUnit.DEGREES) : 0.0;
         double headingRad = pose != null ? pose.getHeading(AngleUnit.RADIANS) : 0.0;
 
-        boolean visionHasTag = false;
-        int visionTagId = -1;
-        double visionRangeIn = Double.NaN;
-        double visionBearingDeg = Double.NaN;
-        double visionYawDeg = Double.NaN;
-        double visionPoseXIn = Double.NaN;
-        double visionPoseYIn = Double.NaN;
-        double visionHeadingRad = Double.NaN;
-        double visionTxDeg = Double.NaN;
-        double visionTyDeg = Double.NaN;
-        double visionTaPercent = Double.NaN;
-        boolean visionOdometryPending = false;
-        Alliance visionAlliance = Alliance.UNKNOWN;
-
-        if (vision != null) {
-            visionAlliance = vision.getAlliance();
-            visionOdometryPending = vision.shouldUpdateOdometry();
-            visionHasTag = vision.hasValidTag();
-            visionTagId = visionHasTag ? vision.getCurrentTagId() : -1;
-            VisionSubsystemLimelight.TagSnapshot snapshot = vision.getLastSnapshot().orElse(null);
-            if (snapshot != null) {
-                visionRangeIn = snapshot.getFtcRange();
-                visionBearingDeg = snapshot.getFtcBearing();
-                visionYawDeg = snapshot.getFtcYaw();
-                visionPoseXIn = snapshot.getFtcX();
-                visionPoseYIn = snapshot.getFtcY();
-                double snapshotYawDeg = snapshot.getFtcYaw();
-                visionHeadingRad = Double.isNaN(snapshotYawDeg) ? Double.NaN : Math.toRadians(snapshotYawDeg);
-                visionTxDeg = snapshot.getTxDegrees();
-                visionTyDeg = snapshot.getTyDegrees();
-                visionTaPercent = snapshot.getTargetAreaPercent();
-                if (visionAlliance == Alliance.UNKNOWN) {
-                    visionAlliance = snapshot.getAlliance();
-                }
-            }
-        }
-        if (visionAlliance == Alliance.UNKNOWN) {
-            visionAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
-        }
+        VisionSnapshot visionSnapshot = captureVisionSnapshot(vision, alliance);
 
         long nowMs = SystemClock.uptimeMillis();
         boolean drawPanelsThisLoop = nowMs - lastPanelsDrawMs >= PANELS_DRAW_INTERVAL_MS;
@@ -179,12 +166,12 @@ public class TelemetryService {
             panels.debug("DriveMode", drive.getDriveMode());
             panels.debug("Drive/AimMode", aimMode);
             panels.debug("Drive/HeadingHoldRequest", headingHold);
-            panels.debug("Vision/HasTag", visionHasTag);
-            panels.debug("Vision/TagId", visionTagId);
-            panels.debug("Vision/RangeIn", visionRangeIn);
-            panels.debug("Vision/BearingDeg", visionBearingDeg);
-            panels.debug("Vision/YawDeg", visionYawDeg);
-            panels.debug("Vision/OdometryPending", visionOdometryPending);
+            panels.debug("Vision/HasTag", visionSnapshot.hasTag);
+            panels.debug("Vision/TagId", visionSnapshot.tagId);
+            panels.debug("Vision/RangeIn", visionSnapshot.rangeIn);
+            panels.debug("Vision/BearingDeg", visionSnapshot.bearingDeg);
+            panels.debug("Vision/YawDeg", visionSnapshot.yawDeg);
+            panels.debug("Vision/OdometryPending", visionSnapshot.odometryPending);
         }
 
         double leftTargetRpm = shooter.getTargetRpm(LauncherLane.LEFT);
@@ -336,24 +323,27 @@ public class TelemetryService {
                     poseYIn,
                     headingRad,
                     headingDeg,
+                    ftcXIn,
+                    ftcYIn,
+                    ftcHeadingRad,
                     shooterReady,
                     autoSpin,
                     launcherCoordinator,
                     alliance,
-                    visionAlliance,
+                    visionSnapshot.alliance,
                     runtimeSec,
-                    visionHasTag,
-                    visionTagId,
-                    visionRangeIn,
-                    visionBearingDeg,
-                    visionYawDeg,
-                    visionPoseXIn,
-                    visionPoseYIn,
-                    visionHeadingRad,
-                    visionTxDeg,
-                    visionTyDeg,
-                    visionTaPercent,
-                    visionOdometryPending,
+                    visionSnapshot.hasTag,
+                    visionSnapshot.tagId,
+                    visionSnapshot.rangeIn,
+                    visionSnapshot.bearingDeg,
+                    visionSnapshot.yawDeg,
+                    visionSnapshot.poseXIn,
+                    visionSnapshot.poseYIn,
+                    visionSnapshot.headingRad,
+                    visionSnapshot.txDeg,
+                    visionSnapshot.tyDeg,
+                    visionSnapshot.taPercent,
+                    visionSnapshot.odometryPending,
                     controlMode,
                     leftTargetRpm,
                     centerTargetRpm,
@@ -404,6 +394,9 @@ public class TelemetryService {
                                      double poseYIn,
                                      double headingRad,
                                      double headingDeg,
+                                     double ftcXIn,
+                                     double ftcYIn,
+                                     double ftcHeadingRad,
                                      boolean shooterReady,
                                      boolean autoSpin,
                                      LauncherCoordinator launcherCoordinator,
@@ -519,9 +512,22 @@ public class TelemetryService {
         packet.put("vision/targetAreaPercent", visionTaPercent);
         packet.put("vision/odometryPending", visionOdometryPending);
 
-        packet.put("Pose/Pose x", poseXIn); // Inches
-        packet.put("Pose/Pose y", poseYIn); // Inches
-        packet.put("Pose/Pose heading", headingRad); // Radians
+        packet.put("Pose/Pose x", poseXIn); // Inches (Pedro frame)
+        packet.put("Pose/Pose y", poseYIn); // Inches (Pedro frame)
+        packet.put("Pose/Pose heading", headingRad); // Radians (Pedro frame)
+        if (!Double.isNaN(ftcXIn) && !Double.isNaN(ftcYIn)) {
+            packet.put("Pose/FTC Pose x", ftcXIn); // Inches (FTC frame)
+            packet.put("Pose/FTC Pose y", ftcYIn); // Inches (FTC frame)
+        }
+        if (!Double.isNaN(ftcHeadingRad)) {
+            packet.put("Pose/FTC Pose heading", ftcHeadingRad); // Radians (FTC frame)
+        }
+        if (!Double.isNaN(routineStepOrdinal)) {
+            packet.put("Autonomous/RoutineStep", routineStepOrdinal);
+        }
+        if (routineStepName != null && !routineStepName.isEmpty()) {
+            packet.put("Autonomous/RoutineStepName", routineStepName);
+        }
 
         boolean visionPoseValid = visionHasTag
                 && !Double.isNaN(visionPoseXIn)
@@ -561,5 +567,53 @@ public class TelemetryService {
 
     private static String formatValue(double value, String format) {
         return Double.isNaN(value) ? "--" : String.format(format, value);
+    }
+
+    private static VisionSnapshot captureVisionSnapshot(VisionSubsystemLimelight vision, Alliance allianceFallback) {
+        VisionSnapshot snapshot = new VisionSnapshot();
+        snapshot.alliance = allianceFallback == null ? Alliance.UNKNOWN : allianceFallback;
+        if (vision == null) {
+            return snapshot;
+        }
+        snapshot.alliance = vision.getAlliance();
+        snapshot.odometryPending = vision.shouldUpdateOdometry();
+        snapshot.hasTag = vision.hasValidTag();
+        snapshot.tagId = snapshot.hasTag ? vision.getCurrentTagId() : -1;
+        VisionSubsystemLimelight.TagSnapshot lastSnapshot = vision.getLastSnapshot().orElse(null);
+        if (lastSnapshot != null) {
+            snapshot.rangeIn = lastSnapshot.getFtcRange();
+            snapshot.bearingDeg = lastSnapshot.getFtcBearing();
+            snapshot.yawDeg = lastSnapshot.getFtcYaw();
+            snapshot.poseXIn = lastSnapshot.getFtcX();
+            snapshot.poseYIn = lastSnapshot.getFtcY();
+            double yawDeg = lastSnapshot.getFtcYaw();
+            snapshot.headingRad = Double.isNaN(yawDeg) ? Double.NaN : Math.toRadians(yawDeg);
+            snapshot.txDeg = lastSnapshot.getTxDegrees();
+            snapshot.tyDeg = lastSnapshot.getTyDegrees();
+            snapshot.taPercent = lastSnapshot.getTargetAreaPercent();
+            if (snapshot.alliance == Alliance.UNKNOWN) {
+                snapshot.alliance = lastSnapshot.getAlliance();
+            }
+        }
+        if (snapshot.alliance == Alliance.UNKNOWN) {
+            snapshot.alliance = allianceFallback == null ? Alliance.UNKNOWN : allianceFallback;
+        }
+        return snapshot;
+    }
+
+    private static final class VisionSnapshot {
+        boolean hasTag;
+        int tagId = -1;
+        double rangeIn = Double.NaN;
+        double bearingDeg = Double.NaN;
+        double yawDeg = Double.NaN;
+        double poseXIn = Double.NaN;
+        double poseYIn = Double.NaN;
+        double headingRad = Double.NaN;
+        double txDeg = Double.NaN;
+        double tyDeg = Double.NaN;
+        double taPercent = Double.NaN;
+        boolean odometryPending;
+        Alliance alliance = Alliance.UNKNOWN;
     }
 }

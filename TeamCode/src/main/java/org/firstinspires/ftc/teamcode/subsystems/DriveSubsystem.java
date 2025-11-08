@@ -22,7 +22,8 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFusion;
-import org.firstinspires.ftc.teamcode.util.RobotLogger;
+import org.firstinspires.ftc.teamcode.util.PoseTransforms;
+import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
@@ -770,10 +771,26 @@ public class DriveSubsystem implements Subsystem {
         if (Double.isFinite(state.fusedHeadingRad)) {
             robotLogger.logNumber("FusionPose", "poseHeading", state.fusedHeadingRad);
         }
+        Pose fusedPedroPose = (Double.isFinite(state.fusedXInches) && Double.isFinite(state.fusedYInches) && Double.isFinite(state.fusedHeadingRad))
+                ? new Pose(state.fusedXInches, state.fusedYInches, state.fusedHeadingRad)
+                : null;
+        Pose fusedFtcPose = PoseTransforms.toFtcPose(fusedPedroPose);
+        if (fusedFtcPose != null) {
+            robotLogger.logNumber("FusionPoseFtc", "poseX", DistanceUnit.INCH.toMeters(fusedFtcPose.getX()));
+            robotLogger.logNumber("FusionPoseFtc", "poseY", DistanceUnit.INCH.toMeters(fusedFtcPose.getY()));
+            robotLogger.logNumber("FusionPoseFtc", "poseHeading", fusedFtcPose.getHeading());
+        }
         if (Double.isFinite(state.odometryXInches) && Double.isFinite(state.odometryYInches)) {
             robotLogger.logNumber("OdometryPose", "poseX", DistanceUnit.INCH.toMeters(state.odometryXInches));
             robotLogger.logNumber("OdometryPose", "poseY", DistanceUnit.INCH.toMeters(state.odometryYInches));
             robotLogger.logNumber("OdometryPose", "poseHeading", state.odometryHeadingRad);
+            Pose odomPedroPose = new Pose(state.odometryXInches, state.odometryYInches, state.odometryHeadingRad);
+            Pose odomFtcPose = PoseTransforms.toFtcPose(odomPedroPose);
+            if (odomFtcPose != null) {
+                robotLogger.logNumber("OdometryPoseFtc", "poseX", DistanceUnit.INCH.toMeters(odomFtcPose.getX()));
+                robotLogger.logNumber("OdometryPoseFtc", "poseY", DistanceUnit.INCH.toMeters(odomFtcPose.getY()));
+                robotLogger.logNumber("OdometryPoseFtc", "poseHeading", odomFtcPose.getHeading());
+            }
         }
     }
 

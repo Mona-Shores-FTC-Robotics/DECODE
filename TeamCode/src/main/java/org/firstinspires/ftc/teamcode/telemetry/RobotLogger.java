@@ -1,8 +1,10 @@
-package org.firstinspires.ftc.teamcode.util;
+package org.firstinspires.ftc.teamcode.telemetry;
 
 import android.content.Context;
 
 import com.bylazar.telemetry.TelemetryManager;
+
+import org.firstinspires.ftc.teamcode.util.Alliance;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;

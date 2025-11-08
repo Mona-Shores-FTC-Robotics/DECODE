@@ -8,7 +8,7 @@ import dev.nextftc.core.subsystems.Subsystem;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
-import org.firstinspires.ftc.teamcode.util.RobotLogger;
+import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 
 import java.util.EnumMap;

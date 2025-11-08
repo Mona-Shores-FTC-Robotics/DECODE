@@ -34,7 +34,7 @@ public final class AutoField {
 
         public static double launchFarX = 56.279;
         public static double launchFarY = 19.817;
-        public static double launchFarHeadingDeg = 109.0;
+        public static double launchFarHeadingDeg = 90;
 
         public static double setupParkingX = 23.780;
         public static double setupParkingY = 23.780;

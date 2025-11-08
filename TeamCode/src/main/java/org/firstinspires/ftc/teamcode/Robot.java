@@ -10,10 +10,10 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
-import org.firstinspires.ftc.teamcode.util.RobotLogger;
+import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotState;
-import org.firstinspires.ftc.teamcode.util.TelemetryService;
-import org.firstinspires.ftc.teamcode.util.TelemetrySettings;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 public class Robot {
     public final DriveSubsystem drive;

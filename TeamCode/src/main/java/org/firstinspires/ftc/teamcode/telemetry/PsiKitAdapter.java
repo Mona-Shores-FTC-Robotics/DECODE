@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.util;
+package org.firstinspires.ftc.teamcode.telemetry;
 
 import java.io.File;
 import java.io.FileWriter;

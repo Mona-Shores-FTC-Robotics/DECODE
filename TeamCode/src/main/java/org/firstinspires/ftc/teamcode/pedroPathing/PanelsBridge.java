@@ -37,6 +37,7 @@ public final class PanelsBridge {
     public static TelemetryManager preparePanels() {
         TelemetryManager telemetryManager = PanelsTelemetry.INSTANCE.getTelemetry();
         Drawing.init();
+        panelsField.setOffsets(PanelsField.INSTANCE.getPresets().getPEDRO_PATHING());
         return telemetryManager;
     }
 

@@ -243,7 +243,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
                     null,
                     robot.logger,
                     "TeleOp",
-                    false
+                    false,
+                    null
             );
             telemetryMsThisLoop = nanosToMs(System.nanoTime() - telemetryCallStartNs);
             lastTelemetryNs = System.nanoTime();
@@ -359,7 +360,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 null,
                 null,
                 "TeleOpInit",
-                true
+                true,
+                null
         );
     }
 
