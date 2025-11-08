@@ -163,7 +163,7 @@ public class DriveSubsystem implements Subsystem {
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
         follower = Constants.createFollower(hardwareMap);
         driveMotors = new Constants.Motors(hardwareMap);
-        driveMotors.setRunUsingEncoder();
+        driveMotors.setRunWithoutEncoder();
 
         motorLf = driveMotors.lf;
         motorRf = driveMotors.rf;

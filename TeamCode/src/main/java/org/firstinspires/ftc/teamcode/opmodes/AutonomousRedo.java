@@ -44,7 +44,7 @@ public class AutonomousRedo extends OpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public static double maxPathPower = .1;
+        public static double maxPathPower = 1.0;
         public static double placeholderShotDelaySec = 1.0;
     }
 

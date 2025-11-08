@@ -165,6 +165,13 @@ public class Constants {
             safeSetMode(rb, DcMotor.RunMode.RUN_USING_ENCODER);
         }
 
+        public void setRunWithoutEncoder() {
+            safeSetMode(lf, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            safeSetMode(rf, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            safeSetMode(lb, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            safeSetMode(rb, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
+
         public void setAllVelocityTps(double tpsLF, double tpsRF, double tpsLB, double tpsRB) {
             lf.setVelocity(tpsLF);
             rf.setVelocity(tpsRF);

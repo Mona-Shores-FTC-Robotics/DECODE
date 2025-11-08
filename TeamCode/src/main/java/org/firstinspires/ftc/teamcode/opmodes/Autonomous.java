@@ -45,7 +45,7 @@ public class Autonomous extends OpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public static double maxPathPower = .12;
+        public static double maxPathPower = 1.0;
         public static double placeholderShotDelaySec = 1.0;
     }
 
