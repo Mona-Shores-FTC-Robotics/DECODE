@@ -83,7 +83,6 @@ public class AutonomousRedo extends OpMode {
     @Override
     public void init() {
         BindingManager.reset();
-        PanelsConfigurables.INSTANCE.refreshClass(AutoMotionConfig.class);
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
@@ -458,10 +457,13 @@ public class AutonomousRedo extends OpMode {
 
         pathToScore = follower.pathBuilder()
                 .addPath(new BezierLine(start, launch))
+                .setLinearHeadingInterpolation(start.getHeading(), launch.getHeading())
                 .build();
 
         scoreToPickup = follower.pathBuilder()
                 .addPath(new BezierLine(launch, setup))
+                .setLinearHeadingInterpolation(launch.getHeading(), setup.getHeading())
+
                 .build();
 
        }

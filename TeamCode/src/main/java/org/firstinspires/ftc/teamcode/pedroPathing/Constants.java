@@ -116,7 +116,7 @@ public class Constants {
 
         // Motor model
         public static double GEAR_RATIO    = 1.0;              // wheel revs per motor rev
-        public static double TICKS_PER_REV = 383.6;         // goBILDA 435 rpm motor (FTC encoder counts per wheel rev)
+        public static double TICKS_PER_REV = 537.7;         // goBILDA 435 rpm motor (FTC encoder counts per wheel rev)
 
         // Limits
         public static double MAX_VEL_MPS        = 1.6;

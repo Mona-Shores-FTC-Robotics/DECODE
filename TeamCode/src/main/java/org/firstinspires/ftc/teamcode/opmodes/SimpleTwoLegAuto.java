@@ -40,9 +40,9 @@ public class SimpleTwoLegAuto extends OpMode {
         robot.initializeForAuto();
         follower = robot.drive.getFollower();
 
-        Pose start = new Pose(0, 0, Math.toRadians(90));
-        Pose forwardEnd = new Pose(0, 10, Math.toRadians(90));
-        Pose strafeEnd = new Pose(10, 10, Math.toRadians(90));
+        Pose start = new Pose(56, 8, Math.toRadians(90));
+        Pose forwardEnd = new Pose(56.279,19.817, Math.toRadians(109));
+        Pose strafeEnd = new Pose( 23.780,  23.780, Math.toRadians(90));
 
         follower.setStartingPose(start);
         follower.setPose(start);

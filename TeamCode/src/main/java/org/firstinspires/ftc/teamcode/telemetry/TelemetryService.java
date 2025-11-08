@@ -161,17 +161,17 @@ public class TelemetryService {
 
         TelemetryManager panels = panelsTelemetry();
         if (!suppressDriveTelemetry && panels != null) {
-            String label = modeLabel == null || modeLabel.isEmpty() ? "Robot" : modeLabel;
-            panels.debug("Mode", label);
-            panels.debug("DriveMode", drive.getDriveMode());
-            panels.debug("Drive/AimMode", aimMode);
-            panels.debug("Drive/HeadingHoldRequest", headingHold);
-            panels.debug("Vision/HasTag", visionSnapshot.hasTag);
-            panels.debug("Vision/TagId", visionSnapshot.tagId);
-            panels.debug("Vision/RangeIn", visionSnapshot.rangeIn);
-            panels.debug("Vision/BearingDeg", visionSnapshot.bearingDeg);
-            panels.debug("Vision/YawDeg", visionSnapshot.yawDeg);
-            panels.debug("Vision/OdometryPending", visionSnapshot.odometryPending);
+            String label = modeLabel == null || modeLabel.isEmpty() ? "robot" : modeLabel.toLowerCase();
+            panels.debug("mode/label", label);
+            panels.debug("mode/drive", drive.getDriveMode());
+            panels.debug("mode/aim/enabled", aimMode);
+            panels.debug("mode/headingHold/requested", headingHold);
+            panels.debug("vision/tag/visible", visionSnapshot.hasTag);
+            panels.debug("vision/tag/id", visionSnapshot.tagId);
+            panels.debug("vision/tag/rangeIn", visionSnapshot.rangeIn);
+            panels.debug("vision/tag/bearingDeg", visionSnapshot.bearingDeg);
+            panels.debug("vision/tag/yawDeg", visionSnapshot.yawDeg);
+            panels.debug("vision/odometryPending", visionSnapshot.odometryPending);
         }
 
         double leftTargetRpm = shooter.getTargetRpm(LauncherLane.LEFT);
@@ -223,23 +223,23 @@ public class TelemetryService {
         boolean autoSpin = launcherCoordinator != null && launcherCoordinator.isAutoSpinEnabled();
 
         if (panels != null) {
-            panels.debug("shooter/controlMode", controlMode);
-            panels.debug("shooter/autoSpin", autoSpin);
-            panels.debug("shooter/leftTargetRpm", leftTargetRpm);
-            panels.debug("shooter/leftCurrentRpm", leftCurrentRpm);
-            panels.debug("shooter/leftPower", leftPower);
-            panels.debug("shooter/leftReady", leftReady);
-            panels.debug("shooter/centerTargetRpm", centerTargetRpm);
-            panels.debug("shooter/centerCurrentRpm", centerCurrentRpm);
-            panels.debug("shooter/centerPower", centerPower);
-            panels.debug("shooter/centerReady", centerReady);
-            panels.debug("shooter/rightTargetRpm", rightTargetRpm);
-            panels.debug("shooter/rightCurrentRpm", rightCurrentRpm);
-            panels.debug("shooter/rightPower", rightPower);
-            panels.debug("shooter/rightReady", rightReady);
-            panels.debug("shooter/leftPhase", leftPhase);
-            panels.debug("shooter/centerPhase", centerPhase);
-            panels.debug("shooter/rightPhase", rightPhase);
+            panels.debug("shooter/control/mode", controlMode);
+            panels.debug("shooter/control/autoSpin", autoSpin);
+            panels.debug("shooter/lanes/left/targetRpm", leftTargetRpm);
+            panels.debug("shooter/lanes/left/currentRpm", leftCurrentRpm);
+            panels.debug("shooter/lanes/left/power", leftPower);
+            panels.debug("shooter/lanes/left/ready", leftReady);
+            panels.debug("shooter/lanes/left/phase", leftPhase);
+            panels.debug("shooter/lanes/center/targetRpm", centerTargetRpm);
+            panels.debug("shooter/lanes/center/currentRpm", centerCurrentRpm);
+            panels.debug("shooter/lanes/center/power", centerPower);
+            panels.debug("shooter/lanes/center/ready", centerReady);
+            panels.debug("shooter/lanes/center/phase", centerPhase);
+            panels.debug("shooter/lanes/right/targetRpm", rightTargetRpm);
+            panels.debug("shooter/lanes/right/currentRpm", rightCurrentRpm);
+            panels.debug("shooter/lanes/right/power", rightPower);
+            panels.debug("shooter/lanes/right/ready", rightReady);
+            panels.debug("shooter/lanes/right/phase", rightPhase);
         }
 
         if (logger != null) {

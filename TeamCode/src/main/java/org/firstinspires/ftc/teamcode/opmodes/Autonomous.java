@@ -84,7 +84,6 @@ public class Autonomous extends OpMode {
     @Override
     public void init() {
         BindingManager.reset();
-        PanelsConfigurables.INSTANCE.refreshClass(AutoMotionConfig.class);
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
