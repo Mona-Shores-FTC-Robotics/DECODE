@@ -1,9 +1,9 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
-import com.bylazar.configurables.PanelsConfigurables;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
@@ -35,16 +35,15 @@ import java.util.Optional;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.ftc.GamepadEx;
 
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Autonomous 2", group = "Autonomous")
-public class AutonomousRedo extends OpMode {
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Autonomous", group = "Autonomous")
+public class AutonomousBrady extends OpMode {
 
-    private static final int AUTO_BURST_RINGS = 1;
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
 
     @Configurable
     public static class AutoMotionConfig {
-        public static double maxPathPower = 1.0;
+        public static double maxPathPower = .6;
         public static double placeholderShotDelaySec = 1.0;
     }
 
@@ -66,10 +65,13 @@ public class AutonomousRedo extends OpMode {
     private VisionSubsystemLimelight.TagSnapshot lastTagSnapshot;
     private Alliance activeAlliance = Alliance.BLUE;
 
-    private PathChain pathToScore;
-    private PathChain scoreToPickup;
-    private PathChain pickupToStackEnd;
-    private PathChain stackToScore;
+    private PathChain startFarToLaunchFar;
+    private PathChain launchFarToAllianceWallArtifactsPickup;
+    private PathChain allianceWallArtifactsPickupToLaunchFar;
+    private PathChain launchFarToParkingArtifactsPickup;
+    private PathChain parkingArtifactsPickupToLaunchFar;
+    private PathChain launchFarToGateFarArtifactsPickup;
+    private PathChain gateFarArtifactsPickupToLaunchFar;
 
     private String pathToScoreSummary;
     private String scoreToPickupSummary;
@@ -108,12 +110,13 @@ public class AutonomousRedo extends OpMode {
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
         applyDecodePattern(decodeController.current()); // default to alliance colour until a pattern is chosen
+
+
     }
 
     @Override
     public void init_loop() {
         BindingManager.update();
-        robot.drive.updateFollower();
 
         // Blend camera detections with any driver override and apply the combined alliance immediately.
         Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt =
@@ -125,7 +128,7 @@ public class AutonomousRedo extends OpMode {
         Pose snapshotPosePedro = lastTagSnapshot == null ? null : lastTagSnapshot.getRobotPose().orElse(null);
         Pose snapshotPoseFtc = lastTagSnapshot == null ? null : lastTagSnapshot.getFtcPose().orElse(null);
         lastDetectedStartPosePedro = snapshotPosePedro == null ? null : copyPedroPose(snapshotPosePedro);
-        lastDetectedStartPoseFtc = snapshotPoseFtc == null  ? null : copyFtcPose(snapshotPoseFtc);
+        lastDetectedStartPoseFtc = snapshotPoseFtc == null ? null : copyFtcPose(snapshotPoseFtc);
 
         Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
         if (selectedAlliance != activeAlliance) {
@@ -135,9 +138,9 @@ public class AutonomousRedo extends OpMode {
 
         publishInitTelemetry(selectedAlliance);
 
-        robot.logger.logNumber("AutonomousDHS", "RoutineStep", routineStep.ordinal());
-        robot.logger.logString("AutonomousDHS", "RoutineStepName", routineStep.name());
-        robot.logger.logNumber("AutonomousDHS", "RuntimeSec", getRuntime());
+        robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
+        robot.logger.logString("Autonomous", "RoutineStepName", routineStep.name());
+        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
         robot.logger.sampleSources();
         robot.telemetry.updateDriverStation(telemetry);
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
@@ -180,18 +183,22 @@ public class AutonomousRedo extends OpMode {
             shooter.requestSpinUp();
         }
 
-        transitionTo(RoutineStep.DRIVE_TO_PRELOAD_SCORE);
+        transitionTo(RoutineStep.DRIVE_FROM_START_FAR_TO_LAUNCH_FAR);
     }
 
     @Override
     public void loop() {
         BindingManager.update();
         robot.drive.updateFollower();
-
+        updateShootingRoutine();
         autonomousStep();
+
+
         robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
         robot.logger.logString("Autonomous", "RoutineStepName", routineStep.name());
+        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
         robot.logger.sampleSources();
+        robot.telemetry.updateDriverStation(telemetry);
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
@@ -205,9 +212,8 @@ public class AutonomousRedo extends OpMode {
                 robot.logger,
                 "Autonomous",
                 false,
-                null);
-
-
+                null
+        );
     }
 
     @Override
@@ -232,13 +238,37 @@ public class AutonomousRedo extends OpMode {
 
     private void autonomousStep() {
         switch (routineStep) {
-            case DRIVE_TO_PRELOAD_SCORE:
-                startPath(pathToScore, RoutineStep.DRIVE_TO_PICKUP);
+            case DRIVE_FROM_START_FAR_TO_LAUNCH_FAR:
+                startPath(startFarToLaunchFar, RoutineStep.DRIVE_FROM_LAUNCH_FAR_TO_ALLIANCE_WALL_ARTIFACTS);
                 break;
-//
-            case DRIVE_TO_PICKUP:
+            case DRIVE_FROM_LAUNCH_FAR_TO_ALLIANCE_WALL_ARTIFACTS:
                 if (!robot.drive.isFollowerBusy()) {
-                    startPath(scoreToPickup, RoutineStep.FINISHED);
+                    startPath(launchFarToAllianceWallArtifactsPickup, RoutineStep.DRIVE_FROM_ALLIANCE_WALL_ARTIFACTS_TO_LAUNCH_FAR);
+                }
+                break;
+            case DRIVE_FROM_ALLIANCE_WALL_ARTIFACTS_TO_LAUNCH_FAR:
+                if (!robot.drive.isFollowerBusy()) {
+                    startPath(allianceWallArtifactsPickupToLaunchFar, RoutineStep.DRIVE_FROM_LAUNCH_FAR_TO_PARK_ARTIFACTS);
+                }
+                break;
+            case DRIVE_FROM_LAUNCH_FAR_TO_PARK_ARTIFACTS:
+                if (!robot.drive.isFollowerBusy()) {
+                    startPath(launchFarToParkingArtifactsPickup, RoutineStep.DRIVE_FROM_PARK_ARTIFACTS_TO_LAUNCH_FAR);
+                }
+                break;
+            case DRIVE_FROM_PARK_ARTIFACTS_TO_LAUNCH_FAR:
+                if (!robot.drive.isFollowerBusy()) {
+                    startPath(parkingArtifactsPickupToLaunchFar, RoutineStep.DRIVE_FROM_LAUNCH_FAR_TO_GATE_ARTIFACTS_FAR);
+                }
+                break;
+            case DRIVE_FROM_LAUNCH_FAR_TO_GATE_ARTIFACTS_FAR:
+                if (!robot.drive.isFollowerBusy()) {
+                    startPath(launchFarToGateFarArtifactsPickup, RoutineStep.DRIVE_FROM_GATE_ARTIFACTS_FAR_TO_LAUNCH_FAR);
+                }
+                break;
+            case DRIVE_FROM_GATE_ARTIFACTS_FAR_TO_LAUNCH_FAR:
+                if (!robot.drive.isFollowerBusy()) {
+                    startPath(gateFarArtifactsPickupToLaunchFar, RoutineStep.FINISHED);
                 }
                 break;
             case NOT_STARTED:
@@ -255,8 +285,8 @@ public class AutonomousRedo extends OpMode {
         } else if (lastTagSnapshot != null && lastTagSnapshot.getAlliance() == alliance && lastDetectedStartPosePedro != null) {
             layout.overrideStart(lastDetectedStartPosePedro);
         }
-        PathChain[] chains = createPreviewPathChains(layout);
-        PanelsBridge.drawPreview(chains, layout.pose(FieldPoint.START), alliance == Alliance.RED);
+        PathChain[] chains = createPreviewPathChains(layout, alliance);
+        PanelsBridge.drawPreview(chains, layout.pose(FieldPoint.START_FAR), alliance == Alliance.RED);
     }
 
     private boolean shouldUpdateStartPose(Pose candidate) {
@@ -276,33 +306,20 @@ public class AutonomousRedo extends OpMode {
         return distance > POSE_POSITION_TOLERANCE || headingError > POSE_HEADING_TOLERANCE;
     }
 
-    private PathChain[] createPreviewPathChains(FieldLayout layout) {
-        Pose start = layout.pose(FieldPoint.START);
-        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
-        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
-        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
-
-        PathChain previewToScore = follower.pathBuilder()
-                .addPath(new BezierLine(start, launch))
-                .setLinearHeadingInterpolation(start.getHeading(), launch.getHeading())
-                .build();
-
-        PathChain previewScoreToPickup = follower.pathBuilder()
-                .addPath(new BezierLine(launch, setup))
-                .setTangentHeadingInterpolation()
-                .build();
-
-        PathChain previewPickupToStack = follower.pathBuilder()
-                .addPath(new BezierLine(setup, parking))
-                .setTangentHeadingInterpolation()
-                .build();
-
-        PathChain previewStackToScore = follower.pathBuilder()
-                .addPath(new BezierLine(parking, launch))
-                .setLinearHeadingInterpolation(parking.getHeading(), launch.getHeading())
-                .build();
-
-        return new PathChain[]{previewToScore, previewScoreToPickup, previewPickupToStack, previewStackToScore};
+    private PathChain[] createPreviewPathChains(FieldLayout layout, Alliance alliance) {
+        LayoutPaths previewPaths = buildPathChainsForLayout(layout, alliance);
+        if (previewPaths == null) {
+            return new PathChain[0];
+        }
+        return new PathChain[]{
+                previewPaths.startFarToLaunchFar,
+                previewPaths.launchFarToAllianceWallArtifactsPickup,
+                previewPaths.allianceWallArtifactsPickupToLaunchFar,
+                previewPaths.launchFarToParkingArtifactsPickup,
+                previewPaths.parkingArtifactsPickupToLaunchFar,
+                previewPaths.launchFarToGateFarArtifactsPickup,
+                previewPaths.gateFarArtifactsPickupToLaunchFar
+        };
     }
 
     private void applyAlliance(Alliance alliance) {
@@ -323,12 +340,12 @@ public class AutonomousRedo extends OpMode {
         if (startOverride != null) {
             currentLayout.overrideStart(startOverride);
         }
-        Pose startPose = currentLayout.pose(FieldPoint.START);
+        Pose startPose = currentLayout.pose(FieldPoint.START_FAR);
         follower.setStartingPose(startPose);
         follower.setPose(startPose);
         buildPaths(currentLayout);
-        cachePathSummaries(currentLayout);
-        publishLayoutTelemetry(currentLayout);
+//        cachePathSummaries(currentLayout);
+//        publishLayoutTelemetry(currentLayout);
         lastAppliedStartPosePedro = copyPedroPose(startPose);
         if (lastDetectedStartPosePedro == null) {
             lastDetectedStartPosePedro = copyPedroPose(startPose);
@@ -366,7 +383,7 @@ public class AutonomousRedo extends OpMode {
                 formatDouble(allianceSelector.getDetectedRange()),
                 formatDouble(allianceSelector.getDetectedYaw())));
 
-        Pose layoutStartPedro = currentLayout == null ? null : currentLayout.pose(FieldPoint.START);
+        Pose layoutStartPedro = currentLayout == null ? null : currentLayout.pose(FieldPoint.START_FAR);
         telemetry.addLine(String.format(Locale.US,
                 "Layout start (Pedro): %s",
                 formatPosePedro(layoutStartPedro)));
@@ -419,54 +436,112 @@ public class AutonomousRedo extends OpMode {
         }
     }
 
-    private void cachePathSummaries(FieldLayout layout) {
-        Pose start = layout.pose(FieldPoint.START);
-        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
-        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
-        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
+//    private void cachePathSummaries(FieldLayout layout) {
+//        Pose start = layout.pose(FieldPoint.START);
+//        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
+//        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+//        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
+//
+//        pathToScoreSummary = formatSegment("Start→Launch", start, launch);
+//        scoreToPickupSummary = formatSegment("Launch→Setup", launch, setup);
+//        pickupToStackEndSummary = formatSegment("Setup→Parking", setup, parking);
+//        stackToScoreSummary = formatSegment("Parking→Launch", parking, launch);
+//    }
 
-        pathToScoreSummary = formatSegment("Start→Launch", start, launch);
-        scoreToPickupSummary = formatSegment("Launch→Setup", launch, setup);
-        pickupToStackEndSummary = formatSegment("Setup→Parking", setup, parking);
-        stackToScoreSummary = formatSegment("Parking→Launch", parking, launch);
-    }
-
-    private void publishLayoutTelemetry(FieldLayout layout) {
-        if (panelsTelemetry == null) {
-            return;
-        }
-        Pose start = layout.pose(FieldPoint.START);
-        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
-        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
-        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
-
-        panelsTelemetry.debug("Start pose", formatPosePedro(start));
-        panelsTelemetry.debug("Launch pose", formatPosePedro(launch));
-        panelsTelemetry.debug("Setup pose", formatPosePedro(setup));
-        panelsTelemetry.debug("Parking pose", formatPosePedro(parking));
-        panelsTelemetry.debug("Path Start→Launch", pathToScoreSummary);
-        panelsTelemetry.debug("Path Launch→Setup", scoreToPickupSummary);
-        panelsTelemetry.debug("Path Setup→Parking", pickupToStackEndSummary);
-        panelsTelemetry.debug("Path Parking→Launch", stackToScoreSummary);
-    }
+//    private void publishLayoutTelemetry(FieldLayout layout) {
+//        if (panelsTelemetry == null) {
+//            return;
+//        }
+//        Pose start = layout.pose(FieldPoint.START);
+//        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
+//        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+//        Pose parking = layout.pose(FieldPoint.PARKING_ARTIFACTS);
+//
+//        panelsTelemetry.debug("Start pose", formatPosePedro(start));
+//        panelsTelemetry.debug("Launch pose", formatPosePedro(launch));
+//        panelsTelemetry.debug("Setup pose", formatPosePedro(setup));
+//        panelsTelemetry.debug("Parking pose", formatPosePedro(parking));
+//        panelsTelemetry.debug("Path Start→Launch", pathToScoreSummary);
+//        panelsTelemetry.debug("Path Launch→Setup", scoreToPickupSummary);
+//        panelsTelemetry.debug("Path Setup→Parking", pickupToStackEndSummary);
+//        panelsTelemetry.debug("Path Parking→Launch", stackToScoreSummary);
+//    }
 
     private void buildPaths(FieldLayout layout) {
-        Pose start = layout.pose(FieldPoint.START);
-        Pose launch = layout.pose(FieldPoint.LAUNCH_FAR);
-        Pose setup = layout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+        LayoutPaths paths = buildPathChainsForLayout(layout, activeAlliance);
+        if (paths == null) {
+            return;
+        }
+        startFarToLaunchFar = paths.startFarToLaunchFar;
+        launchFarToAllianceWallArtifactsPickup = paths.launchFarToAllianceWallArtifactsPickup;
+        allianceWallArtifactsPickupToLaunchFar = paths.allianceWallArtifactsPickupToLaunchFar;
+        launchFarToParkingArtifactsPickup = paths.launchFarToParkingArtifactsPickup;
+        parkingArtifactsPickupToLaunchFar = paths.parkingArtifactsPickupToLaunchFar;
+        launchFarToGateFarArtifactsPickup = paths.launchFarToGateFarArtifactsPickup;
+        gateFarArtifactsPickupToLaunchFar = paths.gateFarArtifactsPickupToLaunchFar;
+    }
 
-        pathToScore = follower.pathBuilder()
-                .addPath(new BezierLine(start, launch))
-                .setLinearHeadingInterpolation(start.getHeading(), launch.getHeading())
+    private LayoutPaths buildPathChainsForLayout(FieldLayout layout, Alliance alliance) {
+        if (layout == null || follower == null) {
+            return null;
+        }
+        Pose startFarPose = layout.pose(FieldPoint.START_FAR);
+        Pose launchFarPose = layout.pose(FieldPoint.LAUNCH_FAR);
+        Pose allianceWallArtifactsPickupPose = layout.pose(FieldPoint.ALLIANCE_WALL_ARTIFACTS_PICKUP);
+        Pose parkingArtifactsPickupPose = layout.pose(FieldPoint.PARKING_ARTIFACTS_PICKUP);
+        Pose gateFarArtifactsPickupPose = layout.pose(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP);
+        Pose parkingControlPoint = AutoField.parkingArtifactsControlPoint(alliance);
+        Pose gateFarControlPoint = AutoField.gateFarArtifactsControlPoint(alliance);
+
+
+        LayoutPaths paths = new LayoutPaths();
+        paths.startFarToLaunchFar = follower.pathBuilder()
+                .addPath(new BezierLine(startFarPose, launchFarPose))
+                .setLinearHeadingInterpolation(startFarPose.getHeading(), launchFarPose.getHeading())
                 .build();
 
-        scoreToPickup = follower.pathBuilder()
-                .addPath(new BezierLine(launch, setup))
-                .setLinearHeadingInterpolation(launch.getHeading(), setup.getHeading())
-
+        paths.launchFarToAllianceWallArtifactsPickup = follower.pathBuilder()
+                .addPath(new BezierLine(launchFarPose, allianceWallArtifactsPickupPose))
+                .setLinearHeadingInterpolation(launchFarPose.getHeading(), allianceWallArtifactsPickupPose.getHeading(), .7)
                 .build();
 
-       }
+        paths.allianceWallArtifactsPickupToLaunchFar = follower.pathBuilder()
+                .addPath(new BezierLine(allianceWallArtifactsPickupPose, launchFarPose))
+                .setLinearHeadingInterpolation(allianceWallArtifactsPickupPose.getHeading(), launchFarPose.getHeading(),.7)
+                .build();
+
+        paths.launchFarToParkingArtifactsPickup = follower.pathBuilder()
+                .addPath(new BezierCurve(launchFarPose, parkingControlPoint, parkingArtifactsPickupPose))
+                .setLinearHeadingInterpolation(launchFarPose.getHeading(), parkingArtifactsPickupPose.getHeading(), .7)
+                .build();
+
+        paths.parkingArtifactsPickupToLaunchFar = follower.pathBuilder()
+                .addPath(new BezierLine(parkingArtifactsPickupPose, launchFarPose))
+                .setLinearHeadingInterpolation(parkingArtifactsPickupPose.getHeading(), launchFarPose.getHeading(), .7)
+                .build();
+
+        paths.launchFarToGateFarArtifactsPickup = follower.pathBuilder()
+                .addPath(new BezierCurve(launchFarPose,gateFarControlPoint, gateFarArtifactsPickupPose))
+                .setLinearHeadingInterpolation(launchFarPose.getHeading(), gateFarArtifactsPickupPose.getHeading(), .7)
+                .build();
+
+        paths.gateFarArtifactsPickupToLaunchFar = follower.pathBuilder()
+                .addPath(new BezierLine(gateFarArtifactsPickupPose, launchFarPose))
+                .setLinearHeadingInterpolation(gateFarArtifactsPickupPose.getHeading(), launchFarPose.getHeading(), .7)
+                .build();
+
+        return paths;
+    }
+
+    private static final class LayoutPaths {
+        PathChain startFarToLaunchFar;
+        PathChain launchFarToAllianceWallArtifactsPickup;
+        PathChain allianceWallArtifactsPickupToLaunchFar;
+        PathChain launchFarToParkingArtifactsPickup;
+        PathChain parkingArtifactsPickupToLaunchFar;
+        PathChain launchFarToGateFarArtifactsPickup;
+        PathChain gateFarArtifactsPickupToLaunchFar;
+    }
 
     private void transitionTo(RoutineStep nextStep) {
         routineStep = nextStep;
@@ -610,37 +685,34 @@ public class AutonomousRedo extends OpMode {
         return String.format(Locale.US, "(%.2f, %.2f, %.1f°)", x, y, yaw);
     }
 
-    private void pushFieldPointPanels() {
-        if (panelsTelemetry == null || currentLayout == null) {
-            return;
-        }
-        Pose start = currentLayout.pose(FieldPoint.START);
-        Pose launch = currentLayout.pose(FieldPoint.LAUNCH_FAR);
-        Pose setup = currentLayout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
-        Pose parking = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS);
-
-        panelsTelemetry.debug("Start pose", formatPosePedro(start));
-        panelsTelemetry.debug("Launch pose", formatPosePedro(launch));
-        panelsTelemetry.debug("Setup pose", formatPosePedro(setup));
-        panelsTelemetry.debug("Parking pose", formatPosePedro(parking));
-        panelsTelemetry.debug("Path Start→Launch", pathToScoreSummary);
-        panelsTelemetry.debug("Path Launch→Setup", scoreToPickupSummary);
-        panelsTelemetry.debug("Path Setup→Parking", pickupToStackEndSummary);
-        panelsTelemetry.debug("Path Parking→Launch", stackToScoreSummary);
-    }
+//    private void pushFieldPointPanels() {
+//        if (panelsTelemetry == null || currentLayout == null) {
+//            return;
+//        }
+//        Pose start = currentLayout.pose(FieldPoint.START);
+//        Pose launch = currentLayout.pose(FieldPoint.LAUNCH_FAR);
+//        Pose setup = currentLayout.pose(FieldPoint.SETUP_PARKING_ARTIFACTS);
+//        Pose parking = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS);
+//
+//        panelsTelemetry.debug("Start pose", formatPosePedro(start));
+//        panelsTelemetry.debug("Launch pose", formatPosePedro(launch));
+//        panelsTelemetry.debug("Setup pose", formatPosePedro(setup));
+//        panelsTelemetry.debug("Parking pose", formatPosePedro(parking));
+//        panelsTelemetry.debug("Path Start→Launch", pathToScoreSummary);
+//        panelsTelemetry.debug("Path Launch→Setup", scoreToPickupSummary);
+//        panelsTelemetry.debug("Path Setup→Parking", pickupToStackEndSummary);
+//        panelsTelemetry.debug("Path Parking→Launch", stackToScoreSummary);
+//    }
 
     private enum RoutineStep {
         NOT_STARTED("Not started"),
-        DRIVE_TO_PRELOAD_SCORE("Drive to preload score"),
-        WAIT_FOR_PRELOAD_SCORE_PATH("Wait for preload score path"),
-        WAIT_FOR_PRELOAD_SHOT("Wait for preload shot"),
-        DRIVE_TO_PICKUP("Drive to pickup"),
-        WAIT_FOR_PICKUP_PATH("Wait for pickup path"),
-        DRIVE_THROUGH_STACK("Drive through stack"),
-        WAIT_FOR_STACK_PATH("Wait for stack path"),
-        DRIVE_BACK_TO_SCORE("Drive back to score"),
-        WAIT_FOR_RETURN_TO_SCORE("Wait for return to score path"),
-        WAIT_FOR_FINAL_SHOT("Wait for final shot"),
+        DRIVE_FROM_START_FAR_TO_LAUNCH_FAR("Drive to preload score"),
+        DRIVE_FROM_LAUNCH_FAR_TO_ALLIANCE_WALL_ARTIFACTS("Drive to alliance wall artifacts"),
+        DRIVE_FROM_ALLIANCE_WALL_ARTIFACTS_TO_LAUNCH_FAR("Drive to far score"),
+        DRIVE_FROM_LAUNCH_FAR_TO_PARK_ARTIFACTS("Drive to park artifacts"),
+        DRIVE_FROM_PARK_ARTIFACTS_TO_LAUNCH_FAR("Drive to far score"),
+        DRIVE_FROM_LAUNCH_FAR_TO_GATE_ARTIFACTS_FAR("Drive to far gate artifacts"),
+        DRIVE_FROM_GATE_ARTIFACTS_FAR_TO_LAUNCH_FAR("Drive to far score"),
         FINISHED("Finished");
 
         private final String displayName;

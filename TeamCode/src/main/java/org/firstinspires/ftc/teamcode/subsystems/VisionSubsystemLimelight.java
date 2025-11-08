@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.pedropathing.geometry.Pose;
-import org.firstinspires.ftc.teamcode.opmodes.Autonomous;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
