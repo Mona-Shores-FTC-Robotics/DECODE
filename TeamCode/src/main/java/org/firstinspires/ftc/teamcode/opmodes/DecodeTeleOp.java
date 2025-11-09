@@ -123,9 +123,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onStop() {
-        if (operatorBindings != null) {
-            operatorBindings.reset();
-        }
         BindingManager.reset();
         robot.drive.stop();
         robot.launcher.abort();

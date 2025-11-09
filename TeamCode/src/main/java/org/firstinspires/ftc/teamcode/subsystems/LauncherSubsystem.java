@@ -17,6 +17,7 @@ import org.firstinspires.ftc.teamcode.util.RobotMode;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.EnumMap;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -29,7 +30,7 @@ public class LauncherSubsystem implements Subsystem {
 
     public enum SpinMode {
         OFF,
-        HOLD,
+        IDLE,
         FULL
     }
 
@@ -46,7 +47,7 @@ public class LauncherSubsystem implements Subsystem {
 
     public enum LauncherState {
         DISABLED,
-        HOLDING,
+        IDLE,
         SPINNING_UP,
         READY,
         FEEDING,
@@ -66,11 +67,11 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class Timing {
         /** Minimum time the wheel should be commanded at launch speed before trusting fallback readiness. */
-        public static double minimalSpinUpMs = 250.0;
+        public static double minimalSpinUpMs = 500;
         /** If encoders are unavailable, treat the wheel as ready after this many milliseconds at full power. */
-        public static double fallbackReadyMs = 600.0;
+        public static double fallbackReadyMs = 3000;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-        public static double recoveryMs = 150.0;
+        public static double recoveryMs = 1000;
         /** Delay between sequential shots when bursting all three lanes (ms). */
         public static double burstSpacingMs = 120.0;
     }
@@ -101,7 +102,7 @@ public class LauncherSubsystem implements Subsystem {
 
     @Configurable
     public static class FlywheelModeConfig {
-        public static int modeIndex = FlywheelControlMode.BANG_BANG_HOLD.ordinal();
+        public static FlywheelControlMode mode = FlywheelControlMode.BANG_BANG_HOLD;
     }
 
     @Configurable
@@ -116,7 +117,7 @@ public class LauncherSubsystem implements Subsystem {
     public static class LeftFlywheelConfig {
         public static String motorName = "launcher_left";
         public static boolean reversed = true;
-        public static double launchRpm = 4200.0;
+        public static double launchRpm = 0;
         public static double idleRpm = 0;
     }
 
@@ -124,7 +125,7 @@ public class LauncherSubsystem implements Subsystem {
     public static class CenterFlywheelConfig {
         public static String motorName = "launcher_center";
         public static boolean reversed = false;
-        public static double launchRpm = 4200.0;
+        public static double launchRpm = 0;
         public static double idleRpm = 0;
     }
 
@@ -163,9 +164,6 @@ public class LauncherSubsystem implements Subsystem {
         public static double holdMs = 140.0;
     }
 
-    private static final LauncherLane[] DEFAULT_BURST_ORDER = {LauncherLane.LEFT, LauncherLane.CENTER, LauncherLane.RIGHT};
-    private static final LauncherLane DEFAULT_AUTON_LANE = LauncherLane.CENTER;
-
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Double> laneRecoveryDeadlineMs = new EnumMap<>(LauncherLane.class);
@@ -177,30 +175,13 @@ public class LauncherSubsystem implements Subsystem {
 
     private SpinMode requestedSpinMode = SpinMode.OFF;
     private LauncherState state = LauncherState.DISABLED;
-    private ShotRequest activeShot;
-    private double lastShotCompletionMs = 0.0;
     private double lastPeriodicMs = 0.0;
-    private RobotMode robotMode = RobotMode.DEBUG;
 
     public static FlywheelControlMode getFlywheelControlMode() {
-        FlywheelControlMode[] modes = FlywheelControlMode.values();
-        int index = FlywheelModeConfig.modeIndex;
-        if (index < 0) {
-            index = 0;
-        } else if (index >= modes.length) {
-            index = modes.length - 1;
-        }
-        return modes[index];
+        return FlywheelModeConfig.mode;
     }
 
-    public static void setFlywheelControlMode(FlywheelControlMode mode) {
-        if (mode == null) {
-            return;
-        }
-        FlywheelModeConfig.modeIndex = mode.ordinal();
-    }
-
-    public String getPhaseName(LauncherLane lane) {
+     public String getPhaseName(LauncherLane lane) {
         Flywheel flywheel = flywheels.get(lane);
         return flywheel == null ? "UNKNOWN" : flywheel.getPhaseName();
     }
@@ -260,8 +241,6 @@ public class LauncherSubsystem implements Subsystem {
         clock.reset();
         stateTimer.reset();
         shotQueue.clear();
-        activeShot = null;
-        lastShotCompletionMs = 0.0;
         requestedSpinMode = SpinMode.OFF;
 
         for (Map.Entry<LauncherLane, Flywheel> entry : flywheels.entrySet()) {
@@ -289,19 +268,8 @@ public class LauncherSubsystem implements Subsystem {
             flywheel.updateControl();
         }
         updateStateMachine(now, effectiveSpinMode);
+        updateLaneRecovery(now);
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
-    }
-
-    public void setRobotMode(RobotMode mode) {
-        robotMode = RobotMode.orDefault(mode);
-    }
-
-    public void toggleSpinUp() {
-        if (requestedSpinMode == SpinMode.FULL) {
-            setSpinMode(SpinMode.OFF);
-        } else {
-            setSpinMode(SpinMode.FULL);
-        }
     }
 
     public void setSpinMode(SpinMode mode) {
@@ -314,7 +282,7 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     public void requestStandbySpin() {
-        setSpinMode(SpinMode.HOLD);
+        setSpinMode(SpinMode.IDLE);
     }
 
     public boolean atTarget() {
@@ -327,11 +295,20 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     public boolean isBusy() {
-        return activeShot != null
-                || !shotQueue.isEmpty()
-                || state == LauncherState.SPINNING_UP
-                || state == LauncherState.FEEDING
-                || state == LauncherState.RECOVERING;
+        if (!shotQueue.isEmpty()) {
+            return true;
+        }
+        double now = clock.milliseconds();
+        for (LauncherLane lane : LauncherLane.values()) {
+            if (now < laneRecoveryDeadlineMs.getOrDefault(lane, 0.0)) {
+                return true;
+            }
+            Feeder feeder = feeders.get(lane);
+            if (feeder != null && feeder.isBusy()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public LauncherState getState() {
@@ -343,7 +320,7 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     public int getQueuedShots() {
-        return shotQueue.size() + (activeShot != null ? 1 : 0);
+        return shotQueue.size();
     }
 
     public double getLastPeriodicMs() {
@@ -359,33 +336,31 @@ public class LauncherSubsystem implements Subsystem {
         inputs.effectiveSpinMode = computeEffectiveSpinMode();
         inputs.controlMode = getFlywheelControlMode().name();
         inputs.busy = isBusy();
+        double now = clock.milliseconds();
+        ShotRequest pendingShot = shotQueue.peekFirst();
+        if (pendingShot == null) {
+            inputs.activeShotLane = "NONE";
+            inputs.activeShotAgeMs = 0.0;
+        } else {
+            inputs.activeShotLane = pendingShot.lane.name();
+            inputs.activeShotAgeMs = Math.max(0.0, now - pendingShot.scheduledTimeMs);
+        }
+        double lastCompletionMs = 0.0;
+        for (LauncherLane lane : LauncherLane.values()) {
+            double deadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
+            if (deadline > 0.0) {
+                lastCompletionMs = Math.max(lastCompletionMs, deadline - Timing.recoveryMs);
+            }
+        }
+        inputs.lastShotCompletionMs = lastCompletionMs;
         inputs.queuedShots = getQueuedShots();
         inputs.stateElapsedSec = getStateElapsedSeconds();
-        inputs.activeShotLane = activeShot == null ? "NONE" : activeShot.lane.name();
-        inputs.activeShotAgeMs = activeShot == null ? 0.0 : Math.max(0.0, clock.milliseconds() - activeShot.scheduledTimeMs);
-        inputs.lastShotCompletionMs = lastShotCompletionMs;
         inputs.averageTargetRpm = getTargetRpm();
         inputs.averageCurrentRpm = getCurrentRpm();
         inputs.averagePower = getLastPower();
         populateLane(inputs, LauncherLane.LEFT);
         populateLane(inputs, LauncherLane.CENTER);
         populateLane(inputs, LauncherLane.RIGHT);
-    }
-
-    public void launchLeft() {
-        queueShot(LauncherLane.LEFT);
-    }
-
-    public void launchMiddle() {
-        queueShot(LauncherLane.CENTER);
-    }
-
-    public void launchRight() {
-        queueShot(LauncherLane.RIGHT);
-    }
-
-    public void launchAll() {
-        queueBurstAll();
     }
 
     public void queueShot(LauncherLane lane) {
@@ -404,33 +379,21 @@ public class LauncherSubsystem implements Subsystem {
 
     public void queueBurstAll() {
         double delayMs = 0.0;
-        for (LauncherLane lane : DEFAULT_BURST_ORDER) {
+        for (LauncherLane lane : LauncherLane.DEFAULT_BURST_ORDER) {
             scheduleShot(lane, delayMs);
-            delayMs += Timing.burstSpacingMs;
-        }
-    }
-
-    public void requestBurst(int count) {
-        if (count <= 0) {
-            return;
-        }
-        double delayMs = 0.0;
-        for (int i = 0; i < count; i++) {
-            scheduleShot(DEFAULT_AUTON_LANE, delayMs);
             delayMs += Timing.burstSpacingMs;
         }
     }
 
     public void clearQueue() {
         shotQueue.clear();
-        activeShot = null;
     }
 
     public void abort() {
         clearQueue();
-        lastShotCompletionMs = clock.milliseconds();
+        double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
-            laneRecoveryDeadlineMs.put(lane, lastShotCompletionMs);
+            laneRecoveryDeadlineMs.put(lane, now + Timing.recoveryMs);
             feeders.get(lane).stop();
             flywheels.get(lane).stop();
         }
@@ -557,7 +520,6 @@ public class LauncherSubsystem implements Subsystem {
             return;
         }
         shotQueue.clear();
-        activeShot = null;
         requestedSpinMode = SpinMode.OFF;
         flywheel.commandCustom(rpm);
     }
@@ -585,53 +547,52 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     private void updateStateMachine(double now, SpinMode effectiveSpinMode) {
-        if (activeShot != null) {
-            Feeder feeder = feeders.get(activeShot.lane);
-            if (feeder != null && feeder.isBusy()) {
-                setState(LauncherState.FEEDING);
-                return;
-            }
-            laneRecoveryDeadlineMs.put(activeShot.lane, now + Timing.recoveryMs);
-            lastShotCompletionMs = now;
-            activeShot = null;
-        }
-
+        // Allow per-lane independent firing
         if (!shotQueue.isEmpty()) {
-            ShotRequest next = shotQueue.peekFirst();
-            if (now < next.scheduledTimeMs) {
-                reflectSpinState(effectiveSpinMode);
-                return;
-            }
-            if (!isLaneReadyForShot(next.lane, now)) {
-                boolean recovering = now - lastShotCompletionMs < Timing.recoveryMs;
-                setState(recovering ? LauncherState.RECOVERING : LauncherState.SPINNING_UP);
-                return;
-            }
-            Feeder feeder = feeders.get(next.lane);
-            if (feeder != null) {
-                feeder.fire();
-            }
-            activeShot = shotQueue.removeFirst();
-            setState(LauncherState.FEEDING);
-            return;
-        }
+            Iterator<ShotRequest> iterator = shotQueue.iterator();
+            while (iterator.hasNext()) {
+                ShotRequest next = iterator.next();
 
-        boolean recovering = now - lastShotCompletionMs < Timing.recoveryMs;
-        if (recovering) {
-            setState(LauncherState.RECOVERING);
-            return;
+                if (now < next.scheduledTimeMs) {
+                    continue;
+                }
+                if (!isLaneReadyForShot(next.lane, now)) {
+                    continue;
+                }
+
+                Feeder feeder = feeders.get(next.lane);
+                if (feeder != null && !feeder.isBusy()) {
+                    feeder.fire();
+                    laneRecoveryDeadlineMs.put(next.lane, now + Timing.recoveryMs);
+                    iterator.remove();
+                }
+            }
         }
 
         reflectSpinState(effectiveSpinMode);
     }
+
+    private void updateLaneRecovery(double now) {
+        for (LauncherLane lane : LauncherLane.values()) {
+            double deadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
+            if (deadline > 0.0 && now >= deadline) {
+                Flywheel flywheel = flywheels.get(lane);
+                if (flywheel != null) {
+                    flywheel.commandIdle();
+                }
+                laneRecoveryDeadlineMs.put(lane, 0.0);
+            }
+        }
+    }
+
 
     private void reflectSpinState(SpinMode effectiveSpinMode) {
         switch (effectiveSpinMode) {
             case FULL:
                 setState(atTarget() ? LauncherState.READY : LauncherState.SPINNING_UP);
                 break;
-            case HOLD:
-                setState(LauncherState.HOLDING);
+            case IDLE:
+                setState(LauncherState.IDLE);
                 break;
             case OFF:
             default:
@@ -657,16 +618,24 @@ public class LauncherSubsystem implements Subsystem {
         if (debugOverrideEnabled) {
             return;
         }
+
+        double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel == null) {
                 continue;
             }
+
+            // Skip lanes that are currently in recovery
+            if (now < laneRecoveryDeadlineMs.getOrDefault(lane, 0.0)) {
+                continue;
+            }
+
             switch (mode) {
                 case FULL:
                     flywheel.commandLaunch();
                     break;
-                case HOLD:
+                case IDLE:
                     flywheel.commandIdle();
                     break;
                 case OFF:
@@ -678,7 +647,7 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     private SpinMode computeEffectiveSpinMode() {
-        if (activeShot != null || !shotQueue.isEmpty()) {
+        if (!shotQueue.isEmpty()) {
             return SpinMode.FULL;
         }
         return requestedSpinMode;

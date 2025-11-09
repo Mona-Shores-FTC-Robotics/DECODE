@@ -53,18 +53,17 @@ public class OperatorBindings {
             launcherCoordinator.enableAutoSpin(false);
         }
         robot.launcher.setDebugOverrideEnabled(false);
-        robot.launcher.setSpinMode(LauncherSubsystem.SpinMode.HOLD);
+        robot.launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
         if (launcherCoordinator != null) {
             launcherCoordinator.clearIntakeOverride();
         }
         syncLightingWithIntake();
 
-        spinModeToggle.whenBecomesTrue(this::toggleSpinMode);
-
-        launchLeft.whenBecomesTrue(launcherCommands.launchLeft());
-        launchCenter.whenBecomesTrue(launcherCommands.launchCenter());
-        launchRight.whenBecomesTrue(launcherCommands.launchRight());
-        launchAll.whenBecomesTrue(launcherCommands.launchAll());
+        spinModeToggle.whenBecomesTrue(launcherCommands::toggleSpinMode);
+        launchLeft.whenBecomesTrue(launcherCommands::launchLeft);
+        launchCenter.whenBecomesTrue(launcherCommands::launchCenter);
+        launchRight.whenBecomesTrue(launcherCommands::launchRight);
+        launchAll.whenBecomesTrue(launcherCommands::launchAll);
 
         intakeForwardHold.whenBecomesTrue(this::requestForwardIntake);
         intakeForwardHold.whenBecomesFalse(this::releaseForwardIntake);
@@ -109,13 +108,5 @@ public class OperatorBindings {
             }
         }
     }
-
-    private void toggleSpinMode() {
-        fullSpinRequested = !fullSpinRequested;
-        robot.launcher.setSpinMode(fullSpinRequested
-                ? LauncherSubsystem.SpinMode.FULL
-                : LauncherSubsystem.SpinMode.HOLD);
-    }
-
 
 }

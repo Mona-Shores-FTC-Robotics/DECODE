@@ -9,7 +9,7 @@ public enum LauncherLane {
     CENTER,
     RIGHT;
 
-    public static final LauncherLane[] ALL = {LEFT, CENTER, RIGHT};
+    public static final LauncherLane[] DEFAULT_BURST_ORDER = {LEFT, CENTER, RIGHT};
 
     public static LauncherLane fromIndex(int index) {
         LauncherLane[] lanes = values();

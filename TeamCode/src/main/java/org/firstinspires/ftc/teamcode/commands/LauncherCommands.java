@@ -4,10 +4,13 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
+import dev.nextftc.core.commands.Command;
+
 /**
  * Convenience factory for launcher-related commands alongside immediate queue helpers used by
  * legacy binding paths.
  */
+@SuppressWarnings("UnusedReturnValue")
 public class LauncherCommands {
 
     public static final double DEFAULT_BURST_SPACING_MS = 150.0;
@@ -72,6 +75,25 @@ public class LauncherCommands {
 
     public void cancelAll() {
         launcher.clearQueue();
+    }
+
+    public Command toggleSpinMode() {
+        return new Command() {
+            private boolean targetFull;
+
+            @Override
+            public void start() {
+                targetFull = launcher.getRequestedSpinMode() != LauncherSubsystem.SpinMode.FULL;
+                launcher.setSpinMode(targetFull
+                        ? LauncherSubsystem.SpinMode.FULL
+                        : LauncherSubsystem.SpinMode.IDLE);
+            }
+
+            @Override
+            public boolean isDone() {
+                return true; // instantaneous toggle
+            }
+        };
     }
 
 }

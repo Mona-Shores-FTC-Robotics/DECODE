@@ -94,7 +94,6 @@ public class Robot {
 
     private void applyRobotMode(RobotMode mode) {
         drive.setRobotMode(mode);
-        launcher.setRobotMode(mode);
         intake.setRobotMode(mode);
         lighting.setRobotMode(mode);
         vision.setRobotMode(mode);

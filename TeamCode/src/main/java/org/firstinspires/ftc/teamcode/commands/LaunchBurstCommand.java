@@ -18,12 +18,12 @@ public class LaunchBurstCommand extends LauncherCommand {
 
     @Override
     protected boolean queueShots() {
-        if (LauncherLane.ALL.length == 0) {
+        if (LauncherLane.DEFAULT_BURST_ORDER.length == 0) {
             return false;
         }
         boolean queued = false;
         double delay = 0.0;
-        for (LauncherLane lane : LauncherLane.ALL) {
+        for (LauncherLane lane : LauncherLane.DEFAULT_BURST_ORDER) {
             if (lane == null) {
                 delay += spacingMs;
                 continue;
