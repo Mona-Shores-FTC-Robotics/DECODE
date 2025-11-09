@@ -2,10 +2,11 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -25,10 +26,12 @@ public class Robot {
     public final TelemetryService telemetry;
     public final RobotLogger logger;
 
+    public final LauncherCommands launcherCommands;
+
     private RobotMode robotMode = RobotMode.DEBUG;
 
     private final DriveSubsystem.Inputs driveInputs = new DriveSubsystem.Inputs();
-    private final LauncherSubsystem.Inputs launcherInputs = new LauncherSubsystem.Inputs();
+    private final LauncherSubsystem.Inputs shooterInputs = new LauncherSubsystem.Inputs();
     private final IntakeSubsystem.Inputs intakeInputs = new IntakeSubsystem.Inputs();
     private final LightingSubsystem.Inputs lightingInputs = new LightingSubsystem.Inputs();
     private final VisionSubsystemLimelight.Inputs visionInputs = new VisionSubsystemLimelight.Inputs();
@@ -45,7 +48,8 @@ public class Robot {
         launcher = new LauncherSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
-        launcherCoordinator = new LauncherCoordinator(launcher , intake, lighting);
+        launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
+        launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
         applyRobotMode(robotMode);
         registerLoggingSources();
     }
@@ -114,13 +118,13 @@ public class Robot {
         logger.registerSource(new RobotLogger.Source() {
             @Override
             public String subsystem() {
-                return "Launcher";
+                return "Shooter";
             }
 
             @Override
             public void collect(RobotLogger.Frame frame) {
-                launcher.populateInputs(launcherInputs);
-                logger.logInputs("Launcher", launcherInputs);
+                launcher.populateInputs(shooterInputs);
+                logger.logInputs("Shooter", shooterInputs);
             }
         });
         logger.registerSource(new RobotLogger.Source() {
