@@ -10,7 +10,7 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 
 /**
  * TelemetryPublisher centralises the construction of telemetry lines for FTControl Panels
- * (and optional PsiKit logging).  It publishes drive and shooter state values each loop so
+ * (and optional PsiKit logging).  It publishes drive and launcher state values each loop so
  * they can be graphed or inspected without keeping the FTC Dashboard dependency.
  */
 public class TelemetryPublisher {
@@ -106,27 +106,27 @@ public class TelemetryPublisher {
     }
 
     /**
-     * Publish shooter telemetry. Includes target RPM, measured RPM, error, and power.
+     * Publish launcher telemetry. Includes target RPM, measured RPM, error, and power.
      */
-    public void publishShooter(double targetRpm, double rpm, double power, double error) {
+    public void publishLauncher(double targetRpm, double rpm, double power, double error) {
         if (panelsTelemetry != null) {
-            panelsTelemetry.debug("shooter/targetRpm", targetRpm);
-            panelsTelemetry.debug("shooter/rpm", rpm);
-            panelsTelemetry.debug("shooter/error", error);
-            panelsTelemetry.debug("shooter/power", power);
+            panelsTelemetry.debug("launcher/targetRpm", targetRpm);
+            panelsTelemetry.debug("launcher/rpm", rpm);
+            panelsTelemetry.debug("launcher/error", error);
+            panelsTelemetry.debug("launcher/power", power);
         }
         if (logger != null) {
-            logger.recordNumber("shooter_target_rpm", targetRpm);
-            logger.recordNumber("shooter_rpm", rpm);
-            logger.recordNumber("shooter_err", error);
-            logger.recordNumber("shooter_power", power);
+            logger.recordNumber("launcher_target_rpm", targetRpm);
+            logger.recordNumber("launcher", rpm);
+            logger.recordNumber("launcher_err", error);
+            logger.recordNumber("launcher_power", power);
             logger.flush();
         }
     }
 
-    /** @deprecated Use {@link #publishShooter(double, double, double, double)} instead. */
+    /** @deprecated Use {@link #publishLauncher(double, double, double, double)} instead. */
     @Deprecated
     public void publishFlywheel(double targetRpm, double rpm, double power, double error) {
-        publishShooter(targetRpm, rpm, power, error);
+        publishLauncher(targetRpm, rpm, power, error);
     }
 }

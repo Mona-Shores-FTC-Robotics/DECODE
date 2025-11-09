@@ -20,12 +20,12 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * Shooter subsystem that manages three flywheels and their paired bootkicker servos.
+ * Launcher subsystem that manages three flywheels and their paired bootkicker servos.
  * Callers queue individual shots or bursts while this class coordinates spin-up,
  * feed timing, and recovery delays.
  */
 @Configurable
-public class ShooterSubsystem implements Subsystem {
+public class LauncherSubsystem implements Subsystem {
 
     public enum SpinMode {
         OFF,
@@ -44,7 +44,7 @@ public class ShooterSubsystem implements Subsystem {
         HOLD
     }
 
-    public enum ShooterState {
+    public enum LauncherState {
         DISABLED,
         HOLDING,
         SPINNING_UP,
@@ -114,7 +114,7 @@ public class ShooterSubsystem implements Subsystem {
 
     @Configurable
     public static class LeftFlywheelConfig {
-        public static String motorName = "shooter_left";
+        public static String motorName = "launcher_left";
         public static boolean reversed = true;
         public static double launchRpm = 4200.0;
         public static double idleRpm = 0;
@@ -122,7 +122,7 @@ public class ShooterSubsystem implements Subsystem {
 
     @Configurable
     public static class CenterFlywheelConfig {
-        public static String motorName = "shooter_center";
+        public static String motorName = "launcher_center";
         public static boolean reversed = false;
         public static double launchRpm = 4200.0;
         public static double idleRpm = 0;
@@ -130,7 +130,7 @@ public class ShooterSubsystem implements Subsystem {
 
     @Configurable
     public static class RightFlywheelConfig { //actually left
-        public static String motorName = "shooter_right";
+        public static String motorName = "launcher_right";
         public static boolean reversed = true;
         public static double launchRpm = 0;
         public static double idleRpm = 0;
@@ -176,7 +176,7 @@ public class ShooterSubsystem implements Subsystem {
     private final ElapsedTime stateTimer = new ElapsedTime();
 
     private SpinMode requestedSpinMode = SpinMode.OFF;
-    private ShooterState state = ShooterState.DISABLED;
+    private LauncherState state = LauncherState.DISABLED;
     private ShotRequest activeShot;
     private double lastShotCompletionMs = 0.0;
     private double lastPeriodicMs = 0.0;
@@ -208,7 +208,7 @@ public class ShooterSubsystem implements Subsystem {
     private boolean debugOverrideEnabled = false;
 
     public static final class Inputs {
-        public ShooterState state = ShooterState.DISABLED;
+        public LauncherState state = LauncherState.DISABLED;
         public SpinMode requestedSpinMode = SpinMode.OFF;
         public SpinMode effectiveSpinMode = SpinMode.OFF;
         public String controlMode = FlywheelControlMode.HYBRID.name();
@@ -247,7 +247,7 @@ public class ShooterSubsystem implements Subsystem {
         public double rightRecoveryRemainingMs;
     }
 
-    public ShooterSubsystem(HardwareMap hardwareMap) {
+    public LauncherSubsystem(HardwareMap hardwareMap) {
         for (LauncherLane lane : LauncherLane.values()) {
             flywheels.put(lane, new Flywheel(lane, hardwareMap));
             feeders.put(lane, new Feeder(lane, hardwareMap));
@@ -271,7 +271,7 @@ public class ShooterSubsystem implements Subsystem {
         for (Feeder feeder : feeders.values()) {
             feeder.initialize();
         }
-        setState(ShooterState.DISABLED);
+        setState(LauncherState.DISABLED);
     }
 
     @Override
@@ -329,12 +329,12 @@ public class ShooterSubsystem implements Subsystem {
     public boolean isBusy() {
         return activeShot != null
                 || !shotQueue.isEmpty()
-                || state == ShooterState.SPINNING_UP
-                || state == ShooterState.FEEDING
-                || state == ShooterState.RECOVERING;
+                || state == LauncherState.SPINNING_UP
+                || state == LauncherState.FEEDING
+                || state == LauncherState.RECOVERING;
     }
 
-    public ShooterState getState() {
+    public LauncherState getState() {
         return state;
     }
 
@@ -372,28 +372,20 @@ public class ShooterSubsystem implements Subsystem {
         populateLane(inputs, LauncherLane.RIGHT);
     }
 
-    public void shootLeft() {
+    public void launchLeft() {
         queueShot(LauncherLane.LEFT);
     }
 
-    public void shootMiddle() {
+    public void launchMiddle() {
         queueShot(LauncherLane.CENTER);
     }
 
-    public void shootRight() {
+    public void launchRight() {
         queueShot(LauncherLane.RIGHT);
     }
 
-    public void shootAll() {
+    public void launchAll() {
         queueBurstAll();
-    }
-
-    public void shoot(int count) {
-        requestBurst(count);
-    }
-
-    public void burst(int count) {
-        requestBurst(count);
     }
 
     public void queueShot(LauncherLane lane) {
@@ -443,7 +435,7 @@ public class ShooterSubsystem implements Subsystem {
             flywheels.get(lane).stop();
         }
         setSpinMode(SpinMode.OFF);
-        setState(ShooterState.DISABLED);
+        setState(LauncherState.DISABLED);
     }
 
     public void homeFeeder(LauncherLane lane) {
@@ -596,7 +588,7 @@ public class ShooterSubsystem implements Subsystem {
         if (activeShot != null) {
             Feeder feeder = feeders.get(activeShot.lane);
             if (feeder != null && feeder.isBusy()) {
-                setState(ShooterState.FEEDING);
+                setState(LauncherState.FEEDING);
                 return;
             }
             laneRecoveryDeadlineMs.put(activeShot.lane, now + Timing.recoveryMs);
@@ -612,7 +604,7 @@ public class ShooterSubsystem implements Subsystem {
             }
             if (!isLaneReadyForShot(next.lane, now)) {
                 boolean recovering = now - lastShotCompletionMs < Timing.recoveryMs;
-                setState(recovering ? ShooterState.RECOVERING : ShooterState.SPINNING_UP);
+                setState(recovering ? LauncherState.RECOVERING : LauncherState.SPINNING_UP);
                 return;
             }
             Feeder feeder = feeders.get(next.lane);
@@ -620,13 +612,13 @@ public class ShooterSubsystem implements Subsystem {
                 feeder.fire();
             }
             activeShot = shotQueue.removeFirst();
-            setState(ShooterState.FEEDING);
+            setState(LauncherState.FEEDING);
             return;
         }
 
         boolean recovering = now - lastShotCompletionMs < Timing.recoveryMs;
         if (recovering) {
-            setState(ShooterState.RECOVERING);
+            setState(LauncherState.RECOVERING);
             return;
         }
 
@@ -636,14 +628,14 @@ public class ShooterSubsystem implements Subsystem {
     private void reflectSpinState(SpinMode effectiveSpinMode) {
         switch (effectiveSpinMode) {
             case FULL:
-                setState(atTarget() ? ShooterState.READY : ShooterState.SPINNING_UP);
+                setState(atTarget() ? LauncherState.READY : LauncherState.SPINNING_UP);
                 break;
             case HOLD:
-                setState(ShooterState.HOLDING);
+                setState(LauncherState.HOLDING);
                 break;
             case OFF:
             default:
-                setState(ShooterState.DISABLED);
+                setState(LauncherState.DISABLED);
                 break;
         }
     }
@@ -692,7 +684,7 @@ public class ShooterSubsystem implements Subsystem {
         return requestedSpinMode;
     }
 
-    private void setState(ShooterState newState) {
+    private void setState(LauncherState newState) {
         if (state != newState) {
             state = newState;
             stateTimer.reset();

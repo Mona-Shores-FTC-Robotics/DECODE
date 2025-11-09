@@ -5,7 +5,7 @@ need to depend on `TelemetryService` and `RobotLogger`.
 
 * `TelemetryService` – main façade used by OpModes. Fans data out to Panels,
   the dashboard/AdvantageScope packet, and optional PsiKit logs.
-* `TelemetryPublisher` – helper that emits the detailed drive/shooter topics
+* `TelemetryPublisher` – helper that emits the detailed drive/launcher topics
   expected by FTControl Panels (and PsiKit).
 * `TelemetrySettings` – Configurable flags that enable/disable dashboard or
   PsiKit logging from panels.

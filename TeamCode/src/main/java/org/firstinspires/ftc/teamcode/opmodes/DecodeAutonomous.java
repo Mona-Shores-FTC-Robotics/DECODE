@@ -15,9 +15,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
@@ -37,7 +36,7 @@ import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.ftc.GamepadEx;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Autonomous", group = "Autonomous")
-public class AutonomousBrady extends OpMode {
+public class DecodeAutonomous extends OpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
@@ -74,11 +73,6 @@ public class AutonomousBrady extends OpMode {
     private PathChain launchFarToGateFarArtifactsPickup;
     private PathChain gateFarArtifactsPickupToLaunchFar;
 
-    private String pathToScoreSummary;
-    private String scoreToPickupSummary;
-    private String pickupToStackEndSummary;
-    private String stackToScoreSummary;
-
     private final DecodePatternController decodeController = new DecodePatternController();
     private ArtifactColor[] activeDecodePattern = new ArtifactColor[0];
     private boolean opModeStarted;
@@ -114,7 +108,6 @@ public class AutonomousBrady extends OpMode {
         allianceSelector.applySelection(robot, robot.lighting);
         applyDecodePattern(decodeController.current()); // default to alliance colour until a pattern is chosen
 
-
     }
 
     @Override
@@ -149,7 +142,7 @@ public class AutonomousBrady extends OpMode {
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
-                robot.shooter,
+                robot.launcher ,
                 robot.vision,
                 null,
                 robot.launcherCoordinator,
@@ -184,9 +177,9 @@ public class AutonomousBrady extends OpMode {
         robot.launcherCoordinator.setIntakeAutomationEnabled(true);
         robot.launcherCoordinator.unlockIntake();
 
-        ShooterSubsystem shooter = robot.shooter;
-        if (shooter != null) {
-            shooter.requestSpinUp();
+        LauncherSubsystem launcher = robot.launcher;
+        if (launcher != null) {
+            launcher.requestSpinUp();
         }
 
         transitionTo(RoutineStep.DRIVE_FROM_START_FAR_TO_LAUNCH_FAR);
@@ -196,9 +189,8 @@ public class AutonomousBrady extends OpMode {
     public void loop() {
         BindingManager.update();
         robot.drive.updateFollower();
-        updateShootingRoutine();
+        updateLaunchingRoutine();
         autonomousStep();
-
 
         robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
         robot.logger.logString("Autonomous", "RoutineStepName", routineStep.name());
@@ -208,7 +200,7 @@ public class AutonomousBrady extends OpMode {
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
-                robot.shooter,
+                robot.launcher ,
                 robot.vision,
                 null,
                 robot.launcherCoordinator,
@@ -228,9 +220,9 @@ public class AutonomousBrady extends OpMode {
         allianceSelector.unlockSelection();
         BindingManager.reset();
 
-        ShooterSubsystem shooter = robot.shooter;
-        if (shooter != null) {
-            shooter.abort();
+        LauncherSubsystem launcher = robot.launcher;
+        if (launcher != null) {
+            launcher.abort();
         }
         Pose finalPose = follower == null ? null : copyPedroPose(follower.getPose());
         if (finalPose != null) {
@@ -562,15 +554,15 @@ public class AutonomousBrady extends OpMode {
         transitionTo(waitingStep);
     }
 
-    private void beginShootingRoutine() {
-        // Placeholder: pause for a configurable duration instead of firing the shooter.
+    private void beginLaunchingRoutine() {
+        // Placeholder: pause for a configurable duration instead of firing the launcher.
         if (stepTimer != null) {
             stepTimer.resetTimer();
         }
     }
 
-    private void updateShootingRoutine() {
-        // No-op while shooter is replaced with a timer.
+    private void updateLaunchingRoutine() {
+        // No-op while launcher is replaced with a timer.
     }
 
     private boolean isWaitingForShot() {
@@ -579,8 +571,8 @@ public class AutonomousBrady extends OpMode {
     }
 
     private double getShotTimerSeconds() {
-        ShooterSubsystem shooter = robot.shooter;
-        return shooter != null ? shooter.getStateElapsedSeconds() : 0.0;
+        LauncherSubsystem launcher = robot.launcher;
+        return launcher != null ? launcher.getStateElapsedSeconds() : 0.0;
     }
 
     private double getStepTimerSeconds() {
@@ -588,8 +580,8 @@ public class AutonomousBrady extends OpMode {
     }
 
     private String getFlywheelStateName() {
-        ShooterSubsystem shooter = robot.shooter;
-        return shooter != null ? shooter.getState().name() : "N/A";
+        LauncherSubsystem launcher = robot.launcher;
+        return launcher != null ? launcher.getState().name() : "N/A";
     }
 
     private static String formatSegment(String label, Pose start, Pose end) {

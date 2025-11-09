@@ -8,9 +8,9 @@ Control Hub:
     Port 5 = feeder_right
 
  Motor:
-    Port 0 = shooter_left
-    Port 1 = shooter_center
-    Port 2 = shooter_right
+    Port 0 = launcher_left
+    Port 1 = launcher_center
+    Port 2 = launcher_right
     Port 3 = intake
 
  I2C:

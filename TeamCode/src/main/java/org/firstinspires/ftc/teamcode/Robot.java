@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -17,7 +17,7 @@ import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 public class Robot {
     public final DriveSubsystem drive;
-    public final ShooterSubsystem shooter;
+    public final LauncherSubsystem launcher;
     public final IntakeSubsystem intake;
     public final LightingSubsystem lighting;
     public final VisionSubsystemLimelight vision;
@@ -28,7 +28,7 @@ public class Robot {
     private RobotMode robotMode = RobotMode.DEBUG;
 
     private final DriveSubsystem.Inputs driveInputs = new DriveSubsystem.Inputs();
-    private final ShooterSubsystem.Inputs shooterInputs = new ShooterSubsystem.Inputs();
+    private final LauncherSubsystem.Inputs launcherInputs = new LauncherSubsystem.Inputs();
     private final IntakeSubsystem.Inputs intakeInputs = new IntakeSubsystem.Inputs();
     private final LightingSubsystem.Inputs lightingInputs = new LightingSubsystem.Inputs();
     private final VisionSubsystemLimelight.Inputs visionInputs = new VisionSubsystemLimelight.Inputs();
@@ -42,10 +42,10 @@ public class Robot {
         logger = new RobotLogger(telemetry);
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
-        shooter = new ShooterSubsystem(hardwareMap);
+        launcher = new LauncherSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
-        launcherCoordinator = new LauncherCoordinator(shooter, intake, lighting);
+        launcherCoordinator = new LauncherCoordinator(launcher , intake, lighting);
         applyRobotMode(robotMode);
         registerLoggingSources();
     }
@@ -72,7 +72,7 @@ public class Robot {
         drive.setTeleOpControlEnabled(enableTeleOpControl);
         drive.setVisionRelocalizationEnabled(enableVisionRelocalization);
         drive.initialize();
-        shooter.initialize();
+        launcher.initialize();
         lighting.initialize();
         intake.initialize();
         vision.initialize();
@@ -90,7 +90,7 @@ public class Robot {
 
     private void applyRobotMode(RobotMode mode) {
         drive.setRobotMode(mode);
-        shooter.setRobotMode(mode);
+        launcher.setRobotMode(mode);
         intake.setRobotMode(mode);
         lighting.setRobotMode(mode);
         vision.setRobotMode(mode);
@@ -114,13 +114,13 @@ public class Robot {
         logger.registerSource(new RobotLogger.Source() {
             @Override
             public String subsystem() {
-                return "Shooter";
+                return "Launcher";
             }
 
             @Override
             public void collect(RobotLogger.Frame frame) {
-                shooter.populateInputs(shooterInputs);
-                logger.logInputs("Shooter", shooterInputs);
+                launcher.populateInputs(launcherInputs);
+                logger.logInputs("Launcher", launcherInputs);
             }
         });
         logger.registerSource(new RobotLogger.Source() {

@@ -2,7 +2,7 @@
 
 ## Live Streaming
 - `RobotLogger` now owns the single pipeline for AdvantageScope Lite and optional PsiKit CSV capture.
-- Each subsystem exposes an `Inputs` data class (`DriveSubsystem.Inputs`, `ShooterSubsystem.Inputs`, etc.).
+- Each subsystem exposes an `Inputs` data class (`DriveSubsystem.Inputs`, `launcherSubsystem.Inputs`, etc.).
 - During each loop, `Robot` calls `populateInputs(...)` for every subsystem and forwards the result to `RobotLogger.logInputs(...)`.
 - `RobotLogger` reflects over the fields and publishes numbers/booleans/strings under `Subsystem/field` topics. AdvantageScope Lite and PsiKit see identical data.
 - Pedro tuning OpModes still use FTControl Panels directly; logging updates do not touch `pedroPathing/*`.

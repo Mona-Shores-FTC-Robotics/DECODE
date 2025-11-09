@@ -15,7 +15,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * Coordinates the launcher subsystems: intake lane sensing, lighting feedback, and shooter spin/feed.
+ * Coordinates the launcher subsystems: intake lane sensing, lighting feedback, and launcher spin/feed.
  * Shared by bench diagnostics, teleop, and autonomous so behaviour remains consistent.
  */
 @Configurable
@@ -51,7 +51,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         }
     }
 
-    private final ShooterSubsystem shooter;
+    private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
     private final LightingSubsystem lighting;
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
@@ -59,7 +59,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     private final Inputs inputs = new Inputs();
     private RobotLogger logger;
     private RobotLogger.Source loggerSource;
-    private boolean lastShooterReady = false;
+    private boolean lastLauncherReady = false;
     private double lastPeriodicMs = 0.0;
     private boolean autoSpinEnabled = false;
     private boolean intakeAutomationEnabled = true;
@@ -69,10 +69,10 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     private boolean intakeLocked = false;
     private RobotMode robotMode = RobotMode.DEBUG;
 
-    public LauncherCoordinator(ShooterSubsystem shooter,
+    public LauncherCoordinator(LauncherSubsystem launcher ,
                                IntakeSubsystem intake,
                                LightingSubsystem lighting) {
-        this.shooter = shooter;
+        this.launcher = launcher;
         this.intake = intake;
         this.lighting = lighting;
 
@@ -141,7 +141,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         if (color == ArtifactColor.NONE || color == ArtifactColor.UNKNOWN) {
             return;
         }
-        shooter.queueShot(lane);
+        launcher.queueShot(lane);
     }
 
     public void requestBurst(double spacingMs) {
@@ -151,7 +151,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
             if (color == ArtifactColor.NONE || color == ArtifactColor.UNKNOWN) {
                 continue;
             }
-            shooter.queueShot(lane, offset);
+            launcher.queueShot(lane, offset);
             offset += Math.max(0.0, spacingMs);
         }
     }
@@ -226,7 +226,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
 
     private void recomputeSpinMode() {
         if (!autoSpinEnabled || robotMode != RobotMode.MATCH) {
-            shooter.requestStandbySpin();
+            launcher.requestStandbySpin();
             return;
         }
         boolean anyActive = false;
@@ -238,9 +238,9 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
             }
         }
         if (anyActive) {
-            shooter.requestSpinUp();
+            launcher.requestSpinUp();
         } else {
-            shooter.requestStandbySpin();
+            launcher.requestStandbySpin();
         }
     }
 
@@ -299,16 +299,16 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
 
     /**
      * Publishes launcher telemetry to the driver station and Panels while also recording
-     * shooter-ready events. Keeps lane diagnostics close to the subsystem so OpModes don't have to
+     * launcher-ready events. Keeps lane diagnostics close to the subsystem so OpModes don't have to
      * duplicate formatting logic.
      */
-    public boolean logShooterReadyEvent(RobotLogger robotLogger) {
-        boolean shooterReady = shooter.atTarget();
-        if (robotLogger != null && shooterReady && !lastShooterReady) {
-            robotLogger.logEvent("Shooter", "Ready");
+    public boolean logLauncherReadyEvent(RobotLogger robotLogger) {
+        boolean launcherReady = launcher.atTarget();
+        if (robotLogger != null && launcherReady && ! lastLauncherReady) {
+            robotLogger.logEvent("Launcher", "Ready");
         }
-        lastShooterReady = shooterReady;
-        return shooterReady;
+        lastLauncherReady = launcherReady;
+        return launcherReady;
     }
 
     public void publishLaneTelemetry(Telemetry dsTelemetry,
@@ -398,9 +398,9 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
             }
         }
         inputs.anyActiveLanes = anyActive;
-        inputs.shooterState = shooter.getState().name();
-        inputs.shooterSpinMode = shooter.getEffectiveSpinMode().name();
-        inputs.shooterQueuedShots = shooter.getQueuedShots();
+        inputs.launcherState = launcher.getState().name();
+        inputs.launcherSpinMode = launcher.getEffectiveSpinMode().name();
+        inputs.launcherQueuedShots = launcher.getQueuedShots();
     }
 
     public double getLastPeriodicMs() {
@@ -479,8 +479,8 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         public String leftColor = ArtifactColor.NONE.name();
         public String centerColor = ArtifactColor.NONE.name();
         public String rightColor = ArtifactColor.NONE.name();
-        public String shooterState;
-        public String shooterSpinMode;
-        public int shooterQueuedShots;
+        public String launcherState;
+        public String launcherSpinMode;
+        public int launcherQueuedShots;
     }
 }
