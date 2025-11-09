@@ -1,4 +1,6 @@
-package org.firstinspires.ftc.teamcode.commands;
+package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
+
+import com.bylazar.configurables.annotations.Configurable;
 
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -11,6 +13,7 @@ import dev.nextftc.core.commands.Command;
  * legacy binding paths.
  */
 @SuppressWarnings("UnusedReturnValue")
+@Configurable
 public class LauncherCommands {
 
     public static final double DEFAULT_BURST_SPACING_MS = 150.0;

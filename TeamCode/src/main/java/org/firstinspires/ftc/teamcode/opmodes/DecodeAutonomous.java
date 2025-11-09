@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.follower.Follower;
@@ -8,11 +10,11 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
@@ -33,10 +35,15 @@ import java.util.Locale;
 import java.util.Optional;
 
 import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.core.commands.CommandManager;
+import dev.nextftc.core.components.SubsystemComponent;
+import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
+import dev.nextftc.ftc.NextFTCOpMode;
+import dev.nextftc.ftc.components.BulkReadComponent;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Autonomous", group = "Autonomous")
-public class DecodeAutonomous extends OpMode {
+public class DecodeAutonomous extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
@@ -78,7 +85,7 @@ public class DecodeAutonomous extends OpMode {
     private boolean opModeStarted;
 
     @Override
-    public void init() {
+    public void onInit() {
         BindingManager.reset();
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
@@ -91,7 +98,7 @@ public class DecodeAutonomous extends OpMode {
         robot.launcherCoordinator.lockIntake();
         robot.launcherCoordinator.setIntakeAutomationEnabled(false);
         robot.initializeForAuto();
-        follower = robot.drive.getFollower();
+        follower = follower();
 
         // Register init-phase controls with NextFTC (selector handles alliance overrides automatically).
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
@@ -108,10 +115,22 @@ public class DecodeAutonomous extends OpMode {
         allianceSelector.applySelection(robot, robot.lighting);
         applyDecodePattern(decodeController.current()); // default to alliance colour until a pattern is chosen
 
+        addComponents(
+                BulkReadComponent.INSTANCE,
+                new PedroComponent(Constants::createFollower),
+                CommandManager.INSTANCE,
+                new SubsystemComponent(robot.drive),
+                new SubsystemComponent(robot.launcher),
+                new SubsystemComponent(robot.intake),
+                new SubsystemComponent(robot.lighting),
+                new SubsystemComponent(robot.vision),
+                new SubsystemComponent(robot.launcherCoordinator)
+        );
+
     }
 
     @Override
-    public void init_loop() {
+    public void onWaitForStart() {
         BindingManager.update();
 
         // Blend camera detections with any driver override and apply the combined alliance immediately.
@@ -157,7 +176,7 @@ public class DecodeAutonomous extends OpMode {
     }
 
     @Override
-    public void start() {
+    public void onStartButtonPressed() {
         BindingManager.reset();
         opModeStarted = true;
         allianceSelector.lockSelection();
@@ -186,9 +205,9 @@ public class DecodeAutonomous extends OpMode {
     }
 
     @Override
-    public void loop() {
+    public void onUpdate() {
         BindingManager.update();
-        robot.drive.updateFollower();
+        follower.update();
         updateLaunchingRoutine();
         autonomousStep();
 
@@ -215,7 +234,7 @@ public class DecodeAutonomous extends OpMode {
     }
 
     @Override
-    public void stop() {
+    public void onStop() {
         opModeStarted = false;
         allianceSelector.unlockSelection();
         BindingManager.reset();
@@ -240,32 +259,32 @@ public class DecodeAutonomous extends OpMode {
                 startPath(startFarToLaunchFar, RoutineStep.DRIVE_FROM_LAUNCH_FAR_TO_ALLIANCE_WALL_ARTIFACTS);
                 break;
             case DRIVE_FROM_LAUNCH_FAR_TO_ALLIANCE_WALL_ARTIFACTS:
-                if (!robot.drive.isFollowerBusy()) {
+                if (!follower().isBusy()) {
                     startPath(launchFarToAllianceWallArtifactsPickup, RoutineStep.DRIVE_FROM_ALLIANCE_WALL_ARTIFACTS_TO_LAUNCH_FAR);
                 }
                 break;
             case DRIVE_FROM_ALLIANCE_WALL_ARTIFACTS_TO_LAUNCH_FAR:
-                if (!robot.drive.isFollowerBusy()) {
+                if (!follower().isBusy()) {
                     startPath(allianceWallArtifactsPickupToLaunchFar, RoutineStep.DRIVE_FROM_LAUNCH_FAR_TO_PARK_ARTIFACTS);
                 }
                 break;
             case DRIVE_FROM_LAUNCH_FAR_TO_PARK_ARTIFACTS:
-                if (!robot.drive.isFollowerBusy()) {
+                if (!follower().isBusy()) {
                     startPath(launchFarToParkingArtifactsPickup, RoutineStep.DRIVE_FROM_PARK_ARTIFACTS_TO_LAUNCH_FAR);
                 }
                 break;
             case DRIVE_FROM_PARK_ARTIFACTS_TO_LAUNCH_FAR:
-                if (!robot.drive.isFollowerBusy()) {
+                if (!follower().isBusy()) {
                     startPath(parkingArtifactsPickupToLaunchFar, RoutineStep.DRIVE_FROM_LAUNCH_FAR_TO_GATE_ARTIFACTS_FAR);
                 }
                 break;
             case DRIVE_FROM_LAUNCH_FAR_TO_GATE_ARTIFACTS_FAR:
-                if (!robot.drive.isFollowerBusy()) {
+                if (!follower().isBusy()) {
                     startPath(launchFarToGateFarArtifactsPickup, RoutineStep.DRIVE_FROM_GATE_ARTIFACTS_FAR_TO_LAUNCH_FAR);
                 }
                 break;
             case DRIVE_FROM_GATE_ARTIFACTS_FAR_TO_LAUNCH_FAR:
-                if (!robot.drive.isFollowerBusy()) {
+                if (!follower().isBusy()) {
                     startPath(gateFarArtifactsPickupToLaunchFar, RoutineStep.FINISHED);
                 }
                 break;
@@ -550,7 +569,7 @@ public class DecodeAutonomous extends OpMode {
 
     private void startPath(PathChain pathChain, RoutineStep waitingStep) {
         double maxPower = Range.clip(AutoMotionConfig.maxPathPower, 0.0, 1.0);
-        robot.drive.followPath(pathChain, maxPower, false);
+        follower.followPath(pathChain, maxPower, false);
         transitionTo(waitingStep);
     }
 

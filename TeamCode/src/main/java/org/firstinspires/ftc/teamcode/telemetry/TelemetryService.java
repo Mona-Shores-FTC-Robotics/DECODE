@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.telemetry;
 
+import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+
 import android.os.SystemClock;
 
 import com.acmerobotics.dashboard.FtcDashboard;
@@ -155,7 +157,7 @@ public class TelemetryService {
         boolean sendDashboardThisLoop = nowMs - lastDashboardPacketMs >= DASHBOARD_PACKET_INTERVAL_MS;
 
         if (drawPanelsThisLoop && ENABLE_PANELS_DRAWING) {
-            PanelsBridge.drawFollowerDebug(drive.getFollower());
+            PanelsBridge.drawFollowerDebug(follower());
             lastPanelsDrawMs = nowMs;
         }
 

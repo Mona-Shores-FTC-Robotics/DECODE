@@ -4,7 +4,8 @@ import dev.nextftc.bindings.Button;
 import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
@@ -28,9 +29,9 @@ public class OperatorBindings {
     private final Button launchAll;
     private final Button intakeForwardHold;
     private boolean manualIntakeActive = false;
-    private boolean fullSpinRequested = false;
 
     private final LauncherCommands launcherCommands;
+    private final IntakeCommands intakeCommands;
 
 
     public OperatorBindings(GamepadEx operator,
@@ -38,6 +39,7 @@ public class OperatorBindings {
         this.robot = robot;
         this.launcherCoordinator = robot.launcherCoordinator;
         this.launcherCommands = robot.launcherCommands;
+        this.intakeCommands = robot.intakeCommands;
 
         spinModeToggle = operator.leftBumper();
         launchLeft = operator.x();
@@ -45,6 +47,7 @@ public class OperatorBindings {
         launchRight = operator.b();
         launchAll = operator.a();
         intakeForwardHold = operator.rightBumper();
+
         configureMatchBindings();
     }
 
@@ -65,8 +68,8 @@ public class OperatorBindings {
         launchRight.whenBecomesTrue(launcherCommands::launchRight);
         launchAll.whenBecomesTrue(launcherCommands::launchAll);
 
-        intakeForwardHold.whenBecomesTrue(this::requestForwardIntake);
-        intakeForwardHold.whenBecomesFalse(this::releaseForwardIntake);
+        intakeForwardHold.whenBecomesTrue(robot.intake::startForward);
+        intakeForwardHold.whenBecomesFalse(robot.intake::startReverse);
     }
 
     private void requestForwardIntake() {

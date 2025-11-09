@@ -2,7 +2,8 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -27,6 +28,7 @@ public class Robot {
     public final RobotLogger logger;
 
     public final LauncherCommands launcherCommands;
+    public final IntakeCommands intakeCommands;
 
     private RobotMode robotMode = RobotMode.DEBUG;
 
@@ -50,6 +52,7 @@ public class Robot {
         lighting = new LightingSubsystem(hardwareMap);
         launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
         launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
+        intakeCommands = new IntakeCommands(intake);
         applyRobotMode(robotMode);
         registerLoggingSources();
     }

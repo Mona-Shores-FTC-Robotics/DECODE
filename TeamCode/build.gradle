@@ -40,6 +40,8 @@ dependencies {
     implementation 'dev.nextftc:ftc:1.0.1'
     implementation 'dev.nextftc:hardware:1.0.1' // If you would like to use the hardware module
     implementation 'dev.nextftc:bindings:1.0.1'
+    implementation 'dev.nextftc.extensions:pedro:1.0.0'
+
 
 
     // Pedro Pathing
@@ -54,6 +56,8 @@ dependencies {
     }
 
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
+
+
 
 
 }

@@ -3,10 +3,13 @@ package org.firstinspires.ftc.teamcode.opmodes;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
+import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
+import dev.nextftc.ftc.components.BulkReadComponent;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -17,6 +20,7 @@ import java.util.Locale;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
@@ -59,7 +63,10 @@ public class DecodeTeleOp extends NextFTCOpMode {
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
 
         addComponents(
+                BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
+                CommandManager.INSTANCE,
+                new PedroComponent(Constants::createFollower),
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
                 new SubsystemComponent(robot.intake),

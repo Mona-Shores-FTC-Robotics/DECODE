@@ -355,6 +355,9 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
+    public void startForward() { setMode(IntakeMode.ACTIVE_FORWARD); }
+    public void startReverse() { setMode(IntakeMode.PASSIVE_REVERSE); }
+
     public IntakeMode getResolvedMode() {
         return resolveMode();
     }
@@ -434,6 +437,7 @@ public class IntakeSubsystem implements Subsystem {
                 break;
         }
     }
+
 
     private static IntakeMode parseMode(String value) {
         if (value == null || value.isEmpty()) {
@@ -751,6 +755,14 @@ public class IntakeSubsystem implements Subsystem {
                 inputs.rightRawBlue = sample.rawBlue;
                 break;
         }
+    }
+
+    public boolean isFull() {
+        int count = 0;
+        for (LauncherLane lane : LauncherLane.values()) {
+            if (getLaneSample(lane).withinDistance) count++;
+        }
+        return count >= 3;
     }
 
 }

@@ -1,12 +1,12 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.control.PIDFController;
 import com.pedropathing.control.PIDFCoefficients;
-import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.math.Vector;
-import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -27,6 +27,7 @@ import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
+
 
 @Configurable
 public class DriveSubsystem implements Subsystem {
@@ -72,7 +73,6 @@ public class DriveSubsystem implements Subsystem {
 
     private static final double NORMAL_MULTIPLIER = 1.0;
 
-    private final Follower follower;
     private final Constants.Motors driveMotors;
     private final DcMotorEx motorLf;
     private final DcMotorEx motorRf;
@@ -161,7 +161,6 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
-        follower = Constants.createFollower(hardwareMap);
         driveMotors = new Constants.Motors(hardwareMap);
         driveMotors.setRunWithoutEncoder();
 
@@ -191,8 +190,8 @@ public class DriveSubsystem implements Subsystem {
 
     @Override
     public void initialize() {
-        if (follower.isBusy()) {
-            follower.breakFollowing();
+        if (follower().isBusy()) {
+            follower().breakFollowing();
         }
 
         Pose seed = RobotState.takeHandoffPose();
@@ -200,13 +199,12 @@ public class DriveSubsystem implements Subsystem {
             seed = new Pose();
         }
 
-        follower.setStartingPose(seed);
-        follower.setPose(seed);
-        follower.update();
+        follower().setStartingPose(seed);
+        follower().setPose(seed);
         if (teleOpControlEnabled) {
-            follower.startTeleopDrive();
+            follower().startTeleopDrive();
         } else {
-            follower.breakFollowing();
+            follower().breakFollowing();
         }
         poseFusion.reset(seed, System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
@@ -217,7 +215,6 @@ public class DriveSubsystem implements Subsystem {
     @Override
     public void periodic() {
         long start = System.nanoTime();
-        follower.update();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
         updatePoseFusion();
     }
@@ -228,10 +225,10 @@ public class DriveSubsystem implements Subsystem {
 
     public void stop() {
         if (teleOpControlEnabled) {
-            follower.startTeleopDrive(true);
-            follower.setTeleOpDrive(0 , 0 , 0 , robotCentric);
+            follower().startTeleopDrive(true);
+            follower().setTeleOpDrive(0 , 0 , 0 , robotCentric);
         } else {
-            follower.breakFollowing();
+            follower().breakFollowing();
         }
         driveMotors.stop();
 
@@ -252,11 +249,11 @@ public class DriveSubsystem implements Subsystem {
         if (inputs == null) {
             return;
         }
-        Pose pose = follower.getPose();
+        Pose pose = follower().getPose();
         if (pose != null) {
             inputs.poseXInches = pose.getX();
             inputs.poseYInches = pose.getY();
-            inputs.poseHeadingDeg = Math.toDegrees(follower.getHeading());
+            inputs.poseHeadingDeg = Math.toDegrees(follower().getHeading());
         } else {
             inputs.poseXInches = 0.0;
             inputs.poseYInches = 0.0;
@@ -275,7 +272,7 @@ public class DriveSubsystem implements Subsystem {
         inputs.headingLockTargetDeg = Double.isNaN(headingLockTarget) ? Double.NaN : Math.toDegrees(headingLockTarget);
         inputs.headingLockErrorDeg = Math.toDegrees(lastHeadingLockError);
         inputs.headingLockOutput = lastHeadingLockOutput;
-        inputs.followerBusy = follower.isBusy();
+        inputs.followerBusy = follower().isBusy();
         inputs.lfPower = motorLf.getPower();
         inputs.rfPower = motorRf.getPower();
         inputs.lbPower = motorLb.getPower();
@@ -375,7 +372,7 @@ public class DriveSubsystem implements Subsystem {
         cancelHeadingNudge();
         headingLockEnabled = false;
         headingLockEngaged = false;
-        headingLockTarget = normalizeAngle(follower.getHeading());
+        headingLockTarget = normalizeAngle(follower().getHeading());
         lastHeadingLockError = 0.0;
         lastHeadingLockOutput = 0.0;
         double slowMultiplier = Range.clip(TeleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
@@ -426,7 +423,7 @@ public class DriveSubsystem implements Subsystem {
         lastCommandForward = appliedForward;
         lastCommandStrafeLeft = appliedStrafeLeft;
         lastCommandTurn = appliedTurn;
-        follower.setTeleOpDrive(appliedForward , appliedStrafeLeft , appliedTurn , robotCentric);
+        follower().setTeleOpDrive(appliedForward , appliedStrafeLeft , appliedTurn , robotCentric);
         activeMode = slowMode ? DriveMode.SLOW : DriveMode.NORMAL;
     }
 
@@ -443,7 +440,7 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public void queueHeadingNudgeRadians(double radians) {
-        double currentHeading = follower.getHeading();
+        double currentHeading = follower().getHeading();
         headingNudgeTarget = normalizeAngle(currentHeading + radians);
         headingNudgeActive = true;
         headingLockTarget = headingNudgeTarget;
@@ -465,13 +462,13 @@ public class DriveSubsystem implements Subsystem {
             return false;
         }
         headingLockTarget = headingNudgeTarget;
-        double error = Math.abs(normalizeAngle(headingNudgeTarget - follower.getHeading()));
+        double error = Math.abs(normalizeAngle(headingNudgeTarget - follower().getHeading()));
         if (error <= HEADING_NUDGE_TOLERANCE_RAD) {
             cancelHeadingNudge();
             headingLockEnabled = false;
             headingLockEngaged = false;
             headingLockTarget = Double.NaN;
-            follower.setTeleOpDrive(0 , 0 , 0 , robotCentric);
+            follower().setTeleOpDrive(0 , 0 , 0 , robotCentric);
             lastCommandForward = 0.0;
             lastCommandStrafeLeft = 0.0;
             lastCommandTurn = 0.0;
@@ -481,7 +478,7 @@ public class DriveSubsystem implements Subsystem {
         lastCommandForward = 0.0;
         lastCommandStrafeLeft = 0.0;
         lastCommandTurn = turnCW;
-        follower.setTeleOpDrive(0 , 0 , turnCW , robotCentric);
+        follower().setTeleOpDrive(0 , 0 , turnCW , robotCentric);
         return true;
     }
 
@@ -510,7 +507,7 @@ public class DriveSubsystem implements Subsystem {
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
         lastCommandTurn = turnCW;
-        follower.setTeleOpDrive(forward , strafeLeft , turnCW , robotCentric);
+        follower().setTeleOpDrive(forward , strafeLeft , turnCW , robotCentric);
         activeMode = slowMode ? DriveMode.SLOW : DriveMode.NORMAL;
     }
 
@@ -518,10 +515,10 @@ public class DriveSubsystem implements Subsystem {
         if (!headingLockEngaged) {
             headingLockEngaged = true;
             if (Double.isNaN(headingLockTarget)) {
-                headingLockTarget = normalizeAngle(follower.getHeading());
+                headingLockTarget = normalizeAngle(follower().getHeading());
             }
         }
-        double error = normalizeAngle(headingLockTarget - follower.getHeading());
+        double error = normalizeAngle(headingLockTarget - follower().getHeading());
         lastHeadingLockError = error;
         headingLockController.setCoefficients(currentHeadingLockCoefficients());
         headingLockController.updateError(error);
@@ -557,12 +554,12 @@ public class DriveSubsystem implements Subsystem {
         } else if (! Double.isNaN(lastGoodVisionAngle) && nowMs - lastVisionTimestamp <= VISION_TIMEOUT_MS) {
             targetHeading = lastGoodVisionAngle;
         } else {
-            Pose pose = follower.getPose();
+            Pose pose = follower().getPose();
             Pose targetPose = vision.getTargetGoalPose().orElse(FieldConstants.BLUE_GOAL_TAG);
             targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
         }
 
-        double headingError = normalizeAngle(targetHeading - follower.getHeading());
+        double headingError = normalizeAngle(targetHeading - follower().getHeading());
         double maxTurn = Math.max(0.0, AimAssistConfig.kMaxTurn);
         double turn = Range.clip(AimAssistConfig.kP * headingError , - maxTurn , maxTurn);
         lastCommandForward = forward;
@@ -570,7 +567,7 @@ public class DriveSubsystem implements Subsystem {
         lastCommandTurn = turn;
         lastRequestRotation = turn;
 
-        follower.setTeleOpDrive(forward , strafeLeft , turn , robotCentric);
+        follower().setTeleOpDrive(forward , strafeLeft , turn , robotCentric);
     }
 
     // --- Telemetry accessors ------------------------------------------------
@@ -579,7 +576,7 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public Pose2D getPose() {
-        Pose pose = follower.getPose();
+        Pose pose = follower().getPose();
         if (pose == null) {
             return new Pose2D(DistanceUnit.INCH , 0.0 , 0.0 , AngleUnit.RADIANS , 0.0);
         }
@@ -588,33 +585,12 @@ public class DriveSubsystem implements Subsystem {
                 pose.getX() ,
                 pose.getY() ,
                 AngleUnit.RADIANS ,
-                follower.getHeading()
+                follower().getHeading()
         );
     }
 
     public Pose getFollowerPose() {
-        return follower.getPose();
-    }
-
-    public Follower getFollower() {
-        return follower;
-    }
-
-    public void updateFollower() {
-        follower.update();
-    }
-
-    public void followPath(PathChain pathChain , boolean holdPositionAtEnd) {
-        follower.followPath(pathChain , holdPositionAtEnd);
-    }
-
-    public void followPath(PathChain pathChain, double maxPower, boolean holdPositionAtEnd) {
-        double clippedPower = Range.clip(maxPower, 0.0, 1.0);
-        follower.followPath(pathChain, clippedPower, holdPositionAtEnd);
-    }
-
-    public boolean isFollowerBusy() {
-        return follower.isBusy();
+        return follower().getPose();
     }
 
     public double getLfPower() {
@@ -658,11 +634,11 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public void drawPoseOnPanels() {
-        PanelsBridge.drawCurrentPose(follower);
+        PanelsBridge.drawCurrentPose(follower());
     }
 
     public void drawPoseWithHistoryOnPanels() {
-        PanelsBridge.drawCurrentPoseWithHistory(follower);
+        PanelsBridge.drawCurrentPoseWithHistory(follower());
     }
 
     private static double normalizeAngle(double angle) {
@@ -700,7 +676,7 @@ public class DriveSubsystem implements Subsystem {
         }
 
         Pose tagPose = tagPoseOpt.get();
-        follower.setPose(tagPose);
+        follower().setPose(tagPose);
         vision.markOdometryUpdated();
         vision.overrideRobotPose(tagPose);
         poseFusion.reset(tagPose, System.currentTimeMillis());
@@ -713,7 +689,7 @@ public class DriveSubsystem implements Subsystem {
 
     private void updatePoseFusion() {
         long timestampMs = System.currentTimeMillis();
-        poseFusion.updateWithOdometry(follower.getPose(), timestampMs);
+        poseFusion.updateWithOdometry(follower().getPose(), timestampMs);
 
         long visionTimestamp = vision.getLastPoseTimestampMs();
         if (visionTimestamp > 0L && visionTimestamp > lastFusionVisionTimestampMs) {
@@ -796,7 +772,7 @@ public class DriveSubsystem implements Subsystem {
 
     private double getRobotSpeedInchesPerSecond() {
         try {
-            Vector velocity = follower.getVelocity();
+            Vector velocity = follower().getVelocity();
             if (velocity == null) {
                 return Double.POSITIVE_INFINITY;
             }
@@ -817,7 +793,7 @@ public class DriveSubsystem implements Subsystem {
 
     private double followerVelocityIps() {
         try {
-            Vector velocity = follower.getVelocity();
+            Vector velocity = follower().getVelocity();
             if (velocity == null) {
                 return 0.0;
             }
