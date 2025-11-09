@@ -23,6 +23,8 @@ import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -224,6 +226,7 @@ public class IntakeSubsystem implements Subsystem {
         public int rightRawGreen;
         public int rightRawBlue;
         public double motorPower;
+        public double motorCurrentAmps;
         public String commandedMode = IntakeMode.STOPPED.name();
         public String appliedMode = IntakeMode.STOPPED.name();
         public boolean modeOverrideEnabled;
@@ -384,6 +387,7 @@ public class IntakeSubsystem implements Subsystem {
         inputs.sensorPollingEnabled = LaneSensorConfig.enablePolling;
         inputs.sensorSamplePeriodMs = LaneSensorConfig.samplePeriodMs;
         inputs.motorPower = appliedMotorPower;
+        inputs.motorCurrentAmps = readCurrentAmps();
         inputs.commandedMode = intakeMode.name();
         inputs.appliedMode = resolveMode().name();
         inputs.modeOverrideEnabled = ManualModeConfig.enableOverride;
@@ -417,6 +421,17 @@ public class IntakeSubsystem implements Subsystem {
             }
         }
         return intakeMode;
+    }
+
+    private double readCurrentAmps() {
+        if (intakeMotor == null) {
+            return Double.NaN;
+        }
+        try {
+            return intakeMotor.getCurrent(CurrentUnit.AMPS);
+        } catch (Exception e) {
+            return Double.NaN;
+        }
     }
 
     private void applyModePower(IntakeMode mode) {

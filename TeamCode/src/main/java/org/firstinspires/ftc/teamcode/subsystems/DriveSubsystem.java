@@ -16,6 +16,7 @@ import com.qualcomm.robotcore.util.RobotLog;
 import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -138,6 +139,11 @@ public class DriveSubsystem implements Subsystem {
         public double rfPower;
         public double lbPower;
         public double rbPower;
+        public double lfCurrentAmps;
+        public double rfCurrentAmps;
+        public double lbCurrentAmps;
+        public double rbCurrentAmps;
+        public double driveTotalCurrentAmps;
         public double lfVelocityIps;
         public double rfVelocityIps;
         public double lbVelocityIps;
@@ -291,6 +297,16 @@ public class DriveSubsystem implements Subsystem {
         inputs.visionSampleAgeMs = lastVisionTimestamp == Double.NEGATIVE_INFINITY
                 ? Double.POSITIVE_INFINITY
                 : Math.max(0.0 , clock.milliseconds() - lastVisionTimestamp);
+        inputs.lfCurrentAmps = readCurrentAmps(motorLf);
+        inputs.rfCurrentAmps = readCurrentAmps(motorRf);
+        inputs.lbCurrentAmps = readCurrentAmps(motorLb);
+        inputs.rbCurrentAmps = readCurrentAmps(motorRb);
+        inputs.driveTotalCurrentAmps = sumCurrentAmps(
+                inputs.lfCurrentAmps,
+                inputs.rfCurrentAmps,
+                inputs.lbCurrentAmps,
+                inputs.rbCurrentAmps
+        );
 
         PoseFusion.State fusionState = poseFusion.getStateSnapshot();
         inputs.fusionHasPose = fusionState.hasFusedPose;
@@ -326,6 +342,27 @@ public class DriveSubsystem implements Subsystem {
         inputs.fusionVisionDecisionMargin = fusionState.lastVisionDecisionMargin;
         inputs.fusionLastVisionAgeMs = fusionState.ageOfLastVisionMs;
         inputs.fusionOdometryDtMs = fusionState.lastOdometryDtMs;
+    }
+
+    private double readCurrentAmps(DcMotorEx motor) {
+        if (motor == null) {
+            return Double.NaN;
+        }
+        try {
+            return motor.getCurrent(CurrentUnit.AMPS);
+        } catch (Exception e) {
+            return Double.NaN;
+        }
+    }
+
+    private double sumCurrentAmps(double... values) {
+        double total = 0.0;
+        for (double value : values) {
+            if (Double.isFinite(value)) {
+                total += value;
+            }
+        }
+        return total;
     }
 
     public void driveTeleOp(double fieldX,
