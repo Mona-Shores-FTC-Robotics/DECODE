@@ -128,7 +128,6 @@ public class TelemetryService {
         double requestY = driveRequest != null ? driveRequest.fieldY : 0.0;
         double requestRot = driveRequest != null ? driveRequest.rotation : 0.0;
         boolean slowMode = driveRequest != null && driveRequest.slowMode;
-        boolean headingHold = driveRequest != null && driveRequest.headingHold;
         boolean aimMode = driveRequest != null && driveRequest.aimMode;
         Pose pedroPose = poseOverride != null ? poseOverride : drive.getFollowerPose();
         Pose2D pose = drive.getPose();
@@ -167,7 +166,6 @@ public class TelemetryService {
             panels.debug("mode/label", label);
             panels.debug("mode/drive", drive.getDriveMode());
             panels.debug("mode/aim/enabled", aimMode);
-            panels.debug("mode/headingHold/requested", headingHold);
             panels.debug("vision/tag/visible", visionSnapshot.hasTag);
             panels.debug("vision/tag/id", visionSnapshot.tagId);
             panels.debug("vision/tag/rangeIn", visionSnapshot.rangeIn);
@@ -211,9 +209,11 @@ public class TelemetryService {
         } else {
             launcherReady = launcher.atTarget();
         }
+        String launcherState = launcher.getState().name();
+        String launcherSpinMode = launcher.getEffectiveSpinMode().name();
 
         if (!suppressDriveTelemetry) {
-            publisher.publishDrive(drive, requestX, requestY, requestRot, slowMode, aimMode, headingHold);
+            publisher.publishDrive(drive, requestX, requestY, requestRot, slowMode, aimMode);
         }
         publisher.publishLauncher(
                 displayTargetRpm,
@@ -222,11 +222,8 @@ public class TelemetryService {
                 displayTargetRpm - displayCurrentRpm
         );
 
-        boolean autoSpin = launcherCoordinator != null && launcherCoordinator.isAutoSpinEnabled();
-
         if (panels != null) {
             panels.debug("launcher/control/mode", controlMode);
-            panels.debug("launcher/control/autoSpin", autoSpin);
             panels.debug("launcher/lanes/left/targetRpm", leftTargetRpm);
             panels.debug("launcher/lanes/left/currentRpm", leftCurrentRpm);
             panels.debug("launcher/lanes/left/power", leftPower);
@@ -242,6 +239,30 @@ public class TelemetryService {
             panels.debug("launcher/lanes/right/power", rightPower);
             panels.debug("launcher/lanes/right/ready", rightReady);
             panels.debug("launcher/lanes/right/phase", rightPhase);
+        }
+
+        if (logger != null) {
+            logger.logString("Launcher", "ControlMode", controlMode);
+            logger.logString("Launcher", "State", launcher.getState().name());
+            logger.logString("Launcher", "SpinMode", launcher.getEffectiveSpinMode().name());
+
+            logger.logNumber("Launcher", "LeftTargetRpm", leftTargetRpm);
+            logger.logNumber("Launcher", "LeftCurrentRpm", leftCurrentRpm);
+            logger.logNumber("Launcher", "LeftPower", leftPower);
+            logger.logBoolean("Launcher", "LeftReady", leftReady);
+            logger.logString("Launcher", "LeftPhase", leftPhase);
+
+            logger.logNumber("Launcher", "CenterTargetRpm", centerTargetRpm);
+            logger.logNumber("Launcher", "CenterCurrentRpm", centerCurrentRpm);
+            logger.logNumber("Launcher", "CenterPower", centerPower);
+            logger.logBoolean("Launcher", "CenterReady", centerReady);
+            logger.logString("Launcher", "CenterPhase", centerPhase);
+
+            logger.logNumber("Launcher", "RightTargetRpm", rightTargetRpm);
+            logger.logNumber("Launcher", "RightCurrentRpm", rightCurrentRpm);
+            logger.logNumber("Launcher", "RightPower", rightPower);
+            logger.logBoolean("Launcher", "RightReady", rightReady);
+            logger.logString("Launcher", "RightPhase", rightPhase);
         }
 
         if (logger != null) {
@@ -261,17 +282,14 @@ public class TelemetryService {
             Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
             dsTelemetry.addData("Alliance", activeAlliance.displayName());
             dsTelemetry.addData("Drive Aim Assist", aimMode ? "vision-locked" : "manual");
-            dsTelemetry.addData("Drive Heading Hold", headingHold ? "engaged" : "free");
             dsTelemetry.addData("Drive Turn Cmd",
                     "%.2f (lock %.2f)",
-                    drive.getLastCommandTurn(),
-                    drive.getHeadingLockOutput());
+                    drive.getLastCommandTurn());
             dsTelemetry.addData(
                     "launcher Mode",
-                    "%s | ready=%s | autoSpin=%s",
+                    "%s | ready=%s",
                     controlMode,
-                    launcherReady,
-                    autoSpin
+                    launcherReady
             );
             dsTelemetry.addData(
                     "launcher Left",
@@ -319,7 +337,6 @@ public class TelemetryService {
                     requestRot,
                     slowMode,
                     aimMode,
-                    headingHold,
                     pose != null,
                     poseXIn,
                     poseYIn,
@@ -329,7 +346,8 @@ public class TelemetryService {
                     ftcYIn,
                     ftcHeadingRad,
                     launcherReady,
-                    autoSpin,
+                    launcherState,
+                    launcherSpinMode,
                     launcherCoordinator,
                     alliance,
                     visionSnapshot.alliance,
@@ -390,7 +408,6 @@ public class TelemetryService {
                                      double requestRot,
                                      boolean slowMode,
                                      boolean aimMode,
-                                     boolean headingHold,
                                      boolean poseValid,
                                      double poseXIn,
                                      double poseYIn,
@@ -400,7 +417,8 @@ public class TelemetryService {
                                      double ftcYIn,
                                      double ftcHeadingRad,
                                      boolean launcherReady,
-                                     boolean autoSpin,
+                                     String launcherState,
+                                     String launcherSpinMode,
                                      LauncherCoordinator launcherCoordinator,
                                      Alliance alliance,
                                      Alliance visionAlliance,
@@ -453,10 +471,8 @@ public class TelemetryService {
         packet.put("drive/requestRot", requestRot);
         packet.put("drive/slowMode", slowMode);
         packet.put("drive/aimMode", aimMode);
-        packet.put("drive/headingHold", headingHold);
         packet.put("drive/mode", drive.getDriveMode().name());
         packet.put("drive/commandTurn", drive.getLastCommandTurn());
-        packet.put("drive/headingLockOutput", drive.getHeadingLockOutput());
         packet.put("drive/lfPower", drive.getLfPower());
         packet.put("drive/rfPower", drive.getRfPower());
         packet.put("drive/lbPower", drive.getLbPower());
@@ -471,8 +487,12 @@ public class TelemetryService {
         packet.put("drive/lbVelIps", lbVelIps);
         packet.put("drive/rbVelIps", rbVelIps);
 
+
+
         packet.put("launcher/ready", launcherReady);
         packet.put("launcher/controlMode", controlMode);
+        packet.put("launcher/state", launcherState);
+        packet.put("launcher/spinMode", launcherSpinMode);
         packet.put("launcher/left/targetRpm", leftTargetRpm);
         packet.put("launcher/left/currentRpm", leftCurrentRpm);
         packet.put("launcher/left/power", leftPower);
@@ -497,8 +517,6 @@ public class TelemetryService {
         packet.put("launcher/right/isBang", rightBang);
         packet.put("launcher/right/isHold", rightHold);
         packet.put("launcher/right/isHybrid", rightHybrid);
-        packet.put("lanes/autoSpinEnabled", autoSpin);
-
         Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
         packet.put("alliance/id", activeAlliance.name());
 

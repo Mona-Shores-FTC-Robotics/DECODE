@@ -45,16 +45,18 @@ public class DecodeTeleOp extends NextFTCOpMode {
     private String visionRelocalizeStatus = "Press A to re-localize";
     private long visionRelocalizeStatusMs = 0L;
 
+
     @Override
     public void onInit() {
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.launcherCoordinator.lockIntake();
+
         robot.initializeForTeleOp();
 
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
-        driverBindings = new DriverBindings(driverPad);
+        driverBindings = new DriverBindings(driverPad, robot);
         driverBindings.onRelocalizeRequested(this::handleVisionRelocalizeRequest);
 
         GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
@@ -66,7 +68,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 CommandManager.INSTANCE,
-                new PedroComponent(Constants::createFollower),
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
                 new SubsystemComponent(robot.intake),
@@ -114,8 +115,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                     request.fieldY,
                     request.rotation,
                     request.slowMode,
-                    request.rampMode,
-                    request.headingHold
+                    request.rampMode
             );
         }
 

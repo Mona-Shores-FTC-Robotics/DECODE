@@ -17,8 +17,10 @@ import org.firstinspires.ftc.teamcode.util.RobotMode;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Launcher subsystem that manages three flywheels and their paired bootkicker servos.
@@ -141,27 +143,27 @@ public class LauncherSubsystem implements Subsystem {
     public static class LeftFeederConfig {
         public static String servoName = "feeder_left";
         public static boolean reversed = false;
-        public static double loadPosition = 0.12;
-        public static double firePosition = 0.48;
-        public static double holdMs = 140.0;
+        public static double loadPosition = 1.0;
+        public static double firePosition = .7;
+        public static double holdMs = 3000;
     }
 
     @Configurable
     public static class CenterFeederConfig {
         public static String servoName = "feeder_center";
         public static boolean reversed = false;
-        public static double loadPosition = 0.12;
-        public static double firePosition = 0.48;
-        public static double holdMs = 140.0;
+        public static double loadPosition = .7;
+        public static double firePosition = 1.0;
+        public static double holdMs = 2000;
     }
 
     @Configurable
     public static class RightFeederConfig {
         public static String servoName = "feeder_right";
         public static boolean reversed = false;
-        public static double loadPosition = 0.12;
-        public static double firePosition = 0.48;
-        public static double holdMs = 140.0;
+        public static double loadPosition = .7;
+        public static double firePosition = 1;
+        public static double holdMs = 2000;
     }
 
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
@@ -408,6 +410,20 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    public void moveFeederToFire(LauncherLane lane) {
+        Feeder feeder = feeders.get(lane);
+        if (feeder != null) {
+            feeder.fire();
+        }
+    }
+
+    public void moveFeederToLoad(LauncherLane lane) {
+        Feeder feeder = feeders.get(lane);
+        if (feeder != null) {
+            feeder.toLoadPosition();
+        }
+    }
+
     public void homeAllFeeders() {
         for (Feeder feeder : feeders.values()) {
             feeder.toLoadPosition();
@@ -620,6 +636,8 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         double now = clock.milliseconds();
+        boolean shotDrivenFull = !shotQueue.isEmpty() && requestedSpinMode != SpinMode.FULL;
+        Set<LauncherLane> queuedLanes = shotDrivenFull ? lanesWithQueuedShots() : EnumSet.noneOf(LauncherLane.class);
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel == null) {
@@ -631,7 +649,12 @@ public class LauncherSubsystem implements Subsystem {
                 continue;
             }
 
-            switch (mode) {
+            SpinMode laneMode = mode;
+            if (shotDrivenFull && !queuedLanes.contains(lane)) {
+                laneMode = SpinMode.IDLE;
+            }
+
+            switch (laneMode) {
                 case FULL:
                     flywheel.commandLaunch();
                     break;
@@ -651,6 +674,19 @@ public class LauncherSubsystem implements Subsystem {
             return SpinMode.FULL;
         }
         return requestedSpinMode;
+    }
+
+    private Set<LauncherLane> lanesWithQueuedShots() {
+        if (shotQueue.isEmpty()) {
+            return EnumSet.noneOf(LauncherLane.class);
+        }
+        EnumSet<LauncherLane> lanes = EnumSet.noneOf(LauncherLane.class);
+        for (ShotRequest request : shotQueue) {
+            if (request != null && request.lane != null) {
+                lanes.add(request.lane);
+            }
+        }
+        return lanes;
     }
 
     private void setState(LauncherState newState) {

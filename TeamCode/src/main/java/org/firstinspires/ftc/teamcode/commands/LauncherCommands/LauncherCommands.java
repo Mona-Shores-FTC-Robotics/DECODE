@@ -6,8 +6,6 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
-import dev.nextftc.core.commands.Command;
-
 /**
  * Convenience factory for launcher-related commands alongside immediate queue helpers used by
  * legacy binding paths.
@@ -80,23 +78,20 @@ public class LauncherCommands {
         launcher.clearQueue();
     }
 
-    public Command toggleSpinMode() {
-        return new Command() {
-            private boolean targetFull;
+    public void setSpinModeToFull() {
+        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+    }
 
-            @Override
-            public void start() {
-                targetFull = launcher.getRequestedSpinMode() != LauncherSubsystem.SpinMode.FULL;
-                launcher.setSpinMode(targetFull
-                        ? LauncherSubsystem.SpinMode.FULL
-                        : LauncherSubsystem.SpinMode.IDLE);
-            }
+    public void setSpinModeToIdle() {
+        launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+    }
 
-            @Override
-            public boolean isDone() {
-                return true; // instantaneous toggle
-            }
-        };
+    public SetFeederPositionCommand setLeftFeederToLoad() {
+        return new SetFeederPositionCommand(launcher, LauncherLane.LEFT, true);
+    }
+
+    public SetFeederPositionCommand setLeftFeederToFire() {
+        return new SetFeederPositionCommand(launcher, LauncherLane.LEFT, false);
     }
 
 }

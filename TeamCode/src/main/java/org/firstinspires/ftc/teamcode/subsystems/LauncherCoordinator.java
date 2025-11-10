@@ -61,9 +61,9 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     private RobotLogger.Source loggerSource;
     private boolean lastLauncherReady = false;
     private double lastPeriodicMs = 0.0;
-    private boolean autoSpinEnabled = false;
     private boolean intakeAutomationEnabled = true;
     private ArtifactState artifactState = ArtifactState.EMPTY;
+    private boolean manualSpinOverride = false;
     private IntakeSubsystem.IntakeMode manualIntakeOverride = IntakeSubsystem.IntakeMode.STOPPED;
     private IntakeSubsystem.IntakeMode appliedIntakeMode = IntakeSubsystem.IntakeMode.STOPPED;
     private boolean intakeLocked = false;
@@ -89,6 +89,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         appliedIntakeMode = null;
         updateArtifactState();
         applyIntakeMode();
+        manualSpinOverride = false;
         recomputeSpinMode();
     }
 
@@ -125,15 +126,6 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
 
     public ArtifactColor getLaneColor(LauncherLane lane) {
         return lane == null ? ArtifactColor.NONE : laneColors.getOrDefault(lane, ArtifactColor.NONE);
-    }
-
-    public void enableAutoSpin(boolean enabled) {
-        autoSpinEnabled = enabled;
-        recomputeSpinMode();
-    }
-
-    public boolean isAutoSpinEnabled() {
-        return autoSpinEnabled;
     }
 
     public void requestKick(LauncherLane lane) {
@@ -225,8 +217,11 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     }
 
     private void recomputeSpinMode() {
-        if (!autoSpinEnabled || robotMode != RobotMode.MATCH) {
-            launcher.requestStandbySpin();
+        if (manualSpinOverride) {
+            return;
+        }
+        if (robotMode != RobotMode.MATCH) {
+            launcher.setSpinMode(LauncherSubsystem.SpinMode.OFF);
             return;
         }
         boolean anyActive = false;
@@ -240,7 +235,9 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         if (anyActive) {
             launcher.requestSpinUp();
         } else {
-            launcher.requestStandbySpin();
+            if (launcher.getRequestedSpinMode() != LauncherSubsystem.SpinMode.OFF) {
+                launcher.requestStandbySpin();
+            }
         }
     }
 
@@ -360,11 +357,20 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         }
     }
 
+    public void setManualSpinOverride(boolean enabled) {
+        if (manualSpinOverride == enabled) {
+            return;
+        }
+        manualSpinOverride = enabled;
+        if (!manualSpinOverride) {
+            recomputeSpinMode();
+        }
+    }
+
     public void populateInputs(Inputs inputs) {
         if (inputs == null) {
             return;
         }
-        inputs.autoSpinEnabled = autoSpinEnabled;
         inputs.lightingRegistered = lightingRegistered;
         inputs.artifactState = artifactState.name();
         inputs.artifactCount = artifactState.count();
@@ -437,12 +443,13 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     public void setRobotMode(RobotMode mode) {
         robotMode = RobotMode.orDefault(mode);
         if (robotMode == RobotMode.DEBUG) {
-            enableAutoSpin(false);
             setIntakeAutomationEnabled(false);
         } else {
             setIntakeAutomationEnabled(true);
         }
         refreshLightingRegistration();
+        manualSpinOverride = false;
+        recomputeSpinMode();
     }
 
     private void refreshLightingRegistration() {
@@ -467,7 +474,6 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     }
 
     public static final class Inputs {
-        public boolean autoSpinEnabled;
         public boolean lightingRegistered;
         public String artifactState = ArtifactState.EMPTY.name();
         public int artifactCount;

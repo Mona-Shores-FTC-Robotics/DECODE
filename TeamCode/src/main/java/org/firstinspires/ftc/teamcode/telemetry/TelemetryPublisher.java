@@ -41,14 +41,13 @@ public class TelemetryPublisher {
     public void publishDrive(DriveSubsystem drive,
                              double lx, double ly, double rx,
                              boolean slowMode,
-                             boolean aimMode,
-                             boolean headingHold) {
+                             boolean aimMode
+                             ) {
         double lfPower = drive.getLfPower();
         double rfPower = drive.getRfPower();
         double lbPower = drive.getLbPower();
         double rbPower = drive.getRbPower();
         double commandTurn = drive.getLastCommandTurn();
-        double headingLockOutput = drive.getHeadingLockOutput();
         double lfVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getLfVelocityTicksPerSec()));
         double rfVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getRfVelocityTicksPerSec()));
         double lbVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getLbVelocityTicksPerSec()));
@@ -65,9 +64,7 @@ public class TelemetryPublisher {
             panelsTelemetry.debug("drive/mode", drive.getDriveMode().name());
             panelsTelemetry.debug("drive/slowMode", slowMode);
             panelsTelemetry.debug("drive/aimMode", aimMode);
-            panelsTelemetry.debug("drive/headingHoldRequested", headingHold);
             panelsTelemetry.debug("drive/commandTurn", commandTurn);
-            panelsTelemetry.debug("drive/headingLockOutput", headingLockOutput);
             panelsTelemetry.debug("drive/lfPower", lfPower);
             panelsTelemetry.debug("drive/rfPower", rfPower);
             panelsTelemetry.debug("drive/lbPower", lbPower);
@@ -87,9 +84,7 @@ public class TelemetryPublisher {
             logger.recordNumber("drive_rx", rx);
             logger.recordBoolean("drive_slowMode", slowMode);
             logger.recordBoolean("drive_aim_mode", aimMode);
-            logger.recordBoolean("drive_heading_hold_request", headingHold);
             logger.recordNumber("drive_command_turn", commandTurn);
-            logger.recordNumber("drive_heading_lock_output", headingLockOutput);
             logger.recordString("drive_mode", drive.getDriveMode().name());
             logger.recordNumber("drive_x_in", pose.getX(DistanceUnit.INCH));
             logger.recordNumber("drive_y_in", pose.getY(DistanceUnit.INCH));

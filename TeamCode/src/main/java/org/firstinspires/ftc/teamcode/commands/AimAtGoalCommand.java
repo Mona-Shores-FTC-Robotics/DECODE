@@ -22,12 +22,16 @@ public class AimAtGoalCommand extends Command {
     private final DoubleSupplier fieldXSupplier;
     private final DoubleSupplier fieldYSupplier;
     private final BooleanSupplier slowModeSupplier;
+    private static final long DEFAULT_MAX_DURATION_MS = 0L;
+
     private final double headingToleranceRad;
     private final long settleTimeMs;
     private final boolean requireStationary;
     private final boolean finishWhenAligned;
+    private final long maxDurationMs;
 
     private long alignedSinceMs = -1L;
+    private long startTimeMs = -1L;
 
     public AimAtGoalCommand(DriveSubsystem drive,
                             DoubleSupplier fieldXSupplier,
@@ -40,7 +44,8 @@ public class AimAtGoalCommand extends Command {
                 DEFAULT_HEADING_TOLERANCE_DEG,
                 DEFAULT_SETTLE_TIME_MS,
                 true,
-                false);
+                true,
+                DEFAULT_MAX_DURATION_MS);
     }
 
     public AimAtGoalCommand(DriveSubsystem drive,
@@ -50,7 +55,8 @@ public class AimAtGoalCommand extends Command {
                             double headingToleranceDeg,
                             long settleTimeMs,
                             boolean requireStationary,
-                            boolean finishWhenAligned) {
+                            boolean finishWhenAligned,
+                            long timeoutMs) {
         this.drive = Objects.requireNonNull(drive, "drive subsystem required");
         this.fieldXSupplier = fieldXSupplier != null ? fieldXSupplier : () -> 0.0;
         this.fieldYSupplier = fieldYSupplier != null ? fieldYSupplier : () -> 0.0;
@@ -59,6 +65,7 @@ public class AimAtGoalCommand extends Command {
         this.settleTimeMs = Math.max(0L, settleTimeMs);
         this.requireStationary = requireStationary;
         this.finishWhenAligned = finishWhenAligned;
+        this.maxDurationMs = Math.max(0L, timeoutMs);
         requires(this.drive);
         setInterruptible(true);
     }
@@ -66,6 +73,7 @@ public class AimAtGoalCommand extends Command {
     @Override
     public void start() {
         alignedSinceMs = -1L;
+        startTimeMs = System.currentTimeMillis();
         drive.aimAndDrive(fieldXSupplier.getAsDouble(),
                 fieldYSupplier.getAsDouble(),
                 slowModeSupplier.getAsBoolean());
@@ -100,6 +108,11 @@ public class AimAtGoalCommand extends Command {
 
     @Override
     public boolean isDone() {
+        if (maxDurationMs > 0 && startTimeMs >= 0L) {
+            if (System.currentTimeMillis() - startTimeMs >= maxDurationMs) {
+                return true;
+            }
+        }
         if (!finishWhenAligned) {
             return false;
         }
@@ -112,6 +125,7 @@ public class AimAtGoalCommand extends Command {
     @Override
     public void stop(boolean interrupted) {
         alignedSinceMs = -1L;
+        startTimeMs = -1L;
         drive.stop();
     }
 

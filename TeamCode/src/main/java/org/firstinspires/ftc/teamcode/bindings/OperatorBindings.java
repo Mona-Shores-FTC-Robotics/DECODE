@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.bindings;
 
 import dev.nextftc.bindings.Button;
+import dev.nextftc.core.commands.Command;
 import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -10,6 +11,7 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 /**
  * Match-oriented operator bindings. Keeps the intake running in reverse by default,
@@ -22,7 +24,7 @@ public class OperatorBindings {
 
     private final Robot robot;
     private final LauncherCoordinator launcherCoordinator;
-    private final Button spinModeToggle;
+    private final Button spinModeFull;
     private final Button launchLeft;
     private final Button launchCenter;
     private final Button launchRight;
@@ -41,7 +43,7 @@ public class OperatorBindings {
         this.launcherCommands = robot.launcherCommands;
         this.intakeCommands = robot.intakeCommands;
 
-        spinModeToggle = operator.leftBumper();
+        spinModeFull = operator.leftBumper();
         launchLeft = operator.x();
         launchCenter = operator.y();
         launchRight = operator.b();
@@ -52,21 +54,24 @@ public class OperatorBindings {
     }
 
     private void configureMatchBindings() {
-        if (launcherCoordinator != null) {
-            launcherCoordinator.enableAutoSpin(false);
-        }
         robot.launcher.setDebugOverrideEnabled(false);
-        robot.launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
         if (launcherCoordinator != null) {
             launcherCoordinator.clearIntakeOverride();
         }
         syncLightingWithIntake();
 
-        spinModeToggle.whenBecomesTrue(launcherCommands::toggleSpinMode);
-        launchLeft.whenBecomesTrue(launcherCommands::launchLeft);
-        launchCenter.whenBecomesTrue(launcherCommands::launchCenter);
-        launchRight.whenBecomesTrue(launcherCommands::launchRight);
-        launchAll.whenBecomesTrue(launcherCommands::launchAll);
+        Command launchLeftCommand = launcherCommands.launchLeft();
+
+        launchLeft.whenBecomesTrue(()->robot.launcher.moveFeederToFire(LauncherLane.LEFT));
+        launchLeft.whenBecomesFalse(()->robot.launcher.moveFeederToLoad(LauncherLane.LEFT));
+
+        spinModeFull.whenBecomesTrue(launcherCommands::setSpinModeToFull);
+        spinModeFull.whenBecomesFalse(launcherCommands::setSpinModeToIdle);
+
+//        launchLeft.whenBecomesTrue(launchLeftCommand);
+        launchCenter.whenBecomesTrue(() -> launcherCommands.launchCenter().schedule());
+        launchRight.whenBecomesTrue(() -> launcherCommands.launchRight().schedule());
+        launchAll.whenBecomesTrue(() -> launcherCommands.launchAll().schedule());
 
         intakeForwardHold.whenBecomesTrue(robot.intake::startForward);
         intakeForwardHold.whenBecomesFalse(robot.intake::startReverse);

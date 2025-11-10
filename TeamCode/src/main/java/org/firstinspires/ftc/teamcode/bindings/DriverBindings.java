@@ -1,7 +1,15 @@
 package org.firstinspires.ftc.teamcode.bindings;
 
+import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.commands.AimAtGoalCommand;
+import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+
+import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
+
 import dev.nextftc.bindings.Button;
 import dev.nextftc.bindings.Range;
+import dev.nextftc.core.commands.Command;
 import dev.nextftc.ftc.GamepadEx;
 
 
@@ -20,20 +28,28 @@ public class DriverBindings {
     private final Range rotationCcw;
     private final Button slowHold;
     private final Button rampHold;
-    private final Button headingHold;
     private final Button aimHold;
     private final Button relocalizeRequest;
+    private final Button aim;
 
-
-    public DriverBindings(GamepadEx driver) {
+    public DriverBindings(GamepadEx driver, Robot robot) {
         fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND);
         fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND).negate();
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
         rampHold = driver.leftBumper();
-        headingHold = driver.x();
+        aim = driver.x();
         aimHold = driver.b();
         relocalizeRequest = driver.a();
+
+        Command aimCommand = new AimAtGoalCommand(robot.drive, ()-> 0, ()-> 0, ()-> false,
+                5,
+                120,
+                true,
+                true,
+                1000);
+
+        aim.whenBecomesTrue(aimCommand);
     }
 
     public DriveRequest sampleDriveRequest() {
@@ -43,7 +59,6 @@ public class DriverBindings {
                 rotationCcw.get(),
                 slowHold.get(),
                 rampHold.get(),
-                headingHold.get(),
                 aimHold.get()
         );
     }
@@ -61,7 +76,6 @@ public class DriverBindings {
         public final double rotation;
         public final boolean slowMode;
         public final boolean rampMode;
-        public final boolean headingHold;
         public final boolean aimMode;
 
         private DriveRequest(double fieldX,
@@ -69,14 +83,12 @@ public class DriverBindings {
                              double rotation,
                              boolean slowMode,
                              boolean rampMode,
-                             boolean headingHold,
                              boolean aimMode) {
             this.fieldX = fieldX;
             this.fieldY = fieldY;
             this.rotation = rotation;
             this.slowMode = slowMode;
             this.rampMode = rampMode;
-            this.headingHold = headingHold;
             this.aimMode = aimMode;
         }
     }
