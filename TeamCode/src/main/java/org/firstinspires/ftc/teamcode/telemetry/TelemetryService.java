@@ -199,6 +199,9 @@ public class TelemetryService {
         boolean rightBang = "BANG".equals(rightPhase);
         boolean rightHold = "HOLD".equals(rightPhase);
         boolean rightHybrid = "HYBRID".equals(rightPhase);
+        int leftBangToHoldCount = launcher.getBangToHoldCount(LauncherLane.LEFT);
+        int centerBangToHoldCount = launcher.getBangToHoldCount(LauncherLane.CENTER);
+        int rightBangToHoldCount = launcher.getBangToHoldCount(LauncherLane.RIGHT);
         double displayTargetRpm = Math.max(Math.max(leftTargetRpm, centerTargetRpm), rightTargetRpm);
         double displayCurrentRpm = Math.max(Math.max(leftCurrentRpm, centerCurrentRpm), rightCurrentRpm);
         double displayPower = Math.max(Math.max(leftPower, centerPower), rightPower);
@@ -239,6 +242,9 @@ public class TelemetryService {
             panels.debug("launcher/lanes/right/power", rightPower);
             panels.debug("launcher/lanes/right/ready", rightReady);
             panels.debug("launcher/lanes/right/phase", rightPhase);
+            panels.debug("launcher/lanes/left/bangToHoldCount", leftBangToHoldCount);
+            panels.debug("launcher/lanes/center/bangToHoldCount", centerBangToHoldCount);
+            panels.debug("launcher/lanes/right/bangToHoldCount", rightBangToHoldCount);
         }
 
         if (logger != null) {
@@ -263,6 +269,9 @@ public class TelemetryService {
             logger.logNumber("Launcher", "RightPower", rightPower);
             logger.logBoolean("Launcher", "RightReady", rightReady);
             logger.logString("Launcher", "RightPhase", rightPhase);
+            logger.logNumber("Launcher", "LeftBangToHoldCount", leftBangToHoldCount);
+            logger.logNumber("Launcher", "CenterBangToHoldCount", centerBangToHoldCount);
+            logger.logNumber("Launcher", "RightBangToHoldCount", rightBangToHoldCount);
         }
 
         if (logger != null) {
@@ -388,7 +397,10 @@ public class TelemetryService {
                     centerHybrid,
                     rightBang,
                     rightHold,
-                    rightHybrid
+                    rightHybrid,
+                    leftBangToHoldCount,
+                    centerBangToHoldCount,
+                    rightBangToHoldCount
             );
             lastDashboardPacketMs = nowMs;
         }
@@ -459,7 +471,10 @@ public class TelemetryService {
                                      boolean centerHybrid,
                                      boolean rightBang,
                                      boolean rightHold,
-                                     boolean rightHybrid) {
+                                     boolean rightHybrid,
+                                     int leftBangToHoldCount,
+                                     int centerBangToHoldCount,
+                                     int rightBangToHoldCount) {
         if (!enableDashboardTelemetry || dashboard == null) {
             return;
         }
@@ -517,6 +532,9 @@ public class TelemetryService {
         packet.put("launcher/right/isBang", rightBang);
         packet.put("launcher/right/isHold", rightHold);
         packet.put("launcher/right/isHybrid", rightHybrid);
+        packet.put("launcher/left/bangToHoldCount", leftBangToHoldCount);
+        packet.put("launcher/center/bangToHoldCount", centerBangToHoldCount);
+        packet.put("launcher/right/bangToHoldCount", rightBangToHoldCount);
         Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
         packet.put("alliance/id", activeAlliance.name());
 

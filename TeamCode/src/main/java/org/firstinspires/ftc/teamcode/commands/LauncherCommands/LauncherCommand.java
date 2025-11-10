@@ -65,7 +65,7 @@ abstract class LauncherCommand extends Command {
             launcher.clearQueue();
         }
         if (manageSpinMode && previousSpinMode != LauncherSubsystem.SpinMode.FULL) {
-            launcher.setSpinMode(previousSpinMode);
+            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
         }
     }
 

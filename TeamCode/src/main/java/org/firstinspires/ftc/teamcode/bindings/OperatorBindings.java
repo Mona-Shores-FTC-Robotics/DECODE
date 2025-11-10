@@ -10,7 +10,6 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 /**
@@ -28,7 +27,8 @@ public class OperatorBindings {
     private final Button launchLeft;
     private final Button launchCenter;
     private final Button launchRight;
-    private final Button launchAll;
+    private final Button testLaunchRight;
+//    private final Button testLaunchLeft;
     private final Button intakeForwardHold;
     private boolean manualIntakeActive = false;
 
@@ -47,7 +47,10 @@ public class OperatorBindings {
         launchLeft = operator.x();
         launchCenter = operator.y();
         launchRight = operator.b();
-        launchAll = operator.a();
+
+        testLaunchRight = operator.a();
+//        testLaunchLeft = operator.a();
+
         intakeForwardHold = operator.rightBumper();
 
         configureMatchBindings();
@@ -60,18 +63,23 @@ public class OperatorBindings {
         }
         syncLightingWithIntake();
 
+        Command launchRightCommand = launcherCommands.launchRight();
+        Command launchCenterCommand = launcherCommands.launchCenter();
         Command launchLeftCommand = launcherCommands.launchLeft();
 
-        launchLeft.whenBecomesTrue(()->robot.launcher.moveFeederToFire(LauncherLane.LEFT));
-        launchLeft.whenBecomesFalse(()->robot.launcher.moveFeederToLoad(LauncherLane.LEFT));
+        testLaunchRight.whenBecomesTrue(()->robot.launcher.moveFeederToFire(LauncherLane.RIGHT));
+        testLaunchRight.whenBecomesFalse(()->robot.launcher.moveFeederToLoad(LauncherLane.RIGHT));
+
+//        testLaunchLeft.whenBecomesTrue(()->robot.launcher.moveFeederToFire(LauncherLane.LEFT));
+//        testLaunchLeft.whenBecomesFalse(()->robot.launcher.moveFeederToLoad(LauncherLane.LEFT));
+
 
         spinModeFull.whenBecomesTrue(launcherCommands::setSpinModeToFull);
         spinModeFull.whenBecomesFalse(launcherCommands::setSpinModeToIdle);
 
-//        launchLeft.whenBecomesTrue(launchLeftCommand);
-        launchCenter.whenBecomesTrue(() -> launcherCommands.launchCenter().schedule());
-        launchRight.whenBecomesTrue(() -> launcherCommands.launchRight().schedule());
-        launchAll.whenBecomesTrue(() -> launcherCommands.launchAll().schedule());
+        launchLeft.whenBecomesTrue(launchLeftCommand);
+        launchCenter.whenBecomesTrue(launchCenterCommand);
+        launchRight.whenBecomesTrue(launchRightCommand);
 
         intakeForwardHold.whenBecomesTrue(robot.intake::startForward);
         intakeForwardHold.whenBecomesFalse(robot.intake::startReverse);

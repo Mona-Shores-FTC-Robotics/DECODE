@@ -69,9 +69,9 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class Timing {
         /** Minimum time the wheel should be commanded at launch speed before trusting fallback readiness. */
-        public static double minimalSpinUpMs = 500;
+        public static double minimalSpinUpMs = 1000;
         /** If encoders are unavailable, treat the wheel as ready after this many milliseconds at full power. */
-        public static double fallbackReadyMs = 3000;
+        public static double fallbackReadyMs = 1000;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
         public static double recoveryMs = 1000;
         /** Delay between sequential shots when bursting all three lanes (ms). */
@@ -83,7 +83,7 @@ public class LauncherSubsystem implements Subsystem {
         public static double highPower = 1.0;
         public static double lowPower = 0.3;
         public static double enterBangThresholdRpm = 1200;
-        public static double exitBangThresholdRpm = 500;
+        public static double exitBangThresholdRpm = 800;
         public static double bangDeadbandRpm = 50;
     }
 
@@ -96,7 +96,7 @@ public class LauncherSubsystem implements Subsystem {
 
     @Configurable
     public static class HoldConfig {
-        public static double baseHoldPower = 0.32;
+        public static double baseHoldPower = 0.5;
         public static double rpmPowerGain = 0.000075;
         public static double minHoldPower = 0.2;
         public static double maxHoldPower = 1.0;
@@ -110,17 +110,17 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class PhaseSwitchConfig {
         public static int bangToHybridConfirmCycles = 3;
-        public static int bangToHoldConfirmCycles = 3;
+        public static int bangToHoldConfirmCycles = 5;
         public static int hybridToBangConfirmCycles = 2;
-        public static int holdToBangConfirmCycles = 2;
+        public static int holdToBangConfirmCycles = 5;
     }
 
     @Configurable
     public static class LeftFlywheelConfig {
         public static String motorName = "launcher_left";
         public static boolean reversed = true;
-        public static double launchRpm = 0;
-        public static double idleRpm = 0;
+        public static double launchRpm = 3600;
+        public static double idleRpm = 2600;
     }
 
     @Configurable
@@ -135,26 +135,26 @@ public class LauncherSubsystem implements Subsystem {
     public static class RightFlywheelConfig { //actually left
         public static String motorName = "launcher_right";
         public static boolean reversed = true;
-        public static double launchRpm = 0;
-        public static double idleRpm = 0;
+        public static double launchRpm = 3600;
+        public static double idleRpm = 2800;
     }
 
     @Configurable
     public static class LeftFeederConfig {
         public static String servoName = "feeder_left";
         public static boolean reversed = false;
-        public static double loadPosition = 1.0;
-        public static double firePosition = .7;
-        public static double holdMs = 3000;
+        public static double loadPosition = .93;
+        public static double firePosition = .65;
+        public static double holdMs = 4000;
     }
 
     @Configurable
     public static class CenterFeederConfig {
         public static String servoName = "feeder_center";
         public static boolean reversed = false;
-        public static double loadPosition = .7;
-        public static double firePosition = 1.0;
-        public static double holdMs = 2000;
+        public static double loadPosition = 1.0;
+        public static double firePosition = .7;
+        public static double holdMs = 4000;
     }
 
     @Configurable
@@ -162,7 +162,7 @@ public class LauncherSubsystem implements Subsystem {
         public static String servoName = "feeder_right";
         public static boolean reversed = false;
         public static double loadPosition = .7;
-        public static double firePosition = 1;
+        public static double firePosition = .3;
         public static double holdMs = 2000;
     }
 
@@ -479,6 +479,11 @@ public class LauncherSubsystem implements Subsystem {
     public double getLastPower(LauncherLane lane) {
         Flywheel flywheel = flywheels.get(lane);
         return flywheel == null ? 0.0 : flywheel.getAppliedPower();
+    }
+
+    public int getBangToHoldCount(LauncherLane lane) {
+        Flywheel flywheel = flywheels.get(lane);
+        return flywheel == null ? 0 : flywheel.getBangToHoldCounter();
     }
 
     public SpinMode getRequestedSpinMode() {
@@ -956,6 +961,10 @@ public class LauncherSubsystem implements Subsystem {
 
         String getPhaseName() {
             return phase.name();
+        }
+
+        int getBangToHoldCounter() {
+            return bangToHoldCounter;
         }
 
         boolean isAtLaunch() {
