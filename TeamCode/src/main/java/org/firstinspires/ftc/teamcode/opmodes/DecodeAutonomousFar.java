@@ -43,7 +43,7 @@ import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Autonomous", group = "Autonomous")
-public class DecodeAutonomous extends NextFTCOpMode {
+public class DecodeAutonomousFar extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
@@ -504,8 +504,8 @@ public class DecodeAutonomous extends NextFTCOpMode {
         Pose startFarPose = layout.pose(FieldPoint.START_FAR);
         Pose launchFarPose = layout.pose(FieldPoint.LAUNCH_FAR);
         Pose allianceWallArtifactsPickupPose = layout.pose(FieldPoint.ALLIANCE_WALL_ARTIFACTS_PICKUP);
-        Pose parkingArtifactsPickupPose = layout.pose(FieldPoint.PARKING_ARTIFACTS_PICKUP);
-        Pose gateFarArtifactsPickupPose = layout.pose(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP);
+        Pose parking90DegArtifactsPickupPose = layout.pose(FieldPoint.PARKING_ARTIFACTS_PICKUP_90_DEG);
+        Pose gateFar90DegArtifactsPickupPose = layout.pose(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_90_DEG);
         Pose parkingControlPoint = AutoField.parkingArtifactsControlPoint(alliance);
         Pose gateFarControlPoint = AutoField.gateFarArtifactsControlPoint(alliance);
 
@@ -527,23 +527,23 @@ public class DecodeAutonomous extends NextFTCOpMode {
                 .build();
 
         paths.launchFarToParkingArtifactsPickup = follower.pathBuilder()
-                .addPath(new BezierCurve(launchFarPose, parkingControlPoint, parkingArtifactsPickupPose))
-                .setLinearHeadingInterpolation(launchFarPose.getHeading(), parkingArtifactsPickupPose.getHeading(), .7)
+                .addPath(new BezierCurve(launchFarPose, parkingControlPoint, parking90DegArtifactsPickupPose))
+                .setLinearHeadingInterpolation(launchFarPose.getHeading(), parking90DegArtifactsPickupPose.getHeading(), .7)
                 .build();
 
         paths.parkingArtifactsPickupToLaunchFar = follower.pathBuilder()
-                .addPath(new BezierLine(parkingArtifactsPickupPose, launchFarPose))
-                .setLinearHeadingInterpolation(parkingArtifactsPickupPose.getHeading(), launchFarPose.getHeading(), .7)
+                .addPath(new BezierLine(parking90DegArtifactsPickupPose, launchFarPose))
+                .setLinearHeadingInterpolation(parking90DegArtifactsPickupPose.getHeading(), launchFarPose.getHeading(), .7)
                 .build();
 
         paths.launchFarToGateFarArtifactsPickup = follower.pathBuilder()
-                .addPath(new BezierCurve(launchFarPose,gateFarControlPoint, gateFarArtifactsPickupPose))
-                .setLinearHeadingInterpolation(launchFarPose.getHeading(), gateFarArtifactsPickupPose.getHeading(), .7)
+                .addPath(new BezierCurve(launchFarPose,gateFarControlPoint, gateFar90DegArtifactsPickupPose))
+                .setLinearHeadingInterpolation(launchFarPose.getHeading(), gateFar90DegArtifactsPickupPose.getHeading(), .7)
                 .build();
 
         paths.gateFarArtifactsPickupToLaunchFar = follower.pathBuilder()
-                .addPath(new BezierLine(gateFarArtifactsPickupPose, launchFarPose))
-                .setLinearHeadingInterpolation(gateFarArtifactsPickupPose.getHeading(), launchFarPose.getHeading(), .7)
+                .addPath(new BezierLine(gateFar90DegArtifactsPickupPose, launchFarPose))
+                .setLinearHeadingInterpolation(gateFar90DegArtifactsPickupPose.getHeading(), launchFarPose.getHeading(), .7)
                 .build();
 
         return paths;

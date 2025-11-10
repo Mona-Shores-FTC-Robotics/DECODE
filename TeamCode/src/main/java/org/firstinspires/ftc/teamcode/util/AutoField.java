@@ -21,8 +21,12 @@ public final class AutoField {
         START_FAR,
         LAUNCH_FAR,
         ALLIANCE_WALL_ARTIFACTS_PICKUP,
-        PARKING_ARTIFACTS_PICKUP,
-        GATE_FAR_ARTIFACTS_PICKUP
+        PARKING_ARTIFACTS_PICKUP_90_DEG,
+        GATE_FAR_ARTIFACTS_PICKUP_90_DEG,
+        LAUNCH_CLOSE,
+        GATE_CLOSE_ARTIFACTS_PICKUP,
+        GATE_FAR_ARTIFACTS_PICKUP_270_DEG,
+        PARKING_ARTIFACTS_PICKUP_270_DEG
     }
 
     @com.bylazar.configurables.annotations.Configurable
@@ -43,15 +47,24 @@ public final class AutoField {
 
         public static double parkingArtifactsX = 23;
         public static double parkingArtifactsY = 32;
-        public static double parkingArtifactsHeadingDeg = 90.0;
+        public static double parkingArtifactsHeadingDeg90 = 90.0;
         public static double parkingArtifactsControlPointX = 28;
         public static double parkingArtifactsControlPointY = 2;
 
         public static double gateFarX = 24;
         public static double gateFarY = 56;
-        public static double gateFarHeadingDeg = 90.0;
+        public static double gateFarHeadingDeg90 = 90.0;
         public static double gateFarControlPointX = 22;
         public static double gateFarControlPointY = 29;
+        public static double launchCloseX = 21.5;
+        public static double launchCloseY = 124;
+        public static double launchCloseHeading = 270;
+
+        public static double gateCloseX = 24;
+        public static double gateCloseY = 87;
+        public static double gateCloseHeading = 270;
+        public static double gateFarHeadingDeg270 = 270;
+        public static double parkingArtifactsHeading270 = 270;
 
 
         ArrayList<Pose> parkingControlPoints = new ArrayList<>();
@@ -80,17 +93,44 @@ public final class AutoField {
                 Waypoints.allianceWallArtifactsHeadingDeg,
                 alliance
         ));
-        layout.put(FieldPoint.PARKING_ARTIFACTS_PICKUP, poseForAlliance(
+        layout.put(FieldPoint.PARKING_ARTIFACTS_PICKUP_90_DEG, poseForAlliance(
                 Waypoints.parkingArtifactsX,
                 Waypoints.parkingArtifactsY,
-                Waypoints.parkingArtifactsHeadingDeg,
+                Waypoints.parkingArtifactsHeadingDeg90,
                 alliance
         ));
-        layout.put(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP, poseForAlliance(
+        layout.put(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_90_DEG, poseForAlliance(
                 Waypoints.gateFarX,
                 Waypoints.gateFarY,
-                Waypoints.gateFarHeadingDeg,
+                Waypoints.gateFarHeadingDeg90,
                 alliance
+        ));
+        layout.put(FieldPoint.LAUNCH_CLOSE, poseForAlliance(
+                Waypoints.launchCloseX,
+                Waypoints.launchCloseY,
+                Waypoints.launchCloseHeading,
+                alliance
+
+        ));
+        layout.put(FieldPoint.GATE_CLOSE_ARTIFACTS_PICKUP, poseForAlliance(
+                Waypoints.gateCloseX,
+                Waypoints.gateCloseY,
+                Waypoints.gateCloseHeading,
+                alliance
+        ));
+        layout.put(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_270_DEG, poseForAlliance(
+                Waypoints.gateFarX,
+                Waypoints.gateFarY,
+                Waypoints.gateFarHeadingDeg270,
+                alliance
+
+        ));
+        layout.put(FieldPoint.PARKING_ARTIFACTS_PICKUP_270_DEG, poseForAlliance(
+                Waypoints.parkingArtifactsX,
+                Waypoints.parkingArtifactsY,
+                Waypoints.parkingArtifactsHeading270,
+                alliance
+
         ));
         return new FieldLayout(layout);
     }
@@ -99,7 +139,7 @@ public final class AutoField {
         return poseForAlliance(
                 Waypoints.parkingArtifactsControlPointX,
                 Waypoints.parkingArtifactsControlPointY,
-                Waypoints.parkingArtifactsHeadingDeg,
+                Waypoints.parkingArtifactsHeadingDeg90,
 
                 alliance
         );
@@ -108,7 +148,7 @@ public final class AutoField {
         return poseForAlliance(
                 Waypoints.gateFarControlPointX,
                 Waypoints.gateFarControlPointY,
-                Waypoints.gateFarHeadingDeg,
+                Waypoints.gateFarHeadingDeg90,
                 alliance
         );
     }
