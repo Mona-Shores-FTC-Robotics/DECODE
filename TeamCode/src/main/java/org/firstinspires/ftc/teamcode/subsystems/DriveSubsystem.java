@@ -187,28 +187,11 @@ public class DriveSubsystem implements Subsystem {
         Pose seed = RobotState.takeHandoffPose();
         if (seed == null) {
             seed = new Pose();
-            RobotLog.dd(LOG_TAG, "No handoff pose - initializing with default (0, 0, 0°)");
-        } else {
-            RobotLog.dd(LOG_TAG, "Initializing with handoff pose: (%.2f, %.2f, %.1f°)",
-                seed.getX(), seed.getY(), Math.toDegrees(seed.getHeading()));
         }
 
         follower.setStartingPose(seed);
         follower.setPose(seed);
         follower.update();
-
-        // Log what the Pinpoint actually reports after initialization
-        Pose actualPose = follower.getPose();
-        if (actualPose != null) {
-            RobotLog.dd(LOG_TAG, "After init, follower reports pose: (%.2f, %.2f, %.1f°)",
-                actualPose.getX(), actualPose.getY(), Math.toDegrees(actualPose.getHeading()));
-        }
-
-        double rawPinpoint = getRawPinpointHeadingDeg();
-        if (Double.isFinite(rawPinpoint)) {
-            RobotLog.dd(LOG_TAG, "Raw Pinpoint IMU heading: %.1f°", rawPinpoint);
-        }
-
         if (teleOpControlEnabled) {
             follower.startTeleopDrive();
         } else {
@@ -612,20 +595,8 @@ public class DriveSubsystem implements Subsystem {
         }
 
         Pose tagPose = tagPoseOpt.get();
-        Pose beforePose = follower.getPose();
         double currentHeading = follower.getHeading();
-        double visionHeading = tagPose.getHeading();
-        double headingDiscrepancyDeg = Math.toDegrees(normalizeAngle(visionHeading - currentHeading));
-
-        RobotLog.dd(LOG_TAG, "Vision relocalization - Vision says heading: %.1f°, Odometry says: %.1f°, Discrepancy: %.1f°",
-            Math.toDegrees(visionHeading), Math.toDegrees(currentHeading), headingDiscrepancyDeg);
-
         Pose adjustedPose = new Pose(tagPose.getX(), tagPose.getY(), currentHeading);
-
-        RobotLog.dd(LOG_TAG, "Before relocalize: (%.2f, %.2f, %.1f°) -> After: (%.2f, %.2f, %.1f°) [HEADING PRESERVED FROM ODOMETRY]",
-            beforePose.getX(), beforePose.getY(), Math.toDegrees(beforePose.getHeading()),
-            adjustedPose.getX(), adjustedPose.getY(), Math.toDegrees(adjustedPose.getHeading()));
-
         follower.setPose(adjustedPose);
         vision.markOdometryUpdated();
         vision.overrideRobotPose(adjustedPose);
@@ -634,6 +605,7 @@ public class DriveSubsystem implements Subsystem {
         // Keep the driver-facing heading to what was already tracked.
         lastGoodVisionAngle = currentHeading;
         lastVisionTimestamp = clock.milliseconds();
+        RobotLog.dd(LOG_TAG, "Forced re-localization from AprilTag (heading preserved): (%.2f, %.2f, %.2f)", tagPose.getX(), tagPose.getY(), Math.toDegrees(currentHeading));
         return true;
     }
 
@@ -731,22 +703,6 @@ public class DriveSubsystem implements Subsystem {
         } catch (Exception ignored) {
             return Double.POSITIVE_INFINITY;
         }
-    }
-
-    public double getRawPinpointHeadingDeg() {
-        try {
-            // Try to get the raw IMU heading from Pinpoint localizer
-            if (follower.getPoseTracker() != null
-                    && follower.getPoseTracker().getLocalizer() != null) {
-                Pose rawPose = follower.getPoseTracker().getLocalizer().getPose();
-                if (rawPose != null) {
-                    return Math.toDegrees(rawPose.getHeading());
-                }
-            }
-        } catch (Exception e) {
-            // Pinpoint localizer might not expose this, that's ok
-        }
-        return Double.NaN;
     }
 
     private static double distanceBetween(Pose a , Pose b) {

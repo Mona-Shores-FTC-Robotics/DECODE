@@ -82,6 +82,16 @@ public class DecodeTeleOp extends NextFTCOpMode {
         BindingManager.update();
         syncVisionDuringInit();
         pushInitTelemetry();
+
+        // Attempt to correct initial heading from vision if available
+        if (robot.vision.hasValidTag()) {
+            boolean headingCorrected = robot.drive.correctInitialHeadingFromVision();
+            if (headingCorrected) {
+                telemetry.clear();
+                telemetry.addData("Heading Correction", "Applied from AprilTag");
+            }
+        }
+
         telemetry.clear();
         telemetry.addData("Alliance", selectedAlliance.displayName());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
