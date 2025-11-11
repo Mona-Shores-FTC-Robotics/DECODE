@@ -82,9 +82,20 @@ public class DecodeTeleOp extends NextFTCOpMode {
         BindingManager.update();
         syncVisionDuringInit();
         pushInitTelemetry();
+
+        // Attempt to correct initial heading from vision if available
+        if (robot.vision.hasValidTag()) {
+            boolean headingCorrected = robot.drive.correctInitialHeadingFromVision();
+            if (headingCorrected) {
+                telemetry.clear();
+                telemetry.addData("Heading Correction", "Applied from AprilTag");
+            }
+        }
+
         telemetry.clear();
         telemetry.addData("Alliance", selectedAlliance.displayName());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
+        addHeadingDiagnostics();
         telemetry.addLine("Press START when ready");
         telemetry.update();
     }
@@ -187,6 +198,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         telemetry.addData("Telemetry publish", timing.telemetrySent
                 ? String.format(Locale.US, "%.1f ms", timing.telemetryMs)
                 : "skipped");
+        addHeadingDiagnostics();
     }
 
     private void addIntakeTelemetry() {
@@ -215,6 +227,68 @@ public class DecodeTeleOp extends NextFTCOpMode {
                             ? String.format(Locale.US, "override -> %s", coordinator.getRequestedIntakeMode())
                             : "automation");
         }
+    }
+
+    private void addHeadingDiagnostics() {
+        telemetry.addLine("--- HEADING DIAGNOSTICS ---");
+
+        // Current odometry heading
+        Pose2D pose = robot.drive.getPose();
+        if (pose != null) {
+            double odomHeadingDeg = pose.getHeading(AngleUnit.DEGREES);
+            telemetry.addData("Odom Heading", "%.1f°", odomHeadingDeg);
+        }
+
+        // Vision heading
+        if (robot.vision.hasValidTag()) {
+            telemetry.addData("Vision Tag ID", robot.vision.getCurrentTagId());
+            java.util.Optional<com.pedropathing.geometry.Pose> visionPose = robot.vision.getRobotPoseFromTag();
+            if (visionPose.isPresent()) {
+                double visionHeadingDeg = Math.toDegrees(visionPose.get().getHeading());
+                telemetry.addData("Vision Heading", "%.1f°", visionHeadingDeg);
+
+                // Calculate heading error
+                if (pose != null) {
+                    double odomHeadingDeg = pose.getHeading(AngleUnit.DEGREES);
+                    double headingErrorDeg = normalizeAngleDeg(visionHeadingDeg - odomHeadingDeg);
+                    telemetry.addData("Heading Error", "%.1f° (Vision - Odom)", headingErrorDeg);
+                }
+            }
+        } else {
+            telemetry.addData("Vision", "No AprilTag detected");
+        }
+
+        // Fusion diagnostics
+        DriveSubsystem.Inputs inputs = new DriveSubsystem.Inputs();
+        robot.drive.populateInputs(inputs);
+
+        if (inputs.fusionHasPose) {
+            telemetry.addData("Fusion Heading", "%.1f°", inputs.fusionPoseHeadingDeg);
+            if (Double.isFinite(inputs.fusionVisionHeadingErrorDeg)) {
+                telemetry.addData("Fusion Vision Err", "%.1f°", inputs.fusionVisionHeadingErrorDeg);
+            }
+            if (Double.isFinite(inputs.fusionDeltaHeadingDeg)) {
+                telemetry.addData("Fusion Delta", "%.1f° (Fusion - Odom)", inputs.fusionDeltaHeadingDeg);
+            }
+            telemetry.addData("Vision Weight", "%.2f", inputs.fusionVisionWeight);
+            telemetry.addData("Vision Accepted", inputs.fusionVisionAccepted ? "YES" : "NO");
+        }
+
+        // Raw Pinpoint heading if accessible
+        double rawPinpointHeading = robot.drive.getRawPinpointHeadingDeg();
+        if (Double.isFinite(rawPinpointHeading)) {
+            telemetry.addData("Raw Pinpoint IMU", "%.1f°", rawPinpointHeading);
+        }
+    }
+
+    private static double normalizeAngleDeg(double angleDeg) {
+        while (angleDeg > 180.0) {
+            angleDeg -= 360.0;
+        }
+        while (angleDeg < -180.0) {
+            angleDeg += 360.0;
+        }
+        return angleDeg;
     }
 
     private LoopTiming buildLoopTiming(double loopMs, double telemetryMsThisLoop, boolean telemetrySent) {
