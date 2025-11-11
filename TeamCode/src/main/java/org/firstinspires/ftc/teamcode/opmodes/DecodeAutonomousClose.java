@@ -58,7 +58,6 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
     private static final double POSE_HEADING_TOLERANCE = Math.toRadians(10.0);
 
     private Robot robot;
-    private Follower follower;
     private TelemetryManager panelsTelemetry;
     private AllianceSelector allianceSelector;
 
@@ -71,6 +70,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
     private Pose lastDetectedStartPoseFtc;
     private VisionSubsystemLimelight.TagSnapshot lastTagSnapshot;
     private Alliance activeAlliance = Alliance.BLUE;
+    private Follower follower;
 
     private PathChain launchCloseToGateCloseArtifactPickup;
     private PathChain gateCloseArtifactsPickupToLaunchClose;
@@ -97,7 +97,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
         robot.launcherCoordinator.lockIntake();
         robot.launcherCoordinator.setIntakeAutomationEnabled(false);
         robot.initializeForAuto();
-        follower = follower();
+        follower = robot.drive.getFollower();
 
         // Register init-phase controls with NextFTC (selector handles alliance overrides automatically).
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
@@ -116,7 +116,6 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
 
         addComponents(
                 BulkReadComponent.INSTANCE,
-                new PedroComponent(Constants::createFollower),
                 CommandManager.INSTANCE,
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
@@ -255,32 +254,32 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
     private void autonomousStep() {
         switch (routineStep) {
             case DRIVE_FROM_LAUNCH_CLOSE_TO_GATE_CLOSE_ARTIFACTS:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(launchCloseToGateCloseArtifactPickup, RoutineStep.DRIVE_FROM_GATE_CLOSE_ARTIFACTS_TO_LAUNCH_CLOSE);
                 }
                 break;
             case DRIVE_FROM_GATE_CLOSE_ARTIFACTS_TO_LAUNCH_CLOSE:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(gateCloseArtifactsPickupToLaunchClose, RoutineStep.DRIVE_FROM_LAUNCH_CLOSE_TO_GATE_FAR_ARTIFACTS);
                 }
                 break;
             case DRIVE_FROM_LAUNCH_CLOSE_TO_GATE_FAR_ARTIFACTS:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(launchCloseGateFarArtifactsPickup, RoutineStep.DRIVE_FROM_GATE_FAR_ARTIFACTS_TO_LAUNCH_CLOSE);
                 }
                 break;
             case DRIVE_FROM_GATE_FAR_ARTIFACTS_TO_LAUNCH_CLOSE:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(gateFarArtifactsPickupToLaunchClose, RoutineStep.DRIVE_FROM_LAUNCH_CLOSE_TO_PARKING_ARTIFACTS);
                 }
                 break;
             case DRIVE_FROM_LAUNCH_CLOSE_TO_PARKING_ARTIFACTS:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(launchCloseToParkingArtifactsPickup, RoutineStep.DRIVE_FROM_PARKING_ARTIFACTS_TO_LAUNCH_CLOSE);
                 }
                 break;
             case DRIVE_FROM_PARKING_ARTIFACTS_TO_LAUNCH_CLOSE:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(gateFarArtifactsPickupToLaunchClose, RoutineStep.FINISHED);
                 }
                 break;
