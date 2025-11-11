@@ -64,7 +64,9 @@ public class DriverBindings {
                 slowHold::get,
                 robot.drive
         );
-        aimHold.whenTrue(aimAndDrive);
+        aimHold.whenBecomesTrue(aimAndDrive)
+                .whenBecomesFalse(aimAndDrive::cancel);
+
 
         // X button: Capture-once aim
         // Samples target angle at start, snaps to fixed heading (locks driver out)

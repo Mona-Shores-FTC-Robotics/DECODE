@@ -5,6 +5,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
+import com.pedropathing.paths.PathConstraints;
 
 import dev.nextftc.core.commands.Command;
 
@@ -149,6 +150,17 @@ public class CaptureAndAimCommand extends Command {
             // Use BezierLine for instant heading interpolation (no translation)
             turnPath = new Path(new BezierLine(currentPose, targetPose));
             turnPath.setConstantHeadingInterpolation(capturedTargetHeadingRad);
+            PathConstraints turnConstraints = new PathConstraints(
+                    0.0,
+                    PathConstraints.defaultConstraints.getVelocityConstraint(),
+                    PathConstraints.defaultConstraints.getTranslationalConstraint(),
+                    PathConstraints.defaultConstraints.getHeadingConstraint(),
+                    PathConstraints.defaultConstraints.getTimeoutConstraint(),
+                    PathConstraints.defaultConstraints.getBrakingStrength(),
+                    PathConstraints.defaultConstraints.getBEZIER_CURVE_SEARCH_LIMIT(),
+                    PathConstraints.defaultConstraints.getBrakingStart()
+            );
+            turnPath.setConstraints(turnConstraints);
 
             // Start following the path - Pedro's PIDF takes over
             follower.followPath(turnPath, true);  // holdPositionAtEnd = true

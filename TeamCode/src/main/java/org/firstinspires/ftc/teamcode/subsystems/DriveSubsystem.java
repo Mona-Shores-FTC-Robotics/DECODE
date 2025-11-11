@@ -35,8 +35,8 @@ import java.util.Optional;
 @Configurable
 public class DriveSubsystem implements Subsystem {
 
-    private static final double VISION_TIMEOUT_MS = 500.0;
-    private static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.0;
+    private static final double VISION_TIMEOUT_MS = 100;
+    private static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.5;
     private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
     private static final String LOG_TAG = "DriveSubsystem";
 

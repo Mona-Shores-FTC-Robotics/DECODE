@@ -31,6 +31,7 @@ public class AimAndDriveCommand extends Command {
     private final DoubleSupplier fieldXSupplier;
     private final DoubleSupplier fieldYSupplier;
     private final BooleanSupplier slowModeSupplier;
+    private static final double TRANSLATION_IDLE_THRESHOLD = 0.05;
 
     /**
      * Creates an aim-and-drive command.
@@ -64,6 +65,9 @@ public class AimAndDriveCommand extends Command {
         double fieldY = fieldYSupplier.getAsDouble();
         boolean slowMode = slowModeSupplier.getAsBoolean();
 
+        fieldX = applyTranslationDeadband(fieldX);
+        fieldY = applyTranslationDeadband(fieldY);
+
         // Aim and drive - rotation is overridden by vision/odometry targeting
         drive.aimAndDrive(fieldX, fieldY, slowMode);
     }
@@ -77,5 +81,9 @@ public class AimAndDriveCommand extends Command {
     @Override
     public void stop(boolean interrupted) {
         // Don't stop motors - let default command resume smoothly
+    }
+
+    private static double applyTranslationDeadband(double value) {
+        return Math.abs(value) < TRANSLATION_IDLE_THRESHOLD ? 0.0 : value;
     }
 }
