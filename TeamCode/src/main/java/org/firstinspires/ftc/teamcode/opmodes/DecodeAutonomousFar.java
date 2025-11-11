@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
-import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
@@ -37,7 +36,6 @@ import java.util.Optional;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -58,7 +56,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
     private static final double POSE_HEADING_TOLERANCE = Math.toRadians(10.0);
 
     private Robot robot;
-    private Follower follower;
     private TelemetryManager panelsTelemetry;
     private AllianceSelector allianceSelector;
 
@@ -79,6 +76,7 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
     private PathChain parkingArtifactsPickupToLaunchFar;
     private PathChain launchFarToGateFarArtifactsPickup;
     private PathChain gateFarArtifactsPickupToLaunchFar;
+    private Follower follower;
 
     private final DecodePatternController decodeController = new DecodePatternController();
     private ArtifactColor[] activeDecodePattern = new ArtifactColor[0];
@@ -98,7 +96,7 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         robot.launcherCoordinator.lockIntake();
         robot.launcherCoordinator.setIntakeAutomationEnabled(false);
         robot.initializeForAuto();
-        follower = follower();
+        follower = robot.drive.getFollower();
 
         // Register init-phase controls with NextFTC (selector handles alliance overrides automatically).
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
@@ -206,7 +204,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
     @Override
     public void onUpdate() {
         BindingManager.update();
-        follower.update();
         updateLaunchingRoutine();
         autonomousStep();
 
@@ -258,32 +255,32 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
                 startPath(startFarToLaunchFar, RoutineStep.DRIVE_FROM_LAUNCH_FAR_TO_ALLIANCE_WALL_ARTIFACTS);
                 break;
             case DRIVE_FROM_LAUNCH_FAR_TO_ALLIANCE_WALL_ARTIFACTS:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(launchFarToAllianceWallArtifactsPickup, RoutineStep.DRIVE_FROM_ALLIANCE_WALL_ARTIFACTS_TO_LAUNCH_FAR);
                 }
                 break;
             case DRIVE_FROM_ALLIANCE_WALL_ARTIFACTS_TO_LAUNCH_FAR:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(allianceWallArtifactsPickupToLaunchFar, RoutineStep.DRIVE_FROM_LAUNCH_FAR_TO_PARK_ARTIFACTS);
                 }
                 break;
             case DRIVE_FROM_LAUNCH_FAR_TO_PARK_ARTIFACTS:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(launchFarToParkingArtifactsPickup, RoutineStep.DRIVE_FROM_PARK_ARTIFACTS_TO_LAUNCH_FAR);
                 }
                 break;
             case DRIVE_FROM_PARK_ARTIFACTS_TO_LAUNCH_FAR:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(parkingArtifactsPickupToLaunchFar, RoutineStep.DRIVE_FROM_LAUNCH_FAR_TO_GATE_ARTIFACTS_FAR);
                 }
                 break;
             case DRIVE_FROM_LAUNCH_FAR_TO_GATE_ARTIFACTS_FAR:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(launchFarToGateFarArtifactsPickup, RoutineStep.DRIVE_FROM_GATE_ARTIFACTS_FAR_TO_LAUNCH_FAR);
                 }
                 break;
             case DRIVE_FROM_GATE_ARTIFACTS_FAR_TO_LAUNCH_FAR:
-                if (!follower().isBusy()) {
+                if (!follower.isBusy()) {
                     startPath(gateFarArtifactsPickupToLaunchFar, RoutineStep.FINISHED);
                 }
                 break;

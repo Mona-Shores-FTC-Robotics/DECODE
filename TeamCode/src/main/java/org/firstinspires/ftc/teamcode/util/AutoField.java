@@ -37,8 +37,8 @@ public final class AutoField {
         public static double startY = 8;
         public static double startHeadingDeg = 90.0;
 
-        public static double launchFarX = 65;
-        public static double launchFarY = 16;
+        public static double launchFarX = 55;
+        public static double launchFarY = 17.3;
         public static double launchFarHeadingDeg = 109.0;
 
         public static double allianceWallArtifactsX = 8;

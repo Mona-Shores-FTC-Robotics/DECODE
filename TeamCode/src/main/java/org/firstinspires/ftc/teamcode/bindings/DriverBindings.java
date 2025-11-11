@@ -33,8 +33,8 @@ public class DriverBindings {
     private final Button aim;
 
     public DriverBindings(GamepadEx driver, Robot robot) {
-        fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND);
-        fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND).negate();
+        fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND).negate();
+        fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND);
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
         rampHold = driver.leftBumper();

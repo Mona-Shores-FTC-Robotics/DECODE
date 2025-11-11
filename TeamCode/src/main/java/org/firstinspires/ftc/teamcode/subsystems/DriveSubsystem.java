@@ -77,6 +77,9 @@ public class DriveSubsystem implements Subsystem {
     private double lastGoodVisionAngle = Double.NaN;
     private double lastVisionTimestamp = Double.NEGATIVE_INFINITY;
     private long lastFusionVisionTimestampMs = 0L;
+    private double fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
+    private static final double DESIRED_FIELD_HEADING_RAD = Math.PI / 2.0;
+    private boolean visionHeadingCalibrated = false;
 
     public static boolean robotCentricConfig = false;
     private boolean robotCentric = robotCentricConfig;
@@ -197,6 +200,8 @@ public class DriveSubsystem implements Subsystem {
         } else {
             follower.breakFollowing();
         }
+        fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
+        visionHeadingCalibrated = false;
         poseFusion.reset(seed, System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
     }
@@ -345,7 +350,8 @@ public class DriveSubsystem implements Subsystem {
         if (robotCentric != robotCentricConfig) {
             setRobotCentric(robotCentricConfig);
         }
-        driveScaled(fieldX, fieldY, rotationInput, slowMode, rampMode);
+        double[] rotated = rotateFieldInput(fieldX, fieldY);
+        driveScaled(rotated[0], rotated[1], rotationInput, slowMode, rampMode);
     }
 
     /**
@@ -429,10 +435,11 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
+        double[] rotated = rotateFieldInput(fieldX, fieldY);
         double slowMultiplier = Range.clip(TeleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
-        double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
-        double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
+        double forward = Range.clip(rotated[1] * multiplier , - 1.0 , 1.0);
+        double strafeLeft = Range.clip(- rotated[0] * multiplier , - 1.0 , 1.0);
         double nowMs = clock.milliseconds();
         Optional<Double> visionAngle = vision.getAimAngle();
 
@@ -564,6 +571,15 @@ public class DriveSubsystem implements Subsystem {
         return Math.atan2(Math.sin(angle) , Math.cos(angle));
     }
 
+    private double[] rotateFieldInput(double fieldX, double fieldY) {
+        double cos = Math.cos(-fieldHeadingOffsetRad);
+        double sin = Math.sin(-fieldHeadingOffsetRad);
+        return new double[] {
+                cos * fieldX - sin * fieldY,
+                sin * fieldX + cos * fieldY
+        };
+    }
+
     private void maybeRelocalizeFromVision() {
         if (!visionRelocalizationEnabled) {
             return;
@@ -596,16 +612,25 @@ public class DriveSubsystem implements Subsystem {
 
         Pose tagPose = tagPoseOpt.get();
         double currentHeading = follower.getHeading();
-        Pose adjustedPose = new Pose(tagPose.getX(), tagPose.getY(), currentHeading);
+        double visionHeading = tagPose.getHeading();
+        Pose adjustedPose = new Pose(tagPose.getX(), tagPose.getY(), visionHeading);
         follower.setPose(adjustedPose);
         vision.markOdometryUpdated();
         vision.overrideRobotPose(adjustedPose);
         poseFusion.reset(adjustedPose, System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
-        // Keep the driver-facing heading to what was already tracked.
-        lastGoodVisionAngle = currentHeading;
+        // Keep the driver-facing heading in sync with vision so offsets keep controls stable.
+        if (!visionHeadingCalibrated) {
+            fieldHeadingOffsetRad = 0.0;
+            visionHeadingCalibrated = true;
+        }
+        lastGoodVisionAngle = visionHeading;
         lastVisionTimestamp = clock.milliseconds();
-        RobotLog.dd(LOG_TAG, "Forced re-localization from AprilTag (heading preserved): (%.2f, %.2f, %.2f)", tagPose.getX(), tagPose.getY(), Math.toDegrees(currentHeading));
+        RobotLog.dd(LOG_TAG, "Forced re-localization from AprilTag: vision heading %.1f°, odometry heading %.1f°, offset %.1f° -> adjusted heading %.1f°",
+                Math.toDegrees(visionHeading),
+                Math.toDegrees(currentHeading),
+                Math.toDegrees(fieldHeadingOffsetRad),
+                Math.toDegrees(adjustedPose.getHeading()));
         return true;
     }
 
@@ -703,6 +728,32 @@ public class DriveSubsystem implements Subsystem {
         } catch (Exception ignored) {
             return Double.POSITIVE_INFINITY;
         }
+    }
+
+    public double getRawPinpointHeadingDeg() {
+        try {
+            if (follower.getPoseTracker() != null && follower.getPoseTracker().getLocalizer() != null) {
+                Pose rawPose = follower.getPoseTracker().getLocalizer().getPose();
+                if (rawPose != null) {
+                    return Math.toDegrees(rawPose.getHeading());
+                }
+            }
+        } catch (Exception ignored) {
+            // Some localizers may not expose raw heading
+        }
+        return Double.NaN;
+    }
+
+    public boolean correctInitialHeadingFromVision() {
+        if (!vision.hasValidTag()) {
+            RobotLog.dd(LOG_TAG, "No AprilTag visible - cannot correct heading");
+            return false;
+        }
+        boolean success = forceRelocalizeFromVision();
+        if (!success) {
+            RobotLog.dd(LOG_TAG, "Vision pose unavailable - cannot correct heading");
+        }
+        return success;
     }
 
     private static double distanceBetween(Pose a , Pose b) {
