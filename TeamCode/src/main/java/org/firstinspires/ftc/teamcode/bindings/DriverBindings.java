@@ -1,11 +1,10 @@
 package org.firstinspires.ftc.teamcode.bindings;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.commands.AimAndDriveCommand;
 import org.firstinspires.ftc.teamcode.commands.CaptureAndAimCommand;
+import org.firstinspires.ftc.teamcode.commands.DefaultDriveCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
-
-import java.util.function.BooleanSupplier;
-import java.util.function.DoubleSupplier;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.bindings.Range;
@@ -14,13 +13,13 @@ import dev.nextftc.ftc.GamepadEx;
 
 
 /**
- * Driver-facing bindings that turn gamepad inputs into drive commands.
- * Only the scaling flags are captured here; higher level logic (auto heading,
- * pose hold, etc.) lives in the {@link org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem}.
+ * Driver-facing bindings that configure drive commands and button mappings.
  *
- * Aiming modes:
- * - X button: Capture-once aim (samples target angle at start, turns to fixed heading)
- * - B button (hold): Continuous aim-and-drive (tracks target while allowing driver translation)
+ * Drive Commands:
+ * - Default: Normal field-centric drive with slow/ramp modes
+ * - B button (hold): Continuous aim-and-drive (tracks target while allowing translation)
+ * - X button: Capture-once aim (samples target, snaps to fixed heading)
+ * - A button: Vision relocalization (instant, no movement)
  */
 public class DriverBindings {
 
@@ -46,12 +45,49 @@ public class DriverBindings {
         aimHold = driver.b();
         relocalizeRequest = driver.a();
 
-        // Capture-once aim command: samples target angle at start, then turns to that fixed heading
-        Command aimCommand = new CaptureAndAimCommand(robot.drive, robot.vision);
+        // Set up default drive command - runs when no other command uses drive subsystem
+        Command defaultDrive = new DefaultDriveCommand(
+                fieldX::get,
+                fieldY::get,
+                rotationCcw::get,
+                slowHold::get,
+                rampHold::get,
+                robot.drive
+        );
+        robot.drive.setDefaultCommand(defaultDrive);
 
-        aim.whenBecomesTrue(aimCommand);
+        // B button (hold): Continuous aim-and-drive
+        // Tracks target continuously, allows driver translation
+        Command aimAndDrive = new AimAndDriveCommand(
+                fieldX::get,
+                fieldY::get,
+                slowHold::get,
+                robot.drive
+        );
+        aimHold.whenTrue(aimAndDrive);
+
+        // X button: Capture-once aim
+        // Samples target angle at start, snaps to fixed heading (locks driver out)
+        Command captureAim = new CaptureAndAimCommand(robot.drive, robot.vision);
+        aim.whenBecomesTrue(captureAim);
     }
 
+    /**
+     * Registers a callback for vision relocalization requests.
+     * A button triggers instant relocalization with no drive movement.
+     */
+    public void onRelocalizeRequested(Runnable action) {
+        if (action == null) {
+            return;
+        }
+        relocalizeRequest.whenBecomesTrue(action);
+    }
+
+    /**
+     * Samples current driver inputs for telemetry purposes.
+     * Note: This does NOT control the robot - commands handle that.
+     * This is purely for telemetry/logging to see what the driver is doing.
+     */
     public DriveRequest sampleDriveRequest() {
         return new DriveRequest(
                 fieldX.get(),
@@ -63,13 +99,10 @@ public class DriverBindings {
         );
     }
 
-    public void onRelocalizeRequested(Runnable action) {
-        if (action == null) {
-            return;
-        }
-        relocalizeRequest.whenBecomesTrue(action);
-    }
-
+    /**
+     * Driver input snapshot for telemetry/logging.
+     * This is not used for control (commands handle that), only for monitoring.
+     */
     public static final class DriveRequest {
         public final double fieldX;
         public final double fieldY;

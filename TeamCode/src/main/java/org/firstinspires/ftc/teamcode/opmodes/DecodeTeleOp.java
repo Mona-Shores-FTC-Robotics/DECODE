@@ -115,20 +115,13 @@ public class DecodeTeleOp extends NextFTCOpMode {
     @Override
     public void onUpdate() {
         long mainLoopStartNs = System.nanoTime();
+
+        // Update bindings and command scheduler
+        // Commands (DefaultDriveCommand, AimAndDriveCommand, CaptureAndAimCommand) handle drive control
         BindingManager.update();
 
+        // Sample driver inputs for telemetry/logging only (not for control)
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
-        if (request.aimMode) {
-            robot.drive.aimAndDrive(request.fieldX, request.fieldY, request.slowMode);
-        } else {
-            robot.drive.driveTeleOp(
-                    request.fieldX,
-                    request.fieldY,
-                    request.rotation,
-                    request.slowMode,
-                    request.rampMode
-            );
-        }
 
         TelemetryTiming telemetryTiming = publishTelemetryIfNeeded(request);
         Pose2D pose = robot.drive.getPose();

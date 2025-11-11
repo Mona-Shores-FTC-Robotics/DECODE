@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import androidx.annotation.NonNull;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.control.PIDFController;
 import com.pedropathing.control.PIDFCoefficients;
@@ -13,6 +15,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.RobotLog;
 
+import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -73,6 +76,9 @@ public class DriveSubsystem implements Subsystem {
     private final VisionSubsystemLimelight vision;
     private final PoseFusion poseFusion = new PoseFusion();
     private final ElapsedTime clock = new ElapsedTime();
+
+    // Default command for NextFTC command scheduler
+    private Command driveDefaultCommand = null;
 
     private double lastGoodVisionAngle = Double.NaN;
     private double lastVisionTimestamp = Double.NEGATIVE_INFINITY;
@@ -162,6 +168,24 @@ public class DriveSubsystem implements Subsystem {
         motorLb = driveMotors.lb;
         motorRb = driveMotors.rb;
         this.vision = vision;
+    }
+
+    /**
+     * Sets the default command for this subsystem.
+     * The default command runs whenever no other command requires this subsystem.
+     */
+    public void setDefaultCommand(Command command) {
+        this.driveDefaultCommand = command;
+    }
+
+    /**
+     * Gets the default command for this subsystem.
+     * Overrides the Subsystem interface property to return our configured command.
+     */
+    @NonNull
+    @Override
+    public Command getDefaultCommand() {
+        return driveDefaultCommand != null ? driveDefaultCommand : Subsystem.super.getDefaultCommand();
     }
 
     public void setRobotCentric(boolean enabled) {
