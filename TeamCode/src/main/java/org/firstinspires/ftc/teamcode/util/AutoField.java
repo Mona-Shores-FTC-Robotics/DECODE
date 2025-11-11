@@ -26,7 +26,8 @@ public final class AutoField {
         LAUNCH_CLOSE,
         GATE_CLOSE_ARTIFACTS_PICKUP,
         GATE_FAR_ARTIFACTS_PICKUP_270_DEG,
-        PARKING_ARTIFACTS_PICKUP_270_DEG
+        PARKING_ARTIFACTS_PICKUP_270_DEG,
+        READY_TO_PRESS_GATE
     }
 
     @com.bylazar.configurables.annotations.Configurable
@@ -63,9 +64,14 @@ public final class AutoField {
         public static double gateCloseX = 24;
         public static double gateCloseY = 87;
         public static double gateCloseHeading = 270;
-        public static double gateFarHeadingDeg270 = 270;
-        public static double parkingArtifactsHeading270 = 270;
+        public static double gateFarYDeg270 = 64;
 
+        public static double gateFarHeadingDeg270 = 270;
+        public static double parkingArtifactsYDeg270 = 40;
+        public static double parkingArtifactsHeading270 = 270;
+        public static double readyToPressGateX = 21.5;
+        public static double readyToPressGateY = 72;
+        public static double readyToPressGateHeading = 180;
 
         ArrayList<Pose> parkingControlPoints = new ArrayList<>();
         Pose gateFarControlPoint = new Pose(gateFarControlPointX, gateFarControlPointY, 0);
@@ -120,17 +126,23 @@ public final class AutoField {
         ));
         layout.put(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_270_DEG, poseForAlliance(
                 Waypoints.gateFarX,
-                Waypoints.gateFarY,
+                Waypoints.gateFarYDeg270,
                 Waypoints.gateFarHeadingDeg270,
                 alliance
 
         ));
         layout.put(FieldPoint.PARKING_ARTIFACTS_PICKUP_270_DEG, poseForAlliance(
                 Waypoints.parkingArtifactsX,
-                Waypoints.parkingArtifactsY,
+                Waypoints.parkingArtifactsYDeg270,
                 Waypoints.parkingArtifactsHeading270,
                 alliance
 
+        ));
+        layout.put(FieldPoint.READY_TO_PRESS_GATE, poseForAlliance(
+                Waypoints.readyToPressGateX,
+                Waypoints.readyToPressGateY,
+                Waypoints.readyToPressGateHeading,
+                alliance
         ));
         return new FieldLayout(layout);
     }
