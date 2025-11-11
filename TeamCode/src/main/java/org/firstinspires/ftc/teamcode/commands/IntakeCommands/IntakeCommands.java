@@ -19,11 +19,6 @@ public class IntakeCommands {
         this.intake = intake;
     }
 
-    /** Keeps the intake running in passive reverse indefinitely (default background command). */
-    public ReverseIntakeCommand reverseIntake() {
-        return new ReverseIntakeCommand(intake);
-    }
-
     /** Runs the intake forward for a fixed time, then returns to passive reverse. */
     public TimedIntakeCommand timedIntake(double seconds) {
         return new TimedIntakeCommand(intake, seconds);

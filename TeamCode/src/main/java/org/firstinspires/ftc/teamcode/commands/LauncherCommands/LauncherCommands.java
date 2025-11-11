@@ -86,6 +86,10 @@ public class LauncherCommands {
         launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
     }
 
+    public void setSpinModeToOff() {
+        launcher.setSpinMode(LauncherSubsystem.SpinMode.OFF);
+    }
+
     public SetFeederPositionCommand setLeftFeederToLoad() {
         return new SetFeederPositionCommand(launcher, LauncherLane.LEFT, true);
     }
