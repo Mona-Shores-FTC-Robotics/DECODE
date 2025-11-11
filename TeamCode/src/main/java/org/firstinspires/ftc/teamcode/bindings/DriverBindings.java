@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode.bindings;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.AimAtGoalCommand;
+import org.firstinspires.ftc.teamcode.commands.CaptureAndAimCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 
 import java.util.function.BooleanSupplier;
@@ -17,6 +17,10 @@ import dev.nextftc.ftc.GamepadEx;
  * Driver-facing bindings that turn gamepad inputs into drive commands.
  * Only the scaling flags are captured here; higher level logic (auto heading,
  * pose hold, etc.) lives in the {@link org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem}.
+ *
+ * Aiming modes:
+ * - X button: Capture-once aim (samples target angle at start, turns to fixed heading)
+ * - B button (hold): Continuous aim-and-drive (tracks target while allowing driver translation)
  */
 public class DriverBindings {
 
@@ -42,12 +46,8 @@ public class DriverBindings {
         aimHold = driver.b();
         relocalizeRequest = driver.a();
 
-        Command aimCommand = new AimAtGoalCommand(robot.drive, ()-> 0, ()-> 0, ()-> false,
-                5,
-                120,
-                true,
-                true,
-                1000);
+        // Capture-once aim command: samples target angle at start, then turns to that fixed heading
+        Command aimCommand = new CaptureAndAimCommand(robot.drive, robot.vision);
 
         aim.whenBecomesTrue(aimCommand);
     }
