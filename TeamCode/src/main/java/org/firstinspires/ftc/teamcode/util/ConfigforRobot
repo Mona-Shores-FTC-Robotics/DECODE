@@ -5,9 +5,9 @@ Control Hub Motors:
     Port 3 = lb
 
 Expansion Hub Motors:
-    Port 0 = launcher_left
+    Port 0 = launcher_right
     Port 1 = launcher_center
-    Port 2 = launcher_right
+    Port 2 = launcher_left
     Port 3 = intake
 
 Control Hub Servos:
