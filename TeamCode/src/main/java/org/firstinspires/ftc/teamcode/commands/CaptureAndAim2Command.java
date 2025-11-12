@@ -118,7 +118,11 @@ public class CaptureAndAim2Command extends Command {
 
         // Phase 2: Execute turn using Pedro Follower directly
         if (!turnStarted) {
-            // Use the follower's turnTo method directly since TurnTo command expects different setup
+            // Break out of teleop drive mode before starting autonomous turn
+            // This ensures the follower switches from manual control to path following
+            drive.getFollower().breakFollowing();
+
+            // Now command the turn - follower will use autonomous PIDF control
             drive.getFollower().turnTo(capturedTargetHeadingRad);
             turnStarted = true;
         }
