@@ -9,10 +9,12 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeUntilFullCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinHoldCommand;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
@@ -23,11 +25,11 @@ import org.firstinspires.ftc.teamcode.util.RobotMode;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.CommandManager;
-import dev.nextftc.core.commands.ParallelCommandGroup;
-import dev.nextftc.core.commands.SequentialCommandGroup;
-import dev.nextftc.core.commands.WaitCommand;
+import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.groups.ParallelGroup;
+import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.extensions.pedro.PedroCommand;
+import dev.nextftc.extensions.pedro.FollowPath;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -132,7 +134,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();
-        CommandManager.scheduleCommand(autoRoutine);
+        CommandManager.INSTANCE.scheduleCommand(autoRoutine);
     }
 
     @Override
@@ -158,7 +160,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
      */
     private Command buildAutonomousRoutine() {
         if (currentLayout == null) {
-            return new WaitCommand(0.01);
+            return new Delay(0.01);
         }
 
         Pose startFarPose = currentLayout.pose(FieldPoint.START_FAR);
@@ -169,25 +171,22 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         Pose parkingControlPoint = AutoField.parkingArtifactsControlPoint(activeAlliance);
         Pose gateFarControlPoint = AutoField.gateFarArtifactsControlPoint(activeAlliance);
 
-        return new SequentialCommandGroup(
-            // Phase 1: Drive to launch position and score preload
-            new ParallelCommandGroup(
-                followPath(startFarPose, launchFarPose),
-                new SequentialCommandGroup(
-                    new WaitCommand(0.5),
-                    spinUpLauncher()
-                )
-            ),
-            scoreSequence(),
+        return new SequentialGroup(
+                // Phase 1: Drive to launch position and score preload
+                new ParallelGroup(
+                    new SpinHoldCommand(robot.launcher, robot.manualSpinController),
+                    followPath(startFarPose, launchFarPose)
+                ),
+                new FireAllCommand(robot.launcher, false, robot.manualSpinController),
 
-            // Phase 2: Collect from Alliance Wall and score
-            collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
+                // Phase 2: Collect from Alliance Wall and score
+                collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
 
-            // Phase 3: Collect from Parking Zone and score
-            collectAndScore(launchFarPose, parking90DegPose, launchFarPose, parkingControlPoint),
+                // Phase 3: Collect from Parking Zone and score
+                collectAndScore(launchFarPose, parking90DegPose, launchFarPose, parkingControlPoint),
 
-            // Phase 4: Collect from Gate Far and score
-            collectAndScore(launchFarPose, gateFar90DegPose, launchFarPose, gateFarControlPoint)
+                // Phase 4: Collect from Gate Far and score
+                collectAndScore(launchFarPose, gateFar90DegPose, launchFarPose, gateFarControlPoint)
         );
     }
 
@@ -199,26 +198,20 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
      * @param controlPoints Optional control points for curved paths
      */
     private Command collectAndScore(Pose fromPose, Pose pickupPose, Pose scorePose, Pose... controlPoints) {
-        return new SequentialCommandGroup(
+        return new SequentialGroup(
             // Drive to pickup while preparing intake
-            new ParallelCommandGroup(
+            new ParallelGroup(
                 followPath(fromPose, pickupPose, controlPoints),
-                new SequentialCommandGroup(
-                    new WaitCommand(0.3),
-                    prepareIntake()
+                new SequentialGroup(
+                    new Delay(0.3),
+                    new IntakeUntilFullCommand(robot.intake, 3)
                 )
             ),
 
-            // Collect samples
-            intakeCommands.timedIntake(AutoMotionConfig.intakeTimeSeconds),
-
             // Drive to score while spinning up launcher
-            new ParallelCommandGroup(
-                followPath(pickupPose, scorePose),
-                new SequentialCommandGroup(
-                    new WaitCommand(0.3),
+            new ParallelGroup(
+                    followPath(pickupPose, scorePose),
                     spinUpLauncher()
-                )
             ),
 
             // Score the samples
@@ -246,53 +239,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         }
 
         double maxPower = Range.clip(AutoMotionConfig.maxPathPower, 0.0, 1.0);
-        return new PedroCommand(robot.drive.getFollower(), path, maxPower, false);
+        return new FollowPath(path, false, maxPower);
     }
 
-    /**
-     * Prepares the intake for collecting samples
-     */
-    private Command prepareIntake() {
-        return new Command() {
-            @Override
-            public void init() {
-                // Set intake mode if needed
-                robot.intake.setRunning(true);
-            }
-
-            @Override
-            public boolean isFinished() {
-                return true;
-            }
-        };
-    }
-
-    /**
-     * Spins up the launcher
-     */
-    private Command spinUpLauncher() {
-        return new Command() {
-            @Override
-            public void init() {
-                robot.launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
-            }
-
-            @Override
-            public boolean isFinished() {
-                return true;
-            }
-        };
-    }
-
-    /**
-     * Scores samples using the launcher
-     */
-    private Command scoreSequence() {
-        return new SequentialCommandGroup(
-            new WaitCommand(AutoMotionConfig.launchDelaySeconds),
-            launcherCommands.launchDetectedBurst()
-        );
-    }
 
     private void applyAlliance(Alliance alliance) {
         Alliance safeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
@@ -311,4 +260,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         // Preview paths would be drawn here using PanelsBridge
         PanelsBridge.drawPreview(new PathChain[0], layout.pose(FieldPoint.START_FAR), alliance == Alliance.RED);
     }
+
+
 }

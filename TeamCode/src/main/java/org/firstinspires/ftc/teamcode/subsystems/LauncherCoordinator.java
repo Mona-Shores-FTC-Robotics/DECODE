@@ -489,4 +489,5 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         public String launcherSpinMode;
         public int launcherQueuedShots;
     }
+
 }

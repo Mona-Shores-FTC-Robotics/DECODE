@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ManualSpinController;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -38,6 +39,8 @@ public class Robot {
     private final LightingSubsystem.Inputs lightingInputs = new LightingSubsystem.Inputs();
     private final VisionSubsystemLimelight.Inputs visionInputs = new VisionSubsystemLimelight.Inputs();
 
+    public final ManualSpinController manualSpinController;
+
     public Robot(HardwareMap hardwareMap) {
         this(hardwareMap, new TelemetryService(TelemetrySettings.enablePsiKitLogging));
     }
@@ -53,6 +56,7 @@ public class Robot {
         launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
         launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
         intakeCommands = new IntakeCommands(intake);
+        manualSpinController = createManualSpinController();
         applyRobotMode(robotMode);
         registerLoggingSources();
     }
@@ -167,4 +171,29 @@ public class Robot {
         });
     }
 
+    private ManualSpinController createManualSpinController() {
+        if (launcherCoordinator == null) {
+            return ManualSpinController.NO_OP;
+        }
+        return new ManualSpinController() {
+            private int activeSources = 0;
+
+            @Override
+            public void enterManualSpin() {
+                if (activeSources++ == 0) {
+                    launcherCoordinator.setManualSpinOverride(true);
+                }
+            }
+
+            @Override
+            public void exitManualSpin() {
+                if (activeSources <= 0) {
+                    return;
+                }
+                if (--activeSources == 0) {
+                    launcherCoordinator.setManualSpinOverride(false);
+                }
+            }
+        };
+    }
 }
