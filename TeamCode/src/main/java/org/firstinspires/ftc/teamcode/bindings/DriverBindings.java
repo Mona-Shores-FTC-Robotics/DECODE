@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.bindings;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.AimAndDriveCommand;
-import org.firstinspires.ftc.teamcode.commands.CaptureAndAimCommand;
+import org.firstinspires.ftc.teamcode.commands.CaptureAndAim2Command;
 import org.firstinspires.ftc.teamcode.commands.DefaultDriveCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 
@@ -69,8 +69,8 @@ public class DriverBindings {
 
 
         // X button: Capture-once aim
-        // Samples target angle at start, snaps to fixed heading (locks driver out)
-        Command captureAim = new CaptureAndAimCommand(robot.drive, robot.vision);
+        // Samples target angle at start, snaps to fixed heading using NextFTC's TurnTo
+        Command captureAim = new CaptureAndAim2Command(robot.drive, robot.vision);
         aim.whenBecomesTrue(captureAim);
     }
 
