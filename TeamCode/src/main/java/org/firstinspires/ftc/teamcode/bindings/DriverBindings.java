@@ -2,9 +2,8 @@ package org.firstinspires.ftc.teamcode.bindings;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.AimAndDriveCommand;
-import org.firstinspires.ftc.teamcode.commands.CaptureAndAim2Command;
+import org.firstinspires.ftc.teamcode.commands.CaptureAndAimCommand;
 import org.firstinspires.ftc.teamcode.commands.DefaultDriveCommand;
-import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.bindings.Range;
@@ -67,19 +66,8 @@ public class DriverBindings {
         aimHold.whenBecomesTrue(aimAndDrive)
                 .whenBecomesFalse(aimAndDrive::cancel);
 
-
-        // X button: Capture-once aim
-        // Samples target angle at start, snaps to fixed heading using NextFTC's TurnTo
-        Command captureAim = new CaptureAndAim2Command(robot.drive, robot.vision);
-
-//        Command aimOnly = new AimAndDriveCommand(
-//                ()->0,
-//                ()->0,
-//                slowHold::get,
-//                robot.drive
-//        );
+        Command captureAim = new CaptureAndAimCommand(robot.drive, robot.vision);
         aim.whenBecomesTrue(captureAim);
-//                .whenBecomesFalse(aimOnly::cancel);
 
     }
 
