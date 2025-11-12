@@ -80,11 +80,16 @@ public class LauncherSubsystem implements Subsystem {
 
     @Configurable
     public static class BangBangConfig {
+        /** Full power for aggressive spinup and recovery */
         public static double highPower = 1.0;
-        public static double lowPower = 0.3;
+        /** Power used when close to target or overshooting - should maintain target RPM */
+        public static double lowPower = 0.72;
+        /** Error threshold to re-enter BANG mode from HOLD (large error = aggressive recovery) */
         public static double enterBangThresholdRpm = 1200;
-        public static double exitBangThresholdRpm = 800;
-        public static double bangDeadbandRpm = 50;
+        /** Error threshold to exit BANG mode and enter HOLD (must be low enough to escape oscillation) */
+        public static double exitBangThresholdRpm = 150;
+        /** Deadband around target RPM within BANG mode */
+        public static double bangDeadbandRpm = 75;
     }
 
     @Configurable
@@ -96,9 +101,13 @@ public class LauncherSubsystem implements Subsystem {
 
     @Configurable
     public static class HoldConfig {
-        public static double baseHoldPower = 0.5;
-        public static double rpmPowerGain = 0.000075;
-        public static double minHoldPower = 0.2;
+        /** Base power for hold mode (intercept of power curve) */
+        public static double baseHoldPower = 0.4;
+        /** Power gain per RPM (slope of power curve) - holdPower = base + gain * targetRPM */
+        public static double rpmPowerGain = 0.00009;
+        /** Minimum power allowed in hold mode */
+        public static double minHoldPower = 0.4;
+        /** Maximum power allowed in hold mode */
         public static double maxHoldPower = 1.0;
     }
 
