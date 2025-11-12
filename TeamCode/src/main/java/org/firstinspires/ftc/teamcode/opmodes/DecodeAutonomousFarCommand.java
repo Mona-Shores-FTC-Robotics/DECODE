@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinHoldCommand;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
@@ -66,6 +67,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     private IntakeCommands intakeCommands;
     private LauncherCommands launcherCommands;
 
+    // AprilTag-based start pose detection
+    private Pose lastAppliedStartPosePedro;
+    private Pose lastDetectedStartPosePedro;
+
     @Override
     public void onInit() {
         BindingManager.reset();
@@ -86,12 +91,13 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         // Register init-phase controls
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, DEFAULT_ALLIANCE);
-        driverPad.y().whenBecomesTrue(() -> applyAlliance(allianceSelector.getSelectedAlliance()));
+        driverPad.y().whenBecomesTrue(() -> applyAlliance(allianceSelector.getSelectedAlliance(), lastAppliedStartPosePedro));
         driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
         driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
+        driverPad.a().whenBecomesTrue(this::applyLastDetectedStartPose);
 
         activeAlliance = allianceSelector.getSelectedAlliance();
-        applyAlliance(activeAlliance);
+        applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
 
         addComponents(
@@ -109,13 +115,25 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     @Override
     public void onWaitForStart() {
         BindingManager.update();
-        allianceSelector.updateFromVision(robot.vision);
+
+        // Detect alliance and start pose from AprilTag vision
+        java.util.Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt =
+                allianceSelector.updateFromVision(robot.vision);
         allianceSelector.applySelection(robot, robot.lighting);
+
+        // Extract detected start pose from vision
+        if (snapshotOpt.isPresent()) {
+            VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
+            java.util.Optional<Pose> detectedPose = snapshot.getRobotPose();
+            if (detectedPose.isPresent()) {
+                lastDetectedStartPosePedro = copyPose(detectedPose.get());
+            }
+        }
 
         Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
         if (selectedAlliance != activeAlliance) {
             activeAlliance = selectedAlliance;
-            applyAlliance(activeAlliance);
+            applyAlliance(activeAlliance, null);
         }
 
         robot.telemetry.updateDriverStation(telemetry);
@@ -174,10 +192,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         return new SequentialGroup(
                 // Phase 1: Drive to launch position and score preload
                 new ParallelGroup(
-                    new SpinHoldCommand(robot.launcher, robot.manualSpinController),
+                    spinUpLauncher(),
                     followPath(startFarPose, launchFarPose)
                 ),
-                new FireAllCommand(robot.launcher, false, robot.manualSpinController),
+                scoreSequence(),
 
                 // Phase 2: Collect from Alliance Wall and score
                 collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
@@ -243,13 +261,20 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     }
 
 
-    private void applyAlliance(Alliance alliance) {
+    private void applyAlliance(Alliance alliance, Pose startOverride) {
         Alliance safeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
         activeAlliance = safeAlliance;
         robot.setAlliance(activeAlliance);
         robot.logger.updateAlliance(activeAlliance);
 
         currentLayout = AutoField.layoutForAlliance(activeAlliance);
+
+        // Apply AprilTag-detected start pose override if provided
+        if (startOverride != null) {
+            currentLayout.overrideStart(startOverride);
+            lastAppliedStartPosePedro = copyPose(startOverride);
+        }
+
         Pose startPose = currentLayout.pose(FieldPoint.START_FAR);
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
@@ -261,5 +286,71 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         PanelsBridge.drawPreview(new PathChain[0], layout.pose(FieldPoint.START_FAR), alliance == Alliance.RED);
     }
 
+    /**
+     * Spins up the launcher and waits until all launchers reach target RPM.
+     * Phase 1: Uses position-specific tunable RPM from LaunchAtPositionCommand.PositionRpmConfig
+     */
+    private Command spinUpLauncher() {
+        return launcherCommands.spinUpForPosition(FieldPoint.LAUNCH_FAR);
+    }
+
+    /**
+     * Scores samples using the launcher
+     */
+    private Command scoreSequence() {
+        return new SequentialGroup(
+            new Delay(AutoMotionConfig.launchDelaySeconds),
+            launcherCommands.launchDetectedBurst()
+        );
+    }
+
+    /**
+     * Applies the last AprilTag-detected start pose (bound to dpad A during init)
+     */
+    private void applyLastDetectedStartPose() {
+        if (!shouldUpdateStartPose(lastDetectedStartPosePedro)) {
+            return;
+        }
+        applyAlliance(activeAlliance, lastDetectedStartPosePedro);
+    }
+
+    /**
+     * Validates that a detected pose is reasonable before applying it
+     */
+    private boolean shouldUpdateStartPose(Pose candidate) {
+        if (candidate == null) {
+            return false;
+        }
+
+        // Sanity check: pose should be on the field
+        double fieldWidthIn = AutoField.Waypoints.fieldWidthIn;
+        if (candidate.getX() < 0 || candidate.getX() > fieldWidthIn ||
+            candidate.getY() < 0 || candidate.getY() > fieldWidthIn) {
+            return false;
+        }
+
+        // Additional check: if we have an applied pose, the detected pose shouldn't be wildly different
+        if (lastAppliedStartPosePedro != null) {
+            double deltaX = Math.abs(candidate.getX() - lastAppliedStartPosePedro.getX());
+            double deltaY = Math.abs(candidate.getY() - lastAppliedStartPosePedro.getY());
+            double maxDelta = 12.0; // 12 inches tolerance
+
+            if (deltaX > maxDelta || deltaY > maxDelta) {
+                return false; // Detected pose too different from expected
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Creates a defensive copy of a Pose
+     */
+    private Pose copyPose(Pose pose) {
+        if (pose == null) {
+            return null;
+        }
+        return new Pose(pose.getX(), pose.getY(), pose.getHeading());
+    }
 
 }

@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
@@ -18,7 +19,17 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
+@Configurable
 public class Robot {
+
+    @Configurable
+    public static class TestBenchConfig {
+        /**
+         * Enable test bench mode (no expansion hub required)
+         * Set to true when testing on bench without full robot hardware
+         */
+        public static boolean testBenchMode = false;
+    }
     public final DriveSubsystem drive;
     public final LauncherSubsystem launcher;
     public final IntakeSubsystem intake;
@@ -48,23 +59,49 @@ public class Robot {
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
         telemetry = telemetryService == null ? new TelemetryService(TelemetrySettings.enablePsiKitLogging) : telemetryService;
         logger = new RobotLogger(telemetry);
-        vision = new VisionSubsystemLimelight(hardwareMap);
+
+        // Vision and Drive always initialize (needed for path visualization)
+        vision = initializeVision(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
-        launcher = new LauncherSubsystem(hardwareMap);
-        intake = new IntakeSubsystem(hardwareMap);
-        lighting = new LightingSubsystem(hardwareMap);
-        launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
-        launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
-        intakeCommands = new IntakeCommands(intake);
+
+        // Expansion hub subsystems - optional in test bench mode
+        if (TestBenchConfig.testBenchMode) {
+            logger.logString("Robot", "TestBenchMode", "ENABLED - expansion hub hardware skipped");
+            launcher = null; // Will be handled by null checks
+            intake = null;
+            lighting = null;
+        } else {
+            launcher = new LauncherSubsystem(hardwareMap);
+            intake = new IntakeSubsystem(hardwareMap);
+            lighting = new LightingSubsystem(hardwareMap);
+        }
+
+        // Create coordinators/commands with null checks
+        launcherCoordinator = (launcher != null && intake != null && lighting != null)
+                ? new LauncherCoordinator(launcher, intake, lighting)
+                : null;
+        launcherCommands = launcher != null
+                ? new LauncherCommands(launcher, launcherCoordinator)
+                : null;
+        intakeCommands = intake != null
+                ? new IntakeCommands(intake)
+                : null;
+
         manualSpinController = createManualSpinController();
         applyRobotMode(robotMode);
         registerLoggingSources();
     }
 
+    private VisionSubsystemLimelight initializeVision(HardwareMap hardwareMap) {
+        return new VisionSubsystemLimelight(hardwareMap);
+    }
+
     public void setAlliance(Alliance alliance) {
         RobotState.setAlliance(alliance);
         vision.setAlliance(alliance);
-        lighting.setAlliance(alliance);
+        if (lighting != null) {
+            lighting.setAlliance(alliance);
+        }
     }
 
     public void initialize() {
@@ -83,11 +120,11 @@ public class Robot {
         drive.setTeleOpControlEnabled(enableTeleOpControl);
         drive.setVisionRelocalizationEnabled(enableVisionRelocalization);
         drive.initialize();
-        launcher.initialize();
-        lighting.initialize();
-        intake.initialize();
+        if (launcher != null) launcher.initialize();
+        if (lighting != null) lighting.initialize();
+        if (intake != null) intake.initialize();
         vision.initialize();
-        launcherCoordinator.initialize();
+        if (launcherCoordinator != null) launcherCoordinator.initialize();
     }
 
     public void setRobotMode(RobotMode mode) {
@@ -101,10 +138,10 @@ public class Robot {
 
     private void applyRobotMode(RobotMode mode) {
         drive.setRobotMode(mode);
-        intake.setRobotMode(mode);
-        lighting.setRobotMode(mode);
+        if (intake != null) intake.setRobotMode(mode);
+        if (lighting != null) lighting.setRobotMode(mode);
         vision.setRobotMode(mode);
-        launcherCoordinator.setRobotMode(mode);
+        if (launcherCoordinator != null) launcherCoordinator.setRobotMode(mode);
     }
 
     private void registerLoggingSources() {
@@ -121,42 +158,52 @@ public class Robot {
                 drive.logPoseFusion(logger);
             }
         });
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Shooter";
-            }
 
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                launcher.populateInputs(shooterInputs);
-                logger.logInputs("Shooter", shooterInputs);
-            }
-        });
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Intake";
-            }
+        if (launcher != null) {
+            logger.registerSource(new RobotLogger.Source() {
+                @Override
+                public String subsystem() {
+                    return "Shooter";
+                }
 
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                intake.populateInputs(intakeInputs);
-                logger.logInputs("Intake", intakeInputs);
-            }
-        });
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Lighting";
-            }
+                @Override
+                public void collect(RobotLogger.Frame frame) {
+                    launcher.populateInputs(shooterInputs);
+                    logger.logInputs("Shooter", shooterInputs);
+                }
+            });
+        }
 
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                lighting.populateInputs(lightingInputs);
-                logger.logInputs("Lighting", lightingInputs);
-            }
-        });
+        if (intake != null) {
+            logger.registerSource(new RobotLogger.Source() {
+                @Override
+                public String subsystem() {
+                    return "Intake";
+                }
+
+                @Override
+                public void collect(RobotLogger.Frame frame) {
+                    intake.populateInputs(intakeInputs);
+                    logger.logInputs("Intake", intakeInputs);
+                }
+            });
+        }
+
+        if (lighting != null) {
+            logger.registerSource(new RobotLogger.Source() {
+                @Override
+                public String subsystem() {
+                    return "Lighting";
+                }
+
+                @Override
+                public void collect(RobotLogger.Frame frame) {
+                    lighting.populateInputs(lightingInputs);
+                    logger.logInputs("Lighting", lightingInputs);
+                }
+            });
+        }
+
         logger.registerSource(new RobotLogger.Source() {
             @Override
             public String subsystem() {
