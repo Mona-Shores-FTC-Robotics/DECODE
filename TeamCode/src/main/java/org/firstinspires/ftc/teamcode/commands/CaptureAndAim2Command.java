@@ -4,9 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import dev.nextftc.core.commands.Command;
-import dev.nextftc.extensions.pedro.TurnTo;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
@@ -15,16 +13,16 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Simplified capture-and-aim command using NextFTC's Pedro TurnTo extension.
+ * Simplified capture-and-aim command using Pedro Follower's turnTo() method.
  * Similar to AimAndDrive but uses a discrete turn command instead of continuous tracking.
  *
  * When activated:
  * 1. Determines target heading from AprilTag vision or odometry fallback
  * 2. Respects alliance color to point at the correct goal (Red/Blue)
- * 3. Uses TurnTo command to execute the rotation with Pedro's PIDF control
+ * 3. Uses follower.turnTo() to execute the rotation with Pedro's PIDF control
  *
- * This approach is simpler than the Path-based CaptureAndAimCommand and leverages
- * NextFTC's built-in turn commands for cleaner code.
+ * This approach is simpler than the Path-based CaptureAndAimCommand and directly
+ * uses Pedro Pathing's built-in turn functionality for cleaner code.
  */
 @Configurable
 public class CaptureAndAim2Command extends Command {
@@ -53,7 +51,7 @@ public class CaptureAndAim2Command extends Command {
     private final VisionSubsystemLimelight vision;
 
     private Double capturedTargetHeadingRad = null;
-    private Command turnCommand = null;
+    private boolean turnStarted = false;
     private long startTimeMs = -1L;
     private int framesSampled = 0;
     private double summedCos = 0.0;
@@ -61,7 +59,7 @@ public class CaptureAndAim2Command extends Command {
     private long lastSampleMs = -1L;
 
     /**
-     * Creates a capture-and-aim command using NextFTC's TurnTo.
+     * Creates a capture-and-aim command using Pedro Follower's turnTo() method.
      */
     public CaptureAndAim2Command(DriveSubsystem drive, VisionSubsystemLimelight vision) {
         this.drive = Objects.requireNonNull(drive, "drive subsystem required");
@@ -73,7 +71,7 @@ public class CaptureAndAim2Command extends Command {
     @Override
     public void start() {
         capturedTargetHeadingRad = null;
-        turnCommand = null;
+        turnStarted = false;
         startTimeMs = System.currentTimeMillis();
         framesSampled = 0;
         summedCos = 0.0;
@@ -118,11 +116,11 @@ public class CaptureAndAim2Command extends Command {
             return;
         }
 
-        // Phase 2: Execute turn using NextFTC's TurnTo command
-        if (turnCommand == null) {
-            // Create and schedule the TurnTo command with the captured heading
-            turnCommand = new TurnTo(drive.getFollower(), capturedTargetHeadingRad, AngleUnit.RADIANS);
-            turnCommand.schedule();
+        // Phase 2: Execute turn using Pedro Follower directly
+        if (!turnStarted) {
+            // Use the follower's turnTo method directly since TurnTo command expects different setup
+            drive.getFollower().turnTo(capturedTargetHeadingRad);
+            turnStarted = true;
         }
     }
 
@@ -136,21 +134,18 @@ public class CaptureAndAim2Command extends Command {
         }
 
         // If we haven't started turning yet, not done
-        if (turnCommand == null) {
+        if (!turnStarted) {
             return false;
         }
 
-        // Done when the TurnTo command finishes
-        return turnCommand.isFinished();
+        // Done when the follower finishes the turn (isBusy returns false when complete)
+        return !drive.getFollower().isBusy();
     }
 
     @Override
     public void stop(boolean interrupted) {
-        if (turnCommand != null && !turnCommand.isFinished()) {
-            turnCommand.cancel();
-        }
         capturedTargetHeadingRad = null;
-        turnCommand = null;
+        turnStarted = false;
         startTimeMs = -1L;
         drive.stop();
     }
