@@ -1,15 +1,3 @@
-//buildscript {
-//    repositories {
-//        mavenCentral()
-//        maven {
-//            url "https://repo.dairy.foundation/releases"
-//        }
-//    }
-//    dependencies {
-//        classpath "dev.frozenmilk:Load:0.2.4"
-//    }
-//}
-//
 // build.gradle in TeamCode
 //
 // Most of the definitions for building your module reside in a common, shared
@@ -19,14 +7,8 @@
 // please think carefully as to whether such customizations are really necessary
 // before doing so.
 
-
-// Custom definitions may go here
-
-// Include common definitions from above.
 apply from: '../build.common.gradle'
 apply from: '../build.dependencies.gradle'
-//apply plugin: 'dev.frozenmilk.sinister.sloth.load'
-
 
 android {
     namespace = 'org.firstinspires.ftc.teamcode'
@@ -37,29 +19,45 @@ android {
         }
         jniLibs.useLegacyPackaging true
     }
+
+    lint {
+        abortOnError true
+        enable 'FieldName', 'LocalVariableName', 'MethodName', 'ClassName', 'ConstantNaming'
+    }
 }
 
-
-
 repositories {
-        maven { url = 'https://maven.brott.dev/' }
+    maven { url = 'https://maven.brott.dev/' }
+    maven { url = 'https://maven.pedropathing.com' }
+    maven { url = "https://mymaven.bylazar.com/releases" }
+    maven { url = "https://repo.dairy.foundation/releases"}
 }
 
 dependencies {
     implementation project(':FtcRobotController')
 
-    implementation 'dev.nextftc:ftc:1.0.0'
-    implementation 'dev.nextftc:hardware:1.0.0' // If you would like to use the hardware module
+    //NextFTC
+    implementation 'dev.nextftc:ftc:1.0.1'
+    implementation 'dev.nextftc:hardware:1.0.1' // If you would like to use the hardware module
+    implementation 'dev.nextftc:bindings:1.0.1'
+    implementation 'dev.nextftc.extensions:pedro:1.0.0'
 
-    //    implementation('com.pedropathing:ftc:2.0.1') {
-//        exclude group: "com.acmerobotics.dashboard"
-//    }
 
-//    implementation("dev.frozenmilk.sinister:Sloth:0.2.4")
-//    implementation("com.acmerobotics.slothboard:dashboard:0.2.4+0.4.17")
-//    implementation("page.j5155.AdvantageScope:lite:v26.0.0")
 
-    implementation('com.acmerobotics.dashboard:dashboard:0.5.0') {
+    // Pedro Pathing
+    implementation('com.pedropathing:ftc:2.0.4')
+    implementation('com.pedropathing:telemetry:1.0.0')
+
+    //Panels
+    implementation('com.bylazar:fullpanels:1.0.9')
+
+    implementation('com.acmerobotics.dashboard:dashboard:0.5.1') {
         exclude group: 'org.firstinspires.ftc'
     }
+
+    implementation("page.j5155.AdvantageScope:lite:v26.0.0")
+
+
+
+
 }

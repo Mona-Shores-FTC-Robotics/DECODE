@@ -1,0 +1,33 @@
+#!/bin/sh
+# Block commits that change Gradle or SDK version files used by FTC projects.
+
+protected_files="
+gradle/wrapper/gradle-wrapper.properties
+build.gradle
+settings.gradle
+gradle.properties
+FtcRobotController/build.gradle
+"
+
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    against=HEAD
+else
+    against=$(git hash-object -t tree /dev/null)
+fi
+
+failed=0
+staged="$(git diff --cached --name-only "$against")"
+
+for f in $protected_files; do
+    echo "$staged" | grep -x "$f" >/dev/null 2>&1 && {
+        echo "ERROR: Attempt to commit changes to protected file: $f"
+        failed=1
+    }
+done
+
+if [ $failed -eq 1 ]; then
+    echo "Revert or unstage those changes before committing."
+    exit 1
+fi
+
+exit 0

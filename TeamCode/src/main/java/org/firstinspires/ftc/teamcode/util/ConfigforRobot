@@ -1,0 +1,20 @@
+Control Hub:
+ Servo:
+    Port 0 = indicator_left
+    Port 1 = feeder_left
+    Port 2 = indicator_center
+    Port 3 = feeder_center
+    Port 4 = indicator_right
+    Port 5 = feeder_right
+
+ Motor:
+    Port 0 = launcher_left
+    Port 1 = launcher_center
+    Port 2 = launcher_right
+    Port 3 = intake
+
+ I2C:
+      Bus 0 = lane_left_color
+      Bus 1 = lane_center_color
+      Bus 2 = lane_right_color
+      Bus 3 = null

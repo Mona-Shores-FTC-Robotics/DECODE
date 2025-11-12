@@ -11,7 +11,7 @@ buildscript {
     }
     dependencies {
         // Note for FTC Teams: Do not modify this yourself.
-        classpath 'com.android.tools.build:gradle:8.12.3'
+        classpath 'com.android.tools.build:gradle:8.13.0'
     }
 }
 
@@ -21,6 +21,20 @@ allprojects {
     repositories {
         mavenCentral()
         google()
+    }
+
+    // Apply linting options to all Android subprojects
+    project.afterEvaluate {
+        if (project.plugins.hasPlugin('com.android.application') || project.plugins.hasPlugin('com.android.library')) {
+            android {
+                lintOptions {
+                    abortOnError true
+                    checkReleaseBuilds false // Optional: don't fail release builds for lint errors
+                    xmlReport true
+                    htmlReport false
+                }
+            }
+        }
     }
 }
 
