@@ -147,10 +147,27 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 - Drag CSV into AdvantageScope for offline replay
 - Same topics as live telemetry
 
+**KoalaLog WPILOG Logging:**
+- Produces `.wpilog` files compatible with AdvantageScope for full-featured offline replay
+- Automatically enabled via `KoalaLog.setup(hardwareMap)` in `Robot` constructor
+- `AutoLogManager.periodic()` called in all OpModes to sample logged data
+- Robot pose automatically logged in `DriveSubsystem.periodic()` for 2D/3D field visualization
+- Log files stored on Control Hub internal storage
+
+**Retrieving WPILOG Files:**
+1. Download LogPuller tools from [KoalaLog GitHub](https://github.com/Koala-Log/Koala-Log/tree/main/LogPuller)
+   - `FTCLogPuller.exe` - retrieves logs from robot
+   - `PullAndDeleteLogs.exe` - retrieves logs and clears storage
+2. Connect to robot via WiFi or USB-C + REV Hardware Client
+3. Run the executable and select destination folder
+4. Open `.wpilog` files in AdvantageScope (File → Open Logs)
+
+**Note:** First run requires internet connection to download ADB tools automatically.
+
 **Adding New Logged Fields:**
 1. Add public field to subsystem's `Inputs` class (prefer primitives/enums/strings)
 2. Populate in `subsystem.populateInputs(...)`
-3. Field automatically discovered by AdvantageScope Lite
+3. Field automatically discovered by AdvantageScope Lite and logged to WPILOG files
 
 ## Coding Conventions
 
@@ -254,6 +271,12 @@ The pre-commit hook (in `.githooks/`) blocks commits that modify Gradle or SDK v
 - NetworkTables 4 streaming
 - 2D field visualization
 - Telemetry plotting and replay
+
+**KoalaLog (v1.4.0):**
+- WPILOG file generation for AdvantageScope offline replay
+- Annotation-based logging with `@AutoLog` and `@AutoLogOutput`
+- Pose2d logging for field visualization
+- Repository: [Koala-Log/Koala-Log](https://github.com/Koala-Log/Koala-Log)
 
 **FullPanels (v1.0.9):**
 - Dashboard panels integration

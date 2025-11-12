@@ -32,6 +32,8 @@ import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
 
+import koalog.KoalaLog;
+
 @Configurable
 public class DriveSubsystem implements Subsystem {
 
@@ -238,6 +240,16 @@ public class DriveSubsystem implements Subsystem {
         follower.update();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
         updatePoseFusion();
+
+        // Log robot pose for AdvantageScope field visualization
+        Pose pose = follower.getPose();
+        if (pose != null) {
+            // Convert inches to meters for AdvantageScope
+            double xMeters = pose.getX() * 0.0254;
+            double yMeters = pose.getY() * 0.0254;
+            double headingRadians = follower.getHeading();
+            KoalaLog.logPose2d("Robot/Pose", xMeters, yMeters, headingRadians, true);
+        }
     }
 
     public double getLastPeriodicMs() {

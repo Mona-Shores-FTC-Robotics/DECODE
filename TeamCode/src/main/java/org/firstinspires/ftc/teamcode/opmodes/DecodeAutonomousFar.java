@@ -33,6 +33,8 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 
+import koalog.AutoLogManager;
+
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.SubsystemComponent;
@@ -204,6 +206,9 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
     @Override
     public void onUpdate() {
         autonomousStep();
+
+        // Periodic logging for KoalaLog (WPILOG files)
+        AutoLogManager.periodic();
 
         robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
         robot.logger.logString("Autonomous", "RoutineStepName", routineStep.name());

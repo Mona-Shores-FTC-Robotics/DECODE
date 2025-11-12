@@ -17,6 +17,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
 import java.util.Locale;
 
+import koalog.AutoLogManager;
+
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
@@ -119,6 +121,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
         // Update bindings and command scheduler
         // Commands (DefaultDriveCommand, AimAndDriveCommand, CaptureAndAimCommand) handle drive control
         BindingManager.update();
+
+        // Periodic logging for KoalaLog (WPILOG files)
+        AutoLogManager.periodic();
 
         // Sample driver inputs for telemetry/logging only (not for control)
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();

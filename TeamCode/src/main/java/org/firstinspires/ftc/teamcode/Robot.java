@@ -17,6 +17,8 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
+import koalog.KoalaLog;
+
 public class Robot {
     public final DriveSubsystem drive;
     public final LauncherSubsystem launcher;
@@ -45,6 +47,10 @@ public class Robot {
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
         telemetry = telemetryService == null ? new TelemetryService(TelemetrySettings.enablePsiKitLogging) : telemetryService;
         logger = new RobotLogger(telemetry);
+
+        // Initialize KoalaLog for WPILOG file logging
+        KoalaLog.setup(hardwareMap);
+
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
         launcher = new LauncherSubsystem(hardwareMap);

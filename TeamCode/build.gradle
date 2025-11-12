@@ -31,6 +31,7 @@ repositories {
     maven { url = 'https://maven.pedropathing.com' }
     maven { url = "https://mymaven.bylazar.com/releases" }
     maven { url = "https://repo.dairy.foundation/releases"}
+    maven { url = 'https://jitpack.io' }
 }
 
 dependencies {
@@ -57,7 +58,8 @@ dependencies {
 
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
 
-
-
+    // KoalaLog for WPILOG file logging
+    implementation 'com.github.Koala-Log.Koala-Log:KoalaLogger:1.4.0'
+    annotationProcessor 'com.github.Koala-Log.Koala-Log:KoalaLoggingProcessor:1.4.0'
 
 }
