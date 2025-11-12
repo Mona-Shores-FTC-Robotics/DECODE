@@ -204,9 +204,6 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        BindingManager.update();
-        follower.update();
-        updateLaunchingRoutine();
         autonomousStep();
 
         robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
@@ -298,7 +295,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
             layout.overrideStart(lastDetectedStartPosePedro);
         }
         PathChain[] chains = createPreviewPathChains(layout, alliance);
-        PanelsBridge.drawPreview(chains, layout.pose(FieldPoint.START_FAR), alliance == Alliance.RED);
+        PanelsBridge.drawPreview(chains, layout.pose(FieldPoint.LAUNCH_CLOSE), alliance == Alliance.RED);
     }
 
     private boolean shouldUpdateStartPose(Pose candidate) {
@@ -352,7 +349,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
         if (startOverride != null) {
             currentLayout.overrideStart(startOverride);
         }
-        Pose startPose = currentLayout.pose(FieldPoint.START_FAR);
+        Pose startPose = currentLayout.pose(FieldPoint.LAUNCH_CLOSE);
         follower.setStartingPose(startPose);
         follower.setPose(startPose);
         buildPaths(currentLayout);
@@ -395,7 +392,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
                 formatDouble(allianceSelector.getDetectedRange()),
                 formatDouble(allianceSelector.getDetectedYaw())));
 
-        Pose layoutStartPedro = currentLayout == null ? null : currentLayout.pose(FieldPoint.START_FAR);
+        Pose layoutStartPedro = currentLayout == null ? null : currentLayout.pose(FieldPoint.LAUNCH_CLOSE);
         telemetry.addLine(String.format(Locale.US,
                 "Layout start (Pedro): %s",
                 formatPosePedro(layoutStartPedro)));
@@ -496,7 +493,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
         if (layout == null || follower == null) {
             return null;
         }
-        Pose launchClosePose = layout.pose(FieldPoint.LAUNCH_FAR);
+        Pose launchClosePose = layout.pose(FieldPoint.LAUNCH_CLOSE);
         Pose gateCloseArtifactsPickupPose = layout.pose(FieldPoint.GATE_CLOSE_ARTIFACTS_PICKUP);
         Pose gateFar270DegArtifactsPickupPose = layout.pose(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_270_DEG);
         Pose parking270DegArtifactsPickupPose = layout.pose(FieldPoint.PARKING_ARTIFACTS_PICKUP_270_DEG);
@@ -564,10 +561,6 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
         if (stepTimer != null) {
             stepTimer.resetTimer();
         }
-    }
-
-    private void updateLaunchingRoutine() {
-        // No-op while launcher is replaced with a timer.
     }
 
     private boolean isWaitingForShot() {

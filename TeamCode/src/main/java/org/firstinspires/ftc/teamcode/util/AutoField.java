@@ -54,16 +54,19 @@ public final class AutoField {
         public static double gateFarX = 24;
         public static double gateFarY = 56;
         public static double gateFarHeadingDeg90 = 90.0;
+        public static double gateFarHeadingDeg270 = 270;
+
         public static double gateFarControlPointX = 22;
         public static double gateFarControlPointY = 29;
+
         public static double launchCloseX = 21.5;
         public static double launchCloseY = 124;
-        public static double launchCloseHeading = 270;
+        public static double launchCloseHeading = 324;
 
         public static double gateCloseX = 24;
         public static double gateCloseY = 87;
+
         public static double gateCloseHeading = 270;
-        public static double gateFarHeadingDeg270 = 270;
         public static double parkingArtifactsHeading270 = 270;
 
 

@@ -71,7 +71,16 @@ public class DriverBindings {
         // X button: Capture-once aim
         // Samples target angle at start, snaps to fixed heading using NextFTC's TurnTo
         Command captureAim = new CaptureAndAim2Command(robot.drive, robot.vision);
+
+//        Command aimOnly = new AimAndDriveCommand(
+//                ()->0,
+//                ()->0,
+//                slowHold::get,
+//                robot.drive
+//        );
         aim.whenBecomesTrue(captureAim);
+//                .whenBecomesFalse(aimOnly::cancel);
+
     }
 
     /**

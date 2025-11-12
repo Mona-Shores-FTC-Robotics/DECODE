@@ -203,8 +203,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        BindingManager.update();
-        updateLaunchingRoutine();
         autonomousStep();
 
         robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
