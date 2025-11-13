@@ -66,6 +66,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
         addComponents(
                 BulkReadComponent.INSTANCE,
+                new PedroComponent(Constants::createFollower),
                 BindingsComponent.INSTANCE,
                 CommandManager.INSTANCE,
                 new SubsystemComponent(robot.drive),

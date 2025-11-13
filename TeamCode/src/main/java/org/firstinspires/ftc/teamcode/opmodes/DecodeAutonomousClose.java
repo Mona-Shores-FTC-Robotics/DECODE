@@ -116,6 +116,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
 
         addComponents(
                 BulkReadComponent.INSTANCE,
+                new PedroComponent(Constants::createFollower),
                 CommandManager.INSTANCE,
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
