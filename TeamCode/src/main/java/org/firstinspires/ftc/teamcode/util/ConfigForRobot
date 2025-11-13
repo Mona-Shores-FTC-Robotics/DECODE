@@ -1,0 +1,41 @@
+Control Hub Motors:
+    Port 0 = rf
+    Port 1 = lf
+    Port 2 = rb
+    Port 3 = lb
+
+Expansion Hub Motors:
+    Port 0 = launcher_right
+    Port 1 = launcher_center
+    Port 2 = launcher_left
+    Port 3 = intake
+
+Control Hub Servos:
+    Port 0 = indicator_left
+    Port 1 = feeder_left
+    Port 2 = indicator_center
+    Port 3 = feeder_center
+    Port 4 = indicator_right
+    Port 5 = feeder_right
+
+Expansion Hub Servos:
+    Port 0 = intake_roller
+    Port 1 = prefeed_roller
+    Port 2 = hood_left
+    Port 3 = hood_center
+    Port 4 = hood_right
+    Port 5 = null
+
+ Control Hub I2C:
+    Bus 0 = null
+    Bus 1 = pinpoint
+    Bus 2 = null
+    Bus 3 = null
+
+ Expansion Hub Hub I2C:
+    Bus 0 = lane_left_color
+    Bus 1 = lane_center_color
+    Bus 2 = lane_right_color
+    Bus 3 = null
+
+
