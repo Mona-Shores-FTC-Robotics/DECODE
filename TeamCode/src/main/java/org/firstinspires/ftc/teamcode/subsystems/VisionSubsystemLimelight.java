@@ -13,11 +13,12 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
-import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.core.subsystems.Subsystem;
+import Ori.Coval.Logging.AutoLog;
+import Ori.Coval.Logging.AutoLogOutput;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +27,7 @@ import java.util.Optional;
  * Limelight-backed vision subsystem that mirrors the public API of the legacy VisionPortal-based
  * implementation so existing OpModes can switch to Limelight without broader structural changes.
  */
+@AutoLog
 public class VisionSubsystemLimelight implements Subsystem {
 
     private static final long ODOMETRY_RESET_TIMEOUT_MS = 3000L;
@@ -47,9 +49,6 @@ public class VisionSubsystemLimelight implements Subsystem {
     private long lastSnapshotTimestampMs = 0L;
     private int lastSeenTagId = -1;
 
-    private final Inputs inputs = new Inputs();
-    private RobotLogger logger;
-    private RobotLogger.Source loggerSource;
     private double lastPeriodicMs = 0.0;
     private RobotMode robotMode = RobotMode.DEBUG;
 
@@ -162,48 +161,6 @@ public class VisionSubsystemLimelight implements Subsystem {
         return Optional.ofNullable(lastSnapshot);
     }
 
-    public void populateInputs(Inputs inputs) {
-        if (inputs == null) {
-            return;
-        }
-        refreshSnapshotIfStale();
-        inputs.state = state;
-        inputs.hasValidTag = lastSnapshot != null;
-        inputs.currentTagId = lastSnapshot == null ? -1 : lastSnapshot.getTagId();
-        inputs.lastSeenTagId = lastSeenTagId;
-        inputs.odometryUpdatePending = odometryUpdatePending;
-        inputs.timeSinceLastSeenMs = lastSnapshotTimestampMs == 0L
-                ? Double.POSITIVE_INFINITY
-                : Math.max(0.0, System.currentTimeMillis() - lastSnapshotTimestampMs);
-        inputs.alliance = activeAlliance.name();
-
-        if (lastRobotPose != null) {
-            inputs.lastPoseXInches = lastRobotPose.getX();
-            inputs.lastPoseYInches = lastRobotPose.getY();
-            inputs.lastPoseHeadingDeg = Math.toDegrees(lastRobotPose.getHeading());
-            inputs.poseXInches = inputs.lastPoseXInches;
-            inputs.poseYInches = inputs.lastPoseYInches;
-            inputs.poseHeadingDeg = inputs.lastPoseHeadingDeg;
-        } else {
-            inputs.lastPoseXInches = Double.NaN;
-            inputs.lastPoseYInches = Double.NaN;
-            inputs.lastPoseHeadingDeg = Double.NaN;
-            inputs.poseXInches = Double.NaN;
-            inputs.poseYInches = Double.NaN;
-            inputs.poseHeadingDeg = Double.NaN;
-        }
-
-        if (lastSnapshot != null) {
-            inputs.lastTxDegrees = lastSnapshot.getTxDegrees();
-            inputs.lastTyDegrees = lastSnapshot.getTyDegrees();
-            inputs.lastTaPercent = lastSnapshot.getTargetAreaPercent();
-        } else {
-            inputs.lastTxDegrees = Double.NaN;
-            inputs.lastTyDegrees = Double.NaN;
-            inputs.lastTaPercent = Double.NaN;
-        }
-    }
-
     public void setAlliance(Alliance alliance) {
         activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
         RobotState.setAlliance(activeAlliance);
@@ -215,66 +172,6 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     public double getLastPeriodicMs() {
         return lastPeriodicMs;
-    }
-
-    public void attachLogger(RobotLogger robotLogger) {
-        if (robotLogger == null || loggerSource != null) {
-            return;
-        }
-        logger = robotLogger;
-        loggerSource = new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Vision";
-            }
-
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                populateInputs(inputs);
-                logger.logBoolean("Vision", "hasTag", inputs.hasValidTag);
-                if (inputs.currentTagId >= 0) {
-                    logger.logNumber("Vision", "tagId", inputs.currentTagId);
-                }
-                logger.logBoolean("Vision", "odometryPending", inputs.odometryUpdatePending);
-                if (Double.isFinite(inputs.poseXInches)) {
-                    logger.logNumber("Vision", "poseXInches", inputs.poseXInches);
-                }
-                if (Double.isFinite(inputs.poseYInches)) {
-                    logger.logNumber("Vision", "poseYInches", inputs.poseYInches);
-                }
-                if (Double.isFinite(inputs.poseHeadingDeg)) {
-                    logger.logNumber("Vision", "poseHeadingDeg", inputs.poseHeadingDeg);
-                    if (Double.isFinite(inputs.poseXInches) && Double.isFinite(inputs.poseYInches)) {
-                        double headingRad = Math.toRadians(inputs.poseHeadingDeg);
-                        double poseXMeters = DistanceUnit.INCH.toMeters(inputs.poseXInches);
-                        double poseYMeters = DistanceUnit.INCH.toMeters(inputs.poseYInches);
-                        logger.logNumber("VisionPose", "poseX", poseXMeters);
-                        logger.logNumber("VisionPose", "poseY", poseYMeters);
-                        logger.logNumber("VisionPose", "poseHeading", headingRad);
-                    }
-                }
-                if (Double.isFinite(inputs.lastTxDegrees)) {
-                    logger.logNumber("Vision", "txDegrees", inputs.lastTxDegrees);
-                }
-                if (Double.isFinite(inputs.lastTyDegrees)) {
-                    logger.logNumber("Vision", "tyDegrees", inputs.lastTyDegrees);
-                }
-                if (Double.isFinite(inputs.lastTaPercent)) {
-                    logger.logNumber("Vision", "targetAreaPercent", inputs.lastTaPercent);
-                }
-                if (Double.isFinite(inputs.timeSinceLastSeenMs)) {
-                    logger.logNumber("Vision", "timeSinceLastSeenMs", inputs.timeSinceLastSeenMs);
-                }
-            }
-        };
-        robotLogger.registerSource(loggerSource);
-    }
-
-    public void detachLogger() {
-        if (logger != null && loggerSource != null) {
-            logger.unregisterSource(loggerSource);
-            loggerSource = null;
-        }
     }
 
     private TagSnapshot selectSnapshot(Alliance preferredAlliance) {
@@ -386,23 +283,95 @@ public class VisionSubsystemLimelight implements Subsystem {
         return Alliance.UNKNOWN;
     }
 
-    public static final class Inputs {
-        public VisionState state = VisionState.OFF;
-        public boolean hasValidTag;
-        public int currentTagId = -1;
-        public int lastSeenTagId = -1;
-        public double timeSinceLastSeenMs = Double.POSITIVE_INFINITY;
-        public boolean odometryUpdatePending;
-        public double lastPoseXInches = Double.NaN;
-        public double lastPoseYInches = Double.NaN;
-        public double lastPoseHeadingDeg = Double.NaN;
-        public double poseXInches = Double.NaN;
-        public double poseYInches = Double.NaN;
-        public double poseHeadingDeg = Double.NaN;
-        public double lastTxDegrees = Double.NaN;
-        public double lastTyDegrees = Double.NaN;
-        public double lastTaPercent = Double.NaN;
-        public String alliance = Alliance.UNKNOWN.name();
+    // ========================================================================
+    // AutoLog Output Methods
+    // These methods are automatically logged by KoalaLog to WPILOG files
+    // and published to FTC Dashboard for AdvantageScope Lite
+    // ========================================================================
+
+    @AutoLogOutput
+    public String getVisionState() {
+        return state.name();
+    }
+
+    @AutoLogOutput
+    public boolean getHasValidTag() {
+        refreshSnapshotIfStale();
+        return lastSnapshot != null;
+    }
+
+    @AutoLogOutput
+    public int getLoggedCurrentTagId() {
+        refreshSnapshotIfStale();
+        return lastSnapshot == null ? -1 : lastSnapshot.getTagId();
+    }
+
+    @AutoLogOutput
+    public int getLastSeenTagId() {
+        return lastSeenTagId;
+    }
+
+    @AutoLogOutput
+    public double getTimeSinceLastSeenMs() {
+        return lastSnapshotTimestampMs == 0L
+                ? Double.POSITIVE_INFINITY
+                : Math.max(0.0, System.currentTimeMillis() - lastSnapshotTimestampMs);
+    }
+
+    @AutoLogOutput
+    public boolean getOdometryUpdatePending() {
+        refreshSnapshotIfStale();
+        return odometryUpdatePending;
+    }
+
+    @AutoLogOutput
+    public double getLastPoseXInches() {
+        return lastRobotPose != null ? lastRobotPose.getX() : Double.NaN;
+    }
+
+    @AutoLogOutput
+    public double getLastPoseYInches() {
+        return lastRobotPose != null ? lastRobotPose.getY() : Double.NaN;
+    }
+
+    @AutoLogOutput
+    public double getLastPoseHeadingDeg() {
+        return lastRobotPose != null ? Math.toDegrees(lastRobotPose.getHeading()) : Double.NaN;
+    }
+
+    @AutoLogOutput
+    public double getPoseXInches() {
+        return getLastPoseXInches();
+    }
+
+    @AutoLogOutput
+    public double getPoseYInches() {
+        return getLastPoseYInches();
+    }
+
+    @AutoLogOutput
+    public double getPoseHeadingDeg() {
+        return getLastPoseHeadingDeg();
+    }
+
+    @AutoLogOutput
+    public double getLastTxDegrees() {
+        return lastSnapshot != null ? lastSnapshot.getTxDegrees() : Double.NaN;
+    }
+
+    @AutoLogOutput
+    public double getLastTyDegrees() {
+        return lastSnapshot != null ? lastSnapshot.getTyDegrees() : Double.NaN;
+    }
+
+    @AutoLogOutput
+    public double getLastTaPercent() {
+        return lastSnapshot != null ? lastSnapshot.getTargetAreaPercent() : Double.NaN;
+    }
+
+    @AutoLogOutput
+    public String getAllianceName() {
+        return activeAlliance.name();
     }
 
     public static final class TagSnapshot {

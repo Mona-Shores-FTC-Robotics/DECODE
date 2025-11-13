@@ -76,7 +76,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         robot.setRobotMode(ACTIVE_MODE);
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
-        robot.logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), DEFAULT_ALLIANCE, "AutonomousInit");
 
         robot.launcherCoordinator.lockIntake();
         robot.launcherCoordinator.setIntakeAutomationEnabled(false);
@@ -141,8 +140,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     public void onStartButtonPressed() {
         BindingManager.reset();
         allianceSelector.lockSelection();
-        robot.logger.updateAlliance(activeAlliance);
-        robot.logger.logEvent("Autonomous", "Start");
 
         robot.launcherCoordinator.setIntakeAutomationEnabled(true);
         robot.launcherCoordinator.unlockIntake();
@@ -155,8 +152,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
-        robot.logger.sampleSources();
         robot.telemetry.updateDriverStation(telemetry);
     }
 
@@ -167,8 +162,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         robot.launcher.abort();
         robot.drive.stop();
         robot.vision.stop();
-        robot.logger.logEvent("Autonomous", "Stop");
-        robot.logger.stopSession();
     }
 
     /**
@@ -299,7 +292,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         Alliance safeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
         activeAlliance = safeAlliance;
         robot.setAlliance(activeAlliance);
-        robot.logger.updateAlliance(activeAlliance);
 
         currentLayout = AutoField.layoutForAlliance(activeAlliance);
 

@@ -39,9 +39,8 @@ DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. I
 
 **Robot Container (`Robot.java`):**
 - Central container that initializes all subsystems and passes shared references
-- Owns the telemetry service and robot logger
+- Owns the telemetry service
 - Provides `initialize()`, `initializeForAuto()`, and `initializeForTeleOp()` methods
-- Registers logging sources for all subsystems
 
 **Subsystems (in `subsystems/`):**
 - `DriveSubsystem`: Mecanum drive with field-centric control, heading alignment, AprilTag relocalization via pose fusion
@@ -76,15 +75,15 @@ DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. I
 - `Alliance.java`, `RobotMode.java`, `ArtifactColor.java`: Enums for robot state
 
 **Telemetry (`telemetry/`):**
-- `RobotLogger.java`: Collects subsystem Inputs and stores topics for FTC Dashboard
-- `TelemetryService.java`: Unified telemetry service
+- `TelemetryService.java`: Unified telemetry service for FTC Dashboard and pose visualization
 - `TelemetryPublisher.java`: Publishes telemetry to FullPanels
-- `TelemetrySettings.java`: Global logging toggles
+- `TelemetrySettings.java`: Global telemetry toggles
+- `RobotStatusLogger.java`: Logs robot status for AdvantageScope compatibility
 
 ### Key Architectural Patterns
 
-**Subsystem Inputs Pattern:**
-Each subsystem exposes a static `Inputs` nested class containing all loggable state. During each loop, `Robot` calls `subsystem.populateInputs(inputs)` and forwards the result to `RobotLogger.logInputs(subsystem, inputs)`. This decouples subsystems from logging infrastructure.
+**@AutoLog Logging Pattern:**
+All subsystems use KoalaLog's `@AutoLog` annotation for automatic logging. Methods annotated with `@AutoLogOutput` are automatically logged to WPILOG files and published to FTC Dashboard for AdvantageScope Lite viewing. No manual logging infrastructure is required.
 
 **Centralized Constants:**
 All hardware names, tuning parameters, and field names are defined in `pedroPathing/Constants.java`. Use `Constants.HardwareNames.*` for device names and `Constants.Naming.FieldNames.*` for telemetry keys.
@@ -122,7 +121,7 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 - `PoseFusion` blends Pinpoint odometry with AprilTag measurements
 - Configurable trust weights based on range and decision margin
 - Outlier rejection for invalid measurements
-- Diagnostics exposed through `DriveSubsystem.logPoseFusion(logger)`
+- Diagnostics automatically logged via `@AutoLogOutput` methods
 - Not yet used for control, but logged for analysis
 
 **Odometry Updates:**
@@ -172,9 +171,28 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 **Note:** First run requires internet connection to download ADB tools automatically.
 
 **Adding New Logged Fields:**
-1. Add public field to subsystem's `Inputs` class (prefer primitives/enums/strings)
-2. Populate in `subsystem.populateInputs(...)`
-3. Field automatically published to AdvantageScope Lite and logged to WPILOG files
+1. Add a getter method to your subsystem class
+2. Annotate the method with `@AutoLogOutput` (or `@AutoLogOutput(key = "CustomKey")` for custom naming)
+3. Return the value to log (supports primitives, enums, strings, Pose2d, etc.)
+4. Field automatically published to AdvantageScope Lite and logged to WPILOG files
+
+**Example:**
+```java
+@AutoLog
+public class MySubsystem implements Subsystem {
+    private double motorPower = 0.0;
+
+    @AutoLogOutput
+    public double getMotorPower() {
+        return motorPower;
+    }
+
+    @AutoLogOutput(key = "Subsystem/CustomFieldName")
+    public String getCustomStatus() {
+        return "Running";
+    }
+}
+```
 
 **Robot Status Logging:**
 All OpModes should log FTC Dashboard _Status fields to ensure WPILOG files match live AdvantageScope Lite data. Use `RobotStatusLogger.logStatus()` in both init and main loops:

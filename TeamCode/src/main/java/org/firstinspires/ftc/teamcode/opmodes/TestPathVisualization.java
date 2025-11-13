@@ -13,7 +13,6 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
-import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AutoField;
@@ -39,19 +38,15 @@ public class TestPathVisualization extends LinearOpMode {
     private Alliance activeAlliance = Alliance.BLUE;
     private FtcDashboard dashboard;
     private TelemetryService telemetryService;
-    private RobotLogger logger;
 
     @Override
     public void runOpMode() throws InterruptedException {
         // Initialize KoalaLog for WPILOG file logging
         KoalaLog.setup(hardwareMap);
 
-        // Initialize telemetry and logging
-        telemetryService = new TelemetryService();  // Enable PsiKit logging
-        logger = new RobotLogger(telemetryService);
+        // Initialize telemetry
+        telemetryService = new TelemetryService();
         telemetryService.startSession();
-        logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), activeAlliance, "PathVisualizationTest");
-        logger.logEvent("PathViz", "Init");
 
         // Initialize Panels for visualization
         PanelsBridge.preparePanels();
@@ -150,10 +145,6 @@ public class TestPathVisualization extends LinearOpMode {
             Pose currentPose = follower.getPose();
             sendPathSimPacket(currentPose, 0, "Init Preview", false);
 
-            // Log init pose and status to CSV
-            logPoseData(currentPose, 0);
-            logStatus(false, "Init", 0);
-
             // Sample AutoLog data during init
             AutoLogManager.periodic();
 
@@ -167,8 +158,6 @@ public class TestPathVisualization extends LinearOpMode {
 
         // If started, simulate following all paths sequentially
         if (isStarted()) {
-            logger.logEvent("PathViz", "SimulationStart");
-
             for (int i = 0; i < allPaths.length; i++) {
                 telemetry.addData("Simulating path", (i + 1) + " of " + allPaths.length);
                 telemetry.update();
@@ -181,15 +170,10 @@ public class TestPathVisualization extends LinearOpMode {
             telemetry.addLine("Check AdvantageScope for visualization");
             telemetry.update();
 
-            logger.logEvent("PathViz", "SimulationComplete");
-            logStatus(false, "Stopped", allPaths.length - 1);
             sleep(2000);
         }
 
-        // Cleanup - stop logging session
-        logger.logEvent("PathViz", "Stop");
-        logStatus(false, "Stopped", 0);
-        logger.stopSession();
+        // Cleanup
         telemetryService.stopSession();
     }
 
@@ -262,10 +246,6 @@ public class TestPathVisualization extends LinearOpMode {
             boolean isBusy = progress < 0.99;
             sendPathSimPacket(simulatedPose, pathIndex, getPathName(pathIndex), isBusy);
 
-            // Log to CSV file
-            logPoseData(simulatedPose, pathIndex);
-            logStatus(true, "Running", pathIndex);
-
             // Sample AutoLog data during simulation
             AutoLogManager.periodic();
 
@@ -292,54 +272,6 @@ public class TestPathVisualization extends LinearOpMode {
     private double smoothStep(double x) {
         x = Math.max(0.0, Math.min(1.0, x));
         return x * x * (3.0 - 2.0 * x);
-    }
-
-    /**
-     * Logs pose data to CSV file for offline analysis in AdvantageScope
-     */
-    private void logPoseData(Pose pedroPose, int pathIndex) {
-        if (logger == null) {
-            return;
-        }
-
-        // Convert to FTC frame for consistency with other logs
-        Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
-
-        // Log individual components for reference
-        logger.logNumber("PathSim", "Pose x", pedroPose.getX());
-        logger.logNumber("PathSim", "Pose y", pedroPose.getY());
-        logger.logNumber("PathSim", "Pose heading", pedroPose.getHeading());
-
-        logger.logNumber("PathSim", "FTC Pose x", ftcPose.getX());
-        logger.logNumber("PathSim", "FTC Pose y", ftcPose.getY());
-        logger.logNumber("PathSim", "FTC Pose heading", ftcPose.getHeading());
-
-        // Log as Pose2d with AdvantageScope's expected nested structure
-        // AdvantageScope recognizes this specific structure as a draggable Pose2d
-        logger.logNumber("Pose2d/rotation", "value", ftcPose.getHeading());  // Rotation in radians
-        logger.logNumber("Pose2d/translation", "x", ftcPose.getX());         // X position in inches
-        logger.logNumber("Pose2d/translation", "y", ftcPose.getY());         // Y position in inches
-
-        // Log path progress
-        logger.logNumber("PathSim", "currentPathIndex", pathIndex);
-    }
-
-    /**
-     * Logs status information for AdvantageScope timeline features
-     */
-    private void logStatus(boolean isRunning, String phase, int pathIndex) {
-        if (logger == null) {
-            return;
-        }
-
-        // Standard AdvantageScope status fields
-        logger.logBoolean("_Status", "RUNNING", isRunning);
-        logger.logString("_Status", "OpMode", "TestPathVisualization");
-        logger.logString("_Status", "Alliance", activeAlliance.toString());
-        logger.logString("_Status", "Phase", phase);  // "Init", "Running", or "Stopped"
-        logger.logString("_Status", "CurrentPath", getPathName(pathIndex));
-        logger.logNumber("_Status", "PathIndex", pathIndex);
-        logger.logNumber("_Status", "ElapsedTime", getRuntime());
     }
 
     private void sendPathSimPacket(Pose pedroPose, int pathIndex, String pathName, boolean isBusy) {

@@ -8,8 +8,10 @@ import dev.nextftc.core.subsystems.Subsystem;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
-import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
+
+import Ori.Coval.Logging.AutoLog;
+import Ori.Coval.Logging.AutoLogOutput;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -19,6 +21,7 @@ import java.util.Map;
  * Shared by bench diagnostics, teleop, and autonomous so behaviour remains consistent.
  */
 @Configurable
+@AutoLog
 public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColorListener {
 
     public enum ArtifactState {
@@ -56,10 +59,6 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     private final LightingSubsystem lighting;
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
     private boolean lightingRegistered = false;
-    private final Inputs inputs = new Inputs();
-    private RobotLogger logger;
-    private RobotLogger.Source loggerSource;
-    private boolean lastLauncherReady = false;
     private double lastPeriodicMs = 0.0;
     private boolean intakeAutomationEnabled = true;
     private ArtifactState artifactState = ArtifactState.EMPTY;
@@ -106,7 +105,6 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         removeLightingListener();
         clearIntakeOverride();
         appliedIntakeMode = null;
-        detachLogger();
     }
 
     @Override
@@ -251,7 +249,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         artifactState = ArtifactState.fromCount(count);
     }
 
-    private boolean isArtifactPresent(LauncherLane lane) {
+    protected boolean isArtifactPresent(LauncherLane lane) {
         ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
         if (color != ArtifactColor.NONE && color != ArtifactColor.UNKNOWN) {
             return true;
@@ -294,19 +292,6 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         }
     }
 
-    /**
-     * Publishes launcher telemetry to the driver station and Panels while also recording
-     * launcher-ready events. Keeps lane diagnostics close to the subsystem so OpModes don't have to
-     * duplicate formatting logic.
-     */
-    public boolean logLauncherReadyEvent(RobotLogger robotLogger) {
-        boolean launcherReady = launcher.atTarget();
-        if (robotLogger != null && launcherReady && ! lastLauncherReady) {
-            robotLogger.logEvent("Launcher", "Ready");
-        }
-        lastLauncherReady = launcherReady;
-        return launcherReady;
-    }
 
     public void publishLaneTelemetry(Telemetry dsTelemetry,
                                      TelemetryManager panelsTelemetry) {
@@ -367,77 +352,38 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         }
     }
 
-    public void populateInputs(Inputs inputs) {
-        if (inputs == null) {
-            return;
-        }
-        inputs.lightingRegistered = lightingRegistered;
-        inputs.artifactState = artifactState.name();
-        inputs.artifactCount = artifactState.count();
-        inputs.intakeAutomationEnabled = intakeAutomationEnabled;
-        inputs.intakeOverrideActive = manualIntakeOverride != null;
-        IntakeSubsystem.IntakeMode requestedMode = getRequestedIntakeMode();
-        IntakeSubsystem.IntakeMode appliedMode = getAppliedIntakeMode();
-        inputs.intakeRequestedMode = requestedMode == null
-                ? IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name()
-                : requestedMode.name();
-        inputs.intakeAppliedMode = appliedMode == null
-                ? IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name()
-                : appliedMode.name();
-        boolean anyActive = false;
-        for (LauncherLane lane : LauncherLane.values()) {
-            ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
-            switch (lane) {
-                case LEFT:
-                    inputs.leftColor = color.name();
-                    break;
-                case CENTER:
-                    inputs.centerColor = color.name();
-                    break;
-                case RIGHT:
-                default:
-                    inputs.rightColor = color.name();
-                    break;
+    /**
+     * Creates a ManualSpinController that manages manual spin override for this coordinator.
+     * Multiple sources can hold the spin active; it only releases when all sources exit.
+     *
+     * @return A ManualSpinController instance that controls this coordinator's manual spin override
+     */
+    public org.firstinspires.ftc.teamcode.commands.LauncherCommands.ManualSpinController createManualSpinController() {
+        return new org.firstinspires.ftc.teamcode.commands.LauncherCommands.ManualSpinController() {
+            private int activeSources = 0;
+
+            @Override
+            public void enterManualSpin() {
+                if (activeSources++ == 0) {
+                    setManualSpinOverride(true);
+                }
             }
-            if (color != ArtifactColor.NONE && color != ArtifactColor.UNKNOWN) {
-                anyActive = true;
+
+            @Override
+            public void exitManualSpin() {
+                if (activeSources <= 0) {
+                    return;
+                }
+                if (--activeSources == 0) {
+                    setManualSpinOverride(false);
+                }
             }
-        }
-        inputs.anyActiveLanes = anyActive;
-        inputs.launcherState = launcher.getState().name();
-        inputs.launcherSpinMode = launcher.getEffectiveSpinMode().name();
-        inputs.launcherQueuedShots = launcher.getQueuedShots();
+        };
     }
+
 
     public double getLastPeriodicMs() {
         return lastPeriodicMs;
-    }
-
-    public void attachLogger(RobotLogger robotLogger) {
-        if (robotLogger == null || loggerSource != null) {
-            return;
-        }
-        logger = robotLogger;
-        loggerSource = new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "LauncherCoordinator";
-            }
-
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                populateInputs(inputs);
-                logger.logInputs("LauncherCoordinator", inputs);
-            }
-        };
-        logger.registerSource(loggerSource);
-    }
-
-    public void detachLogger() {
-        if (logger != null && loggerSource != null) {
-            logger.unregisterSource(loggerSource);
-            loggerSource = null;
-        }
     }
 
     public void setRobotMode(RobotMode mode) {
@@ -473,21 +419,92 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         }
     }
 
-    public static final class Inputs {
-        public boolean lightingRegistered;
-        public String artifactState = ArtifactState.EMPTY.name();
-        public int artifactCount;
-        public boolean intakeAutomationEnabled;
-        public boolean intakeOverrideActive;
-        public String intakeRequestedMode = IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name();
-        public String intakeAppliedMode = IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name();
-        public boolean anyActiveLanes;
-        public String leftColor = ArtifactColor.NONE.name();
-        public String centerColor = ArtifactColor.NONE.name();
-        public String rightColor = ArtifactColor.NONE.name();
-        public String launcherState;
-        public String launcherSpinMode;
-        public int launcherQueuedShots;
+    // ========================================================================
+    // AutoLog Output Methods
+    // These methods are automatically logged by KoalaLog to WPILOG files
+    // and published to FTC Dashboard for AdvantageScope Lite
+    // ========================================================================
+
+    @AutoLogOutput
+    public boolean getLightingRegistered() {
+        return lightingRegistered;
+    }
+
+    @AutoLogOutput
+    public String getArtifactStateString() {
+        return artifactState.name();
+    }
+
+    @AutoLogOutput
+    public int getArtifactCountLogged() {
+        return artifactState.count();
+    }
+
+    @AutoLogOutput
+    public boolean getIntakeAutomationEnabled() {
+        return intakeAutomationEnabled;
+    }
+
+    @AutoLogOutput
+    public boolean getIntakeOverrideActive() {
+        return manualIntakeOverride != null;
+    }
+
+    @AutoLogOutput
+    public String getIntakeRequestedMode() {
+        IntakeSubsystem.IntakeMode requestedMode = getRequestedIntakeMode();
+        return requestedMode == null
+                ? IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name()
+                : requestedMode.name();
+    }
+
+    @AutoLogOutput
+    public String getIntakeAppliedModeString() {
+        IntakeSubsystem.IntakeMode appliedMode = getAppliedIntakeMode();
+        return appliedMode == null
+                ? IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name()
+                : appliedMode.name();
+    }
+
+    @AutoLogOutput
+    public boolean getAnyActiveLanes() {
+        for (LauncherLane lane : LauncherLane.values()) {
+            ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
+            if (color != ArtifactColor.NONE && color != ArtifactColor.UNKNOWN) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @AutoLogOutput
+    public String getLeftColor() {
+        return laneColors.getOrDefault(LauncherLane.LEFT, ArtifactColor.NONE).name();
+    }
+
+    @AutoLogOutput
+    public String getCenterColor() {
+        return laneColors.getOrDefault(LauncherLane.CENTER, ArtifactColor.NONE).name();
+    }
+
+    @AutoLogOutput
+    public String getRightColor() {
+        return laneColors.getOrDefault(LauncherLane.RIGHT, ArtifactColor.NONE).name();
+    }
+
+    @AutoLogOutput
+    public String getLauncherState() {
+        return launcher.getState().name();
+    }
+
+    @AutoLogOutput
+    public String getLauncherSpinMode() {
+        return launcher.getEffectiveSpinMode().name();
+    }
+
+    @AutoLogOutput
+    public int getLauncherQueuedShots() {
+        return launcher.getQueuedShots();
     }
 
 }

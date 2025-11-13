@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.util.Range;
 /**
  * Lightweight sensor fusion layer that blends Pinpoint odometry with AprilTag vision snapshots.
  * The fused pose is not yet used for control, but the estimates (and supporting diagnostics)
- * are exposed through {@link RobotLogger} so AdvantageScope can chart the combined solution.
+ * are exposed through KoalaLog's @AutoLog so AdvantageScope can chart the combined solution.
  */
 public class PoseFusion {
 

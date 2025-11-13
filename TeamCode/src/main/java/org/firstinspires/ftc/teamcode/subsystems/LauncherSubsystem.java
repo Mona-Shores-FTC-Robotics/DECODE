@@ -14,6 +14,9 @@ import dev.nextftc.core.subsystems.Subsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 
+import Ori.Coval.Logging.AutoLog;
+import Ori.Coval.Logging.AutoLogOutput;
+
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.EnumMap;
@@ -27,6 +30,7 @@ import java.util.Set;
  * Callers queue individual shots or bursts while this class coordinates spin-up,
  * feed timing, and recovery delays.
  */
+@AutoLog
 @Configurable
 public class LauncherSubsystem implements Subsystem {
 
@@ -190,46 +194,6 @@ public class LauncherSubsystem implements Subsystem {
 
     private boolean debugOverrideEnabled = false;
 
-    public static final class Inputs {
-        public LauncherState state = LauncherState.DISABLED;
-        public SpinMode requestedSpinMode = SpinMode.OFF;
-        public SpinMode effectiveSpinMode = SpinMode.OFF;
-        public String controlMode = FlywheelControlMode.HYBRID.name();
-        public boolean busy;
-        public int queuedShots;
-        public double stateElapsedSec;
-        public String activeShotLane = "NONE";
-        public double activeShotAgeMs;
-        public double lastShotCompletionMs;
-        public double averageTargetRpm;
-        public double averageCurrentRpm;
-        public double averagePower;
-        public double leftTargetRpm;
-        public double leftCurrentRpm;
-        public double leftPower;
-        public boolean leftReady;
-        public double leftFeederPosition;
-        public double leftLaunchRpm;
-        public double leftIdleRpm;
-        public double leftRecoveryRemainingMs;
-        public double centerTargetRpm;
-        public double centerCurrentRpm;
-        public double centerPower;
-        public boolean centerReady;
-        public double centerFeederPosition;
-        public double centerLaunchRpm;
-        public double centerIdleRpm;
-        public double centerRecoveryRemainingMs;
-        public double rightTargetRpm;
-        public double rightCurrentRpm;
-        public double rightPower;
-        public boolean rightReady;
-        public double rightFeederPosition;
-        public double rightLaunchRpm;
-        public double rightIdleRpm;
-        public double rightRecoveryRemainingMs;
-    }
-
     public LauncherSubsystem(HardwareMap hardwareMap) {
         for (LauncherLane lane : LauncherLane.values()) {
             flywheels.put(lane, new Flywheel(lane, hardwareMap));
@@ -327,42 +291,6 @@ public class LauncherSubsystem implements Subsystem {
 
     public double getLastPeriodicMs() {
         return lastPeriodicMs;
-    }
-
-    public void populateInputs(Inputs inputs) {
-        if (inputs == null) {
-            return;
-        }
-        inputs.state = state;
-        inputs.requestedSpinMode = requestedSpinMode;
-        inputs.effectiveSpinMode = computeEffectiveSpinMode();
-        inputs.controlMode = getFlywheelControlMode().name();
-        inputs.busy = isBusy();
-        double now = clock.milliseconds();
-        ShotRequest pendingShot = shotQueue.peekFirst();
-        if (pendingShot == null) {
-            inputs.activeShotLane = "NONE";
-            inputs.activeShotAgeMs = 0.0;
-        } else {
-            inputs.activeShotLane = pendingShot.lane.name();
-            inputs.activeShotAgeMs = Math.max(0.0, now - pendingShot.scheduledTimeMs);
-        }
-        double lastCompletionMs = 0.0;
-        for (LauncherLane lane : LauncherLane.values()) {
-            double deadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
-            if (deadline > 0.0) {
-                lastCompletionMs = Math.max(lastCompletionMs, deadline - Timing.recoveryMs);
-            }
-        }
-        inputs.lastShotCompletionMs = lastCompletionMs;
-        inputs.queuedShots = getQueuedShots();
-        inputs.stateElapsedSec = getStateElapsedSeconds();
-        inputs.averageTargetRpm = getTargetRpm();
-        inputs.averageCurrentRpm = getCurrentRpm();
-        inputs.averagePower = getLastPower();
-        populateLane(inputs, LauncherLane.LEFT);
-        populateLane(inputs, LauncherLane.CENTER);
-        populateLane(inputs, LauncherLane.RIGHT);
     }
 
     public void queueShot(LauncherLane lane) {
@@ -622,7 +550,7 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    private boolean isLaneReadyForShot(LauncherLane lane, double now) {
+    protected boolean isLaneReadyForShot(LauncherLane lane, double now) {
         double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
         if (now < recoveryDeadline) {
             return false;
@@ -701,7 +629,7 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    private double launchRpmFor(LauncherLane lane) {
+    protected double launchRpmFor(LauncherLane lane) {
         Double override = launchRpmOverrides.get(lane);
         if (override != null && override > 0.0) {
             return override;
@@ -717,7 +645,7 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    private double idleRpmFor(LauncherLane lane) {
+    protected double idleRpmFor(LauncherLane lane) {
         Double override = idleRpmOverrides.get(lane);
         if (override != null && override >= 0.0) {
             return override;
@@ -838,50 +766,181 @@ public class LauncherSubsystem implements Subsystem {
         return position;
     }
 
-    private void populateLane(Inputs inputs, LauncherLane lane) {
-        double target = getTargetRpm(lane);
-        double current = getCurrentRpm(lane);
-        double power = getLastPower(lane);
-        boolean ready = isLaneReady(lane);
-        double feederPos = getFeederPosition(lane);
-        double launchRpm = getLaunchRpm(lane);
-        double idleRpm = getIdleRpm(lane);
-        double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
-        double remainingMs = Math.max(0.0, recoveryDeadline - clock.milliseconds());
+    // ========================================================================
+    // AutoLog Output Methods
+    // These methods are automatically logged by KoalaLog to WPILOG files
+    // and published to FTC Dashboard for AdvantageScope Lite
+    // ========================================================================
 
-        switch (lane) {
-            case LEFT:
-                inputs.leftTargetRpm = target;
-                inputs.leftCurrentRpm = current;
-                inputs.leftPower = power;
-                inputs.leftReady = ready;
-                inputs.leftFeederPosition = feederPos;
-                inputs.leftLaunchRpm = launchRpm;
-                inputs.leftIdleRpm = idleRpm;
-                inputs.leftRecoveryRemainingMs = remainingMs;
-                break;
-            case CENTER:
-                inputs.centerTargetRpm = target;
-                inputs.centerCurrentRpm = current;
-                inputs.centerPower = power;
-                inputs.centerReady = ready;
-                inputs.centerFeederPosition = feederPos;
-                inputs.centerLaunchRpm = launchRpm;
-                inputs.centerIdleRpm = idleRpm;
-                inputs.centerRecoveryRemainingMs = remainingMs;
-                break;
-            case RIGHT:
-            default:
-                inputs.rightTargetRpm = target;
-                inputs.rightCurrentRpm = current;
-                inputs.rightPower = power;
-                inputs.rightReady = ready;
-                inputs.rightFeederPosition = feederPos;
-                inputs.rightLaunchRpm = launchRpm;
-                inputs.rightIdleRpm = idleRpm;
-                inputs.rightRecoveryRemainingMs = remainingMs;
-                break;
+    @AutoLogOutput
+    public LauncherState getLogState() {
+        return state;
+    }
+
+    @AutoLogOutput
+    public SpinMode getLogRequestedSpinMode() {
+        return requestedSpinMode;
+    }
+
+    @AutoLogOutput
+    public SpinMode getLogEffectiveSpinMode() {
+        return computeEffectiveSpinMode();
+    }
+
+    @AutoLogOutput
+    public String getLogControlMode() {
+        return getFlywheelControlMode().name();
+    }
+
+    @AutoLogOutput
+    public boolean getLogBusy() {
+        return isBusy();
+    }
+
+    @AutoLogOutput
+    public int getLogQueuedShots() {
+        return getQueuedShots();
+    }
+
+    @AutoLogOutput
+    public double getLogStateElapsedSec() {
+        return getStateElapsedSeconds();
+    }
+
+    @AutoLogOutput
+    public String getLogActiveShotLane() {
+        ShotRequest pendingShot = shotQueue.peekFirst();
+        return pendingShot == null ? "NONE" : pendingShot.lane.name();
+    }
+
+    @AutoLogOutput
+    public double getLogActiveShotAgeMs() {
+        ShotRequest pendingShot = shotQueue.peekFirst();
+        if (pendingShot == null) {
+            return 0.0;
         }
+        double now = clock.milliseconds();
+        return Math.max(0.0, now - pendingShot.scheduledTimeMs);
+    }
+
+    @AutoLogOutput
+    public double getLogLastShotCompletionMs() {
+        double lastCompletionMs = 0.0;
+        for (LauncherLane lane : LauncherLane.values()) {
+            double deadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
+            if (deadline > 0.0) {
+                lastCompletionMs = Math.max(lastCompletionMs, deadline - Timing.recoveryMs);
+            }
+        }
+        return lastCompletionMs;
+    }
+
+    @AutoLogOutput
+    public double getLogAverageTargetRpm() {
+        return getTargetRpm();
+    }
+
+    @AutoLogOutput
+    public double getLogAverageCurrentRpm() {
+        return getCurrentRpm();
+    }
+
+    @AutoLogOutput
+    public double getLogAveragePower() {
+        return getLastPower();
+    }
+
+    @AutoLogOutput
+    public double getLogLeftTargetRpm() {
+        return getTargetRpm(LauncherLane.LEFT);
+    }
+
+    @AutoLogOutput
+    public double getLogLeftCurrentRpm() {
+        return getCurrentRpm(LauncherLane.LEFT);
+    }
+
+    @AutoLogOutput
+    public double getLogLeftPower() {
+        return getLastPower(LauncherLane.LEFT);
+    }
+
+    @AutoLogOutput
+    public boolean getLogLeftReady() {
+        return isLaneReady(LauncherLane.LEFT);
+    }
+
+    @AutoLogOutput
+    public double getLogLeftFeederPosition() {
+        return getFeederPosition(LauncherLane.LEFT);
+    }
+
+    @AutoLogOutput
+    public double getLogLeftRecoveryRemainingMs() {
+        double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.LEFT, 0.0);
+        return Math.max(0.0, recoveryDeadline - clock.milliseconds());
+    }
+
+    @AutoLogOutput
+    public double getLogCenterTargetRpm() {
+        return getTargetRpm(LauncherLane.CENTER);
+    }
+
+    @AutoLogOutput
+    public double getLogCenterCurrentRpm() {
+        return getCurrentRpm(LauncherLane.CENTER);
+    }
+
+    @AutoLogOutput
+    public double getLogCenterPower() {
+        return getLastPower(LauncherLane.CENTER);
+    }
+
+    @AutoLogOutput
+    public boolean getLogCenterReady() {
+        return isLaneReady(LauncherLane.CENTER);
+    }
+
+    @AutoLogOutput
+    public double getLogCenterFeederPosition() {
+        return getFeederPosition(LauncherLane.CENTER);
+    }
+
+    @AutoLogOutput
+    public double getLogCenterRecoveryRemainingMs() {
+        double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.CENTER, 0.0);
+        return Math.max(0.0, recoveryDeadline - clock.milliseconds());
+    }
+
+    @AutoLogOutput
+    public double getLogRightTargetRpm() {
+        return getTargetRpm(LauncherLane.RIGHT);
+    }
+
+    @AutoLogOutput
+    public double getLogRightCurrentRpm() {
+        return getCurrentRpm(LauncherLane.RIGHT);
+    }
+
+    @AutoLogOutput
+    public double getLogRightPower() {
+        return getLastPower(LauncherLane.RIGHT);
+    }
+
+    @AutoLogOutput
+    public boolean getLogRightReady() {
+        return isLaneReady(LauncherLane.RIGHT);
+    }
+
+    @AutoLogOutput
+    public double getLogRightFeederPosition() {
+        return getFeederPosition(LauncherLane.RIGHT);
+    }
+
+    @AutoLogOutput
+    public double getLogRightRecoveryRemainingMs() {
+        double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.RIGHT, 0.0);
+        return Math.max(0.0, recoveryDeadline - clock.milliseconds());
     }
 
     private static class ShotRequest {

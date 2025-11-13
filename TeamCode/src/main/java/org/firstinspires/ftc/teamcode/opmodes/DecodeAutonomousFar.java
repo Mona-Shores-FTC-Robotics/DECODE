@@ -90,7 +90,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         robot.setRobotMode(ACTIVE_MODE);
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
-        robot.logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), DEFAULT_ALLIANCE, "AutonomousInit");
         panelsTelemetry = robot.telemetry.panelsTelemetry();
         stepTimer = new Timer();
 
@@ -151,10 +150,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
 
         publishInitTelemetry(selectedAlliance);
 
-        robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
-        robot.logger.logString("Autonomous", "RoutineStepName", routineStep.name());
-        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
-        robot.logger.sampleSources();
         robot.telemetry.updateDriverStation(telemetry);
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
@@ -166,7 +161,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
                 activeAlliance,
                 getRuntime(),
                 null,
-                robot.logger,
                 "AutonomousInit",
                 true,
                 lastAppliedStartPosePedro
@@ -179,8 +173,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         opModeStarted = true;
         allianceSelector.lockSelection();
         allianceSelector.applySelection(robot, robot.lighting);
-        robot.logger.updateAlliance(activeAlliance);
-        robot.logger.logEvent("Autonomous", "Start");
 
         LightingSubsystem lighting = robot.lighting;
         if (lighting != null) {
@@ -209,10 +201,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         // Periodic logging for KoalaLog (WPILOG files)
         AutoLogManager.periodic();
 
-        robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
-        robot.logger.logString("Autonomous", "RoutineStepName", routineStep.name());
-        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
-        robot.logger.sampleSources();
         robot.telemetry.updateDriverStation(telemetry);
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
@@ -224,7 +212,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
                 activeAlliance,
                 getRuntime(),
                 null,
-                robot.logger,
                 "Autonomous",
                 false,
                 null
@@ -247,8 +234,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         }
         robot.drive.stop();
         robot.vision.stop();
-        robot.logger.logEvent("AutonomousDHS", "Stop");
-        robot.logger.stopSession();
     }
 
     private void autonomousStep() {
@@ -348,8 +333,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         }
         activeAlliance = safeAlliance;
         robot.setAlliance(activeAlliance);
-        robot.logger.updateAlliance(activeAlliance);
-        robot.logger.logEvent("AutonomousDHS", "Alliance-" + activeAlliance.name());
 
         currentLayout = AutoField.layoutForAlliance(activeAlliance);
         if (startOverride != null) {

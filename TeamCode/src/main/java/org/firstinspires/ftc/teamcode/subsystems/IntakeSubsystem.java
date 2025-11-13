@@ -18,6 +18,9 @@ import com.qualcomm.robotcore.util.Range;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
+import Ori.Coval.Logging.AutoLog;
+import Ori.Coval.Logging.AutoLogOutput;
+
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
@@ -38,6 +41,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
  * while higher-level coordinators decide what the subsystem should do.
  */
 @Configurable
+@AutoLog
 public class IntakeSubsystem implements Subsystem {
 
     public enum IntakeMode {
@@ -181,61 +185,6 @@ public class IntakeSubsystem implements Subsystem {
     private boolean rollerEnabled = false;
     private RobotMode robotMode = RobotMode.DEBUG;
 
-    public static final class Inputs {
-        public String alliance = Alliance.UNKNOWN.name();
-        public boolean anyLaneSensorsPresent;
-        public boolean sensorPollingEnabled;
-        public double sensorSamplePeriodMs;
-        public String leftColor = ArtifactColor.NONE.name();
-        public boolean leftSensorPresent;
-        public boolean leftDistanceAvailable;
-        public double leftDistanceCm;
-        public boolean leftWithinDistance;
-        public float leftHue;
-        public float leftSaturation;
-        public float leftValue;
-        public String leftDetectedColor = ArtifactColor.NONE.name();
-        public String leftHsvColor = ArtifactColor.NONE.name();
-        public int leftRawRed;
-        public int leftRawGreen;
-        public int leftRawBlue;
-        public String centerColor = ArtifactColor.NONE.name();
-        public boolean centerSensorPresent;
-        public boolean centerDistanceAvailable;
-        public double centerDistanceCm;
-        public boolean centerWithinDistance;
-        public float centerHue;
-        public float centerSaturation;
-        public float centerValue;
-        public String centerDetectedColor = ArtifactColor.NONE.name();
-        public String centerHsvColor = ArtifactColor.NONE.name();
-        public int centerRawRed;
-        public int centerRawGreen;
-        public int centerRawBlue;
-        public String rightColor = ArtifactColor.NONE.name();
-        public boolean rightSensorPresent;
-        public boolean rightDistanceAvailable;
-        public double rightDistanceCm;
-        public boolean rightWithinDistance;
-        public float rightHue;
-        public float rightSaturation;
-        public float rightValue;
-        public String rightDetectedColor = ArtifactColor.NONE.name();
-        public String rightHsvColor = ArtifactColor.NONE.name();
-        public int rightRawRed;
-        public int rightRawGreen;
-        public int rightRawBlue;
-        public double motorPower;
-        public double motorCurrentAmps;
-        public String commandedMode = IntakeMode.STOPPED.name();
-        public String appliedMode = IntakeMode.STOPPED.name();
-        public boolean modeOverrideEnabled;
-        public String modeOverride = IntakeMode.STOPPED.name();
-        public boolean rollerPresent;
-        public double rollerPosition;
-        public boolean rollerActive;
-    }
-
     public IntakeSubsystem(HardwareMap hardwareMap) {
         intakeMotor = tryGetMotor(hardwareMap, MotorConfig.motorName);
         if (intakeMotor != null) {
@@ -365,6 +314,7 @@ public class IntakeSubsystem implements Subsystem {
         return resolveMode();
     }
 
+    @AutoLogOutput
     public boolean isRollerPresent() {
         return rollerServo != null;
     }
@@ -376,30 +326,6 @@ public class IntakeSubsystem implements Subsystem {
     public boolean isRollerActive() {
         return rollerServo != null
                 && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
-    }
-
-    public void populateInputs(Inputs inputs) {
-        if (inputs == null) {
-            return;
-        }
-        inputs.alliance = alliance.name();
-        inputs.anyLaneSensorsPresent = anyLaneSensorsPresent;
-        inputs.sensorPollingEnabled = LaneSensorConfig.enablePolling;
-        inputs.sensorSamplePeriodMs = LaneSensorConfig.samplePeriodMs;
-        inputs.motorPower = appliedMotorPower;
-        inputs.motorCurrentAmps = readCurrentAmps();
-        inputs.commandedMode = intakeMode.name();
-        inputs.appliedMode = resolveMode().name();
-        inputs.modeOverrideEnabled = ManualModeConfig.enableOverride;
-        inputs.modeOverride = ManualModeConfig.overrideMode;
-        inputs.rollerPresent = rollerServo != null;
-        inputs.rollerPosition = rollerServo != null ? lastRollerPosition : Double.NaN;
-        inputs.rollerActive = rollerServo != null
-                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
-
-        populateLaneInputs(inputs, LauncherLane.LEFT);
-        populateLaneInputs(inputs, LauncherLane.CENTER);
-        populateLaneInputs(inputs, LauncherLane.RIGHT);
     }
 
     private void pollLaneSensorsIfNeeded() {
@@ -421,17 +347,6 @@ public class IntakeSubsystem implements Subsystem {
             }
         }
         return intakeMode;
-    }
-
-    private double readCurrentAmps() {
-        if (intakeMotor == null) {
-            return Double.NaN;
-        }
-        try {
-            return intakeMotor.getCurrent(CurrentUnit.AMPS);
-        } catch (Exception e) {
-            return Double.NaN;
-        }
     }
 
     private void applyModePower(IntakeMode mode) {
@@ -714,70 +629,273 @@ public class IntakeSubsystem implements Subsystem {
         return null;
     }
 
-    public interface LaneColorListener {
-        void onLaneColorChanged(LauncherLane lane, ArtifactColor color);
-    }
-
-
-    private void populateLaneInputs(Inputs inputs, LauncherLane lane) {
-        LaneSample sample = getLaneSample(lane);
-        ArtifactColor laneColor = getLaneColor(lane);
-        switch (lane) {
-            case LEFT:
-                inputs.leftColor = laneColor.name();
-                inputs.leftSensorPresent = sample.sensorPresent;
-                inputs.leftDistanceAvailable = sample.distanceAvailable;
-                inputs.leftDistanceCm = sample.distanceCm;
-                inputs.leftWithinDistance = sample.withinDistance;
-                inputs.leftHue = sample.hue;
-                inputs.leftSaturation = sample.saturation;
-                inputs.leftValue = sample.value;
-                inputs.leftDetectedColor = sample.color.name();
-                inputs.leftHsvColor = sample.hsvColor.name();
-                inputs.leftRawRed = sample.rawRed;
-                inputs.leftRawGreen = sample.rawGreen;
-                inputs.leftRawBlue = sample.rawBlue;
-                break;
-            case CENTER:
-                inputs.centerColor = laneColor.name();
-                inputs.centerSensorPresent = sample.sensorPresent;
-                inputs.centerDistanceAvailable = sample.distanceAvailable;
-                inputs.centerDistanceCm = sample.distanceCm;
-                inputs.centerWithinDistance = sample.withinDistance;
-                inputs.centerHue = sample.hue;
-                inputs.centerSaturation = sample.saturation;
-                inputs.centerValue = sample.value;
-                inputs.centerDetectedColor = sample.color.name();
-                inputs.centerHsvColor = sample.hsvColor.name();
-                inputs.centerRawRed = sample.rawRed;
-                inputs.centerRawGreen = sample.rawGreen;
-                inputs.centerRawBlue = sample.rawBlue;
-                break;
-            case RIGHT:
-            default:
-                inputs.rightColor = laneColor.name();
-                inputs.rightSensorPresent = sample.sensorPresent;
-                inputs.rightDistanceAvailable = sample.distanceAvailable;
-                inputs.rightDistanceCm = sample.distanceCm;
-                inputs.rightWithinDistance = sample.withinDistance;
-                inputs.rightHue = sample.hue;
-                inputs.rightSaturation = sample.saturation;
-                inputs.rightValue = sample.value;
-                inputs.rightDetectedColor = sample.color.name();
-                inputs.rightHsvColor = sample.hsvColor.name();
-                inputs.rightRawRed = sample.rawRed;
-                inputs.rightRawGreen = sample.rawGreen;
-                inputs.rightRawBlue = sample.rawBlue;
-                break;
-        }
-    }
-
     public boolean isFull() {
         int count = 0;
         for (LauncherLane lane : LauncherLane.values()) {
             if (getLaneSample(lane).withinDistance) count++;
         }
         return count >= 3;
+    }
+
+    // ========================================================================
+    // AutoLog Output Methods
+    // These methods are automatically logged by KoalaLog to WPILOG files
+    // and published to FTC Dashboard for AdvantageScope Lite
+    // ========================================================================
+
+    @AutoLogOutput
+    public String getAllianceString() {
+        return alliance.name();
+    }
+
+    @AutoLogOutput
+    public boolean isAnyLaneSensorsPresent() {
+        return anyLaneSensorsPresent;
+    }
+
+    @AutoLogOutput
+    public boolean isSensorPollingEnabled() {
+        return LaneSensorConfig.enablePolling;
+    }
+
+    @AutoLogOutput
+    public double getSensorSamplePeriodMs() {
+        return LaneSensorConfig.samplePeriodMs;
+    }
+
+    @AutoLogOutput
+    public String getLeftColor() {
+        return getLaneColor(LauncherLane.LEFT).name();
+    }
+
+    @AutoLogOutput
+    public boolean isLeftSensorPresent() {
+        return getLaneSample(LauncherLane.LEFT).sensorPresent;
+    }
+
+    @AutoLogOutput
+    public boolean isLeftDistanceAvailable() {
+        return getLaneSample(LauncherLane.LEFT).distanceAvailable;
+    }
+
+    @AutoLogOutput
+    public double getLeftDistanceCm() {
+        return getLaneSample(LauncherLane.LEFT).distanceCm;
+    }
+
+    @AutoLogOutput
+    public boolean isLeftWithinDistance() {
+        return getLaneSample(LauncherLane.LEFT).withinDistance;
+    }
+
+    @AutoLogOutput
+    public float getLeftHue() {
+        return getLaneSample(LauncherLane.LEFT).hue;
+    }
+
+    @AutoLogOutput
+    public float getLeftSaturation() {
+        return getLaneSample(LauncherLane.LEFT).saturation;
+    }
+
+    @AutoLogOutput
+    public float getLeftValue() {
+        return getLaneSample(LauncherLane.LEFT).value;
+    }
+
+    @AutoLogOutput
+    public String getLeftDetectedColor() {
+        return getLaneSample(LauncherLane.LEFT).color.name();
+    }
+
+    @AutoLogOutput
+    public String getLeftHsvColor() {
+        return getLaneSample(LauncherLane.LEFT).hsvColor.name();
+    }
+
+    @AutoLogOutput
+    public int getLeftRawRed() {
+        return getLaneSample(LauncherLane.LEFT).rawRed;
+    }
+
+    @AutoLogOutput
+    public int getLeftRawGreen() {
+        return getLaneSample(LauncherLane.LEFT).rawGreen;
+    }
+
+    @AutoLogOutput
+    public int getLeftRawBlue() {
+        return getLaneSample(LauncherLane.LEFT).rawBlue;
+    }
+
+    @AutoLogOutput
+    public String getCenterColor() {
+        return getLaneColor(LauncherLane.CENTER).name();
+    }
+
+    @AutoLogOutput
+    public boolean isCenterSensorPresent() {
+        return getLaneSample(LauncherLane.CENTER).sensorPresent;
+    }
+
+    @AutoLogOutput
+    public boolean isCenterDistanceAvailable() {
+        return getLaneSample(LauncherLane.CENTER).distanceAvailable;
+    }
+
+    @AutoLogOutput
+    public double getCenterDistanceCm() {
+        return getLaneSample(LauncherLane.CENTER).distanceCm;
+    }
+
+    @AutoLogOutput
+    public boolean isCenterWithinDistance() {
+        return getLaneSample(LauncherLane.CENTER).withinDistance;
+    }
+
+    @AutoLogOutput
+    public float getCenterHue() {
+        return getLaneSample(LauncherLane.CENTER).hue;
+    }
+
+    @AutoLogOutput
+    public float getCenterSaturation() {
+        return getLaneSample(LauncherLane.CENTER).saturation;
+    }
+
+    @AutoLogOutput
+    public float getCenterValue() {
+        return getLaneSample(LauncherLane.CENTER).value;
+    }
+
+    @AutoLogOutput
+    public String getCenterDetectedColor() {
+        return getLaneSample(LauncherLane.CENTER).color.name();
+    }
+
+    @AutoLogOutput
+    public String getCenterHsvColor() {
+        return getLaneSample(LauncherLane.CENTER).hsvColor.name();
+    }
+
+    @AutoLogOutput
+    public int getCenterRawRed() {
+        return getLaneSample(LauncherLane.CENTER).rawRed;
+    }
+
+    @AutoLogOutput
+    public int getCenterRawGreen() {
+        return getLaneSample(LauncherLane.CENTER).rawGreen;
+    }
+
+    @AutoLogOutput
+    public int getCenterRawBlue() {
+        return getLaneSample(LauncherLane.CENTER).rawBlue;
+    }
+
+    @AutoLogOutput
+    public String getRightColor() {
+        return getLaneColor(LauncherLane.RIGHT).name();
+    }
+
+    @AutoLogOutput
+    public boolean isRightSensorPresent() {
+        return getLaneSample(LauncherLane.RIGHT).sensorPresent;
+    }
+
+    @AutoLogOutput
+    public boolean isRightDistanceAvailable() {
+        return getLaneSample(LauncherLane.RIGHT).distanceAvailable;
+    }
+
+    @AutoLogOutput
+    public double getRightDistanceCm() {
+        return getLaneSample(LauncherLane.RIGHT).distanceCm;
+    }
+
+    @AutoLogOutput
+    public boolean isRightWithinDistance() {
+        return getLaneSample(LauncherLane.RIGHT).withinDistance;
+    }
+
+    @AutoLogOutput
+    public float getRightHue() {
+        return getLaneSample(LauncherLane.RIGHT).hue;
+    }
+
+    @AutoLogOutput
+    public float getRightSaturation() {
+        return getLaneSample(LauncherLane.RIGHT).saturation;
+    }
+
+    @AutoLogOutput
+    public float getRightValue() {
+        return getLaneSample(LauncherLane.RIGHT).value;
+    }
+
+    @AutoLogOutput
+    public String getRightDetectedColor() {
+        return getLaneSample(LauncherLane.RIGHT).color.name();
+    }
+
+    @AutoLogOutput
+    public String getRightHsvColor() {
+        return getLaneSample(LauncherLane.RIGHT).hsvColor.name();
+    }
+
+    @AutoLogOutput
+    public int getRightRawRed() {
+        return getLaneSample(LauncherLane.RIGHT).rawRed;
+    }
+
+    @AutoLogOutput
+    public int getRightRawGreen() {
+        return getLaneSample(LauncherLane.RIGHT).rawGreen;
+    }
+
+    @AutoLogOutput
+    public int getRightRawBlue() {
+        return getLaneSample(LauncherLane.RIGHT).rawBlue;
+    }
+
+    @AutoLogOutput
+    public double getMotorPower() {
+        return appliedMotorPower;
+    }
+
+    @AutoLogOutput
+    public String getCommandedMode() {
+        return intakeMode.name();
+    }
+
+    @AutoLogOutput
+    public String getAppliedMode() {
+        return resolveMode().name();
+    }
+
+    @AutoLogOutput
+    public boolean isModeOverrideEnabled() {
+        return ManualModeConfig.enableOverride;
+    }
+
+    @AutoLogOutput
+    public String getModeOverride() {
+        return ManualModeConfig.overrideMode;
+    }
+
+    @AutoLogOutput
+    public double getLoggedRollerPosition() {
+        return rollerServo != null ? lastRollerPosition : Double.NaN;
+    }
+
+    @AutoLogOutput
+    public boolean isLoggedRollerActive() {
+        return rollerServo != null
+                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
+    }
+
+    public interface LaneColorListener {
+        void onLaneColorChanged(LauncherLane lane, ArtifactColor color);
     }
 
 }

@@ -30,6 +30,9 @@ import java.util.Map;
 /**
  * Centralises telemetry output to FTControl Panels and the driver station.
  * OpModes create a single instance and share its {@link TelemetryPublisher} across subsystems.
+ * <p>
+ * Note: Logging is now handled by KoalaLog's @AutoLog annotation system.
+ * </p>
  */
 public class TelemetryService {
 
@@ -93,7 +96,9 @@ public class TelemetryService {
         // Driver station output is handled directly by the caller.
     }
 
-
+    /**
+     * Publishes telemetry for the current loop to all available outputs.
+     */
     public void publishLoopTelemetry(DriveSubsystem drive,
                                      LauncherSubsystem launcher,
                                      VisionSubsystemLimelight vision,
@@ -102,7 +107,6 @@ public class TelemetryService {
                                      Alliance alliance,
                                      double runtimeSec,
                                      Telemetry dsTelemetry,
-                                     RobotLogger logger,
                                      String modeLabel,
                                      boolean suppressDriveTelemetry,
                                      Pose poseOverride) {
@@ -188,12 +192,7 @@ public class TelemetryService {
         double displayCurrentRpm = Math.max(Math.max(leftCurrentRpm, centerCurrentRpm), rightCurrentRpm);
         double displayPower = Math.max(Math.max(leftPower, centerPower), rightPower);
 
-        boolean launcherReady;
-        if (launcherCoordinator != null) {
-            launcherReady = launcherCoordinator.logLauncherReadyEvent(logger);
-        } else {
-            launcherReady = launcher.atTarget();
-        }
+        boolean launcherReady = launcher.atTarget();
         String launcherState = launcher.getState().name();
         String launcherSpinMode = launcher.getEffectiveSpinMode().name();
 
@@ -227,37 +226,6 @@ public class TelemetryService {
             panels.debug("launcher/lanes/left/bangToHoldCount", leftBangToHoldCount);
             panels.debug("launcher/lanes/center/bangToHoldCount", centerBangToHoldCount);
             panels.debug("launcher/lanes/right/bangToHoldCount", rightBangToHoldCount);
-        }
-
-        if (logger != null) {
-            logger.logString("Launcher", "ControlMode", controlMode);
-            logger.logString("Launcher", "State", launcher.getState().name());
-            logger.logString("Launcher", "SpinMode", launcher.getEffectiveSpinMode().name());
-
-            logger.logNumber("Launcher", "LeftTargetRpm", leftTargetRpm);
-            logger.logNumber("Launcher", "LeftCurrentRpm", leftCurrentRpm);
-            logger.logNumber("Launcher", "LeftPower", leftPower);
-            logger.logBoolean("Launcher", "LeftReady", leftReady);
-            logger.logString("Launcher", "LeftPhase", leftPhase);
-
-            logger.logNumber("Launcher", "CenterTargetRpm", centerTargetRpm);
-            logger.logNumber("Launcher", "CenterCurrentRpm", centerCurrentRpm);
-            logger.logNumber("Launcher", "CenterPower", centerPower);
-            logger.logBoolean("Launcher", "CenterReady", centerReady);
-            logger.logString("Launcher", "CenterPhase", centerPhase);
-
-            logger.logNumber("Launcher", "RightTargetRpm", rightTargetRpm);
-            logger.logNumber("Launcher", "RightCurrentRpm", rightCurrentRpm);
-            logger.logNumber("Launcher", "RightPower", rightPower);
-            logger.logBoolean("Launcher", "RightReady", rightReady);
-            logger.logString("Launcher", "RightPhase", rightPhase);
-            logger.logNumber("Launcher", "LeftBangToHoldCount", leftBangToHoldCount);
-            logger.logNumber("Launcher", "CenterBangToHoldCount", centerBangToHoldCount);
-            logger.logNumber("Launcher", "RightBangToHoldCount", rightBangToHoldCount);
-        }
-
-        if (logger != null) {
-            logger.logNumber("Robot", "RuntimeSec", runtimeSec);
         }
 
         if (dsTelemetry != null && !suppressDriveTelemetry) {
@@ -382,8 +350,7 @@ public class TelemetryService {
                     rightHybrid,
                     leftBangToHoldCount,
                     centerBangToHoldCount,
-                    rightBangToHoldCount,
-                    logger
+                    rightBangToHoldCount
             );
             lastDashboardPacketMs = nowMs;
         }
@@ -397,6 +364,9 @@ public class TelemetryService {
         }
     }
 
+    /**
+     * Sends a telemetry packet to the FTC Dashboard.
+     */
     private void sendDashboardPacket(DriveSubsystem drive,
                                      double requestX,
                                      double requestY,
@@ -457,8 +427,7 @@ public class TelemetryService {
                                      boolean rightHybrid,
                                      int leftBangToHoldCount,
                                      int centerBangToHoldCount,
-                                     int rightBangToHoldCount,
-                                     RobotLogger logger) {
+                                     int rightBangToHoldCount) {
         if (!enableDashboardTelemetry || dashboard == null) {
             return;
         }
@@ -582,22 +551,6 @@ public class TelemetryService {
             overlay.setStrokeWidth(2);
             overlay.strokeCircle(visionPoseXIn, visionPoseYIn, 2.0);
             overlay.strokeLine(visionPoseXIn, visionPoseYIn, visionEndX, visionEndY);
-        }
-
-        // Add all subsystem Inputs topics from RobotLogger
-        if (logger != null) {
-            Map<String, Object> topics = logger.collectAllTopics();
-            for (Map.Entry<String, Object> entry : topics.entrySet()) {
-                Object value = entry.getValue();
-                if (value instanceof Number) {
-                    packet.put(entry.getKey(), ((Number) value).doubleValue());
-                } else if (value instanceof Boolean) {
-                    packet.put(entry.getKey(), (Boolean) value);
-                } else if (value instanceof String) {
-                    packet.put(entry.getKey(), (String) value);
-                }
-            }
-            logger.clearTopics();
         }
 
         dashboard.sendTelemetryPacket(packet);

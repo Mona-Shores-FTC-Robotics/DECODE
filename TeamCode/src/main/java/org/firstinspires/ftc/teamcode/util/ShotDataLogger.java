@@ -3,8 +3,6 @@ package org.firstinspires.ftc.teamcode.util;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
-import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
-
 /**
  * Phase 2: Data collection for building distance-based RPM formula
  *
@@ -14,7 +12,10 @@ import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
  * - Robot pose
  * - Timestamp
  *
- * Use AdvantageScope or PsiKit CSV to analyze offline and fit formula.
+ * Use AdvantageScope to analyze offline and fit formula.
+ *
+ * Note: This class is currently a stub as RobotLogger has been removed.
+ * Logging is now handled by KoalaLog's @AutoLog annotation system.
  */
 @Configurable
 public class ShotDataLogger {
@@ -28,11 +29,10 @@ public class ShotDataLogger {
         public static int logThrottle = 1;
     }
 
-    private final RobotLogger logger;
     private int shotCounter = 0;
 
-    public ShotDataLogger(RobotLogger logger) {
-        this.logger = logger;
+    public ShotDataLogger() {
+        // No-op constructor - logging now handled by @AutoLog
     }
 
     /**
@@ -64,19 +64,8 @@ public class ShotDataLogger {
             return;
         }
 
-        String prefix = "ShotData";
-
-        logger.logNumber(prefix, "ShotNumber", shotCounter);
-        logger.logNumber(prefix, "DistanceToGoalInches", distanceToGoalInches);
-        logger.logNumber(prefix, "CommandedRpmLeft", commandedRpmLeft);
-        logger.logNumber(prefix, "CommandedRpmRight", commandedRpmRight);
-        logger.logNumber(prefix, "ActualRpmLeft", actualRpmLeft);
-        logger.logNumber(prefix, "ActualRpmRight", actualRpmRight);
-        logger.logNumber(prefix, "RobotX", robotPose.getX());
-        logger.logNumber(prefix, "RobotY", robotPose.getY());
-        logger.logNumber(prefix, "RobotHeading", Math.toDegrees(robotPose.getHeading()));
-        logger.logString(prefix, "LaunchPosition", launchPosition != null ? launchPosition : "UNKNOWN");
-        logger.logNumber(prefix, "TimestampMs", System.currentTimeMillis());
+        // TODO: Implement using @AutoLog annotations when needed
+        // For now, this is a no-op stub
     }
 
     /**
@@ -132,8 +121,8 @@ public class ShotDataLogger {
             return;
         }
 
-        logger.logBoolean("ShotData", "LastShotSuccess", success);
-        logger.logNumber("ShotData", "LastShotNumber", shotCounter);
+        // TODO: Implement using @AutoLog annotations when needed
+        // For now, this is a no-op stub
     }
 
     public int getShotCount() {

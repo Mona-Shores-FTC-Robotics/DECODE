@@ -80,3 +80,8 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+
+# Node.js (not used in FTC projects)
+node_modules/
+package.json
+package-lock.json

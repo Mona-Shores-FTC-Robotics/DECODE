@@ -256,19 +256,16 @@ public class DecodeTeleOp extends NextFTCOpMode {
         }
 
         // Fusion diagnostics
-        DriveSubsystem.Inputs inputs = new DriveSubsystem.Inputs();
-        robot.drive.populateInputs(inputs);
-
-        if (inputs.fusionHasPose) {
-            telemetry.addData("Fusion Heading", "%.1f°", inputs.fusionPoseHeadingDeg);
-            if (Double.isFinite(inputs.fusionVisionHeadingErrorDeg)) {
-                telemetry.addData("Fusion Vision Err", "%.1f°", inputs.fusionVisionHeadingErrorDeg);
+        if (robot.drive.getFusionHasPose()) {
+            telemetry.addData("Fusion Heading", "%.1f°", robot.drive.getFusionPoseHeadingDeg());
+            if (Double.isFinite(robot.drive.getFusionVisionHeadingErrorDeg())) {
+                telemetry.addData("Fusion Vision Err", "%.1f°", robot.drive.getFusionVisionHeadingErrorDeg());
             }
-            if (Double.isFinite(inputs.fusionDeltaHeadingDeg)) {
-                telemetry.addData("Fusion Delta", "%.1f° (Fusion - Odom)", inputs.fusionDeltaHeadingDeg);
+            if (Double.isFinite(robot.drive.getFusionDeltaHeadingDeg())) {
+                telemetry.addData("Fusion Delta", "%.1f° (Fusion - Odom)", robot.drive.getFusionDeltaHeadingDeg());
             }
-            telemetry.addData("Vision Weight", "%.2f", inputs.fusionVisionWeight);
-            telemetry.addData("Vision Accepted", inputs.fusionVisionAccepted ? "YES" : "NO");
+            telemetry.addData("Vision Weight", "%.2f", robot.drive.getFusionVisionWeight());
+            telemetry.addData("Vision Accepted", robot.drive.getFusionVisionAccepted() ? "YES" : "NO");
         }
 
         // Raw Pinpoint heading if accessible
@@ -319,7 +316,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                     selectedAlliance,
                     getRuntime(),
                     null,
-                    robot.logger,
                     "TeleOp",
                     false,
                     null
@@ -435,7 +431,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 robot.launcherCoordinator,
                 selectedAlliance,
                 getRuntime(),
-                null,
                 null,
                 "TeleOpInit",
                 true,

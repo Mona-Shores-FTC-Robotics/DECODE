@@ -30,7 +30,6 @@ import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFusion;
 import org.firstinspires.ftc.teamcode.util.PoseTransforms;
-import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
@@ -111,56 +110,6 @@ public class DriveSubsystem implements Subsystem {
     private long lastRampUpdateNs = 0L;
     private boolean teleOpControlEnabled = false;
     private boolean visionRelocalizationEnabled = false;
-
-    public static final class Inputs {
-        public double poseXInches;
-        public double poseYInches;
-        public double poseHeadingDeg;
-        public boolean robotCentric;
-        public String driveMode = DriveMode.NORMAL.name();
-        public double requestFieldX;
-        public double requestFieldY;
-        public double requestRotation;
-        public boolean requestSlowMode;
-        public double commandForward;
-        public double commandStrafeLeft;
-        public double commandTurn;
-        public boolean headingLockActive;
-        public double headingLockTargetDeg;
-        public double headingLockErrorDeg;
-        public double headingLockOutput;
-        public boolean followerBusy;
-        public double lfPower;
-        public double rfPower;
-        public double lbPower;
-        public double rbPower;
-        public double lfCurrentAmps;
-        public double rfCurrentAmps;
-        public double lbCurrentAmps;
-        public double rbCurrentAmps;
-        public double driveTotalCurrentAmps;
-        public double lfVelocityIps;
-        public double rfVelocityIps;
-        public double lbVelocityIps;
-        public double rbVelocityIps;
-        public double followerSpeedIps;
-        public double lastVisionAngleDeg;
-        public double visionSampleAgeMs;
-        public boolean fusionHasPose;
-        public double fusionPoseXInches;
-        public double fusionPoseYInches;
-        public double fusionPoseHeadingDeg;
-        public double fusionDeltaXYInches;
-        public double fusionDeltaHeadingDeg;
-        public double fusionVisionWeight;
-        public boolean fusionVisionAccepted;
-        public double fusionVisionErrorInches;
-        public double fusionVisionHeadingErrorDeg;
-        public double fusionVisionRangeInches;
-        public double fusionVisionDecisionMargin;
-        public double fusionLastVisionAgeMs;
-        public double fusionOdometryDtMs;
-    }
 
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
         follower = Constants.createFollower(hardwareMap);
@@ -272,90 +221,6 @@ public class DriveSubsystem implements Subsystem {
         lastCommandStrafeLeft = 0.0;
         lastCommandTurn = 0.0;
         lastAimErrorRad = Double.NaN;
-    }
-
-    public void populateInputs(Inputs inputs) {
-        if (inputs == null) {
-            return;
-        }
-        Pose pose = follower.getPose();
-        if (pose != null) {
-            inputs.poseXInches = pose.getX();
-            inputs.poseYInches = pose.getY();
-            inputs.poseHeadingDeg = Math.toDegrees(follower.getHeading());
-        } else {
-            inputs.poseXInches = 0.0;
-            inputs.poseYInches = 0.0;
-            inputs.poseHeadingDeg = 0.0;
-        }
-        inputs.robotCentric = robotCentric;
-        inputs.driveMode = activeMode.name();
-        inputs.requestFieldX = lastRequestFieldX;
-        inputs.requestFieldY = lastRequestFieldY;
-        inputs.requestRotation = lastRequestRotation;
-        inputs.requestSlowMode = lastRequestSlowMode;
-        inputs.commandForward = lastCommandForward;
-        inputs.commandStrafeLeft = lastCommandStrafeLeft;
-        inputs.commandTurn = lastCommandTurn;
-        inputs.followerBusy = follower.isBusy();
-        inputs.lfPower = motorLf.getPower();
-        inputs.rfPower = motorRf.getPower();
-        inputs.lbPower = motorLb.getPower();
-        inputs.rbPower = motorRb.getPower();
-        inputs.lfVelocityIps = ticksToInchesPerSecond(motorLf.getVelocity());
-        inputs.rfVelocityIps = ticksToInchesPerSecond(motorRf.getVelocity());
-        inputs.lbVelocityIps = ticksToInchesPerSecond(motorLb.getVelocity());
-        inputs.rbVelocityIps = ticksToInchesPerSecond(motorRb.getVelocity());
-        inputs.followerSpeedIps = followerVelocityIps();
-        inputs.lastVisionAngleDeg = Double.isNaN(lastGoodVisionAngle) ? Double.NaN : Math.toDegrees(lastGoodVisionAngle);
-        inputs.visionSampleAgeMs = lastVisionTimestamp == Double.NEGATIVE_INFINITY
-                ? Double.POSITIVE_INFINITY
-                : Math.max(0.0 , clock.milliseconds() - lastVisionTimestamp);
-        inputs.lfCurrentAmps = readCurrentAmps(motorLf);
-        inputs.rfCurrentAmps = readCurrentAmps(motorRf);
-        inputs.lbCurrentAmps = readCurrentAmps(motorLb);
-        inputs.rbCurrentAmps = readCurrentAmps(motorRb);
-        inputs.driveTotalCurrentAmps = sumCurrentAmps(
-                inputs.lfCurrentAmps,
-                inputs.rfCurrentAmps,
-                inputs.lbCurrentAmps,
-                inputs.rbCurrentAmps
-        );
-
-        PoseFusion.State fusionState = poseFusion.getStateSnapshot();
-        inputs.fusionHasPose = fusionState.hasFusedPose;
-        if (fusionState.hasFusedPose && Double.isFinite(fusionState.fusedXInches) && Double.isFinite(fusionState.fusedYInches)) {
-            inputs.fusionPoseXInches = fusionState.fusedXInches;
-            inputs.fusionPoseYInches = fusionState.fusedYInches;
-            inputs.fusionPoseHeadingDeg = Math.toDegrees(fusionState.fusedHeadingRad);
-        } else {
-            inputs.fusionPoseXInches = Double.NaN;
-            inputs.fusionPoseYInches = Double.NaN;
-            inputs.fusionPoseHeadingDeg = Double.NaN;
-        }
-
-        if (fusionState.hasFusedPose
-                && Double.isFinite(fusionState.odometryXInches)
-                && Double.isFinite(fusionState.odometryYInches)
-                && Double.isFinite(fusionState.odometryHeadingRad)) {
-            inputs.fusionDeltaXYInches = Math.hypot(
-                    fusionState.fusedXInches - fusionState.odometryXInches,
-                    fusionState.fusedYInches - fusionState.odometryYInches);
-            inputs.fusionDeltaHeadingDeg = Math.toDegrees(
-                    normalizeAngle(fusionState.fusedHeadingRad - fusionState.odometryHeadingRad));
-        } else {
-            inputs.fusionDeltaXYInches = Double.NaN;
-            inputs.fusionDeltaHeadingDeg = Double.NaN;
-        }
-
-        inputs.fusionVisionWeight = fusionState.lastVisionWeight;
-        inputs.fusionVisionAccepted = fusionState.lastVisionAccepted;
-        inputs.fusionVisionErrorInches = fusionState.lastVisionTranslationErrorInches;
-        inputs.fusionVisionHeadingErrorDeg = fusionState.lastVisionHeadingErrorDeg;
-        inputs.fusionVisionRangeInches = fusionState.lastVisionRangeInches;
-        inputs.fusionVisionDecisionMargin = fusionState.lastVisionDecisionMargin;
-        inputs.fusionLastVisionAgeMs = fusionState.ageOfLastVisionMs;
-        inputs.fusionOdometryDtMs = fusionState.lastOdometryDtMs;
     }
 
     protected double readCurrentAmps(DcMotorEx motor) {
@@ -714,46 +579,6 @@ public class DriveSubsystem implements Subsystem {
 
     public PoseFusion.State getPoseFusionStateSnapshot() {
         return poseFusion.getStateSnapshot();
-    }
-
-    public void logPoseFusion(RobotLogger robotLogger) {
-        if (robotLogger == null) {
-            return;
-        }
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        if (!state.hasFusedPose) {
-            return;
-        }
-        if (Double.isFinite(state.fusedXInches)) {
-            robotLogger.logNumber("FusionPose", "poseX", DistanceUnit.INCH.toMeters(state.fusedXInches));
-        }
-        if (Double.isFinite(state.fusedYInches)) {
-            robotLogger.logNumber("FusionPose", "poseY", DistanceUnit.INCH.toMeters(state.fusedYInches));
-        }
-        if (Double.isFinite(state.fusedHeadingRad)) {
-            robotLogger.logNumber("FusionPose", "poseHeading", state.fusedHeadingRad);
-        }
-        Pose fusedPedroPose = (Double.isFinite(state.fusedXInches) && Double.isFinite(state.fusedYInches) && Double.isFinite(state.fusedHeadingRad))
-                ? new Pose(state.fusedXInches, state.fusedYInches, state.fusedHeadingRad)
-                : null;
-        Pose fusedFtcPose = PoseTransforms.toFtcPose(fusedPedroPose);
-        if (fusedFtcPose != null) {
-            robotLogger.logNumber("FusionPoseFtc", "poseX", DistanceUnit.INCH.toMeters(fusedFtcPose.getX()));
-            robotLogger.logNumber("FusionPoseFtc", "poseY", DistanceUnit.INCH.toMeters(fusedFtcPose.getY()));
-            robotLogger.logNumber("FusionPoseFtc", "poseHeading", fusedFtcPose.getHeading());
-        }
-        if (Double.isFinite(state.odometryXInches) && Double.isFinite(state.odometryYInches)) {
-            robotLogger.logNumber("OdometryPose", "poseX", DistanceUnit.INCH.toMeters(state.odometryXInches));
-            robotLogger.logNumber("OdometryPose", "poseY", DistanceUnit.INCH.toMeters(state.odometryYInches));
-            robotLogger.logNumber("OdometryPose", "poseHeading", state.odometryHeadingRad);
-            Pose odomPedroPose = new Pose(state.odometryXInches, state.odometryYInches, state.odometryHeadingRad);
-            Pose odomFtcPose = PoseTransforms.toFtcPose(odomPedroPose);
-            if (odomFtcPose != null) {
-                robotLogger.logNumber("OdometryPoseFtc", "poseX", DistanceUnit.INCH.toMeters(odomFtcPose.getX()));
-                robotLogger.logNumber("OdometryPoseFtc", "poseY", DistanceUnit.INCH.toMeters(odomFtcPose.getY()));
-                robotLogger.logNumber("OdometryPoseFtc", "poseHeading", odomFtcPose.getHeading());
-            }
-        }
     }
 
     public double getRobotSpeedInchesPerSecond() {
