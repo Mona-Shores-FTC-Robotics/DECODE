@@ -34,8 +34,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 
-import koalog.AutoLogManager;
-
+import Ori.Coval.Logging.AutoLogManager;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.SubsystemComponent;
