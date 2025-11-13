@@ -90,6 +90,9 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
     private ArtifactColor[] activeDecodePattern = new ArtifactColor[0];
     private boolean opModeStarted;
 
+    private static final long TELEMETRY_INTERVAL_NS = 50_000_000L; // 50ms (20Hz)
+    private long lastTelemetryNs = 0L;
+
     {
         addComponents(
                 BulkReadComponent.INSTANCE,
@@ -219,24 +222,29 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
         logStatus(this, hardwareMap, opModeIsActive());
         autonomousStep();
 
-        // Periodic logging for KoalaLog (WPILOG files)
-        AutoLogManager.periodic();
+        // Throttled telemetry publishing (50ms interval)
+        long nowNs = System.nanoTime();
+        if (nowNs - lastTelemetryNs >= TELEMETRY_INTERVAL_NS) {
+            // Periodic logging for KoalaLog (WPILOG files)
+            AutoLogManager.periodic();
 
-        robot.telemetry.updateDriverStation(telemetry);
-        robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
-        robot.telemetry.publishLoopTelemetry(
-                robot.drive,
-                robot.launcher ,
-                robot.vision,
-                null,
-                robot.launcherCoordinator,
-                activeAlliance,
-                getRuntime(),
-                null,
-                "Autonomous",
-                false,
-                null
-        );
+            robot.telemetry.updateDriverStation(telemetry);
+            robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
+            robot.telemetry.publishLoopTelemetry(
+                    robot.drive,
+                    robot.launcher ,
+                    robot.vision,
+                    null,
+                    robot.launcherCoordinator,
+                    activeAlliance,
+                    getRuntime(),
+                    null,
+                    "Autonomous",
+                    false,
+                    null
+            );
+            lastTelemetryNs = nowNs;
+        }
     }
 
     @Override

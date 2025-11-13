@@ -137,9 +137,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
         // Commands (DefaultDriveCommand, AimAndDriveCommand, CaptureAndAimCommand) handle drive control
         BindingManager.update();
 
-        // Periodic logging for KoalaLog (WPILOG files)
-        AutoLogManager.periodic();
-
         // Sample driver inputs for telemetry/logging only (not for control)
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
 
@@ -324,6 +321,10 @@ public class DecodeTeleOp extends NextFTCOpMode {
         boolean telemetrySent = false;
         if (nowNs - lastTelemetryNs >= TELEMETRY_INTERVAL_NS) {
             long telemetryCallStartNs = nowNs;
+
+            // Periodic logging for KoalaLog (WPILOG files) - throttled to match telemetry rate
+            AutoLogManager.periodic();
+
             robot.telemetry.publishLoopTelemetry(
                     robot.drive,
                     robot.launcher ,

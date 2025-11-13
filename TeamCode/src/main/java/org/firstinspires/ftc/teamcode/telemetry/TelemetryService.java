@@ -367,7 +367,10 @@ public class TelemetryService {
     }
 
     /**
-     * Helper method to log a value to both FTC Dashboard and KoalaLog.
+     * Helper method to log a value to FTC Dashboard.
+     *
+     * Note: Subsystems already use @AutoLogOutput to log to WPILOG automatically.
+     * This method only publishes to FTC Dashboard to avoid duplicate logging overhead.
      *
      * @param packet The telemetry packet to add the value to
      * @param key The telemetry key
@@ -375,22 +378,22 @@ public class TelemetryService {
      */
     private void log(TelemetryPacket packet, String key, Boolean value) {
         packet.put(key, value);
-        KoalaLog.log(key, value, true);
+        // KoalaLog removed: subsystem @AutoLogOutput already logs to WPILOG
     }
 
     private void log(TelemetryPacket packet, String key, String value) {
         packet.put(key, value);
-        KoalaLog.log(key, value, true);
+        // KoalaLog removed: subsystem @AutoLogOutput already logs to WPILOG
     }
 
     private void log(TelemetryPacket packet, String key, Double value) {
         packet.put(key, value);
-        KoalaLog.log(key, value, true);
+        // KoalaLog removed: subsystem @AutoLogOutput already logs to WPILOG
     }
 
     private void log(TelemetryPacket packet, String key, int value) {
         packet.put(key, value);
-        KoalaLog.log(key, value, true);
+        // KoalaLog removed: subsystem @AutoLogOutput already logs to WPILOG
     }
 
     /**

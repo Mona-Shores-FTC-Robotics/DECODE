@@ -23,6 +23,13 @@ import Ori.Coval.Logging.Logger.KoalaLog;
  */
 public class RobotStatusLogger {
 
+    // Cache for slow-changing status fields
+    private static long lastStatusLogMs = 0L;
+    private static final long STATUS_LOG_INTERVAL_MS = 500L; // 500ms - status rarely changes
+    private static String cachedErrorMsg = "";
+    private static String cachedWarningMsg = "";
+    private static double cachedBatteryVoltage = 0.0;
+
     /**
      * Log all FTC Dashboard _Status fields to WPILOG.
      *
@@ -34,7 +41,9 @@ public class RobotStatusLogger {
      * @param running Whether the OpMode is actively running (use opModeIsActive())
      */
     public static void logStatus(LinearOpMode opMode, HardwareMap hardwareMap, boolean running) {
-        // RUNNING field at root level (for AdvantageScope timeline)
+        long nowMs = System.currentTimeMillis();
+
+        // RUNNING field at root level (for AdvantageScope timeline) - always log (changes frequently)
         KoalaLog.log("RUNNING", running, true);
 
         // Get OpMode name from the class
@@ -44,33 +53,40 @@ public class RobotStatusLogger {
         // Determine status - INIT or RUNNING based on running flag
         String status = running ? "RUNNING" : "INIT";
 
-        // Log _Status fields (exact match to FTC Dashboard)
+        // Log _Status fields that change frequently (every loop)
         KoalaLog.log("_Status/enabled", !opMode.isStopRequested(), true);
         KoalaLog.log("_Status/activeOpmode", opModeName, true);
         KoalaLog.log("_Status/activeOpModeStatus", status, true);
 
-        // Read error/warning messages from FTC SDK's RobotLog (same source as FTC Dashboard)
-        String errorMsg = RobotLog.getGlobalErrorMsg();
-        String warningMsg = "";
-        try {
-            RobotLog.GlobalWarningMessage warningSource = RobotLog.getGlobalWarningMessage();
-            if (warningSource != null && warningSource.message != null) {
-                warningMsg = warningSource.message;
+        // Throttle slow-changing status fields (errors, warnings, battery)
+        if (nowMs - lastStatusLogMs >= STATUS_LOG_INTERVAL_MS) {
+            // Read error/warning messages from FTC SDK's RobotLog (same source as FTC Dashboard)
+            cachedErrorMsg = RobotLog.getGlobalErrorMsg();
+            cachedWarningMsg = "";
+            try {
+                RobotLog.GlobalWarningMessage warningSource = RobotLog.getGlobalWarningMessage();
+                if (warningSource != null && warningSource.message != null) {
+                    cachedWarningMsg = warningSource.message;
+                }
+            } catch (Exception e) {
+                // Ignore if warning message not available
             }
-        } catch (Exception e) {
-            // Ignore if warning message not available
-        }
-        KoalaLog.log("_Status/errorMessage", errorMsg != null ? errorMsg : "", true);
-        KoalaLog.log("_Status/warningMessage", warningMsg, true);
 
-        // Battery voltage from hardware
-        try {
-            if (hardwareMap != null && hardwareMap.voltageSensor.iterator().hasNext()) {
-                double voltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
-                KoalaLog.log("_Status/batteryVoltage", voltage, true);
+            // Battery voltage from hardware
+            try {
+                if (hardwareMap != null && hardwareMap.voltageSensor.iterator().hasNext()) {
+                    cachedBatteryVoltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
+                }
+            } catch (Exception e) {
+                // Ignore if voltage sensor not available
             }
-        } catch (Exception e) {
-            // Ignore if voltage sensor not available
+
+            lastStatusLogMs = nowMs;
         }
+
+        // Log cached values (updated at 500ms interval)
+        KoalaLog.log("_Status/errorMessage", cachedErrorMsg != null ? cachedErrorMsg : "", true);
+        KoalaLog.log("_Status/warningMessage", cachedWarningMsg, true);
+        KoalaLog.log("_Status/batteryVoltage", cachedBatteryVoltage, true);
     }
 }
