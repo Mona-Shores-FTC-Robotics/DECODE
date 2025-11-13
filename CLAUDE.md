@@ -176,6 +176,37 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 2. Populate in `subsystem.populateInputs(...)`
 3. Field automatically published to AdvantageScope Lite and logged to WPILOG files
 
+**Robot Status Logging:**
+All OpModes should log FTC Dashboard _Status fields to ensure WPILOG files match live AdvantageScope Lite data. Use `RobotStatusLogger.logStatus()` in both init and main loops:
+
+```java
+import org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger;
+
+// In init loop:
+while (!isStarted() && !isStopRequested()) {
+    RobotStatusLogger.logStatus(this, hardwareMap, false);
+    AutoLogManager.periodic();
+    sleep(25);
+}
+
+// In main loop:
+while (opModeIsActive()) {
+    RobotStatusLogger.logStatus(this, hardwareMap, opModeIsActive());
+    AutoLogManager.periodic();
+}
+```
+
+This automatically logs:
+- `RUNNING` - OpMode active state (root level)
+- `_Status/enabled` - Stop requested state
+- `_Status/activeOpmode` - OpMode name (from class name)
+- `_Status/activeOpModeStatus` - INIT or RUNNING
+- `_Status/errorMessage` - From RobotLog
+- `_Status/warningMessage` - From RobotLog
+- `_Status/batteryVoltage` - From hardware
+
+**Do NOT** add custom fields to `_Status/` namespace - use separate namespaces like `OpMode/` or `Subsystem/` for OpMode-specific data.
+
 ## Coding Conventions
 
 **Naming:**

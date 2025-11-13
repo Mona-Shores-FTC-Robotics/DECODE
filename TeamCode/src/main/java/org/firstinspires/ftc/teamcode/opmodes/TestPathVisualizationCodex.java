@@ -15,21 +15,45 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
-import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
-import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
+import org.firstinspires.ftc.teamcode.subsystems.DemoAutoLogSubsystem;
+import org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
-import org.firstinspires.ftc.teamcode.util.PoseTransforms;
+
+import Ori.Coval.Logging.AutoLogManager;
+import Ori.Coval.Logging.Logger.KoalaLog;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * Bench-friendly autonomous visualiser that replays Pedro paths through FTC Dashboard packets so
- * AdvantageScope Lite can plot the virtual robot pose with no field hardware connected.
+ * Clean example of using @AutoLog for WPILOG logging without any hardware.
+ *
+ * This OpMode demonstrates:
+ * - KoalaLog.setup() for WPILOG file generation
+ * - @AutoLog subsystem (DemoAutoLogSubsystem) with automatic logging
+ * - AutoLogManager.periodic() to sample logged data
+ * - KoalaLog.logPose2d() for robot pose field visualization
+ * - RobotStatusLogger.logStatus() for FTC Dashboard _Status fields
+ *
+ * Robot state metadata (via RobotStatusLogger - matches FTC Dashboard):
+ *   - RUNNING: OpMode active state (root level boolean)
+ *   - _Status/enabled: Stop requested state
+ *   - _Status/activeOpmode: Current OpMode name (from class name)
+ *   - _Status/activeOpModeStatus: INIT/RUNNING state
+ *   - _Status/errorMessage: From RobotLog.getGlobalErrorMsg()
+ *   - _Status/warningMessage: From RobotLog.getGlobalWarningMessage()
+ *   - _Status/batteryVoltage: Battery voltage from hardware
+ *
+ * Custom fields (separate namespaces):
+ *   - OpMode/*: Custom fields for this specific OpMode (Alliance, Phase, CurrentStep, etc.)
+ *   - Simulation/*: Simulation-specific state (stepName, stepType, progress, etc.)
+ *   - Robot/Pose: Robot pose for field visualization (Pose2d struct)
+ *
+ * Perfect for testing on a testbench without expansion hub!
  */
 @Autonomous(name = "Test: Path Visualization Codex", group = "Test")
 public class TestPathVisualizationCodex extends LinearOpMode {
@@ -61,11 +85,10 @@ public class TestPathVisualizationCodex extends LinearOpMode {
     private final PathSimInputs simInputs = new PathSimInputs();
     private final FtcDashboard dashboard = FtcDashboard.getInstance();
 
-    private TelemetryService telemetryService;
-    private RobotLogger logger;
     private Follower follower;
     private SimulationContext simulationContext;
     private CommandRunner commandRunner;
+    private DemoAutoLogSubsystem demoSubsystem;
 
     private boolean prevLeftBumper;
     private boolean prevRightBumper;
@@ -75,40 +98,18 @@ public class TestPathVisualizationCodex extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
-        telemetryService = new TelemetryService(true);
-        telemetryService.startSession();
-        logger = new RobotLogger(telemetryService);
-        logger.startSession(hardwareMap.appContext, "TestPathVisualizationCodex", activeAlliance, "Init");
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "PathSimCodex";
-            }
+        // ========================================================================
+        // STEP 1: Initialize KoalaLog for WPILOG file logging
+        // This must be called before any @AutoLog subsystems are created
+        // ========================================================================
+        KoalaLog.setup(hardwareMap);
 
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                frame.number("poseX", simInputs.poseX);
-                frame.number("poseY", simInputs.poseY);
-                frame.number("poseHeadingDeg", Math.toDegrees(simInputs.poseHeading));
-                frame.number("stepProgress", simInputs.stepProgress);
-                frame.number("overallProgress", simInputs.overallProgress);
-                frame.number("loopCount", simInputs.loopCount);
-                frame.bool("running", simInputs.running);
-                frame.string("stepName", simInputs.stepName);
-                frame.string("stepType", simInputs.stepType);
-                frame.string("mode", simulationMode.displayName);
-                Pose pedroPose = new Pose(simInputs.poseX, simInputs.poseY, simInputs.poseHeading);
-                Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
-                if (ftcPose != null) {
-                    frame.number("ftcPoseX", ftcPose.getX());
-                    frame.number("ftcPoseY", ftcPose.getY());
-                    frame.number("ftcPoseHeadingDeg", Math.toDegrees(ftcPose.getHeading()));
-                }
-                if (pedroPose != null) {
-                    frame.number("pedroPoseHeadingDeg", Math.toDegrees(pedroPose.getHeading()));
-                }
-            }
-        });
+        // ========================================================================
+        // STEP 2: Create @AutoLog subsystems
+        // Use the AutoLogged version (generated by annotation processor)
+        // It auto-registers with AutoLogManager in its constructor
+        // ========================================================================
+        demoSubsystem = new org.firstinspires.ftc.teamcode.subsystems.DemoAutoLogSubsystemAutoLogged();
 
         follower = Constants.createFollower(hardwareMap);
         rebuildSimulationContext(true);
@@ -120,9 +121,46 @@ public class TestPathVisualizationCodex extends LinearOpMode {
             if (rebuildRequested) {
                 rebuildSimulationContext(false);
             }
+            // Update demo subsystem (calls periodic() which updates its state)
+            demoSubsystem.periodic();
+
+            // Update follower to get latest pose
+            follower.update();
+
+            // ========================================================================
+            // OPTIONAL: Log Pose2d for field visualization in AdvantageScope
+            // This creates a draggable robot on the 2D field view
+            // Must convert inches to meters for AdvantageScope
+            // ========================================================================
+            Pose currentPose = follower.getPose();
+            if (currentPose != null) {
+                double xMeters = currentPose.getX() * 0.0254;
+                double yMeters = currentPose.getY() * 0.0254;
+                double headingRad = currentPose.getHeading();
+                KoalaLog.logPose2d("Robot/Pose", xMeters, yMeters, headingRad, true);
+            }
+
+            // Log FTC Dashboard _Status fields (matches AdvantageScope Lite)
+            RobotStatusLogger.logStatus(this, hardwareMap, false);
+
+            // ===================================================================
+            // Custom OpMode fields (separate from FTC Dashboard _Status)
+            // ===================================================================
+            KoalaLog.log("OpMode/Alliance", activeAlliance.name(), true);
+            KoalaLog.log("OpMode/Phase", "Init", true);
+
+            // Log simulation state
+            KoalaLog.log("Simulation/stepName", simInputs.stepName, true);
+            KoalaLog.log("Simulation/stepProgress", simInputs.stepProgress, true);
+
             updateInitTelemetry();
             sendDashboardPacket();
-            logger.sampleSources();
+
+            // ========================================================================
+            // STEP 3: Call AutoLogManager.periodic() in your loop
+            // This samples all @AutoLog subsystems and writes to WPILOG
+            // ========================================================================
+            AutoLogManager.periodic();
             sleep(25);
         }
 
@@ -132,7 +170,9 @@ public class TestPathVisualizationCodex extends LinearOpMode {
         }
 
         waitForStart();
-        logger.logEvent("PathSimCodex", "SimulationStarted");
+
+        // Start the demo subsystem
+        demoSubsystem.start();
 
         if (commandRunner != null) {
             commandRunner.restart(simulationContext.startPose);
@@ -146,21 +186,52 @@ public class TestPathVisualizationCodex extends LinearOpMode {
             double dt = Math.min(now - lastTime, 0.1);
             lastTime = now;
 
+            // Update demo subsystem
+            demoSubsystem.periodic();
+
             commandRunner.update(dt, simInputs);
             simInputs.runtimeSec = now;
 
+            // Log robot pose for field visualization
+            Pose currentPose = new Pose(simInputs.poseX, simInputs.poseY, simInputs.poseHeading);
+            double xMeters = currentPose.getX() * 0.0254;
+            double yMeters = currentPose.getY() * 0.0254;
+            double headingRad = currentPose.getHeading();
+            KoalaLog.logPose2d("Robot/Pose", xMeters, yMeters, headingRad, true);
+
+            // Log FTC Dashboard _Status fields (matches AdvantageScope Lite)
+            RobotStatusLogger.logStatus(this, hardwareMap, opModeIsActive());
+
+            // ===================================================================
+            // Custom OpMode fields (separate from FTC Dashboard _Status)
+            // ===================================================================
+            KoalaLog.log("OpMode/Alliance", activeAlliance.name(), true);
+            KoalaLog.log("OpMode/Phase", "Running", true);
+            KoalaLog.log("OpMode/CurrentStep", simInputs.stepName, true);
+            KoalaLog.log("OpMode/StepIndex", simInputs.stepIndex, true);
+            KoalaLog.log("OpMode/LoopCount", simInputs.loopCount, true);
+
+            // Log simulation state
+            KoalaLog.log("Simulation/stepName", simInputs.stepName, true);
+            KoalaLog.log("Simulation/stepType", simInputs.stepType, true);
+            KoalaLog.log("Simulation/stepProgress", simInputs.stepProgress, true);
+            KoalaLog.log("Simulation/overallProgress", simInputs.overallProgress, true);
+            KoalaLog.log("Simulation/loopCount", simInputs.loopCount, true);
+
             sendDashboardPacket();
             updateRuntimeTelemetry();
-            logger.sampleSources();
+
+            // Sample all @AutoLog subsystems and write to WPILOG
+            AutoLogManager.periodic();
         }
 
         simInputs.running = false;
         simInputs.overallProgress = 1.0;
         sendDashboardPacket();
-        logger.sampleSources();
 
-        logger.logEvent("PathSimCodex", "SimulationFinished");
-        telemetry.addLine("Simulation complete - check AdvantageScope for the trace.");
+        telemetry.addLine("Simulation complete!");
+        telemetry.addLine("Download WPILOG file with FTCLogPuller.exe");
+        telemetry.addLine("Open in AdvantageScope to view all logged data");
         telemetry.update();
         sleep(750);
 
@@ -168,11 +239,8 @@ public class TestPathVisualizationCodex extends LinearOpMode {
     }
 
     private void cleanup() {
-        if (logger != null) {
-            logger.stopSession();
-        }
-        if (telemetryService != null) {
-            telemetryService.stopSession();
+        if (demoSubsystem != null) {
+            demoSubsystem.stop();
         }
     }
 
@@ -233,7 +301,6 @@ public class TestPathVisualizationCodex extends LinearOpMode {
         );
 
         commandRunner = new CommandRunner(steps, simulationMode.loops, startPose);
-        logger.updateAlliance(activeAlliance);
 
         Pose pose = simulationContext.startPose;
         simInputs.poseX = pose.getX();
@@ -350,19 +417,9 @@ public class TestPathVisualizationCodex extends LinearOpMode {
         }
         TelemetryPacket packet = new TelemetryPacket();
         Pose pedroPose = new Pose(simInputs.poseX, simInputs.poseY, simInputs.poseHeading);
-        Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
-        if (ftcPose != null) {
-            packet.put("Pose/Pose x", ftcPose.getX());
-            packet.put("Pose/Pose y", ftcPose.getY());
-            packet.put("Pose/Pose heading", ftcPose.getHeading());
-        } else {
-            packet.put("Pose/Pose x", simInputs.poseX);
-            packet.put("Pose/Pose y", simInputs.poseY);
-            packet.put("Pose/Pose heading", simInputs.poseHeading);
-        }
-        packet.put("Pose/Pedro Pose x", pedroPose.getX());
-        packet.put("Pose/Pedro Pose y", pedroPose.getY());
-        packet.put("Pose/Pedro Pose heading", pedroPose.getHeading());
+        packet.put("Pose/Pose x", pedroPose.getX());
+        packet.put("Pose/Pose y", pedroPose.getY());
+        packet.put("Pose/Pose heading", pedroPose.getHeading());
         packet.put("Simulation/Alliance", activeAlliance.name());
         packet.put("Simulation/Mode", simulationMode.displayName);
         packet.put("Simulation/StepName", simInputs.stepName);
@@ -371,11 +428,6 @@ public class TestPathVisualizationCodex extends LinearOpMode {
         packet.put("Simulation/OverallProgress", simInputs.overallProgress);
         packet.put("Simulation/LoopCount", simInputs.loopCount);
         packet.put("Simulation/Running", simInputs.running);
-        if (ftcPose != null) {
-            packet.put("Pose/FTC Pose x", ftcPose.getX());
-            packet.put("Pose/FTC Pose y", ftcPose.getY());
-            packet.put("Pose/FTC Pose heading", ftcPose.getHeading());
-        }
 
         Canvas overlay = packet.fieldOverlay();
         drawPathsOnOverlay(overlay,

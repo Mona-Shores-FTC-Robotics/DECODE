@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ManualSpinController;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -33,11 +34,14 @@ public class Robot {
 
     private RobotMode robotMode = RobotMode.DEBUG;
 
-    private final DriveSubsystem.Inputs driveInputs = new DriveSubsystem.Inputs();
+    // DriveSubsystem uses @AutoLog - no Inputs needed!
+    // Other subsystems still use old pattern until migrated to @AutoLog
     private final LauncherSubsystem.Inputs shooterInputs = new LauncherSubsystem.Inputs();
     private final IntakeSubsystem.Inputs intakeInputs = new IntakeSubsystem.Inputs();
     private final LightingSubsystem.Inputs lightingInputs = new LightingSubsystem.Inputs();
     private final VisionSubsystemLimelight.Inputs visionInputs = new VisionSubsystemLimelight.Inputs();
+
+    public ManualSpinController manualSpinController;
 
     public Robot(HardwareMap hardwareMap) {
         this(hardwareMap, new TelemetryService());
@@ -59,6 +63,8 @@ public class Robot {
         launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
         launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
         intakeCommands = new IntakeCommands(intake);
+
+        manualSpinController = createManualSpinController();
         applyRobotMode(robotMode);
 
         registerLoggingSources();
@@ -111,19 +117,9 @@ public class Robot {
     }
 
     private void registerLoggingSources() {
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Drive";
-            }
+        // DriveSubsystem now uses @AutoLog - no manual logging needed!
+        // Logging happens automatically via AutoLogManager.periodic()
 
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                drive.populateInputs(driveInputs);
-                logger.logInputs("Drive", driveInputs);
-                drive.logPoseFusion(logger);
-            }
-        });
         logger.registerSource(new RobotLogger.Source() {
             @Override
             public String subsystem() {
@@ -172,6 +168,33 @@ public class Robot {
                 logger.logInputs("Vision", visionInputs);
             }
         });
+    }
+
+
+    private ManualSpinController createManualSpinController() {
+        if (launcherCoordinator == null) {
+            return ManualSpinController.NO_OP;
+        }
+        return new ManualSpinController() {
+            private int activeSources = 0;
+
+            @Override
+            public void enterManualSpin() {
+                if (activeSources++ == 0) {
+                    launcherCoordinator.setManualSpinOverride(true);
+                }
+            }
+
+            @Override
+            public void exitManualSpin() {
+                if (activeSources <= 0) {
+                    return;
+                }
+                if (--activeSources == 0) {
+                    launcherCoordinator.setManualSpinOverride(false);
+                }
+            }
+        };
     }
 
 }

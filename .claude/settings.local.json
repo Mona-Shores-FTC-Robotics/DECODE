@@ -3,7 +3,9 @@
     "allow": [
       "Bash(./gradlew:*)",
       "WebFetch(domain:github.com)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
     "ask": []

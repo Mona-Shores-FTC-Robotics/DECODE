@@ -21,6 +21,9 @@ import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.PoseTransforms;
 
+import Ori.Coval.Logging.AutoLogManager;
+import Ori.Coval.Logging.Logger.KoalaLog;
+
 /**
  * Simple test OpMode for visualizing autonomous paths on test bench
  *
@@ -40,8 +43,11 @@ public class TestPathVisualization extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
+        // Initialize KoalaLog for WPILOG file logging
+        KoalaLog.setup(hardwareMap);
+
         // Initialize telemetry and logging
-        telemetryService = new TelemetryService(true);  // Enable PsiKit logging
+        telemetryService = new TelemetryService();  // Enable PsiKit logging
         logger = new RobotLogger(telemetryService);
         telemetryService.startSession();
         logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), activeAlliance, "PathVisualizationTest");
@@ -133,7 +139,8 @@ public class TestPathVisualization extends LinearOpMode {
                 follower.followPath(currentPath);
             }
 
-            // Update follower (this processes the path)
+
+                       // Update follower (this processes the path)
             follower.update();
 
             // Draw ALL the paths as preview (not just current)
@@ -146,6 +153,9 @@ public class TestPathVisualization extends LinearOpMode {
             // Log init pose and status to CSV
             logPoseData(currentPose, 0);
             logStatus(false, "Init", 0);
+
+            // Sample AutoLog data during init
+            AutoLogManager.periodic();
 
             telemetry.addData("Alliance", activeAlliance);
             telemetry.addData("Status", "Initialized - Showing all paths");
@@ -255,6 +265,9 @@ public class TestPathVisualization extends LinearOpMode {
             // Log to CSV file
             logPoseData(simulatedPose, pathIndex);
             logStatus(true, "Running", pathIndex);
+
+            // Sample AutoLog data during simulation
+            AutoLogManager.periodic();
 
             telemetry.addData("Path", getPathName(pathIndex));
             telemetry.addData("Progress", String.format("%.0f%%", progress * 100));
