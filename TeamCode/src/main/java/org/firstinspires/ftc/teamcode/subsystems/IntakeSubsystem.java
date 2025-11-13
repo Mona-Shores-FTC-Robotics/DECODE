@@ -12,6 +12,8 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
+import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -174,7 +176,7 @@ public class IntakeSubsystem implements Subsystem {
 
     private Alliance alliance = Alliance.UNKNOWN;
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
-    private final EnumMap<LauncherLane, ColorSensor> laneSensors = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, NormalizedColorSensor> laneSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, DistanceSensor> laneDistanceSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, LaneSample> laneSamples = new EnumMap<>(LauncherLane.class);
     private final float[] hsvBuffer = new float[3];
@@ -401,7 +403,7 @@ public class IntakeSubsystem implements Subsystem {
         laneDistanceSensors.put(LauncherLane.CENTER, tryGetDistanceSensor(hardwareMap, laneSensorConfig.centerSensor));
         laneSensors.put(LauncherLane.RIGHT, tryGetColorSensor(hardwareMap, laneSensorConfig.rightSensor));
         laneDistanceSensors.put(LauncherLane.RIGHT, tryGetDistanceSensor(hardwareMap, laneSensorConfig.rightSensor));
-        for (ColorSensor sensor : laneSensors.values()) {
+        for (NormalizedColorSensor sensor : laneSensors.values()) {
             if (sensor != null) {
                 anyLaneSensorsPresent = true;
                 break;
@@ -420,12 +422,12 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
-    private static ColorSensor tryGetColorSensor(HardwareMap hardwareMap, String name) {
+    private static NormalizedColorSensor tryGetColorSensor(HardwareMap hardwareMap, String name) {
         if (name == null || name.isEmpty()) {
             return null;
         }
         try {
-            return hardwareMap.get(ColorSensor.class, name);
+            return hardwareMap.get(NormalizedColorSensor.class, name);
         } catch (IllegalArgumentException ignored) {
             return null;
         }
@@ -454,7 +456,7 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     private LaneSample sampleLane(LauncherLane lane) {
-        ColorSensor colorSensor = laneSensors.get(lane);
+        NormalizedColorSensor colorSensor = laneSensors.get(lane);
         DistanceSensor distanceSensor = laneDistanceSensors.get(lane);
         if (colorSensor == null) {
             return ABSENT_SAMPLE;
@@ -476,23 +478,26 @@ public class IntakeSubsystem implements Subsystem {
             withinDistance = distanceCm <= laneSensorConfig.presenceDistanceCm;
         }
 
-        int rawRed = colorSensor.red();
-        int rawGreen = colorSensor.green();
-        int rawBlue = colorSensor.blue();
-        int maxComponent = Math.max(rawRed, Math.max(rawGreen, rawBlue));
-        int scaledRed = 0;
-        int scaledGreen = 0;
-        int scaledBlue = 0;
+        // SINGLE I2C read for all color channels (red, green, blue, alpha)
+        NormalizedRGBA colors = colorSensor.getNormalizedColors();
+
+        // Convert normalized values (0-1) to 0-255 range
+        // NormalizedColorSensor already applies gain internally, so these are our scaled values
+        int scaledRed = Math.min(255, Math.round(colors.red * 255.0f));
+        int scaledGreen = Math.min(255, Math.round(colors.green * 255.0f));
+        int scaledBlue = Math.min(255, Math.round(colors.blue * 255.0f));
+
+        // For raw values, use the same normalized values scaled to 0-255
+        int rawRed = scaledRed;
+        int rawGreen = scaledGreen;
+        int rawBlue = scaledBlue;
+
+        int maxComponent = Math.max(scaledRed, Math.max(scaledGreen, scaledBlue));
         float hue = 0.0f;
         float saturation = 0.0f;
         float value = 0.0f;
 
         if (maxComponent > 0) {
-            float scale = maxComponent > 0 ? 255.0f / maxComponent : 0.0f;
-            scaledRed = Math.min(255, Math.round(rawRed * scale));
-            scaledGreen = Math.min(255, Math.round(rawGreen * scale));
-            scaledBlue = Math.min(255, Math.round(rawBlue * scale));
-
             Color.RGBToHSV(scaledRed, scaledGreen, scaledBlue, hsvBuffer);
             hue = hsvBuffer[0];
             saturation = hsvBuffer[1];
