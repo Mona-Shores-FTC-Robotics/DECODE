@@ -183,6 +183,9 @@ public class IntakeSubsystem implements Subsystem {
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
     private boolean anyLaneSensorsPresent = false;
     private double lastPeriodicMs = 0.0;
+    private double lastModeResolveMs = 0.0;
+    private double lastSensorPollMs = 0.0;
+    private double lastServoUpdateMs = 0.0;
     private IntakeMode intakeMode = IntakeMode.STOPPED;
     private IntakeMode appliedMode = null;
     private final DcMotorEx intakeMotor;
@@ -240,19 +243,29 @@ public class IntakeSubsystem implements Subsystem {
     public void periodic() {
 
         long start = System.nanoTime();
+
+        long modeResolveStart = System.nanoTime();
         IntakeMode targetMode = resolveMode();
         if (appliedMode != targetMode) {
             applyModePower(targetMode);
             appliedMode = targetMode;
         }
+        lastModeResolveMs = (System.nanoTime() - modeResolveStart) / 1_000_000.0;
+
+        long sensorPollStart = System.nanoTime();
         if (robotMode == RobotMode.MATCH) {
             pollLaneSensorsIfNeeded();
         }
+        lastSensorPollMs = (System.nanoTime() - sensorPollStart) / 1_000_000.0;
+
+        long servoStart = System.nanoTime();
         if (rollerServo != null) {
             double target = rollerEnabled ? rollerConfig.activePosition : rollerConfig.inactivePosition;
             rollerServo.setPosition(target);
             lastRollerPosition = target;
         }
+        lastServoUpdateMs = (System.nanoTime() - servoStart) / 1_000_000.0;
+
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
@@ -902,6 +915,26 @@ public class IntakeSubsystem implements Subsystem {
     public boolean isLoggedRollerActive() {
         return rollerServo != null
                 && Math.abs(lastRollerPosition - rollerConfig.activePosition) < 1e-3;
+    }
+
+    @AutoLogOutput
+    public double getModeResolveMs() {
+        return lastModeResolveMs;
+    }
+
+    @AutoLogOutput
+    public double getSensorPollMs() {
+        return lastSensorPollMs;
+    }
+
+    @AutoLogOutput
+    public double getServoUpdateMs() {
+        return lastServoUpdateMs;
+    }
+
+    @AutoLogOutput
+    public double getPeriodicTotalMs() {
+        return lastPeriodicMs;
     }
 
     public interface LaneColorListener {
