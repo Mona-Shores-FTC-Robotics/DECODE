@@ -25,7 +25,6 @@ public class OperatorBindings {
 
     private final Robot robot;
     private final LauncherCoordinator launcherCoordinator;
-    private final ManualSpinController manualSpinController;
     private final SpinLaneCommand spinLeft;
     private final SpinLaneCommand spinCenter;
     private final SpinLaneCommand spinRight;
@@ -54,7 +53,6 @@ public class OperatorBindings {
 
         this.launcherCoordinator = robot.launcherCoordinator;
         this.launcherCommands = robot.launcherCommands;
-        this.manualSpinController = createManualSpinController();
 
         intakeForwardHold = operator.rightBumper();
 
@@ -64,17 +62,17 @@ public class OperatorBindings {
         launchRight = operator.b();
         launchAll = operator.a();
 
-        spinLeft = new SpinLaneCommand(robot.launcher, manualSpinController);
-        spinCenter = new SpinLaneCommand(robot.launcher, manualSpinController);
-        spinRight = new SpinLaneCommand(robot.launcher, manualSpinController);
+        spinLeft = new SpinLaneCommand(robot.launcher, robot.manualSpinController);
+        spinCenter = new SpinLaneCommand(robot.launcher, robot.manualSpinController);
+        spinRight = new SpinLaneCommand(robot.launcher, robot.manualSpinController);
 
-        fireLeft = new FireLaneCommand(robot.launcher, LauncherLane.LEFT, true, manualSpinController);
-        fireCenter = new FireLaneCommand(robot.launcher, LauncherLane.CENTER, true, manualSpinController);
-        fireRight = new FireLaneCommand(robot.launcher, LauncherLane.RIGHT, true, manualSpinController);
+        fireLeft = new FireLaneCommand(robot.launcher, LauncherLane.LEFT, true, robot.manualSpinController);
+        fireCenter = new FireLaneCommand(robot.launcher, LauncherLane.CENTER, true, robot.manualSpinController);
+        fireRight = new FireLaneCommand(robot.launcher, LauncherLane.RIGHT, true, robot.manualSpinController);
 
-        launchAllSpinner = new SpinHoldCommand(robot.launcher, manualSpinController);
-        fireAll = new FireAllCommand(robot.launcher, true, manualSpinController);
-        manualSpinHold = new SpinHoldCommand(robot.launcher, manualSpinController);
+        launchAllSpinner = new SpinHoldCommand(robot.launcher, robot.manualSpinController);
+        fireAll = new FireAllCommand(robot.launcher, true, robot.manualSpinController);
+        manualSpinHold = new SpinHoldCommand(robot.launcher, robot.manualSpinController);
         intakeForwardCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         intakeReverseCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
 
@@ -105,32 +103,6 @@ public class OperatorBindings {
 
         intakeForwardHold.whenBecomesTrue(intakeForwardCommand);
         intakeForwardHold.whenBecomesFalse(intakeReverseCommand);
-    }
-
-    private ManualSpinController createManualSpinController() {
-        if (launcherCoordinator == null) {
-            return ManualSpinController.NO_OP;
-        }
-        return new ManualSpinController() {
-            private int activeSources = 0;
-
-            @Override
-            public void enterManualSpin() {
-                if (activeSources++ == 0) {
-                    launcherCoordinator.setManualSpinOverride(true);
-                }
-            }
-
-            @Override
-            public void exitManualSpin() {
-                if (activeSources <= 0) {
-                    return;
-                }
-                if (--activeSources == 0) {
-                    launcherCoordinator.setManualSpinOverride(false);
-                }
-            }
-        };
     }
 
     private void requestForwardIntake() {

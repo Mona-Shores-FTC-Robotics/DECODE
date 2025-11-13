@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ManualSpinController;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -12,10 +13,10 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
-import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
-import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
+
+import Ori.Coval.Logging.Logger.KoalaLog;
 
 public class Robot {
     public final DriveSubsystem drive;
@@ -25,36 +26,36 @@ public class Robot {
     public final VisionSubsystemLimelight vision;
     public final LauncherCoordinator launcherCoordinator;
     public final TelemetryService telemetry;
-    public final RobotLogger logger;
 
     public final LauncherCommands launcherCommands;
     public final IntakeCommands intakeCommands;
 
     private RobotMode robotMode = RobotMode.DEBUG;
 
-    private final DriveSubsystem.Inputs driveInputs = new DriveSubsystem.Inputs();
-    private final LauncherSubsystem.Inputs shooterInputs = new LauncherSubsystem.Inputs();
-    private final IntakeSubsystem.Inputs intakeInputs = new IntakeSubsystem.Inputs();
-    private final LightingSubsystem.Inputs lightingInputs = new LightingSubsystem.Inputs();
-    private final VisionSubsystemLimelight.Inputs visionInputs = new VisionSubsystemLimelight.Inputs();
+    public ManualSpinController manualSpinController;
 
     public Robot(HardwareMap hardwareMap) {
-        this(hardwareMap, new TelemetryService(TelemetrySettings.enablePsiKitLogging));
+        this(hardwareMap, new TelemetryService());
     }
 
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
-        telemetry = telemetryService == null ? new TelemetryService(TelemetrySettings.enablePsiKitLogging) : telemetryService;
-        logger = new RobotLogger(telemetry);
-        vision = new VisionSubsystemLimelight(hardwareMap);
-        drive = new DriveSubsystem(hardwareMap, vision);
-        launcher = new LauncherSubsystem(hardwareMap);
-        intake = new IntakeSubsystem(hardwareMap);
-        lighting = new LightingSubsystem(hardwareMap);
-        launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
+        telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
+
+        // Initialize KoalaLog for WPILOG file logging
+        KoalaLog.setup(hardwareMap);
+
+        // All subsystems use AutoLogged versions for automatic WPILOG and FTC Dashboard logging
+        vision = new org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelightAutoLogged(hardwareMap);
+        drive = new org.firstinspires.ftc.teamcode.subsystems.DriveSubsystemAutoLogged(hardwareMap, vision);
+        launcher = new org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystemAutoLogged(hardwareMap);
+        intake = new org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystemAutoLogged(hardwareMap);
+        lighting = new org.firstinspires.ftc.teamcode.subsystems.LightingSubsystemAutoLogged(hardwareMap);
+        launcherCoordinator = new org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinatorAutoLogged(launcher, intake, lighting);
         launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
         intakeCommands = new IntakeCommands(intake);
+
+        manualSpinController = launcherCoordinator.createManualSpinController();
         applyRobotMode(robotMode);
-        registerLoggingSources();
     }
 
     public void setAlliance(Alliance alliance) {
@@ -103,68 +104,7 @@ public class Robot {
         launcherCoordinator.setRobotMode(mode);
     }
 
-    private void registerLoggingSources() {
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Drive";
-            }
-
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                drive.populateInputs(driveInputs);
-                logger.logInputs("Drive", driveInputs);
-                drive.logPoseFusion(logger);
-            }
-        });
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Shooter";
-            }
-
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                launcher.populateInputs(shooterInputs);
-                logger.logInputs("Shooter", shooterInputs);
-            }
-        });
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Intake";
-            }
-
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                intake.populateInputs(intakeInputs);
-                logger.logInputs("Intake", intakeInputs);
-            }
-        });
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Lighting";
-            }
-
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                lighting.populateInputs(lightingInputs);
-                logger.logInputs("Lighting", lightingInputs);
-            }
-        });
-        logger.registerSource(new RobotLogger.Source() {
-            @Override
-            public String subsystem() {
-                return "Vision";
-            }
-
-            @Override
-            public void collect(RobotLogger.Frame frame) {
-                vision.populateInputs(visionInputs);
-                logger.logInputs("Vision", visionInputs);
-            }
-        });
+    public void attachPedroFollower() {
+        drive.attachFollower();
     }
-
 }

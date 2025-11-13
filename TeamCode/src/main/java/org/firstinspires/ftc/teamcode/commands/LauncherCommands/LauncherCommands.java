@@ -98,4 +98,24 @@ public class LauncherCommands {
         return new SetFeederPositionCommand(launcher, LauncherLane.LEFT, false);
     }
 
+    public SpinUpUntilReadyCommand spinUpUntilReady() {
+        return new SpinUpUntilReadyCommand(launcher);
+    }
+
+    /**
+     * Phase 1: Spin up to position-specific RPM (tunable in Dashboard)
+     * @param position Field position we're launching from
+     */
+    public LaunchAtPositionCommand spinUpForPosition(org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint position) {
+        return new LaunchAtPositionCommand(launcher, position);
+    }
+
+    /**
+     * Phase 1: Spin up to explicit RPM (for testing)
+     * @param targetRpm Desired RPM for both enabled launchers
+     */
+    public LaunchAtPositionCommand spinUpToRpm(double targetRpm) {
+        return new LaunchAtPositionCommand(launcher, targetRpm);
+    }
+
 }

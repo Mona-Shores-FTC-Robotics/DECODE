@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
 
+import static org.firstinspires.ftc.teamcode.opmodes.DecodeAutonomousClose.config;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.follower.Follower;
@@ -33,14 +35,18 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 
+import Ori.Coval.Logging.AutoLogManager;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.CommandManager;
+import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
+import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Autonomous Far", group = "Autonomous")
+@Configurable
 public class DecodeAutonomousFar extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
@@ -48,9 +54,13 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public static double maxPathPower = .6;
-        public static double placeholderShotDelaySec = 1.0;
+        public double maxPathPower = .6;
+        public double placeholderShotDelaySec = 1.0;
     }
+
+    public static DecodeAutonomousFar.AutoMotionConfig config = new DecodeAutonomousFar.AutoMotionConfig();
+
+
 
     private static final double POSE_POSITION_TOLERANCE = 1.0; // inches
     private static final double POSE_HEADING_TOLERANCE = Math.toRadians(10.0);
@@ -84,12 +94,21 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        addComponents(
+                BulkReadComponent.INSTANCE,
+                new PedroComponent(Constants::createFollower),
+                BindingsComponent.INSTANCE,
+                CommandManager.INSTANCE
+        );
+
         BindingManager.reset();
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
+
+        robot.attachPedroFollower();
+
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
-        robot.logger.startSession(hardwareMap.appContext, getClass().getSimpleName(), DEFAULT_ALLIANCE, "AutonomousInit");
         panelsTelemetry = robot.telemetry.panelsTelemetry();
         stepTimer = new Timer();
 
@@ -114,8 +133,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         applyDecodePattern(decodeController.current()); // default to alliance colour until a pattern is chosen
 
         addComponents(
-                BulkReadComponent.INSTANCE,
-                CommandManager.INSTANCE,
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
                 new SubsystemComponent(robot.intake),
@@ -150,10 +167,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
 
         publishInitTelemetry(selectedAlliance);
 
-        robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
-        robot.logger.logString("Autonomous", "RoutineStepName", routineStep.name());
-        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
-        robot.logger.sampleSources();
         robot.telemetry.updateDriverStation(telemetry);
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
@@ -165,7 +178,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
                 activeAlliance,
                 getRuntime(),
                 null,
-                robot.logger,
                 "AutonomousInit",
                 true,
                 lastAppliedStartPosePedro
@@ -178,8 +190,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         opModeStarted = true;
         allianceSelector.lockSelection();
         allianceSelector.applySelection(robot, robot.lighting);
-        robot.logger.updateAlliance(activeAlliance);
-        robot.logger.logEvent("Autonomous", "Start");
 
         LightingSubsystem lighting = robot.lighting;
         if (lighting != null) {
@@ -205,10 +215,9 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
     public void onUpdate() {
         autonomousStep();
 
-        robot.logger.logNumber("Autonomous", "RoutineStep", routineStep.ordinal());
-        robot.logger.logString("Autonomous", "RoutineStepName", routineStep.name());
-        robot.logger.logNumber("Autonomous", "RuntimeSec", getRuntime());
-        robot.logger.sampleSources();
+        // Periodic logging for KoalaLog (WPILOG files)
+        AutoLogManager.periodic();
+
         robot.telemetry.updateDriverStation(telemetry);
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
@@ -220,7 +229,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
                 activeAlliance,
                 getRuntime(),
                 null,
-                robot.logger,
                 "Autonomous",
                 false,
                 null
@@ -243,8 +251,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         }
         robot.drive.stop();
         robot.vision.stop();
-        robot.logger.logEvent("AutonomousDHS", "Stop");
-        robot.logger.stopSession();
     }
 
     private void autonomousStep() {
@@ -344,8 +350,6 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         }
         activeAlliance = safeAlliance;
         robot.setAlliance(activeAlliance);
-        robot.logger.updateAlliance(activeAlliance);
-        robot.logger.logEvent("AutonomousDHS", "Alliance-" + activeAlliance.name());
 
         currentLayout = AutoField.layoutForAlliance(activeAlliance);
         if (startOverride != null) {
@@ -562,7 +566,7 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
     }
 
     private void startPath(PathChain pathChain, RoutineStep waitingStep) {
-        double maxPower = Range.clip(AutoMotionConfig.maxPathPower, 0.0, 1.0);
+        double maxPower = Range.clip(config.maxPathPower, 0.0, 1.0);
         follower.followPath(pathChain, maxPower, false);
         transitionTo(waitingStep);
     }
@@ -580,7 +584,7 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
 
     private boolean isWaitingForShot() {
         // Treat the shot as complete once the delay elapses.
-        return stepTimer != null && stepTimer.getElapsedTimeSeconds() < AutoMotionConfig.placeholderShotDelaySec;
+        return stepTimer != null && stepTimer.getElapsedTimeSeconds() < config.placeholderShotDelaySec;
     }
 
     private double getShotTimerSeconds() {
@@ -663,7 +667,7 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         if (pedroPose == null) {
             return null;
         }
-        double halfField = AutoField.Waypoints.fieldWidthIn / 2.0;
+        double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
         double ftcX = halfField - pedroPose.getY();
         double ftcY = pedroPose.getX() - halfField;
         double heading = AngleUnit.normalizeRadians(pedroPose.getHeading() + Math.PI / 2.0);

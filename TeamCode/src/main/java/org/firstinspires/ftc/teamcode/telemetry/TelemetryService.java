@@ -25,15 +25,18 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.PoseTransforms;
 
+import java.util.Map;
+
 /**
- * Centralises telemetry output to FTControl Panels, the driver station, and optional PsiKit logging.
+ * Centralises telemetry output to FTControl Panels and the driver station.
  * OpModes create a single instance and share its {@link TelemetryPublisher} across subsystems.
+ * <p>
+ * Note: Logging is now handled by KoalaLog's @AutoLog annotation system.
+ * </p>
  */
 public class TelemetryService {
 
-    private final boolean enablePsiKitLogging;
     private final boolean enableDashboardTelemetry;
-    private final PsiKitAdapter psiKitLogger;
     private final TelemetryPublisher publisher;
     private final FtcDashboard dashboard;
     private volatile String routineStepName = "";
@@ -48,42 +51,32 @@ public class TelemetryService {
     private static final long PANELS_DRAW_INTERVAL_MS = 50L;
     private static final long DASHBOARD_PACKET_INTERVAL_MS = 50L;
 
-    public TelemetryService(boolean enablePsiKitLogging) {
-        this.enablePsiKitLogging = enablePsiKitLogging;
+    public TelemetryService() {
         this.enableDashboardTelemetry = TelemetrySettings.enableDashboardTelemetry;
-        this.psiKitLogger = enablePsiKitLogging ? new PsiKitAdapter() : null;
-        this.publisher = new TelemetryPublisher(null, psiKitLogger);
+        this.publisher = new TelemetryPublisher(null);
         this.dashboard = enableDashboardTelemetry ? safelyGetDashboard() : null;
     }
 
-    public TelemetryService() {
-        this(false);
-    }
-
     /**
-     * Prepares Panels and (optionally) starts PsiKit logging. Call once when the OpMode starts.
+     * Prepares Panels for telemetry. Call once when the OpMode starts.
      */
     public void startSession() {
         if (!sessionActive) {
             panelsTelemetry = PanelsBridge.preparePanels();
             publisher.setTelemetryManager(panelsTelemetry);
-            if (enablePsiKitLogging && psiKitLogger != null) {
-                psiKitLogger.startSession();
-            }
             sessionActive = true;
         }
     }
 
     /**
-     * Stops any active logging session and flushes resources.
+     * Stops the telemetry session and flushes resources.
      */
     public void stopSession() {
-        if (sessionActive && psiKitLogger != null) {
-            psiKitLogger.stopSession();
+        if (sessionActive) {
+            publisher.setTelemetryManager(null);
+            panelsTelemetry = null;
+            sessionActive = false;
         }
-        publisher.setTelemetryManager(null);
-        panelsTelemetry = null;
-        sessionActive = false;
     }
 
     public TelemetryPublisher publisher() {
@@ -104,14 +97,8 @@ public class TelemetryService {
     }
 
     /**
-     * Provides access to the optional PsiKit adapter so that background loggers can stream
-     * metrics without blocking the OpMode loop. This will be {@code null} when PsiKit logging
-     * is disabled via {@link TelemetrySettings#enablePsiKitLogging}.
+     * Publishes telemetry for the current loop to all available outputs.
      */
-    public PsiKitAdapter psiKitLogger() {
-        return psiKitLogger;
-    }
-
     public void publishLoopTelemetry(DriveSubsystem drive,
                                      LauncherSubsystem launcher,
                                      VisionSubsystemLimelight vision,
@@ -120,7 +107,6 @@ public class TelemetryService {
                                      Alliance alliance,
                                      double runtimeSec,
                                      Telemetry dsTelemetry,
-                                     RobotLogger logger,
                                      String modeLabel,
                                      boolean suppressDriveTelemetry,
                                      Pose poseOverride) {
@@ -206,12 +192,7 @@ public class TelemetryService {
         double displayCurrentRpm = Math.max(Math.max(leftCurrentRpm, centerCurrentRpm), rightCurrentRpm);
         double displayPower = Math.max(Math.max(leftPower, centerPower), rightPower);
 
-        boolean launcherReady;
-        if (launcherCoordinator != null) {
-            launcherReady = launcherCoordinator.logLauncherReadyEvent(logger);
-        } else {
-            launcherReady = launcher.atTarget();
-        }
+        boolean launcherReady = launcher.atTarget();
         String launcherState = launcher.getState().name();
         String launcherSpinMode = launcher.getEffectiveSpinMode().name();
 
@@ -245,37 +226,6 @@ public class TelemetryService {
             panels.debug("launcher/lanes/left/bangToHoldCount", leftBangToHoldCount);
             panels.debug("launcher/lanes/center/bangToHoldCount", centerBangToHoldCount);
             panels.debug("launcher/lanes/right/bangToHoldCount", rightBangToHoldCount);
-        }
-
-        if (logger != null) {
-            logger.logString("Launcher", "ControlMode", controlMode);
-            logger.logString("Launcher", "State", launcher.getState().name());
-            logger.logString("Launcher", "SpinMode", launcher.getEffectiveSpinMode().name());
-
-            logger.logNumber("Launcher", "LeftTargetRpm", leftTargetRpm);
-            logger.logNumber("Launcher", "LeftCurrentRpm", leftCurrentRpm);
-            logger.logNumber("Launcher", "LeftPower", leftPower);
-            logger.logBoolean("Launcher", "LeftReady", leftReady);
-            logger.logString("Launcher", "LeftPhase", leftPhase);
-
-            logger.logNumber("Launcher", "CenterTargetRpm", centerTargetRpm);
-            logger.logNumber("Launcher", "CenterCurrentRpm", centerCurrentRpm);
-            logger.logNumber("Launcher", "CenterPower", centerPower);
-            logger.logBoolean("Launcher", "CenterReady", centerReady);
-            logger.logString("Launcher", "CenterPhase", centerPhase);
-
-            logger.logNumber("Launcher", "RightTargetRpm", rightTargetRpm);
-            logger.logNumber("Launcher", "RightCurrentRpm", rightCurrentRpm);
-            logger.logNumber("Launcher", "RightPower", rightPower);
-            logger.logBoolean("Launcher", "RightReady", rightReady);
-            logger.logString("Launcher", "RightPhase", rightPhase);
-            logger.logNumber("Launcher", "LeftBangToHoldCount", leftBangToHoldCount);
-            logger.logNumber("Launcher", "CenterBangToHoldCount", centerBangToHoldCount);
-            logger.logNumber("Launcher", "RightBangToHoldCount", rightBangToHoldCount);
-        }
-
-        if (logger != null) {
-            logger.logNumber("Robot", "RuntimeSec", runtimeSec);
         }
 
         if (dsTelemetry != null && !suppressDriveTelemetry) {
@@ -414,6 +364,9 @@ public class TelemetryService {
         }
     }
 
+    /**
+     * Sends a telemetry packet to the FTC Dashboard.
+     */
     private void sendDashboardPacket(DriveSubsystem drive,
                                      double requestX,
                                      double requestY,

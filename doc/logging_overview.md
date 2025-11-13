@@ -1,22 +1,28 @@
-# Logging & AdvantageScope Lite Overview
+# Logging & Telemetry Overview
 
-## Live Streaming
-- `RobotLogger` now owns the single pipeline for AdvantageScope Lite and optional PsiKit CSV capture.
-- Each subsystem exposes an `Inputs` data class (`DriveSubsystem.Inputs`, `launcherSubsystem.Inputs`, etc.).
-- During each loop, `Robot` calls `populateInputs(...)` for every subsystem and forwards the result to `RobotLogger.logInputs(...)`.
-- `RobotLogger` reflects over the fields and publishes numbers/booleans/strings under `Subsystem/field` topics. AdvantageScope Lite and PsiKit see identical data.
-- Pedro tuning OpModes still use FTControl Panels directly; logging updates do not touch `pedroPathing/*`.
-- Utility subsystems that sit outside of `Robot` (e.g. `LauncherCoordinator`, `VisionSubsystemLimelight`) expose `attachLogger(...)` helpers so diagnostics can opt-in to the same pipeline.
+## Live Streaming Architecture
+- `RobotLogger` collects subsystem Inputs data via reflection and stores topics in a Map
+- Each subsystem exposes an `Inputs` data class (`DriveSubsystem.Inputs`, `LauncherSubsystem.Inputs`, etc.)
+- During each loop, `Robot` calls `populateInputs(...)` for every subsystem and forwards the result to `RobotLogger.logInputs(...)`
+- `RobotLogger` reflects over the fields and stores numbers/booleans/strings under `Subsystem/field` topics
+- `TelemetryService` retrieves all topics from `RobotLogger` and publishes them to FTC Dashboard packets
+- AdvantageScope desktop app connects to FTC Dashboard for real-time visualization of all topics
+- Pedro tuning OpModes still use FTControl Panels directly; logging updates do not touch `pedroPathing/*`
+- Utility subsystems outside `Robot` (e.g. `LauncherCoordinator`, `VisionSubsystemLimelight`) can opt into the pipeline
+
+## Offline Logging with KoalaLog
+- KoalaLog produces `.wpilog` files compatible with AdvantageScope for post-match analysis
+- Initialized via `KoalaLog.setup(hardwareMap)` in `Robot` constructor
+- `AutoLogManager.periodic()` called in all OpModes to sample logged data
+- Robot pose automatically logged for 2D/3D field visualization
+- Retrieve logs using LogPuller tools from [KoalaLog GitHub](https://github.com/Koala-Log/Koala-Log)
 
 ## Extending A Subsystem
-1. Add a new public field to that subsystem’s `Inputs` class (keep it primitive/enum/string where possible).
-2. Populate it inside `populateInputs(...)`.
-3. AdvantageScope Lite automatically discovers the new topic the next time you run the OpMode.
+1. Add a new public field to that subsystem's `Inputs` class (keep it primitive/enum/string where possible)
+2. Populate it inside `populateInputs(...)`
+3. Topic automatically appears in FTC Dashboard (and AdvantageScope desktop) as `Subsystem/fieldName`
+4. Field is also automatically logged to WPILOG files via KoalaLog
 
 ## Configuration & Toggles
-- Keep runtime knobs in `@Configurable` classes beside the subsystem. AdvantageScope Lite reads them via NT4 so you can tune live.
-- Global logging toggles (e.g. `TelemetrySettings.enablePsiKitLogging`) stay in `TelemetrySettings`.
-
-## PsiKit CSV Replay
-- When `TelemetrySettings.enablePsiKitLogging` is `true`, RobotLogger mirrors every published input into the on-robot CSV (`/sdcard/FIRST/PsiKitLogs/log_*.csv`).
-- Drag the CSV into AdvantageScope to replay the same topics you saw live.
+- Keep runtime knobs in `@Configurable` classes beside the subsystem for live tuning via FTC Dashboard
+- Global telemetry toggles (e.g. `TelemetrySettings.enableDashboardTelemetry`) stay in `TelemetrySettings`

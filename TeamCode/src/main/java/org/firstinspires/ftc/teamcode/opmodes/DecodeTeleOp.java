@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import Ori.Coval.Logging.AutoLogManager;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
@@ -48,8 +49,18 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        addComponents(
+                BulkReadComponent.INSTANCE,
+                new PedroComponent(Constants::createFollower),
+                BindingsComponent.INSTANCE,
+                CommandManager.INSTANCE
+        );
+
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
+
+        robot.attachPedroFollower();
+
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.launcherCoordinator.lockIntake();
 
@@ -65,9 +76,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
 
         addComponents(
-                BulkReadComponent.INSTANCE,
-                BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE,
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
                 new SubsystemComponent(robot.intake),
@@ -119,6 +127,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
         // Update bindings and command scheduler
         // Commands (DefaultDriveCommand, AimAndDriveCommand, CaptureAndAimCommand) handle drive control
         BindingManager.update();
+
+        // Periodic logging for KoalaLog (WPILOG files)
+        AutoLogManager.periodic();
 
         // Sample driver inputs for telemetry/logging only (not for control)
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
@@ -199,7 +210,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 "%s (applied %s)%s",
                 robot.intake.getMode(),
                 robot.intake.getResolvedMode(),
-                IntakeSubsystem.ManualModeConfig.enableOverride
+                IntakeSubsystem.manualModeConfig.enableOverride
                         ? " [override]"
                         : "");
         telemetry.addData("Intake power", "%.2f", robot.intake.getCurrentPower());
@@ -252,19 +263,16 @@ public class DecodeTeleOp extends NextFTCOpMode {
         }
 
         // Fusion diagnostics
-        DriveSubsystem.Inputs inputs = new DriveSubsystem.Inputs();
-        robot.drive.populateInputs(inputs);
-
-        if (inputs.fusionHasPose) {
-            telemetry.addData("Fusion Heading", "%.1f°", inputs.fusionPoseHeadingDeg);
-            if (Double.isFinite(inputs.fusionVisionHeadingErrorDeg)) {
-                telemetry.addData("Fusion Vision Err", "%.1f°", inputs.fusionVisionHeadingErrorDeg);
+        if (robot.drive.getFusionHasPose()) {
+            telemetry.addData("Fusion Heading", "%.1f°", robot.drive.getFusionPoseHeadingDeg());
+            if (Double.isFinite(robot.drive.getFusionVisionHeadingErrorDeg())) {
+                telemetry.addData("Fusion Vision Err", "%.1f°", robot.drive.getFusionVisionHeadingErrorDeg());
             }
-            if (Double.isFinite(inputs.fusionDeltaHeadingDeg)) {
-                telemetry.addData("Fusion Delta", "%.1f° (Fusion - Odom)", inputs.fusionDeltaHeadingDeg);
+            if (Double.isFinite(robot.drive.getFusionDeltaHeadingDeg())) {
+                telemetry.addData("Fusion Delta", "%.1f° (Fusion - Odom)", robot.drive.getFusionDeltaHeadingDeg());
             }
-            telemetry.addData("Vision Weight", "%.2f", inputs.fusionVisionWeight);
-            telemetry.addData("Vision Accepted", inputs.fusionVisionAccepted ? "YES" : "NO");
+            telemetry.addData("Vision Weight", "%.2f", robot.drive.getFusionVisionWeight());
+            telemetry.addData("Vision Accepted", robot.drive.getFusionVisionAccepted() ? "YES" : "NO");
         }
 
         // Raw Pinpoint heading if accessible
@@ -315,7 +323,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                     selectedAlliance,
                     getRuntime(),
                     null,
-                    robot.logger,
                     "TeleOp",
                     false,
                     null
@@ -431,7 +438,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 robot.launcherCoordinator,
                 selectedAlliance,
                 getRuntime(),
-                null,
                 null,
                 "TeleOpInit",
                 true,

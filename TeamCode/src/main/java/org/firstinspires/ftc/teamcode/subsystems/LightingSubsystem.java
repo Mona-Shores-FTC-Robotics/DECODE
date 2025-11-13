@@ -11,6 +11,9 @@ import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 
+import Ori.Coval.Logging.AutoLog;
+import Ori.Coval.Logging.AutoLogOutput;
+
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -19,6 +22,7 @@ import java.util.Map;
  * OpModes can coordinate colours without touching hardware directly. Missing servos are
  * ignored gracefully, preserving compatibility with partial benches.
  */
+@AutoLog
 @Configurable
 public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorListener {
 
@@ -50,20 +54,6 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private Alliance alliance = Alliance.UNKNOWN;
     private double lastPeriodicMs = 0.0;
     private RobotMode robotMode = RobotMode.DEBUG;
-
-    public static final class Inputs {
-        public LightingState state = LightingState.OFF;
-        public String alliance = Alliance.UNKNOWN.name();
-        public String leftColor = ArtifactColor.NONE.name();
-        public double leftOutput = OFF_POS;
-        public boolean leftIndicatorPresent;
-        public String centerColor = ArtifactColor.NONE.name();
-        public double centerOutput = OFF_POS;
-        public boolean centerIndicatorPresent;
-        public String rightColor = ArtifactColor.NONE.name();
-        public double rightOutput = OFF_POS;
-        public boolean rightIndicatorPresent;
-    }
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(
@@ -97,17 +87,6 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     public double getLastPeriodicMs() {
         return lastPeriodicMs;
-    }
-
-    public void populateInputs(Inputs inputs) {
-        if (inputs == null) {
-            return;
-        }
-        inputs.state = state;
-        inputs.alliance = alliance.name();
-        populateLaneInputs(inputs, LauncherLane.LEFT);
-        populateLaneInputs(inputs, LauncherLane.CENTER);
-        populateLaneInputs(inputs, LauncherLane.RIGHT);
     }
 
     public void setAlliance(Alliance alliance) {
@@ -198,7 +177,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         indicator.apply(position);
     }
 
-    private double resolvePosition(ArtifactColor laneColor) {
+    protected double resolvePosition(ArtifactColor laneColor) {
         switch (laneColor) {
             case GREEN:
                 return clamp01(GREEN_POS);
@@ -211,7 +190,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         }
     }
 
-    private double fallbackPosition() {
+    protected double fallbackPosition() {
         switch (state) {
             case BUSY:
                 return clamp01(BUSY_POS);
@@ -223,7 +202,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         }
     }
 
-    private double alliancePosition() {
+    protected double alliancePosition() {
         if (alliance == Alliance.RED) {
             return clamp01(RED_POS);
         }
@@ -237,7 +216,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         return Math.max(0.0, Math.min(1.0, value));
     }
 
-    private boolean resetLaneColors() {
+    protected boolean resetLaneColors() {
         boolean touched = false;
         for (Map.Entry<LauncherLane, ArtifactColor> entry : laneColors.entrySet()) {
             if (entry.getValue() != ArtifactColor.NONE) {
@@ -259,29 +238,71 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         }
     }
 
-    private void populateLaneInputs(Inputs inputs, LauncherLane lane) {
-        ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
-        double output = laneOutputs.getOrDefault(lane, OFF_POS);
-        LaneIndicator indicator = laneIndicators.get(lane);
-        boolean present = indicator != null && indicator.isPresent();
-        switch (lane) {
-            case LEFT:
-                inputs.leftColor = color.name();
-                inputs.leftOutput = output;
-                inputs.leftIndicatorPresent = present;
-                break;
-            case CENTER:
-                inputs.centerColor = color.name();
-                inputs.centerOutput = output;
-                inputs.centerIndicatorPresent = present;
-                break;
-            case RIGHT:
-            default:
-                inputs.rightColor = color.name();
-                inputs.rightOutput = output;
-                inputs.rightIndicatorPresent = present;
-                break;
-        }
+    // ========================================================================
+    // AutoLog Output Methods
+    // These methods are automatically logged by KoalaLog to WPILOG files
+    // and published to FTC Dashboard for AdvantageScope Lite
+    // ========================================================================
+
+    @AutoLogOutput
+    public String getLightingStateString() {
+        return state.name();
+    }
+
+    @AutoLogOutput
+    public String getAllianceString() {
+        return alliance.name();
+    }
+
+    @AutoLogOutput
+    public String getLeftColorString() {
+        ArtifactColor color = laneColors.getOrDefault(LauncherLane.LEFT, ArtifactColor.NONE);
+        return color.name();
+    }
+
+    @AutoLogOutput
+    public double getLeftOutput() {
+        return laneOutputs.getOrDefault(LauncherLane.LEFT, OFF_POS);
+    }
+
+    @AutoLogOutput
+    public boolean isLeftIndicatorPresent() {
+        LaneIndicator indicator = laneIndicators.get(LauncherLane.LEFT);
+        return indicator != null && indicator.isPresent();
+    }
+
+    @AutoLogOutput
+    public String getCenterColorString() {
+        ArtifactColor color = laneColors.getOrDefault(LauncherLane.CENTER, ArtifactColor.NONE);
+        return color.name();
+    }
+
+    @AutoLogOutput
+    public double getCenterOutput() {
+        return laneOutputs.getOrDefault(LauncherLane.CENTER, OFF_POS);
+    }
+
+    @AutoLogOutput
+    public boolean isCenterIndicatorPresent() {
+        LaneIndicator indicator = laneIndicators.get(LauncherLane.CENTER);
+        return indicator != null && indicator.isPresent();
+    }
+
+    @AutoLogOutput
+    public String getRightColorString() {
+        ArtifactColor color = laneColors.getOrDefault(LauncherLane.RIGHT, ArtifactColor.NONE);
+        return color.name();
+    }
+
+    @AutoLogOutput
+    public double getRightOutput() {
+        return laneOutputs.getOrDefault(LauncherLane.RIGHT, OFF_POS);
+    }
+
+    @AutoLogOutput
+    public boolean isRightIndicatorPresent() {
+        LaneIndicator indicator = laneIndicators.get(LauncherLane.RIGHT);
+        return indicator != null && indicator.isPresent();
     }
 
     private static final class LaneIndicator {

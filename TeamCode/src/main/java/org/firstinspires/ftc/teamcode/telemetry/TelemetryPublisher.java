@@ -9,26 +9,19 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 
 /**
- * TelemetryPublisher centralises the construction of telemetry lines for FTControl Panels
- * (and optional PsiKit logging).  It publishes drive and launcher state values each loop so
- * they can be graphed or inspected without keeping the FTC Dashboard dependency.
+ * TelemetryPublisher centralises the construction of telemetry lines for FTControl Panels.
+ * It publishes drive and launcher state values each loop so they can be graphed or inspected.
  */
 public class TelemetryPublisher {
 
     private TelemetryManager panelsTelemetry;
-    private final PsiKitAdapter logger;
-
-    public TelemetryPublisher(TelemetryManager panelsTelemetry, PsiKitAdapter logger) {
-        this.panelsTelemetry = panelsTelemetry;
-        this.logger = logger;
-    }
 
     public TelemetryPublisher(TelemetryManager panelsTelemetry) {
-        this(panelsTelemetry, null);
+        this.panelsTelemetry = panelsTelemetry;
     }
 
     public TelemetryPublisher() {
-        this(null, null);
+        this(null);
     }
 
     public void setTelemetryManager(TelemetryManager panelsTelemetry) {
@@ -77,27 +70,6 @@ public class TelemetryPublisher {
             panelsTelemetry.debug("drive/yIn", pose.getY(DistanceUnit.INCH));
             panelsTelemetry.debug("drive/headingDeg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
         }
-
-        if (logger != null) {
-            logger.recordNumber("drive_lx", lx);
-            logger.recordNumber("drive_ly", ly);
-            logger.recordNumber("drive_rx", rx);
-            logger.recordBoolean("drive_slowMode", slowMode);
-            logger.recordBoolean("drive_aim_mode", aimMode);
-            logger.recordNumber("drive_command_turn", commandTurn);
-            logger.recordString("drive_mode", drive.getDriveMode().name());
-            logger.recordNumber("drive_x_in", pose.getX(DistanceUnit.INCH));
-            logger.recordNumber("drive_y_in", pose.getY(DistanceUnit.INCH));
-            logger.recordNumber("drive_heading_deg", Math.toDegrees(pose.getHeading(AngleUnit.RADIANS)));
-            logger.recordNumber("drive_lf_power", lfPower);
-            logger.recordNumber("drive_rf_power", rfPower);
-            logger.recordNumber("drive_lb_power", lbPower);
-            logger.recordNumber("drive_rb_power", rbPower);
-            logger.recordNumber("drive_lf_vel_ips", lfVelIps);
-            logger.recordNumber("drive_rf_vel_ips", rfVelIps);
-            logger.recordNumber("drive_lb_vel_ips", lbVelIps);
-            logger.recordNumber("drive_rb_vel_ips", rbVelIps);
-        }
     }
 
     /**
@@ -109,13 +81,6 @@ public class TelemetryPublisher {
             panelsTelemetry.debug("launcher/rpm", rpm);
             panelsTelemetry.debug("launcher/error", error);
             panelsTelemetry.debug("launcher/power", power);
-        }
-        if (logger != null) {
-            logger.recordNumber("launcher_target_rpm", targetRpm);
-            logger.recordNumber("launcher", rpm);
-            logger.recordNumber("launcher_err", error);
-            logger.recordNumber("launcher_power", power);
-            logger.flush();
         }
     }
 

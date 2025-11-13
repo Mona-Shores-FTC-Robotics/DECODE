@@ -47,11 +47,17 @@ This scaffold marks the `Constants` class with `@Config` from the FTC Dashboard 
 
 Plots and tables of these values are available in the dashboard and AdvantageScope when connected live.
 
-### Persistent Logs (PsiKit Adapter)
+### Offline Logs (KoalaLog WPILOG)
 
-For offline analysis, the scaffold includes a `PsiKitAdapter` that writes all telemetry to a CSV file on the robot.  A new log file is created when an OpMode is initialised and closed when it stops.  Files are saved under `/sdcard/FIRST/PsiKitLogs` with names like `log_20251004_153000.csv`.  Each row contains a timestamp, a key and a value.  You can drag these CSV files into AdvantageScope and replay your runs.  Because the adapter matches the same keys used for live telemetry, you will see identical graphs.
+For post-match analysis, the project uses KoalaLog to generate `.wpilog` files compatible with AdvantageScope. Log files are created automatically during OpMode execution and stored on the Control Hub's internal storage.
 
-If you later choose to integrate the official PsiKit library, you can replace the simple adapter with the real implementation without changing the rest of your code.
+To retrieve logs:
+1. Download LogPuller tools from [KoalaLog GitHub](https://github.com/Koala-Log/Koala-Log/tree/main/LogPuller)
+2. Connect to robot via WiFi or USB-C + REV Hardware Client
+3. Run `FTCLogPuller.exe` and select destination folder
+4. Open `.wpilog` files in AdvantageScope (File → Open Logs)
+
+WPILOG files provide full-featured offline replay with 2D/3D field visualization and time-series graphs of all telemetry data.
 
 ## FTC Dashboard and AdvantageScope
 
@@ -62,7 +68,7 @@ The scaffold includes the FTC Dashboard library (`ftc-dashboard 0.4.8`).  To vie
 3. Select the **Telemetry** tab to see live numbers for the drive inputs, pose, target RPM and current RPM.
 4. Expand the **Graph** section to plot variables over time (e.g., flywheel RPM vs. target RPM).
 
-AdvantageScope can connect to the same data stream via the NetworkTables 4 protocol.  Add a new **NT4** source using the Robot Controller’s address and watch the 2D field plot update as your robot moves (even in DevSim).  This is a great way to tune heading gains and verify autonomous paths.
+AdvantageScope Lite can connect to the robot via FTC Dashboard packets for real-time visualization, providing live 2D field plots and telemetry graphs during testing. For offline analysis, use WPILOG files retrieved via LogPuller.
 
 ## Adding Pedro and NextFTC
 

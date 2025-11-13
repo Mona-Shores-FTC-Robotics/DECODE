@@ -39,9 +39,8 @@ DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. I
 
 **Robot Container (`Robot.java`):**
 - Central container that initializes all subsystems and passes shared references
-- Owns the telemetry service and robot logger
+- Owns the telemetry service
 - Provides `initialize()`, `initializeForAuto()`, and `initializeForTeleOp()` methods
-- Registers logging sources for all subsystems
 
 **Subsystems (in `subsystems/`):**
 - `DriveSubsystem`: Mecanum drive with field-centric control, heading alignment, AprilTag relocalization via pose fusion
@@ -76,16 +75,15 @@ DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. I
 - `Alliance.java`, `RobotMode.java`, `ArtifactColor.java`: Enums for robot state
 
 **Telemetry (`telemetry/`):**
-- `RobotLogger.java`: Central logging pipeline for AdvantageScope Lite and PsiKit CSV
-- `TelemetryService.java`: Unified telemetry service
-- `AdvLogger.java`: Advanced logging utilities
-- `PsiKitAdapter.java`: CSV logging adapter for offline replay
-- `TelemetrySettings.java`: Global logging toggles
+- `TelemetryService.java`: Unified telemetry service for FTC Dashboard and pose visualization
+- `TelemetryPublisher.java`: Publishes telemetry to FullPanels
+- `TelemetrySettings.java`: Global telemetry toggles
+- `RobotStatusLogger.java`: Logs robot status for AdvantageScope compatibility
 
 ### Key Architectural Patterns
 
-**Subsystem Inputs Pattern:**
-Each subsystem exposes a static `Inputs` nested class containing all loggable state. During each loop, `Robot` calls `subsystem.populateInputs(inputs)` and forwards the result to `RobotLogger.logInputs(subsystem, inputs)`. This decouples subsystems from logging infrastructure.
+**@AutoLog Logging Pattern:**
+All subsystems use KoalaLog's `@AutoLog` annotation for automatic logging. Methods annotated with `@AutoLogOutput` are automatically logged to WPILOG files and published to FTC Dashboard for AdvantageScope Lite viewing. No manual logging infrastructure is required.
 
 **Centralized Constants:**
 All hardware names, tuning parameters, and field names are defined in `pedroPathing/Constants.java`. Use `Constants.HardwareNames.*` for device names and `Constants.Naming.FieldNames.*` for telemetry keys.
@@ -123,7 +121,7 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 - `PoseFusion` blends Pinpoint odometry with AprilTag measurements
 - Configurable trust weights based on range and decision margin
 - Outlier rejection for invalid measurements
-- Diagnostics exposed through `DriveSubsystem.logPoseFusion(logger)`
+- Diagnostics automatically logged via `@AutoLogOutput` methods
 - Not yet used for control, but logged for analysis
 
 **Odometry Updates:**
@@ -132,25 +130,100 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 
 ## Logging and Telemetry
 
-**Live Telemetry (FTC Dashboard):**
-- Dashboard available at `http://192.168.49.1:8080/dash` when connected to robot WiFi
+### Live Telemetry (During Matches)
+
+**FTC Dashboard:**
+- Web dashboard at `http://192.168.49.1:8080/dash` when connected to robot WiFi
 - All `@Configurable` classes expose tunable parameters on Config tab
-- Live graphs and telemetry on Dashboard
+- Live graphs and telemetry
+- Telemetry packets enable AdvantageScope Lite connection
 
 **AdvantageScope Lite:**
-- NetworkTables 4 streaming to AdvantageScope
-- Connect to robot IP to see live 2D field plot and telemetry
+- Connects to robot via FTC Dashboard for live visualization
+- Streams telemetry data through FTC Dashboard packets (not NetworkTables)
+- View live 2D field plots and subsystem metrics
 - All subsystem inputs automatically published under `Subsystem/field` topics
 
-**PsiKit CSV Logging:**
-- When `TelemetrySettings.enablePsiKitLogging = true`, logs saved to `/sdcard/FIRST/PsiKitLogs/log_*.csv`
-- Drag CSV into AdvantageScope for offline replay
-- Same topics as live telemetry
+**FullPanels (FTControl Panels):**
+- Team-specific live metrics panel
+- Displays detailed subsystem data during operation
+
+**Driver Station:**
+- Standard FTC telemetry display on driver station phone/tablet
+
+### Offline Logging (Post-Match Analysis)
+
+**KoalaLog WPILOG Logging:**
+- Produces `.wpilog` files compatible with AdvantageScope for full-featured offline replay
+- Automatically enabled via `KoalaLog.setup(hardwareMap)` in `Robot` constructor
+- `AutoLogManager.periodic()` called in all OpModes to sample logged data
+- Robot pose automatically logged in `DriveSubsystem.periodic()` for 2D/3D field visualization
+- Log files stored on Control Hub internal storage
+
+**Retrieving WPILOG Files:**
+1. Download LogPuller tools from [KoalaLog GitHub](https://github.com/Koala-Log/Koala-Log/tree/main/LogPuller)
+   - `FTCLogPuller.exe` - retrieves logs from robot
+   - `PullAndDeleteLogs.exe` - retrieves logs and clears storage
+2. Connect to robot via WiFi or USB-C + REV Hardware Client
+3. Run the executable and select destination folder
+4. Open `.wpilog` files in AdvantageScope (File → Open Logs)
+
+**Note:** First run requires internet connection to download ADB tools automatically.
 
 **Adding New Logged Fields:**
-1. Add public field to subsystem's `Inputs` class (prefer primitives/enums/strings)
-2. Populate in `subsystem.populateInputs(...)`
-3. Field automatically discovered by AdvantageScope Lite
+1. Add a getter method to your subsystem class
+2. Annotate the method with `@AutoLogOutput` (or `@AutoLogOutput(key = "CustomKey")` for custom naming)
+3. Return the value to log (supports primitives, enums, strings, Pose2d, etc.)
+4. Field automatically published to AdvantageScope Lite and logged to WPILOG files
+
+**Example:**
+```java
+@AutoLog
+public class MySubsystem implements Subsystem {
+    private double motorPower = 0.0;
+
+    @AutoLogOutput
+    public double getMotorPower() {
+        return motorPower;
+    }
+
+    @AutoLogOutput(key = "Subsystem/CustomFieldName")
+    public String getCustomStatus() {
+        return "Running";
+    }
+}
+```
+
+**Robot Status Logging:**
+All OpModes should log FTC Dashboard _Status fields to ensure WPILOG files match live AdvantageScope Lite data. Use `RobotStatusLogger.logStatus()` in both init and main loops:
+
+```java
+import org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger;
+
+// In init loop:
+while (!isStarted() && !isStopRequested()) {
+    RobotStatusLogger.logStatus(this, hardwareMap, false);
+    AutoLogManager.periodic();
+    sleep(25);
+}
+
+// In main loop:
+while (opModeIsActive()) {
+    RobotStatusLogger.logStatus(this, hardwareMap, opModeIsActive());
+    AutoLogManager.periodic();
+}
+```
+
+This automatically logs:
+- `RUNNING` - OpMode active state (root level)
+- `_Status/enabled` - Stop requested state
+- `_Status/activeOpmode` - OpMode name (from class name)
+- `_Status/activeOpModeStatus` - INIT or RUNNING
+- `_Status/errorMessage` - From RobotLog
+- `_Status/warningMessage` - From RobotLog
+- `_Status/batteryVoltage` - From hardware
+
+**Do NOT** add custom fields to `_Status/` namespace - use separate namespaces like `OpMode/` or `Subsystem/` for OpMode-specific data.
 
 ## Coding Conventions
 
@@ -254,6 +327,12 @@ The pre-commit hook (in `.githooks/`) blocks commits that modify Gradle or SDK v
 - NetworkTables 4 streaming
 - 2D field visualization
 - Telemetry plotting and replay
+
+**KoalaLog (v1.4.0):**
+- WPILOG file generation for AdvantageScope offline replay
+- Annotation-based logging with `@AutoLog` and `@AutoLogOutput`
+- Pose2d logging for field visualization
+- Repository: [Koala-Log/Koala-Log](https://github.com/Koala-Log/Koala-Log)
 
 **FullPanels (v1.0.9):**
 - Dashboard panels integration

@@ -31,6 +31,7 @@ repositories {
     maven { url = 'https://maven.pedropathing.com' }
     maven { url = "https://mymaven.bylazar.com/releases" }
     maven { url = "https://repo.dairy.foundation/releases"}
+    maven { url = 'https://jitpack.io' }
 }
 
 dependencies {
@@ -41,8 +42,6 @@ dependencies {
     implementation 'dev.nextftc:hardware:1.0.1' // If you would like to use the hardware module
     implementation 'dev.nextftc:bindings:1.0.1'
     implementation 'dev.nextftc.extensions:pedro:1.0.0'
-
-
 
     // Pedro Pathing
     implementation('com.pedropathing:ftc:2.0.4')
@@ -55,9 +54,11 @@ dependencies {
         exclude group: 'org.firstinspires.ftc'
     }
 
+    // AdvantageScope Lite - enables AdvantageScope connection via FTC Dashboard packets
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
 
-
-
+    // KoalaLog for WPILOG file logging
+    implementation 'com.github.ori-coval.Koala-Log:KoalaLogger:1.4.0'
+    annotationProcessor 'com.github.ori-coval.Koala-Log:KoalaLoggingProcessor:1.4.0'
 
 }
