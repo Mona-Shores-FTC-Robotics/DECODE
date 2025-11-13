@@ -51,7 +51,8 @@ public class Robot {
         KoalaLog.setup(hardwareMap);
 
         vision = new VisionSubsystemLimelight(hardwareMap);
-        drive = new DriveSubsystem(hardwareMap, vision);
+        // Use AutoLogged version for automatic WPILOG and FTC Dashboard logging
+        drive = new org.firstinspires.ftc.teamcode.subsystems.DriveSubsystemAutoLogged(hardwareMap, vision);
         launcher = new LauncherSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
@@ -59,6 +60,7 @@ public class Robot {
         launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
         intakeCommands = new IntakeCommands(intake);
         applyRobotMode(robotMode);
+
         registerLoggingSources();
     }
 
