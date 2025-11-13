@@ -22,8 +22,10 @@ public class SpinUpUntilReadyCommand extends Command {
     @Configurable
     public static class SpinUpConfig {
         /** Timeout in seconds before giving up and completing anyway */
-        public static double timeoutSeconds = 3.0;
+        public double timeoutSeconds = 3.0;
     }
+
+    public static SpinUpConfig spinUpConfig = new SpinUpConfig();
 
     private final LauncherSubsystem launcher;
     private double startTime = 0.0;
@@ -54,7 +56,7 @@ public class SpinUpUntilReadyCommand extends Command {
 
         // Safety timeout to prevent hanging
         double elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
-        return elapsedSeconds >= SpinUpConfig.timeoutSeconds;
+        return elapsedSeconds >= spinUpConfig.timeoutSeconds;
     }
 
     @Override

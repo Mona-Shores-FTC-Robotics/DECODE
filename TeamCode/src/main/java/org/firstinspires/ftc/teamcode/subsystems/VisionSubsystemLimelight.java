@@ -505,7 +505,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     }
 
     private static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
-        double halfField = AutoField.Waypoints.fieldWidthIn / 2.0;
+        double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
         double pedroX = ftcY + halfField;
         double pedroY = halfField - ftcX;
         double pedroHeading = AngleUnit.normalizeRadians(Math.toRadians(headingDeg) - Math.PI / 2.0);

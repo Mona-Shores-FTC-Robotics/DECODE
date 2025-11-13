@@ -20,6 +20,7 @@ import Ori.Coval.Logging.AutoLogOutput;
 import Ori.Coval.Logging.Logger.KoalaLog;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.subsystems.Subsystem;
+import dev.nextftc.extensions.pedro.PedroComponent;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
@@ -45,23 +46,27 @@ public class DriveSubsystem implements Subsystem {
 
     @Configurable
     public static class TeleOpDriveConfig {
-        public static double slowMultiplier = 0.07;
-        public static double rotationOverrideThreshold = 0.05;
+        public double slowMultiplier = 0.07;
+        public double rotationOverrideThreshold = 0.05;
     }
 
     @Configurable
     public static class AimAssistConfig {
-        public static double kP = .38;
-        public static double kMaxTurn = .6;
+        public double kP = .38;
+        public double kMaxTurn = .6;
     }
 
     @Configurable
     public static class RampConfig {
-        public static double forwardRatePerSec = 0.3;
-        public static double strafeRatePerSec = 0.3;
-        public static double turnRatePerSec = 0.6;
-        public static double fallbackDtSeconds = 0.02;
+        public double forwardRatePerSec = 0.3;
+        public double strafeRatePerSec = 0.3;
+        public double turnRatePerSec = 0.6;
+        public double fallbackDtSeconds = 0.02;
     }
+
+    public static TeleOpDriveConfig teleOpDriveConfig = new TeleOpDriveConfig();
+    public static AimAssistConfig aimAssistConfig = new AimAssistConfig();
+    public static RampConfig rampConfig = new RampConfig();
 
     public enum DriveMode {
         NORMAL,
@@ -70,7 +75,7 @@ public class DriveSubsystem implements Subsystem {
 
     private static final double NORMAL_MULTIPLIER = 1.0;
 
-    private final Follower follower;
+    private Follower follower;
     private final Constants.Motors driveMotors;
     private final DcMotorEx motorLf;
     private final DcMotorEx motorRf;
@@ -112,7 +117,7 @@ public class DriveSubsystem implements Subsystem {
     private boolean visionRelocalizationEnabled = false;
 
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
-        follower = Constants.createFollower(hardwareMap);
+//        follower = Constants.createFollower(hardwareMap);
         driveMotors = new Constants.Motors(hardwareMap);
         driveMotors.setRunWithoutEncoder();
 
@@ -121,6 +126,10 @@ public class DriveSubsystem implements Subsystem {
         motorLb = driveMotors.lb;
         motorRb = driveMotors.rb;
         this.vision = vision;
+    }
+
+    public void attachFollower() {
+        this.follower = PedroComponent.follower();  // Get from PedroComponent singleton
     }
 
     /**
@@ -274,7 +283,7 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldY = fieldY;
         lastRequestRotation = rotationInput;
         lastRequestSlowMode = slowMode;
-        double slowMultiplier = Range.clip(TeleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
+        double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
         double targetForward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
         double targetStrafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
@@ -296,11 +305,11 @@ public class DriveSubsystem implements Subsystem {
             double dt = lastRampUpdateNs == 0L ? 0.0 : (now - lastRampUpdateNs) / 1_000_000_000.0;
             lastRampUpdateNs = now;
             if (dt <= 0.0) {
-                dt = Math.max(0.0, RampConfig.fallbackDtSeconds);
+                dt = Math.max(0.0, rampConfig.fallbackDtSeconds);
             }
-            double forwardRate = Math.max(0.0, RampConfig.forwardRatePerSec);
-            double strafeRate = Math.max(0.0, RampConfig.strafeRatePerSec);
-            double turnRate = Math.max(0.0, RampConfig.turnRatePerSec);
+            double forwardRate = Math.max(0.0, rampConfig.forwardRatePerSec);
+            double strafeRate = Math.max(0.0, rampConfig.strafeRatePerSec);
+            double turnRate = Math.max(0.0, rampConfig.turnRatePerSec);
             double maxForwardDelta = forwardRate * dt;
             double maxStrafeDelta = strafeRate * dt;
             double maxTurnDelta = turnRate * dt;
@@ -339,7 +348,7 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
         double[] rotated = rotateFieldInput(fieldX, fieldY);
-        double slowMultiplier = Range.clip(TeleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
+        double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
         double forward = Range.clip(rotated[1] * multiplier , - 1.0 , 1.0);
         double strafeLeft = Range.clip(- rotated[0] * multiplier , - 1.0 , 1.0);
@@ -364,8 +373,8 @@ public class DriveSubsystem implements Subsystem {
 
         double headingError = normalizeAngle(targetHeading - follower.getHeading());
         lastAimErrorRad = headingError;
-        double maxTurn = Math.max(0.0, AimAssistConfig.kMaxTurn);
-        double turn = Range.clip(AimAssistConfig.kP * headingError , - maxTurn , maxTurn);
+        double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
+        double turn = Range.clip(aimAssistConfig.kP * headingError , - maxTurn , maxTurn);
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
         lastCommandTurn = turn;

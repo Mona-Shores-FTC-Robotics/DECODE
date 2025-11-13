@@ -22,17 +22,19 @@ public class LaunchAtPositionCommand extends Command {
     @Configurable
     public static class PositionRpmConfig {
         /** RPM for shots from LAUNCH_FAR position */
-        public static double farLaunchRpm = 4200.0;
+        public double farLaunchRpm = 4200.0;
 
         /** RPM for shots from LAUNCH_CLOSE position */
-        public static double closeLaunchRpm = 2700.0;
+        public double closeLaunchRpm = 2700.0;
 
         /** Default RPM if position unknown */
-        public static double defaultLaunchRpm = 3600.0;
+        public double defaultLaunchRpm = 3600.0;
 
         /** Timeout in seconds before giving up */
-        public static double timeoutSeconds = 3.0;
+        public double timeoutSeconds = 3.0;
     }
+
+    public static PositionRpmConfig positionRpmConfig = new PositionRpmConfig();
 
     private final LauncherSubsystem launcher;
     private final FieldPoint position;
@@ -90,7 +92,7 @@ public class LaunchAtPositionCommand extends Command {
 
         // Safety timeout
         double elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
-        return elapsedSeconds >= PositionRpmConfig.timeoutSeconds;
+        return elapsedSeconds >= positionRpmConfig.timeoutSeconds;
     }
 
     @Override
@@ -126,16 +128,16 @@ public class LaunchAtPositionCommand extends Command {
      */
     private static double getRpmForPosition(FieldPoint position) {
         if (position == null) {
-            return PositionRpmConfig.defaultLaunchRpm;
+            return positionRpmConfig.defaultLaunchRpm;
         }
 
         switch (position) {
             case LAUNCH_FAR:
-                return PositionRpmConfig.farLaunchRpm;
+                return positionRpmConfig.farLaunchRpm;
             case LAUNCH_CLOSE:
-                return PositionRpmConfig.closeLaunchRpm;
+                return positionRpmConfig.closeLaunchRpm;
             default:
-                return PositionRpmConfig.defaultLaunchRpm;
+                return positionRpmConfig.defaultLaunchRpm;
         }
     }
 

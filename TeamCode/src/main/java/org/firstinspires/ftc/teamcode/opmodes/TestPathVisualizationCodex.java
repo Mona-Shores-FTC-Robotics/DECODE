@@ -60,14 +60,16 @@ public class TestPathVisualizationCodex extends LinearOpMode {
 
     @Configurable
     public static class SimulationConfig {
-        public static double simulatedDriveSpeedIps = 30.0;
-        public static double spinUpTimeSec = 1.4;
-        public static double scoreBurstTimeSec = 1.0;
-        public static double intakeTimeSec = 1.2;
-        public static double transferPauseSec = 0.35;
-        public static double dwellBetweenLoopsSec = 0.25;
-        public static double missingPathHoldSec = 0.25;
+        public double simulatedDriveSpeedIps = 30.0;
+        public double spinUpTimeSec = 1.4;
+        public double scoreBurstTimeSec = 1.0;
+        public double intakeTimeSec = 1.2;
+        public double transferPauseSec = 0.35;
+        public double dwellBetweenLoopsSec = 0.25;
+        public double missingPathHoldSec = 0.25;
     }
+
+    TestPathVisualizationCodex.SimulationConfig config = new TestPathVisualizationCodex.SimulationConfig();
 
     private static final String[] PATH_SEQUENCE = {
             "Start → Launch",
@@ -292,7 +294,7 @@ public class TestPathVisualizationCodex extends LinearOpMode {
         VirtualPath[] virtualPaths = buildVirtualPaths(pathChains);
         List<SimulatedStep> steps = buildStepsForMode(virtualPaths);
         if (steps.isEmpty()) {
-            steps.add(new SimulatedActionStep("No paths available", SimulationConfig.missingPathHoldSec));
+            steps.add(new SimulatedActionStep("No paths available", config.missingPathHoldSec));
         }
 
         simulationContext = new SimulationContext(
@@ -344,47 +346,47 @@ public class TestPathVisualizationCodex extends LinearOpMode {
     }
 
     private void buildFullAutoSequence(VirtualPath[] paths, List<SimulatedStep> steps) {
-        steps.add(action("Spin Up Launcher", SimulationConfig.spinUpTimeSec));
+        steps.add(action("Spin Up Launcher", config.spinUpTimeSec));
         steps.add(pathStep(paths[0]));
-        steps.add(action("Score Preload", SimulationConfig.scoreBurstTimeSec));
+        steps.add(action("Score Preload", config.scoreBurstTimeSec));
         steps.add(pathStep(paths[1]));
-        steps.add(action("Collect Alliance Wall", SimulationConfig.intakeTimeSec));
+        steps.add(action("Collect Alliance Wall", config.intakeTimeSec));
         steps.add(pathStep(paths[2]));
-        steps.add(action("Score Alliance Wall", SimulationConfig.scoreBurstTimeSec));
-        steps.add(action("Transfer", SimulationConfig.transferPauseSec));
+        steps.add(action("Score Alliance Wall", config.scoreBurstTimeSec));
+        steps.add(action("Transfer", config.transferPauseSec));
         steps.add(pathStep(paths[3]));
-        steps.add(action("Collect Parking", SimulationConfig.intakeTimeSec));
+        steps.add(action("Collect Parking", config.intakeTimeSec));
         steps.add(pathStep(paths[4]));
-        steps.add(action("Score Parking", SimulationConfig.scoreBurstTimeSec));
-        steps.add(action("Transfer", SimulationConfig.transferPauseSec));
+        steps.add(action("Score Parking", config.scoreBurstTimeSec));
+        steps.add(action("Transfer", config.transferPauseSec));
         steps.add(pathStep(paths[5]));
-        steps.add(action("Collect Gate Far", SimulationConfig.intakeTimeSec));
+        steps.add(action("Collect Gate Far", config.intakeTimeSec));
         steps.add(pathStep(paths[6]));
-        steps.add(action("Final Score", SimulationConfig.scoreBurstTimeSec));
+        steps.add(action("Final Score", config.scoreBurstTimeSec));
     }
 
     private void buildWallLoopSequence(VirtualPath[] paths, List<SimulatedStep> steps) {
-        steps.add(action("Loop Prep", SimulationConfig.transferPauseSec));
+        steps.add(action("Loop Prep", config.transferPauseSec));
         steps.add(pathStep(paths[1]));
-        steps.add(action("Collect @ Wall", SimulationConfig.intakeTimeSec));
+        steps.add(action("Collect @ Wall", config.intakeTimeSec));
         steps.add(pathStep(paths[2]));
-        steps.add(action("Score @ Launch", SimulationConfig.scoreBurstTimeSec));
-        steps.add(action("Loop Dwell", SimulationConfig.dwellBetweenLoopsSec));
+        steps.add(action("Score @ Launch", config.scoreBurstTimeSec));
+        steps.add(action("Loop Dwell", config.dwellBetweenLoopsSec));
     }
 
     private void buildParkingSweepSequence(VirtualPath[] paths, List<SimulatedStep> steps) {
-        steps.add(action("Parking Prep", SimulationConfig.transferPauseSec));
+        steps.add(action("Parking Prep", config.transferPauseSec));
         steps.add(pathStep(paths[3]));
-        steps.add(action("Collect Parking", SimulationConfig.intakeTimeSec));
+        steps.add(action("Collect Parking", config.intakeTimeSec));
         steps.add(pathStep(paths[4]));
-        steps.add(action("Score Parking", SimulationConfig.scoreBurstTimeSec));
+        steps.add(action("Score Parking", config.scoreBurstTimeSec));
     }
 
     private SimulatedStep pathStep(VirtualPath path) {
         if (path == null || !path.hasSamples()) {
-            return action("Missing path", SimulationConfig.missingPathHoldSec);
+            return action("Missing path", config.missingPathHoldSec);
         }
-        return new SimulatedPathStep(path, SimulationConfig.simulatedDriveSpeedIps);
+        return new SimulatedPathStep(path, config.simulatedDriveSpeedIps);
     }
 
     private SimulatedStep action(String name, double durationSec) {

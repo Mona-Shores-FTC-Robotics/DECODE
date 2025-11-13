@@ -33,19 +33,21 @@ public class CaptureAndAimCommand extends Command {
          * Number of frames to average for robustness (1 = no averaging).
          * Averaging multiple vision samples helps filter out single-frame noise.
          */
-        public static int sampleFrames = 3;
+        public int sampleFrames = 3;
 
         /**
          * Time between frame samples (milliseconds).
          * Spreading samples over time improves robustness to transient vision errors.
          */
-        public static double frameSampleIntervalMs = 50.0;
+        public double frameSampleIntervalMs = 50.0;
 
         /**
          * Maximum time for sampling phase before giving up (milliseconds).
          */
-        public static double samplingTimeoutMs = 500.0;
+        public double samplingTimeoutMs = 500.0;
     }
+
+    public static Config config = new Config();
 
     private final DriveSubsystem drive;
     private final VisionSubsystemLimelight vision;
@@ -89,7 +91,7 @@ public class CaptureAndAimCommand extends Command {
             long nowMs = System.currentTimeMillis();
 
             // Check sampling timeout
-            if (nowMs - startTimeMs >= Config.samplingTimeoutMs) {
+            if (nowMs - startTimeMs >= config.samplingTimeoutMs) {
                 // Timeout during sampling - use whatever we've collected so far
                 if (framesSampled > 0) {
                     capturedTargetHeadingRad = Math.atan2(summedSin / framesSampled, summedCos / framesSampled);
@@ -98,13 +100,13 @@ public class CaptureAndAimCommand extends Command {
             }
 
             // Continue sampling if needed
-            if (framesSampled < Config.sampleFrames
-                    && nowMs - lastSampleMs >= Config.frameSampleIntervalMs) {
+            if (framesSampled < config.sampleFrames
+                    && nowMs - lastSampleMs >= config.frameSampleIntervalMs) {
                 sampleTargetHeading();
             }
 
             // Once we have enough samples, compute the circular mean
-            if (framesSampled >= Config.sampleFrames) {
+            if (framesSampled >= config.sampleFrames) {
                 // Use circular mean instead of arithmetic mean to handle angle wrapping correctly.
                 // Arithmetic mean fails for angles near 0°/360° boundary (e.g., mean of [1°, 359°] = 180°).
                 // Circular mean: compute mean of sin/cos components, then use atan2 to recover the angle.
@@ -133,7 +135,7 @@ public class CaptureAndAimCommand extends Command {
         // If sampling timed out without capturing any frames, we're done (failed)
         if (capturedTargetHeadingRad == null
                 && framesSampled == 0
-                && System.currentTimeMillis() - startTimeMs >= Config.samplingTimeoutMs) {
+                && System.currentTimeMillis() - startTimeMs >= config.samplingTimeoutMs) {
             return true;
         }
 

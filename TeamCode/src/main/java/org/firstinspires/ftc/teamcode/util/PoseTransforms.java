@@ -17,7 +17,7 @@ public final class PoseTransforms {
         if (pedroPose == null) {
             return null;
         }
-        double halfField = AutoField.Waypoints.fieldWidthIn / 2.0;
+        double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
         double ftcX = halfField - pedroPose.getY();
         double ftcY = pedroPose.getX() - halfField;
         double heading = AngleUnit.normalizeRadians(pedroPose.getHeading() + Math.PI / 2.0);
@@ -28,7 +28,7 @@ public final class PoseTransforms {
         if (ftcPose == null) {
             return null;
         }
-        double halfField = AutoField.Waypoints.fieldWidthIn / 2.0;
+        double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
         double pedroX = ftcPose.getY() + halfField;
         double pedroY = halfField - ftcPose.getX();
         double heading = AngleUnit.normalizeRadians(ftcPose.getHeading() - Math.PI / 2.0);

@@ -52,47 +52,52 @@ public class IntakeSubsystem implements Subsystem {
 
     @Configurable
     public static class LaneSensorConfig {
-        public static boolean enablePolling = true;
-        public static String leftSensor = "lane_left_color";
-        public static String centerSensor = "lane_center_color";
-        public static String rightSensor = "lane_right_color";
-        public static double samplePeriodMs = 200.0;
+        public boolean enablePolling = true;
+        public String leftSensor = "lane_left_color";
+        public String centerSensor = "lane_center_color";
+        public String rightSensor = "lane_right_color";
+        public double samplePeriodMs = 200.0;
 
-        public static double minValue = 0.02;
-        public static double minSaturation = 0.15;
+        public double minValue = 0.02;
+        public double minSaturation = 0.15;
 
-        public static double greenHueMin = 80.0;
-        public static double greenHueMax = 160.0;
+        public double greenHueMin = 80.0;
+        public double greenHueMax = 160.0;
 
-        public static double purpleHueMin = 260.0;
-        public static double purpleHueMax = 330.0;
-        public static double purpleHueWrapMax = 40.0;
+        public double purpleHueMin = 260.0;
+        public double purpleHueMax = 330.0;
+        public double purpleHueWrapMax = 40.0;
 
-        public static boolean useDistance = true;
-        public static double presenceDistanceCm = 3.0;
+        public boolean useDistance = true;
+        public double presenceDistanceCm = 3.0;
     }
 
     @Configurable
     public static class MotorConfig {
-        public static String motorName = "intake";
-        public static double defaultForwardPower = -.6;
-        public static double defaultReversePower = .3;
-        public static boolean brakeOnZero = true;
-        public static boolean reverseDirection = true;
+        public String motorName = "intake";
+        public double defaultForwardPower = -.6;
+        public double defaultReversePower = .3;
+        public boolean brakeOnZero = true;
+        public boolean reverseDirection = true;
     }
 
     @Configurable
     public static class RollerConfig {
-        public static String servoName = "intake_roller";
-        public static double activePosition = 1.0;
-        public static double inactivePosition = 0.5;
+        public String servoName = "intake_roller";
+        public double activePosition = 1.0;
+        public double inactivePosition = 0.5;
     }
 
     @Configurable
     public static class ManualModeConfig {
-        public static boolean enableOverride = false;
-        public static String overrideMode = STOPPED.name();
+        public boolean enableOverride = false;
+        public String overrideMode = STOPPED.name();
     }
+
+    public static LaneSensorConfig laneSensorConfig = new LaneSensorConfig();
+    public static MotorConfig motorConfig = new MotorConfig();
+    public static RollerConfig rollerConfig = new RollerConfig();
+    public static ManualModeConfig manualModeConfig = new ManualModeConfig();
 
     public static final class LaneSample {
         public final boolean sensorPresent;
@@ -186,23 +191,23 @@ public class IntakeSubsystem implements Subsystem {
     private RobotMode robotMode = RobotMode.DEBUG;
 
     public IntakeSubsystem(HardwareMap hardwareMap) {
-        intakeMotor = tryGetMotor(hardwareMap, MotorConfig.motorName);
+        intakeMotor = tryGetMotor(hardwareMap, motorConfig.motorName);
         if (intakeMotor != null) {
             intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            if (MotorConfig.brakeOnZero) {
+            if (motorConfig.brakeOnZero) {
                 intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             } else {
                 intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
             }
-            if (MotorConfig.reverseDirection) {
+            if (motorConfig.reverseDirection) {
                 intakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
             }
             intakeMotor.setPower(0.0);
         }
-        rollerServo = tryGetServo(hardwareMap, RollerConfig.servoName);
+        rollerServo = tryGetServo(hardwareMap, rollerConfig.servoName);
         if (rollerServo != null) {
-            lastRollerPosition = RollerConfig.inactivePosition;
-            rollerServo.setPosition(RollerConfig.inactivePosition);
+            lastRollerPosition = rollerConfig.inactivePosition;
+            rollerServo.setPosition(rollerConfig.inactivePosition);
         }
         rollerEnabled = false;
         for (LauncherLane lane : LauncherLane.values()) {
@@ -223,8 +228,8 @@ public class IntakeSubsystem implements Subsystem {
         appliedMode = IntakeMode.STOPPED;
         setManualPower(0.0);
         if (rollerServo != null) {
-            rollerServo.setPosition(RollerConfig.inactivePosition);
-            lastRollerPosition = RollerConfig.inactivePosition;
+            rollerServo.setPosition(rollerConfig.inactivePosition);
+            lastRollerPosition = rollerConfig.inactivePosition;
         }
         rollerEnabled = false;
     }
@@ -242,7 +247,7 @@ public class IntakeSubsystem implements Subsystem {
             pollLaneSensorsIfNeeded();
         }
         if (rollerServo != null) {
-            double target = rollerEnabled ? RollerConfig.activePosition : RollerConfig.inactivePosition;
+            double target = rollerEnabled ? rollerConfig.activePosition : rollerConfig.inactivePosition;
             rollerServo.setPosition(target);
             lastRollerPosition = target;
         }
@@ -274,8 +279,8 @@ public class IntakeSubsystem implements Subsystem {
     public void deactivateRoller() {
         rollerEnabled = false;
         if (rollerServo != null) {
-            rollerServo.setPosition(RollerConfig.inactivePosition);
-            lastRollerPosition = RollerConfig.inactivePosition;
+            rollerServo.setPosition(rollerConfig.inactivePosition);
+            lastRollerPosition = rollerConfig.inactivePosition;
         }
     }
 
@@ -325,14 +330,14 @@ public class IntakeSubsystem implements Subsystem {
 
     public boolean isRollerActive() {
         return rollerServo != null
-                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
+                && Math.abs(lastRollerPosition - rollerConfig.activePosition) < 1e-3;
     }
 
     private void pollLaneSensorsIfNeeded() {
-        if (!LaneSensorConfig.enablePolling || !anyLaneSensorsPresent) {
+        if (!laneSensorConfig.enablePolling || !anyLaneSensorsPresent) {
             return;
         }
-        if (sensorTimer.milliseconds() < LaneSensorConfig.samplePeriodMs) {
+        if (sensorTimer.milliseconds() < laneSensorConfig.samplePeriodMs) {
             return;
         }
         sensorTimer.reset();
@@ -340,8 +345,8 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     private IntakeMode resolveMode() {
-        if (ManualModeConfig.enableOverride) {
-            IntakeMode override = parseMode(ManualModeConfig.overrideMode);
+        if (manualModeConfig.enableOverride) {
+            IntakeMode override = parseMode(manualModeConfig.overrideMode);
             if (override != null) {
                 return override;
             }
@@ -355,13 +360,13 @@ public class IntakeSubsystem implements Subsystem {
         }
         switch (mode) {
             case ACTIVE_FORWARD:
-                setManualPower(MotorConfig.defaultForwardPower);
+                setManualPower(motorConfig.defaultForwardPower);
                 break;
             case STOPPED:
                 setManualPower(0.0);
                 break;
             case PASSIVE_REVERSE:
-                setManualPower(MotorConfig.defaultReversePower);
+                setManualPower(motorConfig.defaultReversePower);
                 break;
             default:
                 break;
@@ -390,12 +395,12 @@ public class IntakeSubsystem implements Subsystem {
 
     private void bindLaneSensors(HardwareMap hardwareMap) {
         anyLaneSensorsPresent = false;
-        laneSensors.put(LauncherLane.LEFT, tryGetColorSensor(hardwareMap, LaneSensorConfig.leftSensor));
-        laneDistanceSensors.put(LauncherLane.LEFT, tryGetDistanceSensor(hardwareMap, LaneSensorConfig.leftSensor));
-        laneSensors.put(LauncherLane.CENTER, tryGetColorSensor(hardwareMap, LaneSensorConfig.centerSensor));
-        laneDistanceSensors.put(LauncherLane.CENTER, tryGetDistanceSensor(hardwareMap, LaneSensorConfig.centerSensor));
-        laneSensors.put(LauncherLane.RIGHT, tryGetColorSensor(hardwareMap, LaneSensorConfig.rightSensor));
-        laneDistanceSensors.put(LauncherLane.RIGHT, tryGetDistanceSensor(hardwareMap, LaneSensorConfig.rightSensor));
+        laneSensors.put(LauncherLane.LEFT, tryGetColorSensor(hardwareMap, laneSensorConfig.leftSensor));
+        laneDistanceSensors.put(LauncherLane.LEFT, tryGetDistanceSensor(hardwareMap, laneSensorConfig.leftSensor));
+        laneSensors.put(LauncherLane.CENTER, tryGetColorSensor(hardwareMap, laneSensorConfig.centerSensor));
+        laneDistanceSensors.put(LauncherLane.CENTER, tryGetDistanceSensor(hardwareMap, laneSensorConfig.centerSensor));
+        laneSensors.put(LauncherLane.RIGHT, tryGetColorSensor(hardwareMap, laneSensorConfig.rightSensor));
+        laneDistanceSensors.put(LauncherLane.RIGHT, tryGetDistanceSensor(hardwareMap, laneSensorConfig.rightSensor));
         for (ColorSensor sensor : laneSensors.values()) {
             if (sensor != null) {
                 anyLaneSensorsPresent = true;
@@ -463,12 +468,12 @@ public class IntakeSubsystem implements Subsystem {
 
         boolean distanceValid = distanceAvailable && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
         boolean withinDistance;
-        if (!distanceAvailable || !LaneSensorConfig.useDistance) {
+        if (!distanceAvailable || !laneSensorConfig.useDistance) {
             withinDistance = true;
         } else if (!distanceValid) {
             withinDistance = false;
         } else {
-            withinDistance = distanceCm <= LaneSensorConfig.presenceDistanceCm;
+            withinDistance = distanceCm <= laneSensorConfig.presenceDistanceCm;
         }
 
         int rawRed = colorSensor.red();
@@ -496,7 +501,7 @@ public class IntakeSubsystem implements Subsystem {
 
         ArtifactColor hsvColor = classifyColorFromHsv(hue, saturation, value, maxComponent > 0);
         ArtifactColor finalColor = hsvColor;
-        if (LaneSensorConfig.useDistance && distanceAvailable && !withinDistance) {
+        if (laneSensorConfig.useDistance && distanceAvailable && !withinDistance) {
             finalColor = ArtifactColor.NONE;
         }
 
@@ -513,16 +518,16 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     private ArtifactColor classifyColorFromHsv(float hue, float saturation, float value, boolean hasSignal) {
-        if (!hasSignal || value < LaneSensorConfig.minValue || saturation < LaneSensorConfig.minSaturation) {
+        if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
             return ArtifactColor.NONE;
         }
 
-        if (hue >= LaneSensorConfig.greenHueMin && hue <= LaneSensorConfig.greenHueMax) {
+        if (hue >= laneSensorConfig.greenHueMin && hue <= laneSensorConfig.greenHueMax) {
             return ArtifactColor.GREEN;
         }
 
-        if ((hue >= LaneSensorConfig.purpleHueMin && hue <= LaneSensorConfig.purpleHueMax)
-                || hue <= LaneSensorConfig.purpleHueWrapMax) {
+        if ((hue >= laneSensorConfig.purpleHueMin && hue <= laneSensorConfig.purpleHueMax)
+                || hue <= laneSensorConfig.purpleHueWrapMax) {
             return ArtifactColor.PURPLE;
         }
 
@@ -655,12 +660,12 @@ public class IntakeSubsystem implements Subsystem {
 
     @AutoLogOutput
     public boolean isSensorPollingEnabled() {
-        return LaneSensorConfig.enablePolling;
+        return laneSensorConfig.enablePolling;
     }
 
     @AutoLogOutput
     public double getSensorSamplePeriodMs() {
-        return LaneSensorConfig.samplePeriodMs;
+        return laneSensorConfig.samplePeriodMs;
     }
 
     @AutoLogOutput
@@ -875,12 +880,12 @@ public class IntakeSubsystem implements Subsystem {
 
     @AutoLogOutput
     public boolean isModeOverrideEnabled() {
-        return ManualModeConfig.enableOverride;
+        return manualModeConfig.enableOverride;
     }
 
     @AutoLogOutput
     public String getModeOverride() {
-        return ManualModeConfig.overrideMode;
+        return manualModeConfig.overrideMode;
     }
 
     @AutoLogOutput
@@ -891,7 +896,7 @@ public class IntakeSubsystem implements Subsystem {
     @AutoLogOutput
     public boolean isLoggedRollerActive() {
         return rollerServo != null
-                && Math.abs(lastRollerPosition - RollerConfig.activePosition) < 1e-3;
+                && Math.abs(lastRollerPosition - rollerConfig.activePosition) < 1e-3;
     }
 
     public interface LaneColorListener {

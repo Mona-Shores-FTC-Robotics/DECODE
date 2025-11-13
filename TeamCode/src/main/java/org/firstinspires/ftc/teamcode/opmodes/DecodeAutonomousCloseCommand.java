@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -27,8 +28,10 @@ import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.FollowPath;
+import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -46,6 +49,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  * - Sequential scoring and collection routines
  */
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Auto Close (Command)", group = "Command")
+@Configurable
 public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
@@ -53,10 +57,13 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public static double maxPathPower = .6;
-        public static double intakeTimeSeconds = 2.0;
-        public static double launchDelaySeconds = 0.5;
+        public double maxPathPower = .6;
+        public double intakeTimeSeconds = 2.0;
+        public double launchDelaySeconds = 0.5;
     }
+
+    // Public static instance for FTC Dashboard Config tab
+    public static DecodeAutonomousCloseCommand.AutoMotionConfig config = new DecodeAutonomousCloseCommand.AutoMotionConfig();
 
     private Robot robot;
     private AllianceSelector allianceSelector;
@@ -71,9 +78,19 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        addComponents(
+                BulkReadComponent.INSTANCE,
+                new PedroComponent(Constants::createFollower),
+                BindingsComponent.INSTANCE,
+                CommandManager.INSTANCE
+        );
+
         BindingManager.reset();
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
+
+        robot.attachPedroFollower();
+
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
 
@@ -98,8 +115,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         allianceSelector.applySelection(robot, robot.lighting);
 
         addComponents(
-                BulkReadComponent.INSTANCE,
-                CommandManager.INSTANCE,
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
                 new SubsystemComponent(robot.intake),
@@ -210,7 +225,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             ),
 
             // Collect samples
-            intakeCommands.timedIntake(AutoMotionConfig.intakeTimeSeconds),
+            intakeCommands.timedIntake(config.intakeTimeSeconds),
 
             // Drive to score while spinning up launcher
             new ParallelGroup(
@@ -248,7 +263,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                     .build();
         }
 
-        double maxPower = Range.clip(AutoMotionConfig.maxPathPower, 0.0, 1.0);
+        double maxPower = Range.clip(config.maxPathPower, 0.0, 1.0);
         return new FollowPath(path, false, maxPower);
     }
 
@@ -283,7 +298,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
      */
     private Command scoreSequence() {
         return new SequentialGroup(
-            new Delay(AutoMotionConfig.launchDelaySeconds),
+            new Delay(config.launchDelaySeconds),
             launcherCommands.launchDetectedBurst()
         );
     }
@@ -331,7 +346,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         }
 
         // Sanity check: pose should be on the field
-        double fieldWidthIn = AutoField.Waypoints.fieldWidthIn;
+        double fieldWidthIn = AutoField.waypoints.fieldWidthIn;
         if (candidate.getX() < 0 || candidate.getX() > fieldWidthIn ||
             candidate.getY() < 0 || candidate.getY() > fieldWidthIn) {
             return false;

@@ -63,112 +63,127 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class FlywheelParameters {
         /** Encoder ticks per motor revolution (adjust for the selected motor). */
-        public static double ticksPerRev = 28;
+        public double ticksPerRev = 28;
         /** Output wheel revolutions per motor revolution. */
-        public static double gearRatio = 1.0;
+        public double gearRatio = 1.0;
         /** Acceptable RPM error when considering a lane ready to fire. */
-        public static double rpmTolerance = 60.0;
+        public double rpmTolerance = 60.0;
     }
 
     @Configurable
     public static class Timing {
         /** Minimum time the wheel should be commanded at launch speed before trusting fallback readiness. */
-        public static double minimalSpinUpMs = 1000;
+        public double minimalSpinUpMs = 1000;
         /** If encoders are unavailable, treat the wheel as ready after this many milliseconds at full power. */
-        public static double fallbackReadyMs = 1000;
+        public double fallbackReadyMs = 1000;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-        public static double recoveryMs = 1000;
+        public double recoveryMs = 1000;
         /** Delay between sequential shots when bursting all three lanes (ms). */
-        public static double burstSpacingMs = 120.0;
+        public double burstSpacingMs = 120.0;
     }
 
     @Configurable
     public static class BangBangConfig {
-        public static double highPower = 1.0;
-        public static double lowPower = 0.3;
-        public static double enterBangThresholdRpm = 1200;
-        public static double exitBangThresholdRpm = 800;
-        public static double bangDeadbandRpm = 50;
+        public double highPower = 1.0;
+        public double lowPower = 0.3;
+        public double enterBangThresholdRpm = 1200;
+        public double exitBangThresholdRpm = 800;
+        public double bangDeadbandRpm = 50;
     }
 
     @Configurable
     public static class HybridPidConfig {
-        public static double kP = 0.000075;
-        public static double kF = 0.32;
-        public static double maxPower = 1.0;
+        public double kP = 0.000075;
+        public double kF = 0.32;
+        public double maxPower = 1.0;
     }
 
     @Configurable
     public static class HoldConfig {
-        public static double baseHoldPower = 0.5;
-        public static double rpmPowerGain = 0.000075;
-        public static double minHoldPower = 0.2;
-        public static double maxHoldPower = 1.0;
+        public double baseHoldPower = 0.5;
+        public double rpmPowerGain = 0.000075;
+        public double minHoldPower = 0.2;
+        public double maxHoldPower = 1.0;
     }
 
     @Configurable
     public static class FlywheelModeConfig {
-        public static FlywheelControlMode mode = FlywheelControlMode.BANG_BANG_HOLD;
+        public FlywheelControlMode mode = FlywheelControlMode.BANG_BANG_HOLD;
     }
 
     @Configurable
     public static class PhaseSwitchConfig {
-        public static int bangToHybridConfirmCycles = 3;
-        public static int bangToHoldConfirmCycles = 5;
-        public static int hybridToBangConfirmCycles = 2;
-        public static int holdToBangConfirmCycles = 5;
+        public int bangToHybridConfirmCycles = 3;
+        public int bangToHoldConfirmCycles = 5;
+        public int hybridToBangConfirmCycles = 2;
+        public int holdToBangConfirmCycles = 5;
     }
+
+    public static FlywheelParameters flywheelParameters = new FlywheelParameters();
+    public static Timing timing = new Timing();
+    public static BangBangConfig bangBangConfig = new BangBangConfig();
+    public static HybridPidConfig hybridPidConfig = new HybridPidConfig();
+    public static HoldConfig holdConfig = new HoldConfig();
+    public static FlywheelModeConfig flywheelModeConfig = new FlywheelModeConfig();
+    public static PhaseSwitchConfig phaseSwitchConfig = new PhaseSwitchConfig();
 
     @Configurable
     public static class LeftFlywheelConfig {
-        public static String motorName = "launcher_left";
-        public static boolean reversed = true;
-        public static double launchRpm = 3600;
-        public static double idleRpm = 2600;
+        public String motorName = "launcher_left";
+        public boolean reversed = true;
+        public double launchRpm = 3600;
+        public double idleRpm = 2600;
     }
 
     @Configurable
     public static class CenterFlywheelConfig {
-        public static String motorName = "launcher_center";
-        public static boolean reversed = false;
-        public static double launchRpm = 0;
-        public static double idleRpm = 0;
+        public String motorName = "launcher_center";
+        public boolean reversed = false;
+        public double launchRpm = 0;
+        public double idleRpm = 0;
     }
 
     @Configurable
     public static class RightFlywheelConfig { //actually left
-        public static String motorName = "launcher_right";
-        public static boolean reversed = true;
-        public static double launchRpm = 3600;
-        public static double idleRpm = 2800;
+        public String motorName = "launcher_right";
+        public boolean reversed = true;
+        public double launchRpm = 3600;
+        public double idleRpm = 2800;
     }
 
     @Configurable
     public static class LeftFeederConfig {
-        public static String servoName = "feeder_left";
-        public static boolean reversed = false;
-        public static double loadPosition = .93;
-        public static double firePosition = .65;
-        public static double holdMs = 4000;
+        public String servoName = "feeder_left";
+        public boolean reversed = false;
+        public double loadPosition = .93;
+        public double firePosition = .65;
+        public double holdMs = 4000;
     }
 
     @Configurable
     public static class CenterFeederConfig {
-        public static String servoName = "feeder_center";
-        public static boolean reversed = false;
-        public static double loadPosition = 1.0;
-        public static double firePosition = .7;
-        public static double holdMs = 4000;
+        public String servoName = "feeder_center";
+        public boolean reversed = false;
+        public double loadPosition = 1.0;
+        public double firePosition = .7;
+        public double holdMs = 4000;
     }
 
     @Configurable
     public static class RightFeederConfig {
-        public static String servoName = "feeder_right";
-        public static boolean reversed = false;
-        public static double loadPosition = .7;
-        public static double firePosition = .3;
-        public static double holdMs = 2000;
+        public String servoName = "feeder_right";
+        public boolean reversed = false;
+        public double loadPosition = .7;
+        public double firePosition = .3;
+        public double holdMs = 2000;
     }
+
+    public static LeftFlywheelConfig leftFlywheelConfig = new LeftFlywheelConfig();
+    public static CenterFlywheelConfig centerFlywheelConfig = new CenterFlywheelConfig();
+    public static RightFlywheelConfig rightFlywheelConfig = new RightFlywheelConfig();
+    public static LeftFeederConfig leftFeederConfig = new LeftFeederConfig();
+    public static CenterFeederConfig centerFeederConfig = new CenterFeederConfig();
+    public static RightFeederConfig rightFeederConfig = new RightFeederConfig();
 
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);
@@ -184,7 +199,7 @@ public class LauncherSubsystem implements Subsystem {
     private double lastPeriodicMs = 0.0;
 
     public static FlywheelControlMode getFlywheelControlMode() {
-        return FlywheelModeConfig.mode;
+        return flywheelModeConfig.mode;
     }
 
      public String getPhaseName(LauncherLane lane) {
@@ -311,7 +326,7 @@ public class LauncherSubsystem implements Subsystem {
         double delayMs = 0.0;
         for (LauncherLane lane : LauncherLane.DEFAULT_BURST_ORDER) {
             scheduleShot(lane, delayMs);
-            delayMs += Timing.burstSpacingMs;
+            delayMs += timing.burstSpacingMs;
         }
     }
 
@@ -323,7 +338,7 @@ public class LauncherSubsystem implements Subsystem {
         clearQueue();
         double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
-            laneRecoveryDeadlineMs.put(lane, now + Timing.recoveryMs);
+            laneRecoveryDeadlineMs.put(lane, now + timing.recoveryMs);
             feeders.get(lane).stop();
             flywheels.get(lane).stop();
         }
@@ -512,7 +527,7 @@ public class LauncherSubsystem implements Subsystem {
                 Feeder feeder = feeders.get(next.lane);
                 if (feeder != null && !feeder.isBusy()) {
                     feeder.fire();
-                    laneRecoveryDeadlineMs.put(next.lane, now + Timing.recoveryMs);
+                    laneRecoveryDeadlineMs.put(next.lane, now + timing.recoveryMs);
                     iterator.remove();
                 }
             }
@@ -636,12 +651,12 @@ public class LauncherSubsystem implements Subsystem {
         }
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, LeftFlywheelConfig.launchRpm);
+                return Math.max(0.0, leftFlywheelConfig.launchRpm);
             case CENTER:
-                return Math.max(0.0, CenterFlywheelConfig.launchRpm);
+                return Math.max(0.0, centerFlywheelConfig.launchRpm);
             case RIGHT:
             default:
-                return Math.max(0.0, RightFlywheelConfig.launchRpm);
+                return Math.max(0.0, rightFlywheelConfig.launchRpm);
         }
     }
 
@@ -652,96 +667,96 @@ public class LauncherSubsystem implements Subsystem {
         }
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, LeftFlywheelConfig.idleRpm);
+                return Math.max(0.0, leftFlywheelConfig.idleRpm);
             case CENTER:
-                return Math.max(0.0, CenterFlywheelConfig.idleRpm);
+                return Math.max(0.0, centerFlywheelConfig.idleRpm);
             case RIGHT:
             default:
-                return Math.max(0.0, RightFlywheelConfig.idleRpm);
+                return Math.max(0.0, rightFlywheelConfig.idleRpm);
         }
     }
 
     private static double feederHoldMsFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, LeftFeederConfig.holdMs);
+                return Math.max(0.0, leftFeederConfig.holdMs);
             case CENTER:
-                return Math.max(0.0, CenterFeederConfig.holdMs);
+                return Math.max(0.0, centerFeederConfig.holdMs);
             case RIGHT:
             default:
-                return Math.max(0.0, RightFeederConfig.holdMs);
+                return Math.max(0.0, rightFeederConfig.holdMs);
         }
     }
 
     private static double feederLoadPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(LeftFeederConfig.loadPosition);
+                return clampServo(leftFeederConfig.loadPosition);
             case CENTER:
-                return clampServo(CenterFeederConfig.loadPosition);
+                return clampServo(centerFeederConfig.loadPosition);
             case RIGHT:
             default:
-                return clampServo(RightFeederConfig.loadPosition);
+                return clampServo(rightFeederConfig.loadPosition);
         }
     }
 
     private static double feederFirePositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(LeftFeederConfig.firePosition);
+                return clampServo(leftFeederConfig.firePosition);
             case CENTER:
-                return clampServo(CenterFeederConfig.firePosition);
+                return clampServo(centerFeederConfig.firePosition);
             case RIGHT:
             default:
-                return clampServo(RightFeederConfig.firePosition);
+                return clampServo(rightFeederConfig.firePosition);
         }
     }
 
     private static boolean feederReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return LeftFeederConfig.reversed;
+                return leftFeederConfig.reversed;
             case CENTER:
-                return CenterFeederConfig.reversed;
+                return centerFeederConfig.reversed;
             case RIGHT:
             default:
-                return RightFeederConfig.reversed;
+                return rightFeederConfig.reversed;
         }
     }
 
     private static String motorNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return LeftFlywheelConfig.motorName;
+                return leftFlywheelConfig.motorName;
             case CENTER:
-                return CenterFlywheelConfig.motorName;
+                return centerFlywheelConfig.motorName;
             case RIGHT:
             default:
-                return RightFlywheelConfig.motorName;
+                return rightFlywheelConfig.motorName;
         }
     }
 
     private static boolean motorReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return LeftFlywheelConfig.reversed;
+                return leftFlywheelConfig.reversed;
             case CENTER:
-                return CenterFlywheelConfig.reversed;
+                return centerFlywheelConfig.reversed;
             case RIGHT:
             default:
-                return RightFlywheelConfig.reversed;
+                return rightFlywheelConfig.reversed;
         }
     }
 
     private static String feederNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return LeftFeederConfig.servoName;
+                return leftFeederConfig.servoName;
             case CENTER:
-                return CenterFeederConfig.servoName;
+                return centerFeederConfig.servoName;
             case RIGHT:
             default:
-                return RightFeederConfig.servoName;
+                return rightFeederConfig.servoName;
         }
     }
 
@@ -749,11 +764,11 @@ public class LauncherSubsystem implements Subsystem {
         if (rpm <= 0.0) {
             return 0.0;
         }
-        return rpm * FlywheelParameters.ticksPerRev * FlywheelParameters.gearRatio / 60.0;
+        return rpm * flywheelParameters.ticksPerRev * flywheelParameters.gearRatio / 60.0;
     }
 
     private static double ticksPerSecondToRpm(double ticksPerSecond) {
-        return ticksPerSecond * 60.0 / (FlywheelParameters.ticksPerRev * FlywheelParameters.gearRatio);
+        return ticksPerSecond * 60.0 / (flywheelParameters.ticksPerRev * flywheelParameters.gearRatio);
     }
 
     private static double clampServo(double position) {
@@ -829,7 +844,7 @@ public class LauncherSubsystem implements Subsystem {
         for (LauncherLane lane : LauncherLane.values()) {
             double deadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
             if (deadline > 0.0) {
-                lastCompletionMs = Math.max(lastCompletionMs, deadline - Timing.recoveryMs);
+                lastCompletionMs = Math.max(lastCompletionMs, deadline - timing.recoveryMs);
             }
         }
         return lastCompletionMs;
@@ -1032,15 +1047,15 @@ public class LauncherSubsystem implements Subsystem {
                 return false;
             }
             double error = Math.abs(getCurrentRpm() - launchRpm);
-            if (error <= FlywheelParameters.rpmTolerance) {
+            if (error <= flywheelParameters.rpmTolerance) {
                 return true;
             }
             if (!launchCommandActive) {
                 return false;
             }
             double elapsed = launchTimer.milliseconds();
-            return elapsed >= Timing.fallbackReadyMs
-                    || (elapsed >= Timing.minimalSpinUpMs && commandedRpm >= launchRpm);
+            return elapsed >= timing.fallbackReadyMs
+                    || (elapsed >= timing.minimalSpinUpMs && commandedRpm >= launchRpm);
         }
 
         void updateControl() {
@@ -1058,9 +1073,9 @@ public class LauncherSubsystem implements Subsystem {
             switch (phase) {
                 case BANG:
                     if (getFlywheelControlMode() == FlywheelControlMode.BANG_BANG_HOLD) {
-                        if (absError <= BangBangConfig.exitBangThresholdRpm) {
+                        if (absError <= bangBangConfig.exitBangThresholdRpm) {
                             bangToHoldCounter++;
-                            if (bangToHoldCounter >= Math.max(1, PhaseSwitchConfig.bangToHoldConfirmCycles)) {
+                            if (bangToHoldCounter >= Math.max(1, phaseSwitchConfig.bangToHoldConfirmCycles)) {
                                 phase = ControlPhase.HOLD;
                                 bangToHoldCounter = 0;
                             }
@@ -1069,9 +1084,9 @@ public class LauncherSubsystem implements Subsystem {
                         }
                         bangToHybridCounter = 0;
                     } else {
-                        if (absError <= BangBangConfig.exitBangThresholdRpm) {
+                        if (absError <= bangBangConfig.exitBangThresholdRpm) {
                             bangToHybridCounter++;
-                            if (bangToHybridCounter >= Math.max(1, PhaseSwitchConfig.bangToHybridConfirmCycles)) {
+                            if (bangToHybridCounter >= Math.max(1, phaseSwitchConfig.bangToHybridConfirmCycles)) {
                                 phase = ControlPhase.HYBRID;
                                 bangToHybridCounter = 0;
                             }
@@ -1084,9 +1099,9 @@ public class LauncherSubsystem implements Subsystem {
                     holdToBangCounter = 0;
                     break;
                 case HYBRID:
-                    if (absError >= BangBangConfig.enterBangThresholdRpm) {
+                    if (absError >= bangBangConfig.enterBangThresholdRpm) {
                         hybridToBangCounter++;
-                        if (hybridToBangCounter >= Math.max(1, PhaseSwitchConfig.hybridToBangConfirmCycles)) {
+                        if (hybridToBangCounter >= Math.max(1, phaseSwitchConfig.hybridToBangConfirmCycles)) {
                             phase = ControlPhase.BANG;
                             hybridToBangCounter = 0;
                             bangToHybridCounter = 0;
@@ -1098,9 +1113,9 @@ public class LauncherSubsystem implements Subsystem {
                     holdToBangCounter = 0;
                     break;
                 case HOLD:
-                    if (absError >= BangBangConfig.enterBangThresholdRpm) {
+                    if (absError >= bangBangConfig.enterBangThresholdRpm) {
                         holdToBangCounter++;
-                        if (holdToBangCounter >= Math.max(1, PhaseSwitchConfig.holdToBangConfirmCycles)) {
+                        if (holdToBangCounter >= Math.max(1, phaseSwitchConfig.holdToBangConfirmCycles)) {
                             phase = ControlPhase.BANG;
                             holdToBangCounter = 0;
                             bangToHoldCounter = 0;
@@ -1137,9 +1152,9 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyBangBangControl(double error) {
-            double threshold = Math.max(0.0, BangBangConfig.bangDeadbandRpm);
-            double high = Range.clip(BangBangConfig.highPower, -1.0, 1.0);
-            double low = Range.clip(BangBangConfig.lowPower, -1.0, 1.0);
+            double threshold = Math.max(0.0, bangBangConfig.bangDeadbandRpm);
+            double high = Range.clip(bangBangConfig.highPower, -1.0, 1.0);
+            double low = Range.clip(bangBangConfig.lowPower, -1.0, 1.0);
             if (error > threshold) {
                 motor.setPower(high);
             } else if (error < -threshold) {
@@ -1150,16 +1165,16 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyHybridControl(double error) {
-            double power = HybridPidConfig.kF + HybridPidConfig.kP * error;
-            power = Range.clip(power, 0.0, Math.max(0.0, HybridPidConfig.maxPower));
+            double power = hybridPidConfig.kF + hybridPidConfig.kP * error;
+            power = Range.clip(power, 0.0, Math.max(0.0, hybridPidConfig.maxPower));
             motor.setPower(power);
         }
 
         private void applyHoldControl(double error) {
-            double holdPower = HoldConfig.baseHoldPower + HoldConfig.rpmPowerGain * commandedRpm;
-            holdPower = Range.clip(holdPower, HoldConfig.minHoldPower, HoldConfig.maxHoldPower);
+            double holdPower = holdConfig.baseHoldPower + holdConfig.rpmPowerGain * commandedRpm;
+            holdPower = Range.clip(holdPower, holdConfig.minHoldPower, holdConfig.maxHoldPower);
             if (error < 0.0) {
-                motor.setPower(BangBangConfig.lowPower);
+                motor.setPower(bangBangConfig.lowPower);
             } else {
                 motor.setPower(holdPower);
             }

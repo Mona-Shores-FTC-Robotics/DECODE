@@ -103,4 +103,8 @@ public class Robot {
         vision.setRobotMode(mode);
         launcherCoordinator.setRobotMode(mode);
     }
+
+    public void attachPedroFollower() {
+        drive.attachFollower();
+    }
 }

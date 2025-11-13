@@ -49,8 +49,18 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        addComponents(
+                BulkReadComponent.INSTANCE,
+                new PedroComponent(Constants::createFollower),
+                BindingsComponent.INSTANCE,
+                CommandManager.INSTANCE
+        );
+
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
+
+        robot.attachPedroFollower();
+
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.launcherCoordinator.lockIntake();
 
@@ -66,9 +76,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
 
         addComponents(
-                BulkReadComponent.INSTANCE,
-                BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE,
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
                 new SubsystemComponent(robot.intake),
@@ -203,7 +210,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 "%s (applied %s)%s",
                 robot.intake.getMode(),
                 robot.intake.getResolvedMode(),
-                IntakeSubsystem.ManualModeConfig.enableOverride
+                IntakeSubsystem.manualModeConfig.enableOverride
                         ? " [override]"
                         : "");
         telemetry.addData("Intake power", "%.2f", robot.intake.getCurrentPower());

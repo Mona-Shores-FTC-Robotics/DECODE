@@ -5,6 +5,8 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.bylazar.configurables.annotations.Configurable;
 import Ori.Coval.Logging.AutoLog;
 import Ori.Coval.Logging.AutoLogOutput;
+import Ori.Coval.Logging.AutoLogManager;
+import Ori.Coval.Logging.Logger.KoalaLog;
 
 /**
  * Test OpMode to verify @AutoLog annotation works correctly.
@@ -17,15 +19,31 @@ import Ori.Coval.Logging.AutoLogOutput;
  * - @Configurable parameters editable in Dashboard Config tab
  * - No conflicts between @AutoLog and @Configurable
  */
+@Configurable
 @TeleOp(name="Test AutoLog", group="Test")
 public class TestAutoLogOpMode extends LinearOpMode {
+
+    /**
+     * Tunable configuration parameters for test subsystem.
+     * These should remain separate from logged state.
+     */
+    @Configurable
+    public static class TestConfig {
+        /** Maximum motor power */
+        public double maxPower = 1.0;
+
+        /** P controller gain */
+        public double kP = 0.5;
+    }
+
+    // Public static instance for FTC Dashboard Config tab
+    public static TestConfig config = new TestConfig();
 
     /**
      * Test subsystem with @AutoLog annotation.
      * Use @AutoLogOutput on getter methods to expose values for logging.
      */
     @AutoLog
-    @Configurable
     public static class TestSubsystem {
         // Private state fields
         private double motorPower = 0.0;
@@ -34,25 +52,12 @@ public class TestAutoLogOpMode extends LinearOpMode {
         private String state = "IDLE";
 
         /**
-         * Tunable configuration parameters.
-         * These should remain separate from logged state.
-         */
-        @Configurable
-        public static class TestConfig {
-            /** Maximum motor power */
-            public static double maxPower = 1.0;
-
-            /** P controller gain */
-            public static double kP = 0.5;
-        }
-
-        /**
          * Updates the subsystem state based on power input.
          * @param power Motor power command (-1.0 to 1.0)
          */
         public void update(double power) {
             // Clip power to configured maximum
-            power = Math.max(-TestConfig.maxPower, Math.min(TestConfig.maxPower, power));
+            power = Math.max(-config.maxPower, Math.min(config.maxPower, power));
 
             this.motorPower = power;
             this.encoderPosition += power * 10; // Simulate encoder
@@ -89,6 +94,9 @@ public class TestAutoLogOpMode extends LinearOpMode {
 
     @Override
     public void runOpMode() {
+        // Initialize KoalaLog for WPILOG file logging
+        KoalaLog.setup(hardwareMap);
+
         // Create the auto-logged test subsystem
         TestSubsystemAutoLogged testSubsystem = new TestSubsystemAutoLogged();
 
@@ -120,9 +128,12 @@ public class TestAutoLogOpMode extends LinearOpMode {
             telemetry.addData("State", testSubsystem.getState());
             telemetry.addData("Active", testSubsystem.isActive());
             telemetry.addLine();
-            telemetry.addData("Config kP", TestSubsystem.TestConfig.kP);
-            telemetry.addData("Config maxPower", TestSubsystem.TestConfig.maxPower);
+            telemetry.addData("Config kP", config.kP);
+            telemetry.addData("Config maxPower", config.maxPower);
             telemetry.update();
+
+            // Sample all @AutoLog annotated values for logging
+            AutoLogManager.periodic();
 
             sleep(20);
         }
