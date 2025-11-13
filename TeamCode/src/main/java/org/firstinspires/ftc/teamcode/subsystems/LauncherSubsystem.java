@@ -179,6 +179,38 @@ public class LauncherSubsystem implements Subsystem {
     private LauncherState state = LauncherState.DISABLED;
     private double lastPeriodicMs = 0.0;
 
+    /**
+     * Safely retrieves a motor from the hardware map. Returns null if the motor
+     * is not found or the name is empty, allowing graceful degradation when
+     * hardware is not connected.
+     */
+    private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(DcMotorEx.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * Safely retrieves a servo from the hardware map. Returns null if the servo
+     * is not found or the name is empty, allowing graceful degradation when
+     * hardware is not connected.
+     */
+    private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(Servo.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+    }
+
     public static FlywheelControlMode getFlywheelControlMode() {
         return FlywheelModeConfig.mode;
     }
@@ -912,8 +944,10 @@ public class LauncherSubsystem implements Subsystem {
 
         Flywheel(LauncherLane lane, HardwareMap hardwareMap) {
             this.lane = lane;
-            this.motor = hardwareMap.get(DcMotorEx.class, motorNameFor(lane));
-            configureMotor();
+            this.motor = tryGetMotor(hardwareMap, motorNameFor(lane));
+            if (this.motor != null) {
+                configureMotor();
+            }
         }
 
         void initialize() {
@@ -925,8 +959,10 @@ public class LauncherSubsystem implements Subsystem {
             bangToHoldCounter = 0;
             holdToBangCounter = 0;
             launchTimer.reset();
-            motor.setPower(0.0);
-            lastPositionTicks = motor.getCurrentPosition();
+            if (motor != null) {
+                motor.setPower(0.0);
+                lastPositionTicks = motor.getCurrentPosition();
+            }
             lastSampleTimeMs = clock.milliseconds();
             estimatedTicksPerSec = 0.0;
         }
@@ -956,7 +992,7 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         double getAppliedPower() {
-            return motor.getPower();
+            return motor == null ? 0.0 : motor.getPower();
         }
 
         String getPhaseName() {
@@ -986,6 +1022,10 @@ public class LauncherSubsystem implements Subsystem {
 
         void updateControl() {
             updateVelocityEstimate();
+
+            if (motor == null) {
+                return;
+            }
 
             if (commandedRpm <= 0.0) {
                 motor.setPower(0.0);
@@ -1117,6 +1157,9 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void updateVelocityEstimate() {
+            if (motor == null) {
+                return;
+            }
             double nowMs = clock.milliseconds();
             int position = motor.getCurrentPosition();
             if (!Double.isNaN(lastSampleTimeMs)) {
@@ -1140,32 +1183,42 @@ public class LauncherSubsystem implements Subsystem {
 
         Feeder(LauncherLane lane, HardwareMap hardwareMap) {
             this.lane = lane;
-            this.servo = hardwareMap.get(Servo.class, feederNameFor(lane));
-            if (feederReversedFor(lane)) {
-                servo.setDirection(Servo.Direction.REVERSE);
-            } else {
-                servo.setDirection(Servo.Direction.FORWARD);
+            this.servo = tryGetServo(hardwareMap, feederNameFor(lane));
+            if (this.servo != null) {
+                if (feederReversedFor(lane)) {
+                    servo.setDirection(Servo.Direction.REVERSE);
+                } else {
+                    servo.setDirection(Servo.Direction.FORWARD);
+                }
             }
         }
 
         void initialize() {
             busy = false;
-            servo.setPosition(feederLoadPositionFor(lane));
+            if (servo != null) {
+                servo.setPosition(feederLoadPositionFor(lane));
+            }
         }
 
         void fire() {
-            servo.setPosition(feederFirePositionFor(lane));
-            busy = true;
-            timer.reset();
+            if (servo != null) {
+                servo.setPosition(feederFirePositionFor(lane));
+                busy = true;
+                timer.reset();
+            }
         }
 
         void stop() {
-            servo.setPosition(feederLoadPositionFor(lane));
+            if (servo != null) {
+                servo.setPosition(feederLoadPositionFor(lane));
+            }
             busy = false;
         }
 
         void toLoadPosition() {
-            servo.setPosition(feederLoadPositionFor(lane));
+            if (servo != null) {
+                servo.setPosition(feederLoadPositionFor(lane));
+            }
             busy = false;
         }
 
@@ -1174,7 +1227,9 @@ public class LauncherSubsystem implements Subsystem {
                 return;
             }
             if (timer.milliseconds() >= feederHoldMsFor(lane)) {
-                servo.setPosition(feederLoadPositionFor(lane));
+                if (servo != null) {
+                    servo.setPosition(feederLoadPositionFor(lane));
+                }
                 busy = false;
             }
         }
