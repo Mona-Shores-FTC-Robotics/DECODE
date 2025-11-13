@@ -68,7 +68,7 @@ The scaffold includes the FTC Dashboard library (`ftc-dashboard 0.4.8`).  To vie
 3. Select the **Telemetry** tab to see live numbers for the drive inputs, pose, target RPM and current RPM.
 4. Expand the **Graph** section to plot variables over time (e.g., flywheel RPM vs. target RPM).
 
-AdvantageScope can connect to the same data stream via the NetworkTables 4 protocol.  Add a new **NT4** source using the Robot Controller’s address and watch the 2D field plot update as your robot moves (even in DevSim).  This is a great way to tune heading gains and verify autonomous paths.
+AdvantageScope Lite can connect to the robot via FTC Dashboard packets for real-time visualization, providing live 2D field plots and telemetry graphs during testing. For offline analysis, use WPILOG files retrieved via LogPuller.
 
 ## Adding Pedro and NextFTC
 
