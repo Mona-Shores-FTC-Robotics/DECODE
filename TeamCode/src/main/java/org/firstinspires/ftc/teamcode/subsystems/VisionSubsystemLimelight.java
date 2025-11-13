@@ -52,6 +52,15 @@ public class VisionSubsystemLimelight implements Subsystem {
     private double lastPeriodicMs = 0.0;
     private RobotMode robotMode = RobotMode.DEBUG;
 
+    // Throttle vision polling to 20Hz (50ms) instead of every loop
+    private static final long VISION_POLL_INTERVAL_MS = 50L;
+    private long lastVisionPollTimeMs = 0L;
+
+    // Cache snapshot staleness check to avoid redundant System.currentTimeMillis() calls
+    // in multiple @AutoLogOutput methods each loop
+    private boolean snapshotStaleCache = false;
+    private long lastStaleCacheUpdateMs = 0L;
+
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
         this(hardwareMap, null);
     }
@@ -71,8 +80,24 @@ public class VisionSubsystemLimelight implements Subsystem {
     @Override
     public void periodic() {
         long start = System.nanoTime();
-        updateLatestSnapshot();
+        long nowMs = System.currentTimeMillis();
+
+        // Throttle Limelight polling to 20Hz (50ms) to reduce loop time
+        if (nowMs - lastVisionPollTimeMs >= VISION_POLL_INTERVAL_MS) {
+            updateLatestSnapshot();
+            lastVisionPollTimeMs = nowMs;
+        }
+
+        // Update staleness cache once per loop for use by @AutoLogOutput methods
+        // This avoids 16+ redundant System.currentTimeMillis() calls in logging
+        updateStalenessCache(nowMs);
+
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    private void updateStalenessCache(long nowMs) {
+        snapshotStaleCache = lastSnapshotTimestampMs > 0L && (nowMs - lastSnapshotTimestampMs) > ODOMETRY_RESET_TIMEOUT_MS;
+        lastStaleCacheUpdateMs = nowMs;
     }
 
     public void stop() {
@@ -235,8 +260,14 @@ public class VisionSubsystemLimelight implements Subsystem {
         if (lastSnapshot == null) {
             return;
         }
-        long now = System.currentTimeMillis();
-        if (now - lastSnapshotTimestampMs > ODOMETRY_RESET_TIMEOUT_MS) {
+        // Use cached staleness check if recently updated (avoids redundant time calls)
+        boolean isStale;
+        if (System.currentTimeMillis() - lastStaleCacheUpdateMs < 5L) {
+            isStale = snapshotStaleCache;
+        } else {
+            isStale = lastSnapshotTimestampMs > 0L && (System.currentTimeMillis() - lastSnapshotTimestampMs) > ODOMETRY_RESET_TIMEOUT_MS;
+        }
+        if (isStale) {
             odometryUpdatePending = false;
             lastSnapshot = null;
             lastRobotPose = null;
