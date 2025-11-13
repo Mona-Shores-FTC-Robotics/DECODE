@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(gradlew.bat :TeamCode:compileDebugJavaWithJavac:*)",
+      "Bash(cmd /c \"gradlew.bat :TeamCode:compileDebugJavaWithJavac --console=plain\")",
+      "Bash(cmd /c \"echo off && set ADB_PATH=%LOCALAPPDATA%\\Android\\Sdk\\platform-tools\\adb.exe && echo Checking log directories on robot... && echo. && echo === PsiKit Logs (Our CSV logs): === && %ADB_PATH% shell ls -lh /sdcard/FIRST/PsiKitLogs/ 2>&1 && echo. && echo === RoadRunner Logs (Old, different format): === && %ADB_PATH% shell ls -lh /storage/emulated/0/RoadRunner/logs/ 2>&1\")",
+      "Bash(cmd /c \"%LOCALAPPDATA%\\Android\\Sdk\\platform-tools\\adb.exe shell ls -lh /storage/emulated/0/RoadRunner/logs/\")",
+      "WebFetch(domain:github.com)",
+      "Bash(dir /b)",
+      "WebFetch(domain:docs.advantagescope.org)",
+      "WebFetch(domain:rr.brott.dev)",
+      "WebSearch",
+      "WebFetch(domain:www.chiefdelphi.com)",
+      "WebFetch(domain:docs.seattlesolvers.com)"
     ],
     "deny": [],
     "ask": []

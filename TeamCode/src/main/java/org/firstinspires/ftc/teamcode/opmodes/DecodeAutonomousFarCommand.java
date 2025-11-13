@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -10,9 +11,7 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeUntilFullCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinHoldCommand;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
@@ -241,29 +240,61 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
      * Creates a path following command
      */
     private Command followPath(Pose startPose, Pose endPose, Pose... controlPoints) {
-        PathChain path;
+        PathChain path = buildPath(robot.drive.getFollower(), startPose, endPose, controlPoints);
+        double maxPower = Range.clip(AutoMotionConfig.maxPathPower, 0.0, 1.0);
+        return new FollowPath(path, false, maxPower);
+    }
+
+    /**
+     * Builds a PathChain from start to end with optional control points.
+     * This is public static so test OpModes can visualize the same paths.
+     */
+    public static PathChain buildPath(Follower follower, Pose startPose, Pose endPose, Pose... controlPoints) {
         if (controlPoints.length > 0) {
             // Curved path with control points
-            path = robot.drive.getFollower().pathBuilder()
+            return follower.pathBuilder()
                     .addPath(new BezierCurve(startPose, controlPoints[0], endPose))
                     .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), 0.7)
                     .build();
         } else {
             // Straight line
-            path = robot.drive.getFollower().pathBuilder()
+            return follower.pathBuilder()
                     .addPath(new BezierLine(startPose, endPose))
                     .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), 0.7)
                     .build();
         }
+    }
 
-        double maxPower = Range.clip(AutoMotionConfig.maxPathPower, 0.0, 1.0);
-        return new FollowPath(path, false, maxPower);
+    /**
+     * Builds all paths for the autonomous routine for visualization.
+     * Returns an array of PathChains in order: [startToLaunch, launchToWall, wallToLaunch,
+     * launchToParking, parkingToLaunch, launchToGate, gateToLaunch]
+     */
+    public static PathChain[] buildAllPathsForVisualization(Follower follower, Alliance alliance) {
+        FieldLayout layout = AutoField.layoutForAlliance(alliance);
+
+        Pose startFarPose = layout.pose(FieldPoint.START_FAR);
+        Pose launchFarPose = layout.pose(FieldPoint.LAUNCH_FAR);
+        Pose allianceWallPose = layout.pose(FieldPoint.ALLIANCE_WALL_ARTIFACTS_PICKUP);
+        Pose parking90DegPose = layout.pose(FieldPoint.PARKING_ARTIFACTS_PICKUP_90_DEG);
+        Pose gateFar90DegPose = layout.pose(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_90_DEG);
+        Pose parkingControlPoint = AutoField.parkingArtifactsControlPoint(alliance);
+        Pose gateFarControlPoint = AutoField.gateFarArtifactsControlPoint(alliance);
+
+        return new PathChain[] {
+            buildPath(follower, startFarPose, launchFarPose),
+            buildPath(follower, launchFarPose, allianceWallPose),
+            buildPath(follower, allianceWallPose, launchFarPose),
+            buildPath(follower, launchFarPose, parking90DegPose, parkingControlPoint),
+            buildPath(follower, parking90DegPose, launchFarPose),
+            buildPath(follower, launchFarPose, gateFar90DegPose, gateFarControlPoint),
+            buildPath(follower, gateFar90DegPose, launchFarPose)
+        };
     }
 
 
     private void applyAlliance(Alliance alliance, Pose startOverride) {
-        Alliance safeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
-        activeAlliance = safeAlliance;
+        activeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
         robot.setAlliance(activeAlliance);
         robot.logger.updateAlliance(activeAlliance);
 

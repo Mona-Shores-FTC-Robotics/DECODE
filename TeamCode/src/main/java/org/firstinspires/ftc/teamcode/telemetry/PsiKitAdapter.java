@@ -7,42 +7,37 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * A very simple logger intended to mimic the behaviour of the PsiKit library.
+ * CSV logger that writes in AdvantageScope-compatible long format.
  *
- * <p>This adapter writes a CSV file to persistent storage on the robot.  Each
- * record contains the system time in milliseconds, a key and a value.  The
- * format is intentionally simple so that it can be imported into
- * AdvantageScope as a CSV log.  By matching the key names used in
- * {@link TelemetryPublisher} you can visualise the same values live in the
- * dashboard and offline in AdvantageScope.  If you integrate the actual
- * PsiKit library later, you can swap this implementation without changing
- * calling code.</p>
+ * Format: Timestamp,Key,Value
+ * - Timestamp in seconds (not milliseconds)
+ * - One row per value
  */
 public class PsiKitAdapter {
 
     private FileWriter writer;
     private boolean active;
+    private long startTimeMs;
 
     /**
-     * Starts a new logging session.  Creates a directory on the SD card and
-     * opens a CSV file named with the current timestamp.  If called again
-     * while a session is active the existing session will be closed first.
+     * Starts a new logging session.
      */
     public void startSession() {
         stopSession();
         try {
-            // Create a directory under FIRST for logs
-            File logDir = new File("/sdcard/FIRST/PsiKitLogs");
+            // Use RoadRunner logs directory - same path AdvantageScope already knows about
+            File logDir = new File("/storage/emulated/0/RoadRunner/logs");
             if (!logDir.exists() && !logDir.mkdirs()) {
-                // If we cannot create the directory, disable logging
                 return;
             }
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            // Use .csv extension for CSV format (not .log which is for Road Runner binary format)
             File logFile = new File(logDir, "log_" + timestamp + ".csv");
             writer = new FileWriter(logFile);
-            // CSV header
-            writer.write("time_ms,key,value\n");
+            // AdvantageScope requires EXACTLY these column names (capitalized)
+            writer.write("Timestamp,Key,Value\n");
             writer.flush();
+            startTimeMs = System.currentTimeMillis();
             active = true;
         } catch (IOException e) {
             e.printStackTrace();
@@ -51,16 +46,14 @@ public class PsiKitAdapter {
     }
 
     /**
-     * Records a numeric value.  Values are written with millisecond timestamps.
-     *
-     * @param key the name of the metric
-     * @param value the value to record
+     * Records a numeric value.
      */
     public void recordNumber(String key, double value) {
         if (!active) return;
         try {
-            long time = System.currentTimeMillis();
-            writer.write(time + "," + key + "," + value + "\n");
+            // Timestamp in SECONDS (not milliseconds)
+            double timestampSec = (System.currentTimeMillis() - startTimeMs) / 1000.0;
+            writer.write(String.format("%.3f,%s,%s\n", timestampSec, key, value));
         } catch (IOException e) {
             e.printStackTrace();
             active = false;
@@ -68,28 +61,30 @@ public class PsiKitAdapter {
     }
 
     /**
-     * Records a boolean value.  Booleans are encoded as 1 or 0.
-     *
-     * @param key the name of the metric
-     * @param value the value to record
+     * Records a boolean value (true or false, not 1/0).
      */
     public void recordBoolean(String key, boolean value) {
-        recordNumber(key, value ? 1.0 : 0.0);
+        if (!active) return;
+        try {
+            double timestampSec = (System.currentTimeMillis() - startTimeMs) / 1000.0;
+            // AdvantageScope wants "true" or "false" strings for booleans
+            writer.write(String.format("%.3f,%s,%s\n", timestampSec, key, value ? "true" : "false"));
+        } catch (IOException e) {
+            e.printStackTrace();
+            active = false;
+        }
     }
 
     /**
-     * Records a string value.  Strings are quoted to preserve commas.
-     *
-     * @param key the name of the metric
-     * @param value the string to record
+     * Records a string value (quoted).
      */
     public void recordString(String key, String value) {
         if (!active) return;
         try {
-            long time = System.currentTimeMillis();
-            // Wrap string in quotes and escape any quotes inside
+            double timestampSec = (System.currentTimeMillis() - startTimeMs) / 1000.0;
+            // Escape quotes and wrap in quotes
             String safe = value.replace("\"", "\"\"");
-            writer.write(time + "," + key + ",\"" + safe + "\"\n");
+            writer.write(String.format("%.3f,%s,\"%s\"\n", timestampSec, key, safe));
         } catch (IOException e) {
             e.printStackTrace();
             active = false;
@@ -97,9 +92,7 @@ public class PsiKitAdapter {
     }
 
     /**
-     * Flushes the underlying writer to ensure that all buffered data is
-     * persisted to disk.  Flushing frequently can reduce the risk of data
-     * loss on crash at the expense of performance.
+     * Flushes buffered data to disk.
      */
     public void flush() {
         try {
@@ -113,8 +106,7 @@ public class PsiKitAdapter {
     }
 
     /**
-     * Stops the current session and closes the file.  Subsequent records will
-     * be ignored until a new session is started.
+     * Stops the session and closes the file.
      */
     public void stopSession() {
         try {

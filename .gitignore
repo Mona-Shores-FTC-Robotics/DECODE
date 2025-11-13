@@ -32,6 +32,7 @@ proguard/
 
 # Log Files
 *.log
+logs/  # Downloaded robot telemetry logs (CSV files from PsiKitAdapter)
 
 # Android Studio Navigation editor temp files
 .navigation/
