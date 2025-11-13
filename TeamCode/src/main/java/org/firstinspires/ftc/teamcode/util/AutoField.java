@@ -33,37 +33,29 @@ public final class AutoField {
     public static class Waypoints {
         public static double fieldWidthIn = 144.0;
 
-        /** Starting position for far side autonomous */
+        // Start position
         public static Pose start = new Pose(56, 8, Math.toRadians(90.0));
 
-        /** Launch position for far side */
+        // Launch Far position
         public static Pose launchFar = new Pose(55, 17.3, Math.toRadians(109.0));
 
-        /** Launch position for close side */
+        // Launch Close position
         public static Pose launchClose = new Pose(21.5, 124, Math.toRadians(324));
 
-        /** Alliance wall artifacts pickup position */
+        // Alliance Wall Artifacts position
         public static Pose allianceWallArtifacts = new Pose(8, 8, Math.toRadians(180));
 
-        /** Parking artifacts pickup position (90° orientation) */
+        // Parking Artifacts positions (two orientations)
         public static Pose parkingArtifacts90 = new Pose(23, 32, Math.toRadians(90.0));
-
-        /** Parking artifacts pickup position (270° orientation) */
         public static Pose parkingArtifacts270 = new Pose(23, 32, Math.toRadians(270));
-
-        /** Control point for parking artifacts path */
         public static Pose parkingArtifactsControlPoint = new Pose(28, 2, 0);
 
-        /** Gate far artifacts pickup position (90° orientation) */
+        // Gate Far positions (two orientations)
         public static Pose gateFar90 = new Pose(24, 56, Math.toRadians(90.0));
-
-        /** Gate far artifacts pickup position (270° orientation) */
         public static Pose gateFar270 = new Pose(24, 56, Math.toRadians(270));
-
-        /** Control point for gate far path */
         public static Pose gateFarControlPoint = new Pose(22, 29, 0);
 
-        /** Gate close artifacts pickup position */
+        // Gate Close position
         public static Pose gateClose = new Pose(24, 87, Math.toRadians(270)); // Why was 6 afraid of 7? Because 7 ate 9!
     }
 
