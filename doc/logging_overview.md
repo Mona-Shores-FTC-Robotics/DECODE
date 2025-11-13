@@ -1,11 +1,12 @@
 # Logging & Telemetry Overview
 
 ## Live Streaming Architecture
-- `RobotLogger` owns the pipeline for AdvantageScope Lite live streaming
+- `RobotLogger` collects subsystem Inputs data via reflection and stores topics in a Map
 - Each subsystem exposes an `Inputs` data class (`DriveSubsystem.Inputs`, `LauncherSubsystem.Inputs`, etc.)
 - During each loop, `Robot` calls `populateInputs(...)` for every subsystem and forwards the result to `RobotLogger.logInputs(...)`
-- `RobotLogger` reflects over the fields and publishes numbers/booleans/strings under `Subsystem/field` topics
-- AdvantageScope Lite connects via FTC Dashboard packets for real-time visualization
+- `RobotLogger` reflects over the fields and stores numbers/booleans/strings under `Subsystem/field` topics
+- `TelemetryService` retrieves all topics from `RobotLogger` and publishes them to FTC Dashboard packets
+- AdvantageScope desktop app connects to FTC Dashboard for real-time visualization of all topics
 - Pedro tuning OpModes still use FTControl Panels directly; logging updates do not touch `pedroPathing/*`
 - Utility subsystems outside `Robot` (e.g. `LauncherCoordinator`, `VisionSubsystemLimelight`) can opt into the pipeline
 
@@ -19,7 +20,7 @@
 ## Extending A Subsystem
 1. Add a new public field to that subsystem's `Inputs` class (keep it primitive/enum/string where possible)
 2. Populate it inside `populateInputs(...)`
-3. AdvantageScope Lite automatically discovers the new topic the next time you run the OpMode
+3. Topic automatically appears in FTC Dashboard (and AdvantageScope desktop) as `Subsystem/fieldName`
 4. Field is also automatically logged to WPILOG files via KoalaLog
 
 ## Configuration & Toggles

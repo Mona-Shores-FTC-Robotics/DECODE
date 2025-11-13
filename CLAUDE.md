@@ -76,9 +76,9 @@ DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. I
 - `Alliance.java`, `RobotMode.java`, `ArtifactColor.java`: Enums for robot state
 
 **Telemetry (`telemetry/`):**
-- `RobotLogger.java`: Central logging pipeline for AdvantageScope Lite
+- `RobotLogger.java`: Collects subsystem Inputs and stores topics for FTC Dashboard
 - `TelemetryService.java`: Unified telemetry service
-- `AdvLogger.java`: Advanced logging utilities
+- `TelemetryPublisher.java`: Publishes telemetry to FullPanels
 - `TelemetrySettings.java`: Global logging toggles
 
 ### Key Architectural Patterns

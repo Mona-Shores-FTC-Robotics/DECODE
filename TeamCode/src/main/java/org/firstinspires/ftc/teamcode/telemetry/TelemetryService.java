@@ -380,7 +380,8 @@ public class TelemetryService {
                     rightHybrid,
                     leftBangToHoldCount,
                     centerBangToHoldCount,
-                    rightBangToHoldCount
+                    rightBangToHoldCount,
+                    logger
             );
             lastDashboardPacketMs = nowMs;
         }
@@ -454,7 +455,8 @@ public class TelemetryService {
                                      boolean rightHybrid,
                                      int leftBangToHoldCount,
                                      int centerBangToHoldCount,
-                                     int rightBangToHoldCount) {
+                                     int rightBangToHoldCount,
+                                     RobotLogger logger) {
         if (!enableDashboardTelemetry || dashboard == null) {
             return;
         }
@@ -578,6 +580,22 @@ public class TelemetryService {
             overlay.setStrokeWidth(2);
             overlay.strokeCircle(visionPoseXIn, visionPoseYIn, 2.0);
             overlay.strokeLine(visionPoseXIn, visionPoseYIn, visionEndX, visionEndY);
+        }
+
+        // Add all subsystem Inputs topics from RobotLogger
+        if (logger != null) {
+            Map<String, Object> topics = logger.collectAllTopics();
+            for (Map.Entry<String, Object> entry : topics.entrySet()) {
+                Object value = entry.getValue();
+                if (value instanceof Number) {
+                    packet.put(entry.getKey(), ((Number) value).doubleValue());
+                } else if (value instanceof Boolean) {
+                    packet.put(entry.getKey(), (Boolean) value);
+                } else if (value instanceof String) {
+                    packet.put(entry.getKey(), (String) value);
+                }
+            }
+            logger.clearTopics();
         }
 
         dashboard.sendTelemetryPacket(packet);
