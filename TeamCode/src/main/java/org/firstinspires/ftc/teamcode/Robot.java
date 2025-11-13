@@ -15,9 +15,8 @@ import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.telemetry.RobotLogger;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
-import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
-import koalog.KoalaLog;
+import Ori.Coval.Logging.Logger.KoalaLog;
 
 public class Robot {
     public final DriveSubsystem drive;

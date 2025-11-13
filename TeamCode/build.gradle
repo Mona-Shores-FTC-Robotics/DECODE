@@ -43,8 +43,6 @@ dependencies {
     implementation 'dev.nextftc:bindings:1.0.1'
     implementation 'dev.nextftc.extensions:pedro:1.0.0'
 
-
-
     // Pedro Pathing
     implementation('com.pedropathing:ftc:2.0.4')
     implementation('com.pedropathing:telemetry:1.0.0')
@@ -60,7 +58,7 @@ dependencies {
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
 
     // KoalaLog for WPILOG file logging
-    implementation 'com.github.Koala-Log.Koala-Log:KoalaLogger:1.4.0'
-    annotationProcessor 'com.github.Koala-Log.Koala-Log:KoalaLoggingProcessor:1.4.0'
+    implementation 'com.github.ori-coval.Koala-Log:KoalaLogger:1.4.0'
+    annotationProcessor 'com.github.ori-coval.Koala-Log:KoalaLoggingProcessor:1.4.0'
 
 }
