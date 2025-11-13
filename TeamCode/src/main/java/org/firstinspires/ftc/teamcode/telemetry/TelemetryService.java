@@ -373,7 +373,22 @@ public class TelemetryService {
      * @param key The telemetry key
      * @param value The value to log (can be any type: double, String, boolean, int, etc.)
      */
-    private void log(TelemetryPacket packet, String key, Object value) {
+    private void log(TelemetryPacket packet, String key, Boolean value) {
+        packet.put(key, value);
+        KoalaLog.log(key, value, true);
+    }
+
+    private void log(TelemetryPacket packet, String key, String value) {
+        packet.put(key, value);
+        KoalaLog.log(key, value, true);
+    }
+
+    private void log(TelemetryPacket packet, String key, Double value) {
+        packet.put(key, value);
+        KoalaLog.log(key, value, true);
+    }
+
+    private void log(TelemetryPacket packet, String key, int value) {
         packet.put(key, value);
         KoalaLog.log(key, value, true);
     }
