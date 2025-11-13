@@ -12,7 +12,7 @@
             <goBILDA5202SeriesMotor name="lb" port="3"/>
 
             <!-- Control Hub Servos (Feeders and Indicators) -->
-            <Servo name="indicator_leokayft" port="0"/>
+            <Servo name="indicator_left" port="0"/>
             <Servo name="feeder_left" port="1"/>
             <Servo name="indicator_center" port="2"/>
             <Servo name="feeder_center" port="3"/>
