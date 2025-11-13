@@ -10,6 +10,8 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.geometry.Pose;
 
+import Ori.Coval.Logging.Logger.KoalaLog;
+
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -365,6 +367,38 @@ public class TelemetryService {
     }
 
     /**
+     * Helper method to log a double value to both FTC Dashboard and KoalaLog.
+     */
+    private void logDouble(TelemetryPacket packet, String key, double value) {
+        packet.put(key, value);
+        KoalaLog.logDouble(key, value);
+    }
+
+    /**
+     * Helper method to log a string value to both FTC Dashboard and KoalaLog.
+     */
+    private void logString(TelemetryPacket packet, String key, String value) {
+        packet.put(key, value);
+        KoalaLog.logString(key, value);
+    }
+
+    /**
+     * Helper method to log a boolean value to both FTC Dashboard and KoalaLog.
+     */
+    private void logBoolean(TelemetryPacket packet, String key, boolean value) {
+        packet.put(key, value);
+        KoalaLog.logBoolean(key, value);
+    }
+
+    /**
+     * Helper method to log an integer value to both FTC Dashboard and KoalaLog.
+     */
+    private void logInteger(TelemetryPacket packet, String key, int value) {
+        packet.put(key, value);
+        KoalaLog.logInt(key, value);
+    }
+
+    /**
      * Sends a telemetry packet to the FTC Dashboard.
      */
     private void sendDashboardPacket(DriveSubsystem drive,
@@ -433,91 +467,91 @@ public class TelemetryService {
         }
 
         TelemetryPacket packet = new TelemetryPacket();
-        packet.put("runtimeSec", runtimeSec);
-        packet.put("drive/requestX", requestX);
-        packet.put("drive/requestY", requestY);
-        packet.put("drive/requestRot", requestRot);
-        packet.put("drive/slowMode", slowMode);
-        packet.put("drive/aimMode", aimMode);
-        packet.put("drive/mode", drive.getDriveMode().name());
-        packet.put("drive/commandTurn", drive.getLastCommandTurn());
-        packet.put("drive/lfPower", drive.getLfPower());
-        packet.put("drive/rfPower", drive.getRfPower());
-        packet.put("drive/lbPower", drive.getLbPower());
-        packet.put("drive/rbPower", drive.getRbPower());
+        logDouble(packet, "runtimeSec", runtimeSec);
+        logDouble(packet, "drive/requestX", requestX);
+        logDouble(packet, "drive/requestY", requestY);
+        logDouble(packet, "drive/requestRot", requestRot);
+        logBoolean(packet, "drive/slowMode", slowMode);
+        logBoolean(packet, "drive/aimMode", aimMode);
+        logString(packet, "drive/mode", drive.getDriveMode().name());
+        logDouble(packet, "drive/commandTurn", drive.getLastCommandTurn());
+        logDouble(packet, "drive/lfPower", drive.getLfPower());
+        logDouble(packet, "drive/rfPower", drive.getRfPower());
+        logDouble(packet, "drive/lbPower", drive.getLbPower());
+        logDouble(packet, "drive/rbPower", drive.getRbPower());
 
         double lfVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getLfVelocityTicksPerSec()));
         double rfVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getRfVelocityTicksPerSec()));
         double lbVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getLbVelocityTicksPerSec()));
         double rbVelIps = DistanceUnit.METER.toInches(Constants.Speed.ticksPerSecToMps(drive.getRbVelocityTicksPerSec()));
-        packet.put("drive/lfVelIps", lfVelIps);
-        packet.put("drive/rfVelIps", rfVelIps);
-        packet.put("drive/lbVelIps", lbVelIps);
-        packet.put("drive/rbVelIps", rbVelIps);
+        logDouble(packet, "drive/lfVelIps", lfVelIps);
+        logDouble(packet, "drive/rfVelIps", rfVelIps);
+        logDouble(packet, "drive/lbVelIps", lbVelIps);
+        logDouble(packet, "drive/rbVelIps", rbVelIps);
 
 
 
-        packet.put("launcher/ready", launcherReady);
-        packet.put("launcher/controlMode", controlMode);
-        packet.put("launcher/state", launcherState);
-        packet.put("launcher/spinMode", launcherSpinMode);
-        packet.put("launcher/left/targetRpm", leftTargetRpm);
-        packet.put("launcher/left/currentRpm", leftCurrentRpm);
-        packet.put("launcher/left/power", leftPower);
-        packet.put("launcher/left/ready", leftReady);
-        packet.put("launcher/center/targetRpm", centerTargetRpm);
-        packet.put("launcher/center/currentRpm", centerCurrentRpm);
-        packet.put("launcher/center/power", centerPower);
-        packet.put("launcher/center/ready", centerReady);
-        packet.put("launcher/right/targetRpm", rightTargetRpm);
-        packet.put("launcher/right/currentRpm", rightCurrentRpm);
-        packet.put("launcher/right/power", rightPower);
-        packet.put("launcher/right/ready", rightReady);
-        packet.put("launcher/left/phase", leftPhase);
-        packet.put("launcher/center/phase", centerPhase);
-        packet.put("launcher/right/phase", rightPhase);
-        packet.put("launcher/left/isBang", leftBang);
-        packet.put("launcher/left/isHold", leftHold);
-        packet.put("launcher/left/isHybrid", leftHybrid);
-        packet.put("launcher/center/isBang", centerBang);
-        packet.put("launcher/center/isHold", centerHold);
-        packet.put("launcher/center/isHybrid", centerHybrid);
-        packet.put("launcher/right/isBang", rightBang);
-        packet.put("launcher/right/isHold", rightHold);
-        packet.put("launcher/right/isHybrid", rightHybrid);
-        packet.put("launcher/left/bangToHoldCount", leftBangToHoldCount);
-        packet.put("launcher/center/bangToHoldCount", centerBangToHoldCount);
-        packet.put("launcher/right/bangToHoldCount", rightBangToHoldCount);
+        logBoolean(packet, "launcher/ready", launcherReady);
+        logString(packet, "launcher/controlMode", controlMode);
+        logString(packet, "launcher/state", launcherState);
+        logString(packet, "launcher/spinMode", launcherSpinMode);
+        logDouble(packet, "launcher/left/targetRpm", leftTargetRpm);
+        logDouble(packet, "launcher/left/currentRpm", leftCurrentRpm);
+        logDouble(packet, "launcher/left/power", leftPower);
+        logBoolean(packet, "launcher/left/ready", leftReady);
+        logDouble(packet, "launcher/center/targetRpm", centerTargetRpm);
+        logDouble(packet, "launcher/center/currentRpm", centerCurrentRpm);
+        logDouble(packet, "launcher/center/power", centerPower);
+        logBoolean(packet, "launcher/center/ready", centerReady);
+        logDouble(packet, "launcher/right/targetRpm", rightTargetRpm);
+        logDouble(packet, "launcher/right/currentRpm", rightCurrentRpm);
+        logDouble(packet, "launcher/right/power", rightPower);
+        logBoolean(packet, "launcher/right/ready", rightReady);
+        logString(packet, "launcher/left/phase", leftPhase);
+        logString(packet, "launcher/center/phase", centerPhase);
+        logString(packet, "launcher/right/phase", rightPhase);
+        logBoolean(packet, "launcher/left/isBang", leftBang);
+        logBoolean(packet, "launcher/left/isHold", leftHold);
+        logBoolean(packet, "launcher/left/isHybrid", leftHybrid);
+        logBoolean(packet, "launcher/center/isBang", centerBang);
+        logBoolean(packet, "launcher/center/isHold", centerHold);
+        logBoolean(packet, "launcher/center/isHybrid", centerHybrid);
+        logBoolean(packet, "launcher/right/isBang", rightBang);
+        logBoolean(packet, "launcher/right/isHold", rightHold);
+        logBoolean(packet, "launcher/right/isHybrid", rightHybrid);
+        logInteger(packet, "launcher/left/bangToHoldCount", leftBangToHoldCount);
+        logInteger(packet, "launcher/center/bangToHoldCount", centerBangToHoldCount);
+        logInteger(packet, "launcher/right/bangToHoldCount", rightBangToHoldCount);
         Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
-        packet.put("alliance/id", activeAlliance.name());
+        logString(packet, "alliance/id", activeAlliance.name());
 
         Alliance detectedAlliance = visionAlliance == null ? Alliance.UNKNOWN : visionAlliance;
-        packet.put("vision/alliance", detectedAlliance.name());
-        packet.put("vision/hasTag", visionHasTag);
-        packet.put("vision/tagId", visionTagId);
-        packet.put("vision/rangeIn", visionRangeIn);
-        packet.put("vision/bearingDeg", visionBearingDeg);
-        packet.put("vision/yawDeg", visionYawDeg);
-        packet.put("vision/txDeg", visionTxDeg);
-        packet.put("vision/tyDeg", visionTyDeg);
-        packet.put("vision/targetAreaPercent", visionTaPercent);
-        packet.put("vision/odometryPending", visionOdometryPending);
+        logString(packet, "vision/alliance", detectedAlliance.name());
+        logBoolean(packet, "vision/hasTag", visionHasTag);
+        logInteger(packet, "vision/tagId", visionTagId);
+        logDouble(packet, "vision/rangeIn", visionRangeIn);
+        logDouble(packet, "vision/bearingDeg", visionBearingDeg);
+        logDouble(packet, "vision/yawDeg", visionYawDeg);
+        logDouble(packet, "vision/txDeg", visionTxDeg);
+        logDouble(packet, "vision/tyDeg", visionTyDeg);
+        logDouble(packet, "vision/targetAreaPercent", visionTaPercent);
+        logBoolean(packet, "vision/odometryPending", visionOdometryPending);
 
-        packet.put("Pose/Pose x", poseXIn); // Inches (Pedro frame)
-        packet.put("Pose/Pose y", poseYIn); // Inches (Pedro frame)
-        packet.put("Pose/Pose heading", headingRad); // Radians (Pedro frame)
+        logDouble(packet, "Pose/Pose x", poseXIn); // Inches (Pedro frame)
+        logDouble(packet, "Pose/Pose y", poseYIn); // Inches (Pedro frame)
+        logDouble(packet, "Pose/Pose heading", headingRad); // Radians (Pedro frame)
         if (!Double.isNaN(ftcXIn) && !Double.isNaN(ftcYIn)) {
-            packet.put("Pose/FTC Pose x", ftcXIn); // Inches (FTC frame)
-            packet.put("Pose/FTC Pose y", ftcYIn); // Inches (FTC frame)
+            logDouble(packet, "Pose/FTC Pose x", ftcXIn); // Inches (FTC frame)
+            logDouble(packet, "Pose/FTC Pose y", ftcYIn); // Inches (FTC frame)
         }
         if (!Double.isNaN(ftcHeadingRad)) {
-            packet.put("Pose/FTC Pose heading", ftcHeadingRad); // Radians (FTC frame)
+            logDouble(packet, "Pose/FTC Pose heading", ftcHeadingRad); // Radians (FTC frame)
         }
         if (!Double.isNaN(routineStepOrdinal)) {
-            packet.put("Autonomous/RoutineStep", routineStepOrdinal);
+            logDouble(packet, "Autonomous/RoutineStep", routineStepOrdinal);
         }
         if (routineStepName != null && !routineStepName.isEmpty()) {
-            packet.put("Autonomous/RoutineStepName", routineStepName);
+            logString(packet, "Autonomous/RoutineStepName", routineStepName);
         }
 
         boolean visionPoseValid = visionHasTag
@@ -526,9 +560,9 @@ public class TelemetryService {
                 && !Double.isNaN(visionHeadingRad);
 
         if (visionPoseValid) {
-            packet.put("Pose/Vision Pose x", visionPoseXIn);
-            packet.put("Pose/Vision Pose y", visionPoseYIn);
-            packet.put("Pose/Vision Pose heading", visionHeadingRad);
+            logDouble(packet, "Pose/Vision Pose x", visionPoseXIn);
+            logDouble(packet, "Pose/Vision Pose y", visionPoseYIn);
+            logDouble(packet, "Pose/Vision Pose heading", visionHeadingRad);
         }
 
         Canvas overlay = packet.fieldOverlay();
