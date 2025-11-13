@@ -91,15 +91,16 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
     private final DecodePatternController decodeController = new DecodePatternController();
     private ArtifactColor[] activeDecodePattern = new ArtifactColor[0];
     private boolean opModeStarted;
-
-    @Override
-    public void onInit() {
+    {
         addComponents(
                 BulkReadComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower),
                 BindingsComponent.INSTANCE,
                 CommandManager.INSTANCE
         );
+    }
+    @Override
+    public void onInit() {
 
         BindingManager.reset();
         robot = new Robot(hardwareMap);

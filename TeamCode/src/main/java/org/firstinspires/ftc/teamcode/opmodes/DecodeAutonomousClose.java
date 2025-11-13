@@ -89,15 +89,17 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
     private ArtifactColor[] activeDecodePattern = new ArtifactColor[0];
     private boolean opModeStarted;
 
-    @Override
-    public void onInit() {
+    {
         addComponents(
                 BulkReadComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower),
                 BindingsComponent.INSTANCE,
                 CommandManager.INSTANCE
         );
+    }
 
+    @Override
+    public void onInit() {
         BindingManager.reset();
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);

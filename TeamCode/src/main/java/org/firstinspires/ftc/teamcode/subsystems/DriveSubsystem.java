@@ -34,6 +34,8 @@ import org.firstinspires.ftc.teamcode.util.PoseTransforms;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
+import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+
 
 @Configurable
 @AutoLog
@@ -129,7 +131,7 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public void attachFollower() {
-        this.follower = PedroComponent.follower();  // Get from PedroComponent singleton
+        this.follower = follower();
     }
 
     /**

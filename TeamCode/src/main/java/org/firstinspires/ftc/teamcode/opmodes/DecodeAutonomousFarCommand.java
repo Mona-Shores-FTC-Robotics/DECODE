@@ -76,15 +76,16 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     // AprilTag-based start pose detection
     private Pose lastAppliedStartPosePedro;
     private Pose lastDetectedStartPosePedro;
-
-    @Override
-    public void onInit() {
+    {
         addComponents(
                 BulkReadComponent.INSTANCE,
                 new PedroComponent(Constants::createFollower),
                 BindingsComponent.INSTANCE,
                 CommandManager.INSTANCE
         );
+    }
+    @Override
+    public void onInit() {
 
         BindingManager.reset();
         robot = new Robot(hardwareMap);

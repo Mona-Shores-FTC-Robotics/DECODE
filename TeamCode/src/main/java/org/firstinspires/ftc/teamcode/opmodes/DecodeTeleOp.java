@@ -29,6 +29,8 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+
 
 @TeleOp(name = "Decode TeleOp", group = "TeleOp")
 public class DecodeTeleOp extends NextFTCOpMode {
@@ -46,15 +48,17 @@ public class DecodeTeleOp extends NextFTCOpMode {
     private String visionRelocalizeStatus = "Press A to re-localize";
     private long visionRelocalizeStatusMs = 0L;
 
+    {
+        addComponents(
+                BulkReadComponent.INSTANCE,
+                BindingsComponent.INSTANCE,
+                CommandManager.INSTANCE,
+                new PedroComponent(Constants::createFollower)
+        );
+    }
 
     @Override
     public void onInit() {
-        addComponents(
-                BulkReadComponent.INSTANCE,
-                new PedroComponent(Constants::createFollower),
-                BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE
-        );
 
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
