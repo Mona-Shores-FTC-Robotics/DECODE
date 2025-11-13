@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import static org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger.logStatus;
+
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import Ori.Coval.Logging.AutoLogManager;
@@ -91,6 +93,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onWaitForStart() {
+        logStatus(this, hardwareMap, opModeIsActive());
         BindingManager.update();
         syncVisionDuringInit();
         pushInitTelemetry();
@@ -114,6 +117,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
+        logStatus(this, hardwareMap, opModeIsActive());
         robot.launcherCoordinator.unlockIntake();
         robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
         if (allianceSelector != null) {
@@ -126,6 +130,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
+        logStatus(this, hardwareMap, opModeIsActive());
         long mainLoopStartNs = System.nanoTime();
 
         // Update bindings and command scheduler
@@ -158,6 +163,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         if (allianceSelector != null) {
             allianceSelector.unlockSelection();
         }
+        logStatus(this, hardwareMap, opModeIsActive());
     }
 
     private void publishTelemetryDisplay(Pose2D pose, long nowMs, LoopTiming timing, boolean showDiagnostics) {

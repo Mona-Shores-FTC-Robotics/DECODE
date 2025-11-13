@@ -17,6 +17,7 @@ import com.qualcomm.robotcore.util.RobotLog;
 
 import Ori.Coval.Logging.AutoLog;
 import Ori.Coval.Logging.AutoLogOutput;
+import Ori.Coval.Logging.DoNotLog;
 import Ori.Coval.Logging.Logger.KoalaLog;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.subsystems.Subsystem;
@@ -234,6 +235,7 @@ public class DriveSubsystem implements Subsystem {
         lastAimErrorRad = Double.NaN;
     }
 
+    @DoNotLog
     protected double readCurrentAmps(DcMotorEx motor) {
         if (motor == null) {
             return Double.NaN;

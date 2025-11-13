@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import static org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger.logStatus;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -100,6 +101,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        logStatus(this, hardwareMap, opModeIsActive());
         BindingManager.reset();
         robot = new Robot(hardwareMap);
         robot.setRobotMode(ACTIVE_MODE);
@@ -144,6 +146,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
 
     @Override
     public void onWaitForStart() {
+        logStatus(this, hardwareMap, opModeIsActive());
         BindingManager.update();
 
         // Blend camera detections with any driver override and apply the combined alliance immediately.
@@ -185,6 +188,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
+        logStatus(this, hardwareMap, opModeIsActive());
         BindingManager.reset();
         opModeStarted = true;
         allianceSelector.lockSelection();
@@ -212,6 +216,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
+        logStatus(this, hardwareMap, opModeIsActive());
         autonomousStep();
 
         // Periodic logging for KoalaLog (WPILOG files)
@@ -236,6 +241,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+        logStatus(this, hardwareMap, opModeIsActive());
         opModeStarted = false;
         allianceSelector.unlockSelection();
         BindingManager.reset();
