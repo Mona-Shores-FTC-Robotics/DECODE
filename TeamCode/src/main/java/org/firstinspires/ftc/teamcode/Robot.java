@@ -41,11 +41,11 @@ public class Robot {
     private final VisionSubsystemLimelight.Inputs visionInputs = new VisionSubsystemLimelight.Inputs();
 
     public Robot(HardwareMap hardwareMap) {
-        this(hardwareMap, new TelemetryService(TelemetrySettings.enablePsiKitLogging));
+        this(hardwareMap, new TelemetryService());
     }
 
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
-        telemetry = telemetryService == null ? new TelemetryService(TelemetrySettings.enablePsiKitLogging) : telemetryService;
+        telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
         logger = new RobotLogger(telemetry);
 
         // Initialize KoalaLog for WPILOG file logging

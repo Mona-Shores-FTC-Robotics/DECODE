@@ -76,10 +76,9 @@ DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. I
 - `Alliance.java`, `RobotMode.java`, `ArtifactColor.java`: Enums for robot state
 
 **Telemetry (`telemetry/`):**
-- `RobotLogger.java`: Central logging pipeline for AdvantageScope Lite and PsiKit CSV
+- `RobotLogger.java`: Central logging pipeline for AdvantageScope Lite
 - `TelemetryService.java`: Unified telemetry service
 - `AdvLogger.java`: Advanced logging utilities
-- `PsiKitAdapter.java`: CSV logging adapter for offline replay
 - `TelemetrySettings.java`: Global logging toggles
 
 ### Key Architectural Patterns
@@ -132,20 +131,28 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 
 ## Logging and Telemetry
 
-**Live Telemetry (FTC Dashboard):**
-- Dashboard available at `http://192.168.49.1:8080/dash` when connected to robot WiFi
+### Live Telemetry (During Matches)
+
+**FTC Dashboard:**
+- Web dashboard at `http://192.168.49.1:8080/dash` when connected to robot WiFi
 - All `@Configurable` classes expose tunable parameters on Config tab
-- Live graphs and telemetry on Dashboard
+- Live graphs and telemetry
+- Telemetry packets enable AdvantageScope Lite connection
 
 **AdvantageScope Lite:**
-- NetworkTables 4 streaming to AdvantageScope
-- Connect to robot IP to see live 2D field plot and telemetry
+- Connects to robot via FTC Dashboard for live visualization
+- Streams telemetry data through FTC Dashboard packets (not NetworkTables)
+- View live 2D field plots and subsystem metrics
 - All subsystem inputs automatically published under `Subsystem/field` topics
 
-**PsiKit CSV Logging:**
-- When `TelemetrySettings.enablePsiKitLogging = true`, logs saved to `/sdcard/FIRST/PsiKitLogs/log_*.csv`
-- Drag CSV into AdvantageScope for offline replay
-- Same topics as live telemetry
+**FullPanels (FTControl Panels):**
+- Team-specific live metrics panel
+- Displays detailed subsystem data during operation
+
+**Driver Station:**
+- Standard FTC telemetry display on driver station phone/tablet
+
+### Offline Logging (Post-Match Analysis)
 
 **KoalaLog WPILOG Logging:**
 - Produces `.wpilog` files compatible with AdvantageScope for full-featured offline replay
@@ -167,7 +174,7 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 **Adding New Logged Fields:**
 1. Add public field to subsystem's `Inputs` class (prefer primitives/enums/strings)
 2. Populate in `subsystem.populateInputs(...)`
-3. Field automatically discovered by AdvantageScope Lite and logged to WPILOG files
+3. Field automatically published to AdvantageScope Lite and logged to WPILOG files
 
 ## Coding Conventions
 

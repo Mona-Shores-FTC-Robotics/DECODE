@@ -262,55 +262,35 @@ public class RobotLogger {
     }
 
     private void runWorker() {
-        PsiKitAdapter psiKit = telemetryService.psiKitLogger();
         try {
             while (workerRunning || !queue.isEmpty()) {
                 RobotLogEntry entry = queue.poll(WORKER_POLL_MS, TimeUnit.MILLISECONDS);
                 if (entry == null) {
                     continue;
                 }
-                dispatch(entry, psiKit);
+                dispatch(entry);
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        } finally {
-            if (psiKit != null) {
-                psiKit.flush();
-            }
         }
     }
 
-    private void dispatch(RobotLogEntry entry, PsiKitAdapter psiKit) {
+    private void dispatch(RobotLogEntry entry) {
         switch (entry.type) {
             case NUMBER:
                 AdvLogger.recordNumber(entry.topic, entry.numericValue);
-                if (psiKit != null) {
-                    psiKit.recordNumber(entry.topic, entry.numericValue);
-                }
                 break;
             case BOOLEAN:
                 AdvLogger.recordBoolean(entry.topic, entry.booleanValue);
-                if (psiKit != null) {
-                    psiKit.recordBoolean(entry.topic, entry.booleanValue);
-                }
                 break;
             case STRING:
                 AdvLogger.recordString(entry.topic, entry.stringValue);
-                if (psiKit != null) {
-                    psiKit.recordString(entry.topic, entry.stringValue);
-                }
                 break;
             case EVENT:
                 AdvLogger.recordEvent(entry.topic);
-                if (psiKit != null) {
-                    psiKit.recordString("event/" + entry.subsystem, entry.stringValue);
-                }
                 break;
             case TAG:
                 AdvLogger.tag(entry.key, entry.stringValue);
-                if (psiKit != null) {
-                    psiKit.recordString("meta/" + entry.key, entry.stringValue);
-                }
                 break;
             default:
                 break;

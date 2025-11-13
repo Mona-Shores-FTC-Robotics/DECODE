@@ -26,14 +26,12 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.PoseTransforms;
 
 /**
- * Centralises telemetry output to FTControl Panels, the driver station, and optional PsiKit logging.
+ * Centralises telemetry output to FTControl Panels and the driver station.
  * OpModes create a single instance and share its {@link TelemetryPublisher} across subsystems.
  */
 public class TelemetryService {
 
-    private final boolean enablePsiKitLogging;
     private final boolean enableDashboardTelemetry;
-    private final PsiKitAdapter psiKitLogger;
     private final TelemetryPublisher publisher;
     private final FtcDashboard dashboard;
     private volatile String routineStepName = "";
@@ -48,42 +46,32 @@ public class TelemetryService {
     private static final long PANELS_DRAW_INTERVAL_MS = 50L;
     private static final long DASHBOARD_PACKET_INTERVAL_MS = 50L;
 
-    public TelemetryService(boolean enablePsiKitLogging) {
-        this.enablePsiKitLogging = enablePsiKitLogging;
+    public TelemetryService() {
         this.enableDashboardTelemetry = TelemetrySettings.enableDashboardTelemetry;
-        this.psiKitLogger = enablePsiKitLogging ? new PsiKitAdapter() : null;
-        this.publisher = new TelemetryPublisher(null, psiKitLogger);
+        this.publisher = new TelemetryPublisher(null);
         this.dashboard = enableDashboardTelemetry ? safelyGetDashboard() : null;
     }
 
-    public TelemetryService() {
-        this(false);
-    }
-
     /**
-     * Prepares Panels and (optionally) starts PsiKit logging. Call once when the OpMode starts.
+     * Prepares Panels for telemetry. Call once when the OpMode starts.
      */
     public void startSession() {
         if (!sessionActive) {
             panelsTelemetry = PanelsBridge.preparePanels();
             publisher.setTelemetryManager(panelsTelemetry);
-            if (enablePsiKitLogging && psiKitLogger != null) {
-                psiKitLogger.startSession();
-            }
             sessionActive = true;
         }
     }
 
     /**
-     * Stops any active logging session and flushes resources.
+     * Stops the telemetry session and flushes resources.
      */
     public void stopSession() {
-        if (sessionActive && psiKitLogger != null) {
-            psiKitLogger.stopSession();
+        if (sessionActive) {
+            publisher.setTelemetryManager(null);
+            panelsTelemetry = null;
+            sessionActive = false;
         }
-        publisher.setTelemetryManager(null);
-        panelsTelemetry = null;
-        sessionActive = false;
     }
 
     public TelemetryPublisher publisher() {
@@ -103,14 +91,6 @@ public class TelemetryService {
         // Driver station output is handled directly by the caller.
     }
 
-    /**
-     * Provides access to the optional PsiKit adapter so that background loggers can stream
-     * metrics without blocking the OpMode loop. This will be {@code null} when PsiKit logging
-     * is disabled via {@link TelemetrySettings#enablePsiKitLogging}.
-     */
-    public PsiKitAdapter psiKitLogger() {
-        return psiKitLogger;
-    }
 
     public void publishLoopTelemetry(DriveSubsystem drive,
                                      LauncherSubsystem launcher,
