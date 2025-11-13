@@ -56,6 +56,9 @@ dependencies {
         exclude group: 'org.firstinspires.ftc'
     }
 
+    // AdvantageScope Lite - enables AdvantageScope connection via FTC Dashboard packets
+    implementation("page.j5155.AdvantageScope:lite:v26.0.0")
+
     // KoalaLog for WPILOG file logging
     implementation 'com.github.Koala-Log.Koala-Log:KoalaLogger:1.4.0'
     annotationProcessor 'com.github.Koala-Log.Koala-Log:KoalaLoggingProcessor:1.4.0'
