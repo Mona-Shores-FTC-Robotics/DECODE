@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import static org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger.logStatus;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import Ori.Coval.Logging.AutoLogManager;
@@ -35,10 +36,11 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
 
 @TeleOp(name = "Decode TeleOp", group = "TeleOp")
+@Configurable
 public class DecodeTeleOp extends NextFTCOpMode {
 
-    private static final long TELEMETRY_INTERVAL_NS = 50_000_000L; // 50 ms cadence (~20 Hz)
-    private static final long AUTO_LOG_INTERVAL_MS = 50L; // Throttle AutoLog to 20Hz
+    public static long TELEMETRY_INTERVAL_NS = 200_000_000L; // 50 ms cadence (~20 Hz)
+    public static long AUTO_LOG_INTERVAL_MS = 400L; // Throttle AutoLog to 20Hz
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
 
     private Robot robot;

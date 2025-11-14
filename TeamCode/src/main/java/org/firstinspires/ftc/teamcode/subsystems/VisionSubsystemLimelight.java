@@ -27,7 +27,6 @@ import java.util.Optional;
  * Limelight-backed vision subsystem that mirrors the public API of the legacy VisionPortal-based
  * implementation so existing OpModes can switch to Limelight without broader structural changes.
  */
-@AutoLog
 public class VisionSubsystemLimelight implements Subsystem {
 
     private static final long ODOMETRY_RESET_TIMEOUT_MS = 3000L;
@@ -337,7 +336,6 @@ public class VisionSubsystemLimelight implements Subsystem {
         return lastSnapshot == null ? -1 : lastSnapshot.getTagId();
     }
 
-    @AutoLogOutput
     public int getLastSeenTagId() {
         return lastSeenTagId;
     }
@@ -349,58 +347,47 @@ public class VisionSubsystemLimelight implements Subsystem {
                 : Math.max(0.0, System.currentTimeMillis() - lastSnapshotTimestampMs);
     }
 
-    @AutoLogOutput
     public boolean getOdometryUpdatePending() {
         refreshSnapshotIfStale();
         return odometryUpdatePending;
     }
 
-    @AutoLogOutput
     public double getLastPoseXInches() {
         return lastRobotPose != null ? lastRobotPose.getX() : Double.NaN;
     }
 
-    @AutoLogOutput
     public double getLastPoseYInches() {
         return lastRobotPose != null ? lastRobotPose.getY() : Double.NaN;
     }
 
-    @AutoLogOutput
     public double getLastPoseHeadingDeg() {
         return lastRobotPose != null ? Math.toDegrees(lastRobotPose.getHeading()) : Double.NaN;
     }
 
-    @AutoLogOutput
     public double getPoseXInches() {
         return getLastPoseXInches();
     }
 
-    @AutoLogOutput
     public double getPoseYInches() {
         return getLastPoseYInches();
     }
 
-    @AutoLogOutput
     public double getPoseHeadingDeg() {
         return getLastPoseHeadingDeg();
     }
 
-    @AutoLogOutput
     public double getLastTxDegrees() {
         return lastSnapshot != null ? lastSnapshot.getTxDegrees() : Double.NaN;
     }
 
-    @AutoLogOutput
     public double getLastTyDegrees() {
         return lastSnapshot != null ? lastSnapshot.getTyDegrees() : Double.NaN;
     }
 
-    @AutoLogOutput
     public double getLastTaPercent() {
         return lastSnapshot != null ? lastSnapshot.getTargetAreaPercent() : Double.NaN;
     }
 
-    @AutoLogOutput
     public String getAllianceName() {
         return activeAlliance.name();
     }
