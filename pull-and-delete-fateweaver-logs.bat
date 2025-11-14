@@ -1,11 +1,11 @@
 @echo off
-REM Pull fateweaver logs from FTC Robot Control Hub
-REM This script uses ADB to download log files from the robot
+REM Pull and delete fateweaver logs from FTC Robot Control Hub
+REM This script uses ADB to download log files from the robot and then deletes them
 
 setlocal
 
 echo ================================
-echo Fateweaver Log Puller
+echo Fateweaver Log Puller (Pull and Delete)
 echo ================================
 echo.
 
@@ -48,6 +48,23 @@ if %ERRORLEVEL% EQU 0 (
     echo SUCCESS: Logs downloaded to:
     echo %OUTPUT_DIR%
     echo ================================
+    echo.
+    echo Now deleting logs from robot...
+    echo.
+
+    REM Delete all files in the logs directory on the robot
+    adb shell rm -rf %ROBOT_LOG_PATH%/*
+
+    if %ERRORLEVEL% EQU 0 (
+        echo ================================
+        echo SUCCESS: Logs deleted from robot
+        echo ================================
+    ) else (
+        echo ================================
+        echo WARNING: Failed to delete logs from robot
+        echo ================================
+        echo The logs were downloaded but may still be on the robot.
+    )
 ) else (
     echo.
     echo ================================
@@ -58,6 +75,8 @@ if %ERRORLEVEL% EQU 0 (
     echo 1. Ensure robot is connected via USB or WiFi
     echo 2. Check that fateweaver logs exist at %ROBOT_LOG_PATH%
     echo 3. If using WiFi, run: adb connect 192.168.49.1:5555
+    echo.
+    echo Logs were NOT deleted from robot since pull failed.
 )
 
 echo.
