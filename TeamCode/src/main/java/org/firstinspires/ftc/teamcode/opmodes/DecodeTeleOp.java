@@ -5,7 +5,6 @@ import static org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger.logStat
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import Ori.Coval.Logging.AutoLogManager;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
@@ -137,26 +136,24 @@ public class DecodeTeleOp extends NextFTCOpMode {
         // Commands (DefaultDriveCommand, AimAndDriveCommand, CaptureAndAimCommand) handle drive control
         BindingManager.update();
 
-        // Throttle AutoLogManager based on telemetry level (samples 86 @AutoLogOutput methods)
-        // MATCH: 100ms (10 Hz), PRACTICE: 50ms (20 Hz), DEBUG: configurable
-        long nowMs = System.currentTimeMillis();
-        long autoLogInterval = org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings.getAutoLogInterval();
-        if (nowMs - lastAutoLogTimeMs >= autoLogInterval) {
-            AutoLogManager.periodic();
-            lastAutoLogTimeMs = nowMs;
-        }
-
         // Sample driver inputs for telemetry/logging only (not for control)
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
 
-        TelemetryTiming telemetryTiming = publishTelemetryIfNeeded(request);
         Pose2D pose = robot.drive.getPose();
 
         // Measure loop time including telemetry display (previously unmeasured)
         long mainloopEndNs = System.nanoTime();
-        double totalLoopMs = nanosToMs(mainloopEndNs - mainLoopStartNs);
+        double mainLoopMs = nanosToMs(mainloopEndNs - mainLoopStartNs);
 
-        LoopTiming loopTiming = buildLoopTiming(totalLoopMs, telemetryTiming.telemetryMs, telemetryTiming.telemetrySent, 0);
+        TelemetryTiming telemetryTiming = publishTelemetryIfNeeded(request);
+
+
+        long autoLogStart = System.nanoTime();
+
+        long autoLogEnd = System.nanoTime();
+        double autoLogMs = nanosToMs(autoLogEnd - autoLogStart);
+
+        LoopTiming loopTiming = buildLoopTiming(mainLoopMs, telemetryTiming.telemetryMs, true, autoLogMs, true);
         publishTelemetryDisplay(pose, telemetryTiming.wallClockMs, loopTiming, diagnosticsRequested());
     }
 
@@ -219,6 +216,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
         telemetry.addData("Vision periodic", "%.1f ms", timing.visionMs);
         telemetry.addData("Telemetry publish", timing.telemetrySent
                 ? String.format(Locale.US, "%.1f ms", timing.telemetryMs)
+                : "skipped");
+        telemetry.addData("Autolog publish", timing.autoLogSent
+                ? String.format(Locale.US, "%.1f ms", timing.autoLogMs)
                 : "skipped");
         addHeadingDiagnostics();
     }
@@ -310,15 +310,15 @@ public class DecodeTeleOp extends NextFTCOpMode {
         return angleDeg;
     }
 
-    private LoopTiming buildLoopTiming(double loopMs, double telemetryMsThisLoop, boolean telemetrySent, double telemetryDisplayMs) {
+    private LoopTiming buildLoopTiming(double loopMs, double telemetryMsThisLoop, boolean telemetrySent, double autoLogMsThisLoop, boolean autoLogSent) {
         double drivePeriodicMs = robot.drive.getLastPeriodicMs();
         double intakePeriodicMs = robot.intake.getLastPeriodicMs();
         double launcherPeriodicMs = robot.launcher.getLastPeriodicMs();
         double lightingPeriodicMs = robot.lighting.getLastPeriodicMs();
         double launcherCoordPeriodicMs = robot.launcherCoordinator.getLastPeriodicMs();
         double visionPeriodicMs = robot.vision.getLastPeriodicMs();
-        return new LoopTiming(loopMs, telemetryMsThisLoop, telemetrySent,
-                drivePeriodicMs, intakePeriodicMs, launcherPeriodicMs, lightingPeriodicMs, launcherCoordPeriodicMs, visionPeriodicMs, telemetryDisplayMs);
+        return new LoopTiming(loopMs, telemetryMsThisLoop, telemetrySent, autoLogMsThisLoop, autoLogSent,
+                drivePeriodicMs, intakePeriodicMs, launcherPeriodicMs, lightingPeriodicMs, launcherCoordPeriodicMs, visionPeriodicMs);
     }
 
     private boolean diagnosticsRequested() {
@@ -330,7 +330,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         long nowMs = System.currentTimeMillis();
         double telemetryMsThisLoop = 0.0;
         boolean telemetrySent = false;
-        if (nowNs - lastTelemetryNs >= TELEMETRY_INTERVAL_NS) {
+//        if (nowNs - lastTelemetryNs >= TELEMETRY_INTERVAL_NS) {
             long telemetryCallStartNs = nowNs;
             robot.telemetry.publishLoopTelemetry(
                     robot.drive,
@@ -348,7 +348,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
             telemetryMsThisLoop = nanosToMs(System.nanoTime() - telemetryCallStartNs);
             lastTelemetryNs = System.nanoTime();
             telemetrySent = true;
-        }
+//        }
         return new TelemetryTiming(telemetrySent, telemetryMsThisLoop, nowMs);
     }
 
@@ -396,38 +396,43 @@ public class DecodeTeleOp extends NextFTCOpMode {
         final double loopMs;
         final double telemetryMs;
         final boolean telemetrySent;
+        final double autoLogMs;
+        final boolean autoLogSent;
         final double driveMs;
         final double intakeMs;
         final double launcherMs;
         final double lightingMs;
         final double launchCoordMs;
         final double visionMs;
-        final double telemetryDisplayMs;
 
         LoopTiming(double loopMs,
                    double telemetryMs,
                    boolean telemetrySent,
+                   double autoLogMs,
+                   boolean autoLogSent,
                    double driveMs,
                    double intakeMs,
                    double launcherMs ,
                    double lightingMs,
                    double launchCoordMs ,
-                   double visionMs,
-                   double telemetryDisplayMs) {
+                   double visionMs
+                   ) {
             this.loopMs = loopMs;
             this.telemetryMs = telemetryMs;
             this.telemetrySent = telemetrySent;
+            this.autoLogMs = autoLogMs;
+            this.autoLogSent = autoLogSent;
             this.driveMs = driveMs;
             this.intakeMs = intakeMs;
             this.launcherMs = launcherMs;
             this.lightingMs = lightingMs;
             this.launchCoordMs = launchCoordMs;
             this.visionMs = visionMs;
-            this.telemetryDisplayMs = telemetryDisplayMs;
+
         }
 
         double totalMs() {
-            return loopMs + driveMs + intakeMs + launcherMs + lightingMs + launchCoordMs + visionMs + telemetryMs + telemetryDisplayMs;
+            return loopMs + driveMs + intakeMs + launcherMs + lightingMs + launchCoordMs + visionMs + telemetryMs + autoLogMs;
         }
     }
 

@@ -16,8 +16,6 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 
-import Ori.Coval.Logging.Logger.KoalaLog;
-
 public class Robot {
     public final DriveSubsystem drive;
     public final LauncherSubsystem launcher;
@@ -39,16 +37,13 @@ public class Robot {
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
         telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
 
-        // Initialize KoalaLog for WPILOG file logging
-        KoalaLog.setup(hardwareMap);
-
         // All subsystems use AutoLogged versions for automatic WPILOG and FTC Dashboard logging
         vision = new VisionSubsystemLimelight(hardwareMap);
-        drive = new org.firstinspires.ftc.teamcode.subsystems.DriveSubsystemAutoLogged(hardwareMap, vision);
-        launcher = new org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystemAutoLogged(hardwareMap);
-        intake = new org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystemAutoLogged(hardwareMap);
+        drive = new DriveSubsystem(hardwareMap, vision);
+        launcher = new LauncherSubsystem(hardwareMap);
+        intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
-        launcherCoordinator = new org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinatorAutoLogged(launcher, intake, lighting);
+        launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
         launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
         intakeCommands = new IntakeCommands(intake);
 

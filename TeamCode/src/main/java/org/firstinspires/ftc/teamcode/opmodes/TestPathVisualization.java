@@ -20,9 +20,6 @@ import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.PoseTransforms;
 
-import Ori.Coval.Logging.AutoLogManager;
-import Ori.Coval.Logging.Logger.KoalaLog;
-
 /**
  * Simple test OpMode for visualizing autonomous paths on test bench
  *
@@ -41,8 +38,7 @@ public class TestPathVisualization extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
-        // Initialize KoalaLog for WPILOG file logging
-        KoalaLog.setup(hardwareMap);
+
 
         // Initialize telemetry
         telemetryService = new TelemetryService();
@@ -145,9 +141,6 @@ public class TestPathVisualization extends LinearOpMode {
             Pose currentPose = follower.getPose();
             sendPathSimPacket(currentPose, 0, "Init Preview", false);
 
-            // Sample AutoLog data during init
-            AutoLogManager.periodic();
-
             telemetry.addData("Alliance", activeAlliance);
             telemetry.addData("Status", "Initialized - Showing all paths");
             telemetry.addData("Total Paths", allPaths.length);
@@ -245,9 +238,6 @@ public class TestPathVisualization extends LinearOpMode {
             // Send telemetry packet to AdvantageScope
             boolean isBusy = progress < 0.99;
             sendPathSimPacket(simulatedPose, pathIndex, getPathName(pathIndex), isBusy);
-
-            // Sample AutoLog data during simulation
-            AutoLogManager.periodic();
 
             telemetry.addData("Path", getPathName(pathIndex));
             telemetry.addData("Progress", String.format("%.0f%%", progress * 100));

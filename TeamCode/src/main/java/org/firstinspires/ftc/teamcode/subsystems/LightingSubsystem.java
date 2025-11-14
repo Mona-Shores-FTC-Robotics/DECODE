@@ -10,9 +10,6 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
-import Ori.Coval.Logging.AutoLog;
-import Ori.Coval.Logging.AutoLogOutput;
-
 import java.util.EnumMap;
 import java.util.Map;
 

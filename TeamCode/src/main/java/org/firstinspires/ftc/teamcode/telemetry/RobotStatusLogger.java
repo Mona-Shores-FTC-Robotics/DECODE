@@ -4,8 +4,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.RobotLog;
 
-import Ori.Coval.Logging.Logger.KoalaLog;
-
 /**
  * Helper utility to log FTC Dashboard _Status fields to WPILOG files.
  *
@@ -35,42 +33,42 @@ public class RobotStatusLogger {
      */
     public static void logStatus(LinearOpMode opMode, HardwareMap hardwareMap, boolean running) {
         // RUNNING field at root level (for AdvantageScope timeline)
-        KoalaLog.log("RUNNING", running, true);
-
-        // Get OpMode name from the class
-        // This matches what FTC Dashboard does via opModeManager.getActiveOpModeName()
-        String opModeName = opMode.getClass().getSimpleName();
-
-        // Determine status - INIT or RUNNING based on running flag
-        String status = running ? "RUNNING" : "INIT";
-
-        // Log _Status fields (exact match to FTC Dashboard)
-        KoalaLog.log("_Status/enabled", !opMode.isStopRequested(), true);
-        KoalaLog.log("_Status/activeOpmode", opModeName, true);
-        KoalaLog.log("_Status/activeOpModeStatus", status, true);
-
-        // Read error/warning messages from FTC SDK's RobotLog (same source as FTC Dashboard)
-        String errorMsg = RobotLog.getGlobalErrorMsg();
-        String warningMsg = "";
-        try {
-            RobotLog.GlobalWarningMessage warningSource = RobotLog.getGlobalWarningMessage();
-            if (warningSource != null && warningSource.message != null) {
-                warningMsg = warningSource.message;
-            }
-        } catch (Exception e) {
-            // Ignore if warning message not available
-        }
-        KoalaLog.log("_Status/errorMessage", errorMsg != null ? errorMsg : "", true);
-        KoalaLog.log("_Status/warningMessage", warningMsg, true);
-
-        // Battery voltage from hardware
-        try {
-            if (hardwareMap != null && hardwareMap.voltageSensor.iterator().hasNext()) {
-                double voltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
-                KoalaLog.log("_Status/batteryVoltage", voltage, true);
-            }
-        } catch (Exception e) {
-            // Ignore if voltage sensor not available
-        }
+//        KoalaLog.log("RUNNING", running, true);
+//
+//        // Get OpMode name from the class
+//        // This matches what FTC Dashboard does via opModeManager.getActiveOpModeName()
+//        String opModeName = opMode.getClass().getSimpleName();
+//
+//        // Determine status - INIT or RUNNING based on running flag
+//        String status = running ? "RUNNING" : "INIT";
+//
+//        // Log _Status fields (exact match to FTC Dashboard)
+//        KoalaLog.log("_Status/enabled", !opMode.isStopRequested(), true);
+//        KoalaLog.log("_Status/activeOpmode", opModeName, true);
+//        KoalaLog.log("_Status/activeOpModeStatus", status, true);
+//
+//        // Read error/warning messages from FTC SDK's RobotLog (same source as FTC Dashboard)
+//        String errorMsg = RobotLog.getGlobalErrorMsg();
+//        String warningMsg = "";
+//        try {
+//            RobotLog.GlobalWarningMessage warningSource = RobotLog.getGlobalWarningMessage();
+//            if (warningSource != null && warningSource.message != null) {
+//                warningMsg = warningSource.message;
+//            }
+//        } catch (Exception e) {
+//            // Ignore if warning message not available
+//        }
+//        KoalaLog.log("_Status/errorMessage", errorMsg != null ? errorMsg : "", true);
+//        KoalaLog.log("_Status/warningMessage", warningMsg, true);
+//
+//        // Battery voltage from hardware
+//        try {
+//            if (hardwareMap != null && hardwareMap.voltageSensor.iterator().hasNext()) {
+//                double voltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
+//                KoalaLog.log("_Status/batteryVoltage", voltage, true);
+//            }
+//        } catch (Exception e) {
+//            // Ignore if voltage sensor not available
+//        }
     }
 }

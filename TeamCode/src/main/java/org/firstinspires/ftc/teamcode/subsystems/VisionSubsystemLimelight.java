@@ -16,8 +16,6 @@ import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.core.subsystems.Subsystem;
-import Ori.Coval.Logging.AutoLog;
-import Ori.Coval.Logging.AutoLogOutput;
 
 import java.util.List;
 import java.util.Optional;
@@ -312,34 +310,6 @@ public class VisionSubsystemLimelight implements Subsystem {
     // These methods are automatically logged by KoalaLog to WPILOG files
     // and published to FTC Dashboard for AdvantageScope Lite
     // ========================================================================
-
-    @AutoLogOutput
-    public String getVisionState() {
-        return state.name();
-    }
-
-    @AutoLogOutput
-    public boolean getHasValidTag() {
-        refreshSnapshotIfStale();
-        return lastSnapshot != null;
-    }
-
-    @AutoLogOutput
-    public int getLoggedCurrentTagId() {
-        refreshSnapshotIfStale();
-        return lastSnapshot == null ? -1 : lastSnapshot.getTagId();
-    }
-
-    public int getLastSeenTagId() {
-        return lastSeenTagId;
-    }
-
-    @AutoLogOutput
-    public double getTimeSinceLastSeenMs() {
-        return lastSnapshotTimestampMs == 0L
-                ? Double.POSITIVE_INFINITY
-                : Math.max(0.0, System.currentTimeMillis() - lastSnapshotTimestampMs);
-    }
 
     public boolean getOdometryUpdatePending() {
         refreshSnapshotIfStale();

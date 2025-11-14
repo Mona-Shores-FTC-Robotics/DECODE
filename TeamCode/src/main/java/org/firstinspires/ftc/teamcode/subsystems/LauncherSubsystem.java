@@ -13,9 +13,6 @@ import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
-import Ori.Coval.Logging.AutoLog;
-import Ori.Coval.Logging.AutoLogOutput;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.EnumMap;
@@ -29,7 +26,6 @@ import java.util.Set;
  * Callers queue individual shots or bursts while this class coordinates spin-up,
  * feed timing, and recovery delays.
  */
-@AutoLog
 @Configurable
 public class LauncherSubsystem implements Subsystem {
 
@@ -818,48 +814,39 @@ public class LauncherSubsystem implements Subsystem {
     // and published to FTC Dashboard for AdvantageScope Lite
     // ========================================================================
 
-    @AutoLogOutput
     public LauncherState getLogState() {
         return state;
     }
 
-    @AutoLogOutput
     public SpinMode getLogRequestedSpinMode() {
         return requestedSpinMode;
     }
 
-    @AutoLogOutput
     public SpinMode getLogEffectiveSpinMode() {
         return computeEffectiveSpinMode();
     }
 
-    @AutoLogOutput
     public String getLogControlMode() {
         return getFlywheelControlMode().name();
     }
 
-    @AutoLogOutput
     public boolean getLogBusy() {
         return isBusy();
     }
 
-    @AutoLogOutput
     public int getLogQueuedShots() {
         return getQueuedShots();
     }
 
-    @AutoLogOutput
     public double getLogStateElapsedSec() {
         return getStateElapsedSeconds();
     }
 
-    @AutoLogOutput
     public String getLogActiveShotLane() {
         ShotRequest pendingShot = shotQueue.peekFirst();
         return pendingShot == null ? "NONE" : pendingShot.lane.name();
     }
 
-    @AutoLogOutput
     public double getLogActiveShotAgeMs() {
         ShotRequest pendingShot = shotQueue.peekFirst();
         if (pendingShot == null) {
@@ -869,7 +856,6 @@ public class LauncherSubsystem implements Subsystem {
         return Math.max(0.0, now - pendingShot.scheduledTimeMs);
     }
 
-    @AutoLogOutput
     public double getLogLastShotCompletionMs() {
         double lastCompletionMs = 0.0;
         for (LauncherLane lane : LauncherLane.values()) {
@@ -881,17 +867,14 @@ public class LauncherSubsystem implements Subsystem {
         return lastCompletionMs;
     }
 
-    @AutoLogOutput
     public double getLogAverageTargetRpm() {
         return getTargetRpm();
     }
 
-    @AutoLogOutput
     public double getLogAverageCurrentRpm() {
         return getCurrentRpm();
     }
 
-    @AutoLogOutput
     public double getLogAveragePower() {
         return getLastPower();
     }
@@ -908,7 +891,6 @@ public class LauncherSubsystem implements Subsystem {
         return getLastPower(LauncherLane.LEFT);
     }
 
-    @AutoLogOutput
     public boolean getLogLeftReady() {
         return isLaneReady(LauncherLane.LEFT);
     }
@@ -934,7 +916,6 @@ public class LauncherSubsystem implements Subsystem {
         return getLastPower(LauncherLane.CENTER);
     }
 
-    @AutoLogOutput
     public boolean getLogCenterReady() {
         return isLaneReady(LauncherLane.CENTER);
     }
@@ -960,7 +941,6 @@ public class LauncherSubsystem implements Subsystem {
         return getLastPower(LauncherLane.RIGHT);
     }
 
-    @AutoLogOutput
     public boolean getLogRightReady() {
         return isLaneReady(LauncherLane.RIGHT);
     }

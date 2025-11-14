@@ -9,9 +9,6 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
-import Ori.Coval.Logging.AutoLog;
-import Ori.Coval.Logging.AutoLogOutput;
-
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -20,7 +17,6 @@ import java.util.Map;
  * Shared by bench diagnostics, teleop, and autonomous so behaviour remains consistent.
  */
 @Configurable
-@AutoLog
 public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColorListener {
 
     public enum ArtifactState {
@@ -395,94 +391,6 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
             intake.removeLaneColorListener(lighting);
             lightingRegistered = false;
         }
-    }
-
-    // ========================================================================
-    // AutoLog Output Methods
-    // These methods are automatically logged by KoalaLog to WPILOG files
-    // and published to FTC Dashboard for AdvantageScope Lite
-    // ========================================================================
-
-    @AutoLogOutput
-    public boolean getLightingRegistered() {
-        return lightingRegistered;
-    }
-
-    @AutoLogOutput
-    public String getArtifactStateString() {
-        return artifactState.name();
-    }
-
-    @AutoLogOutput
-    public int getArtifactCountLogged() {
-        return artifactState.count();
-    }
-
-    @AutoLogOutput
-    public boolean getIntakeAutomationEnabled() {
-        return intakeAutomationEnabled;
-    }
-
-    @AutoLogOutput
-    public boolean getIntakeOverrideActive() {
-        return manualIntakeOverride != null;
-    }
-
-    @AutoLogOutput
-    public String getIntakeRequestedMode() {
-        IntakeSubsystem.IntakeMode requestedMode = getRequestedIntakeMode();
-        return requestedMode == null
-                ? IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name()
-                : requestedMode.name();
-    }
-
-    @AutoLogOutput
-    public String getIntakeAppliedModeString() {
-        IntakeSubsystem.IntakeMode appliedMode = getAppliedIntakeMode();
-        return appliedMode == null
-                ? IntakeSubsystem.IntakeMode.PASSIVE_REVERSE.name()
-                : appliedMode.name();
-    }
-
-    @AutoLogOutput
-    public boolean getAnyActiveLanes() {
-        for (LauncherLane lane : LauncherLane.values()) {
-            ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
-            if (color != ArtifactColor.NONE && color != ArtifactColor.UNKNOWN) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @AutoLogOutput
-    public String getLeftColor() {
-        return laneColors.getOrDefault(LauncherLane.LEFT, ArtifactColor.NONE).name();
-    }
-
-    @AutoLogOutput
-    public String getCenterColor() {
-        return laneColors.getOrDefault(LauncherLane.CENTER, ArtifactColor.NONE).name();
-    }
-
-    @AutoLogOutput
-    public String getRightColor() {
-        return laneColors.getOrDefault(LauncherLane.RIGHT, ArtifactColor.NONE).name();
-    }
-
-    @AutoLogOutput
-    public String getLauncherState() {
-        return launcher.getState().name();
-    }
-
-    @AutoLogOutput
-    public String getLauncherSpinMode() {
-        return launcher.getEffectiveSpinMode().name();
-    }
-
-    @AutoLogOutput
-    public int getLauncherQueuedShots() {
-        return launcher.getQueuedShots();
     }
 
 }

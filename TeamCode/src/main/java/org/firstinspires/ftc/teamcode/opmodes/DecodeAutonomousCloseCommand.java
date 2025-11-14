@@ -23,7 +23,6 @@ import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 
-import Ori.Coval.Logging.AutoLogManager;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.CommandManager;
@@ -172,7 +171,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     @Override
     public void onUpdate() {
         logStatus(this, hardwareMap, opModeIsActive());
-        AutoLogManager.periodic();
         robot.telemetry.updateDriverStation(telemetry);
     }
 

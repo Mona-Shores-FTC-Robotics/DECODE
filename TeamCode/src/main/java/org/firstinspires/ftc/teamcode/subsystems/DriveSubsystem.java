@@ -15,10 +15,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.RobotLog;
 
-import Ori.Coval.Logging.AutoLog;
-import Ori.Coval.Logging.AutoLogOutput;
-import Ori.Coval.Logging.DoNotLog;
-import Ori.Coval.Logging.Logger.KoalaLog;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -38,7 +34,6 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
 
 @Configurable
-@AutoLog
 public class DriveSubsystem implements Subsystem {
 
     private static final double VISION_TIMEOUT_MS = 100;
@@ -206,7 +201,7 @@ public class DriveSubsystem implements Subsystem {
             double xMeters = pose.getX() * 0.0254;
             double yMeters = pose.getY() * 0.0254;
             double headingRadians = follower.getHeading();
-            KoalaLog.logPose2d("Robot/Pose", xMeters, yMeters, headingRadians, true);
+//            KoalaLog.logPose2d("Robot/Pose", xMeters, yMeters, headingRadians, true);
         }
     }
 
@@ -230,7 +225,6 @@ public class DriveSubsystem implements Subsystem {
         lastAimErrorRad = Double.NaN;
     }
 
-    @DoNotLog
     protected double readCurrentAmps(DcMotorEx motor) {
         if (motor == null) {
             return Double.NaN;
@@ -656,114 +650,92 @@ public class DriveSubsystem implements Subsystem {
     // and published to FTC Dashboard for AdvantageScope Lite
     // ========================================================================
 
-    @DoNotLog
     public double getPoseXInches() {
         Pose pose = follower.getPose();
         return pose != null ? pose.getX() : 0.0;
     }
 
-    @DoNotLog
     public double getPoseYInches() {
         Pose pose = follower.getPose();
         return pose != null ? pose.getY() : 0.0;
     }
 
-    @DoNotLog
     public double getPoseHeadingDeg() {
         return Math.toDegrees(follower.getHeading());
     }
 
-    @DoNotLog
     public boolean isRobotCentric() {
         return robotCentric;
     }
 
-    @DoNotLog
     public String getDriveModeString() {
         return activeMode.name();
     }
 
-    @DoNotLog
     public double getRequestFieldX() {
         return lastRequestFieldX;
     }
 
-    @DoNotLog
     public double getRequestFieldY() {
         return lastRequestFieldY;
     }
 
-    @DoNotLog
     public double getRequestRotation() {
         return lastRequestRotation;
     }
 
-    @DoNotLog
     public boolean getRequestSlowMode() {
         return lastRequestSlowMode;
     }
 
-    @DoNotLog
     public double getCommandForward() {
         return lastCommandForward;
     }
 
-    @DoNotLog
     public double getCommandStrafeLeft() {
         return lastCommandStrafeLeft;
     }
 
-    @DoNotLog
     public double getCommandTurn() {
         return lastCommandTurn;
     }
 
-    @DoNotLog
     public boolean isFollowerBusyLogged() {
         return follower.isBusy();
     }
 
-    @DoNotLog
     public double getLfPowerLogged() {
         return motorLf.getPower();
     }
 
-    @DoNotLog
     public double getRfPowerLogged() {
         return motorRf.getPower();
     }
 
-    @DoNotLog
     public double getLbPowerLogged() {
         return motorLb.getPower();
     }
 
-    @DoNotLog
     public double getRbPowerLogged() {
         return motorRb.getPower();
     }
 
-    @DoNotLog
     public double getLfCurrentAmps() {
         return readCurrentAmps(motorLf);
     }
 
-    @DoNotLog
     public double getRfCurrentAmps() {
         return readCurrentAmps(motorRf);
     }
 
-    @DoNotLog
     public double getLbCurrentAmps() {
         return readCurrentAmps(motorLb);
     }
 
-    @DoNotLog
     public double getRbCurrentAmps() {
         return readCurrentAmps(motorRb);
     }
 
-    @DoNotLog
     public double getDriveTotalCurrentAmps() {
         return sumCurrentAmps(
                 getLfCurrentAmps(),
@@ -773,44 +745,36 @@ public class DriveSubsystem implements Subsystem {
         );
     }
 
-    @DoNotLog
     public double getLfVelocityIps() {
         return ticksToInchesPerSecond(motorLf.getVelocity());
     }
 
-    @DoNotLog
     public double getRfVelocityIps() {
         return ticksToInchesPerSecond(motorRf.getVelocity());
     }
 
-    @DoNotLog
     public double getLbVelocityIps() {
         return ticksToInchesPerSecond(motorLb.getVelocity());
     }
 
-    @DoNotLog
     public double getRbVelocityIps() {
         return ticksToInchesPerSecond(motorRb.getVelocity());
     }
 
-    @DoNotLog
     public double getFollowerSpeedIps() {
         return followerVelocityIps();
     }
 
-    @DoNotLog
     public double getLastVisionAngleDeg() {
         return Double.isNaN(lastGoodVisionAngle) ? Double.NaN : Math.toDegrees(lastGoodVisionAngle);
     }
 
-    @DoNotLog
     public double getVisionSampleAgeMs() {
         return lastVisionTimestamp == Double.NEGATIVE_INFINITY
                 ? Double.POSITIVE_INFINITY
                 : Math.max(0.0, clock.milliseconds() - lastVisionTimestamp);
     }
 
-    @DoNotLog
     public boolean getFusionHasPose() {
         return poseFusion.getStateSnapshot().hasFusedPose;
     }
@@ -853,12 +817,10 @@ public class DriveSubsystem implements Subsystem {
         return Double.NaN;
     }
 
-    @DoNotLog
     public double getFusionVisionWeight() {
         return poseFusion.getStateSnapshot().lastVisionWeight;
     }
 
-    @DoNotLog
     public boolean getFusionVisionAccepted() {
         return poseFusion.getStateSnapshot().lastVisionAccepted;
     }

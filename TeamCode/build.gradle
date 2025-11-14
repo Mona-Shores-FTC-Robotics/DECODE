@@ -56,9 +56,4 @@ dependencies {
 
     // AdvantageScope Lite - enables AdvantageScope connection via FTC Dashboard packets
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
-
-    // KoalaLog for WPILOG file logging
-    implementation 'com.github.ori-coval.Koala-Log:KoalaLogger:1.4.0'
-    annotationProcessor 'com.github.ori-coval.Koala-Log:KoalaLoggingProcessor:1.4.0'
-
 }

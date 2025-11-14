@@ -10,8 +10,6 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.geometry.Pose;
 
-import Ori.Coval.Logging.Logger.KoalaLog;
-
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -133,7 +131,7 @@ public class TelemetryService {
      * MATCH mode: Minimal telemetry for competition (<10ms target).
      * - Essential driver station info only
      * - Critical pose logging preserved (done in DriveSubsystem.periodic)
-     * - No FTC Dashboard packets
+     * - No FTC Dashboard packets,
      * - No FullPanels telemetry
      */
     private void publishMatchTelemetry(DriveSubsystem drive,
@@ -608,22 +606,18 @@ public class TelemetryService {
      */
     private void log(TelemetryPacket packet, String key, Boolean value) {
         packet.put(key, value);
-        KoalaLog.log(key, value, true);
     }
 
     private void log(TelemetryPacket packet, String key, String value) {
         packet.put(key, value);
-        KoalaLog.log(key, value, true);
     }
 
     private void log(TelemetryPacket packet, String key, Double value) {
         packet.put(key, value);
-        KoalaLog.log(key, value, true);
     }
 
     private void log(TelemetryPacket packet, String key, int value) {
         packet.put(key, value);
-        KoalaLog.log(key, value, true);
     }
 
     /**

@@ -34,7 +34,6 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 
-import Ori.Coval.Logging.AutoLogManager;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
@@ -215,9 +214,6 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
     public void onUpdate() {
         logStatus(this, hardwareMap, opModeIsActive());
         autonomousStep();
-
-        // Periodic logging for KoalaLog (WPILOG files) - throttled based on telemetry level
-        AutoLogManager.periodic();
 
         robot.telemetry.updateDriverStation(telemetry);
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
