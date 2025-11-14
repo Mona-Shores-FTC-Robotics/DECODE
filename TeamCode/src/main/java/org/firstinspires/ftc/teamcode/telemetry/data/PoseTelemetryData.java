@@ -31,7 +31,7 @@ public class PoseTelemetryData {
     public final double visionPoseYIn;
     public final double visionHeadingRad;
 
-    public PoseTelemetryData(Pose2D pose, Pose pedroPose, Pose2D visionPose) {
+    public PoseTelemetryData(Pose2D pose, Pose pedroPose, Pose visionPose) {
         // Pedro pose
         if (pose != null) {
             this.poseValid = true;
@@ -59,12 +59,12 @@ public class PoseTelemetryData {
             this.ftcHeadingRad = Double.NaN;
         }
 
-        // Vision pose
+        // Vision pose (Pedro Pose type from vision subsystem)
         if (visionPose != null) {
             this.visionPoseValid = true;
-            this.visionPoseXIn = visionPose.getX(DistanceUnit.INCH);
-            this.visionPoseYIn = visionPose.getY(DistanceUnit.INCH);
-            this.visionHeadingRad = visionPose.getHeading(AngleUnit.RADIANS);
+            this.visionPoseXIn = visionPose.getX();      // Pedro Pose uses inches directly
+            this.visionPoseYIn = visionPose.getY();      // Pedro Pose uses inches directly
+            this.visionHeadingRad = visionPose.getHeading();  // Pedro Pose uses radians directly
         } else {
             this.visionPoseValid = false;
             this.visionPoseXIn = Double.NaN;
@@ -73,7 +73,7 @@ public class PoseTelemetryData {
         }
     }
 
-    public static PoseTelemetryData capture(DriveSubsystem drive, Pose2D visionPose) {
+    public static PoseTelemetryData capture(DriveSubsystem drive, Pose visionPose) {
         Pose2D pose = drive.getPose();
         Pose pedroPose = drive.getFollowerPose();
         return new PoseTelemetryData(pose, pedroPose, visionPose);
