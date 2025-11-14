@@ -229,6 +229,11 @@ public class TelemetryService {
                 break;
             case DEBUG:
             default:
+                // Handle page navigation from driver gamepad dpad
+                driverStationFormatter.handlePageNavigation(
+                        data.gamepad.driver.dpadUp,
+                        data.gamepad.driver.dpadDown
+                );
                 driverStationFormatter.publishDebug(telemetry, data);
                 break;
         }
