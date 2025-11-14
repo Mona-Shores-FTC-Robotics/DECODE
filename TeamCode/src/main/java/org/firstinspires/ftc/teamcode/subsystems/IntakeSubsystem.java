@@ -664,27 +664,35 @@ public class IntakeSubsystem implements Subsystem {
     // AutoLog Output Methods
     // These methods are automatically logged by KoalaLog to WPILOG files
     // and published to FTC Dashboard for AdvantageScope Lite
+    //
+    // Logging Tiers:
+    // - CRITICAL: Mode, alliance
+    // - MATCH: Per-lane colors, presence detection
+    // - DIAGNOSTIC: NOT auto-logged (timing, HSV, raw sensor data)
     // ========================================================================
+
+    // --- CRITICAL TIER ---
 
     @AutoLogOutput
     public String getAllianceString() {
         return alliance.name();
     }
 
-    @AutoLogOutput
+    // --- DIAGNOSTIC: NOT auto-logged ---
+
     public boolean isAnyLaneSensorsPresent() {
         return anyLaneSensorsPresent;
     }
 
-    @AutoLogOutput
     public boolean isSensorPollingEnabled() {
         return laneSensorConfig.enablePolling;
     }
 
-    @AutoLogOutput
     public double getSensorSamplePeriodMs() {
         return laneSensorConfig.samplePeriodMs;
     }
+
+    // --- MATCH TIER: Per-lane artifact detection ---
 
     @AutoLogOutput
     public String getLeftColor() {
@@ -696,17 +704,24 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.LEFT).sensorPresent;
     }
 
+    @AutoLogOutput
+    public boolean isLeftWithinDistance() {
+        return getLaneSample(LauncherLane.LEFT).withinDistance;
+    }
+
+    @AutoLogOutput
+    public String getLeftDetectedColor() {
+        return getLaneSample(LauncherLane.LEFT).color.name();
+    }
+
+    // --- DIAGNOSTIC: NOT auto-logged ---
+
     public boolean isLeftDistanceAvailable() {
         return getLaneSample(LauncherLane.LEFT).distanceAvailable;
     }
 
     public double getLeftDistanceCm() {
         return getLaneSample(LauncherLane.LEFT).distanceCm;
-    }
-
-    @AutoLogOutput
-    public boolean isLeftWithinDistance() {
-        return getLaneSample(LauncherLane.LEFT).withinDistance;
     }
 
     public float getLeftHue() {
@@ -719,11 +734,6 @@ public class IntakeSubsystem implements Subsystem {
 
     public float getLeftValue() {
         return getLaneSample(LauncherLane.LEFT).value;
-    }
-
-    @AutoLogOutput
-    public String getLeftDetectedColor() {
-        return getLaneSample(LauncherLane.LEFT).color.name();
     }
 
     public String getLeftHsvColor() {
@@ -752,17 +762,22 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.CENTER).sensorPresent;
     }
 
+    @AutoLogOutput
+    public boolean isCenterWithinDistance() {
+        return getLaneSample(LauncherLane.CENTER).withinDistance;
+    }
+
+    @AutoLogOutput
+    public String getCenterDetectedColor() {
+        return getLaneSample(LauncherLane.CENTER).color.name();
+    }
+
     public boolean isCenterDistanceAvailable() {
         return getLaneSample(LauncherLane.CENTER).distanceAvailable;
     }
 
     public double getCenterDistanceCm() {
         return getLaneSample(LauncherLane.CENTER).distanceCm;
-    }
-
-    @AutoLogOutput
-    public boolean isCenterWithinDistance() {
-        return getLaneSample(LauncherLane.CENTER).withinDistance;
     }
 
     public float getCenterHue() {
@@ -775,11 +790,6 @@ public class IntakeSubsystem implements Subsystem {
 
     public float getCenterValue() {
         return getLaneSample(LauncherLane.CENTER).value;
-    }
-
-    @AutoLogOutput
-    public String getCenterDetectedColor() {
-        return getLaneSample(LauncherLane.CENTER).color.name();
     }
 
     public String getCenterHsvColor() {
@@ -808,17 +818,22 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.RIGHT).sensorPresent;
     }
 
+    @AutoLogOutput
+    public boolean isRightWithinDistance() {
+        return getLaneSample(LauncherLane.RIGHT).withinDistance;
+    }
+
+    @AutoLogOutput
+    public String getRightDetectedColor() {
+        return getLaneSample(LauncherLane.RIGHT).color.name();
+    }
+
     public boolean isRightDistanceAvailable() {
         return getLaneSample(LauncherLane.RIGHT).distanceAvailable;
     }
 
     public double getRightDistanceCm() {
         return getLaneSample(LauncherLane.RIGHT).distanceCm;
-    }
-
-    @AutoLogOutput
-    public boolean isRightWithinDistance() {
-        return getLaneSample(LauncherLane.RIGHT).withinDistance;
     }
 
     public float getRightHue() {
@@ -831,11 +846,6 @@ public class IntakeSubsystem implements Subsystem {
 
     public float getRightValue() {
         return getLaneSample(LauncherLane.RIGHT).value;
-    }
-
-    @AutoLogOutput
-    public String getRightDetectedColor() {
-        return getLaneSample(LauncherLane.RIGHT).color.name();
     }
 
     public String getRightHsvColor() {
@@ -854,6 +864,8 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.RIGHT).rawBlue;
     }
 
+    // --- MATCH TIER: Motor and mode state ---
+
     @AutoLogOutput
     public double getMotorPower() {
         return appliedMotorPower;
@@ -870,42 +882,37 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     @AutoLogOutput
-    public boolean isModeOverrideEnabled() {
-        return manualModeConfig.enableOverride;
-    }
-
-    @AutoLogOutput
-    public String getModeOverride() {
-        return manualModeConfig.overrideMode;
-    }
-
-    @AutoLogOutput
-    public double getLoggedRollerPosition() {
-        return rollerServo != null ? lastRollerPosition : Double.NaN;
-    }
-
-    @AutoLogOutput
     public boolean isLoggedRollerActive() {
         return rollerServo != null
                 && Math.abs(lastRollerPosition - rollerConfig.activePosition) < 1e-3;
     }
 
-    @AutoLogOutput
+    // --- DIAGNOSTIC: NOT auto-logged ---
+
+    public boolean isModeOverrideEnabled() {
+        return manualModeConfig.enableOverride;
+    }
+
+    public String getModeOverride() {
+        return manualModeConfig.overrideMode;
+    }
+
+    public double getLoggedRollerPosition() {
+        return rollerServo != null ? lastRollerPosition : Double.NaN;
+    }
+
     public double getModeResolveMs() {
         return lastModeResolveMs;
     }
 
-    @AutoLogOutput
     public double getSensorPollMs() {
         return lastSensorPollMs;
     }
 
-    @AutoLogOutput
     public double getServoUpdateMs() {
         return lastServoUpdateMs;
     }
 
-    @AutoLogOutput
     public double getPeriodicTotalMs() {
         return lastPeriodicMs;
     }
