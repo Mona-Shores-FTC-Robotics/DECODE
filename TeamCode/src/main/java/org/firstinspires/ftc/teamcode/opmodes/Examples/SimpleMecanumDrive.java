@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
-
+@Disabled
 @TeleOp(name = "Simple Mecanum Drive", group = "TeleOp")
 public class SimpleMecanumDrive extends LinearOpMode {
 

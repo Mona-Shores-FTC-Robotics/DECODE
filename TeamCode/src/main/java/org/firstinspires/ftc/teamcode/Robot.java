@@ -53,7 +53,7 @@ public class Robot {
         intakeCommands = new IntakeCommands(intake);
 
         manualSpinController = launcherCoordinator.createManualSpinController();
-        applyRobotMode(robotMode);
+
     }
 
     public void setAlliance(Alliance alliance) {

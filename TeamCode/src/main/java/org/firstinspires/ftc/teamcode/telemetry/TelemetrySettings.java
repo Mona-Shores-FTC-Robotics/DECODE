@@ -42,7 +42,7 @@ public final class TelemetrySettings {
     @Configurable
     public static class Config {
         /** Active telemetry level - change via FTC Dashboard */
-        public TelemetryLevel level = TelemetryLevel.PRACTICE;
+        public TelemetryLevel level = TelemetryLevel.DEBUG;
 
         /** Enable FTC Dashboard packet sending (overridden by level) */
         public boolean enableDashboardPackets = true;
