@@ -809,25 +809,21 @@ public class DriveSubsystem implements Subsystem {
         return poseFusion.getStateSnapshot().hasFusedPose;
     }
 
-    @AutoLogOutput
     public double getFusionPoseXInches() {
         PoseFusion.State state = poseFusion.getStateSnapshot();
         return (state.hasFusedPose && Double.isFinite(state.fusedXInches)) ? state.fusedXInches : Double.NaN;
     }
 
-    @AutoLogOutput
     public double getFusionPoseYInches() {
         PoseFusion.State state = poseFusion.getStateSnapshot();
         return (state.hasFusedPose && Double.isFinite(state.fusedYInches)) ? state.fusedYInches : Double.NaN;
     }
 
-    @AutoLogOutput
     public double getFusionPoseHeadingDeg() {
         PoseFusion.State state = poseFusion.getStateSnapshot();
         return (state.hasFusedPose && Double.isFinite(state.fusedHeadingRad)) ? Math.toDegrees(state.fusedHeadingRad) : Double.NaN;
     }
 
-    @AutoLogOutput
     public double getFusionDeltaXYInches() {
         PoseFusion.State state = poseFusion.getStateSnapshot();
         if (state.hasFusedPose
@@ -840,7 +836,6 @@ public class DriveSubsystem implements Subsystem {
         return Double.NaN;
     }
 
-    @AutoLogOutput
     public double getFusionDeltaHeadingDeg() {
         PoseFusion.State state = poseFusion.getStateSnapshot();
         if (state.hasFusedPose
@@ -862,32 +857,26 @@ public class DriveSubsystem implements Subsystem {
         return poseFusion.getStateSnapshot().lastVisionAccepted;
     }
 
-    @AutoLogOutput
     public double getFusionVisionErrorInches() {
         return poseFusion.getStateSnapshot().lastVisionTranslationErrorInches;
     }
 
-    @AutoLogOutput
     public double getFusionVisionHeadingErrorDeg() {
         return poseFusion.getStateSnapshot().lastVisionHeadingErrorDeg;
     }
 
-    @AutoLogOutput
     public double getFusionVisionRangeInches() {
         return poseFusion.getStateSnapshot().lastVisionRangeInches;
     }
 
-    @AutoLogOutput
     public double getFusionVisionDecisionMargin() {
         return poseFusion.getStateSnapshot().lastVisionDecisionMargin;
     }
 
-    @AutoLogOutput
     public double getFusionLastVisionAgeMs() {
         return poseFusion.getStateSnapshot().ageOfLastVisionMs;
     }
 
-    @AutoLogOutput
     public double getFusionOdometryDtMs() {
         return poseFusion.getStateSnapshot().lastOdometryDtMs;
     }
