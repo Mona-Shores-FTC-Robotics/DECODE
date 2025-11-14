@@ -817,7 +817,14 @@ public class LauncherSubsystem implements Subsystem {
     // AutoLog Output Methods
     // These methods are automatically logged by KoalaLog to WPILOG files
     // and published to FTC Dashboard for AdvantageScope Lite
+    //
+    // Logging Tiers:
+    // - CRITICAL: State, spin mode, queued shots
+    // - MATCH: Per-lane RPM/power/ready, averages
+    // - DIAGNOSTIC: NOT auto-logged (timing, feeders, recovery, phases)
     // ========================================================================
+
+    // --- CRITICAL TIER ---
 
     @AutoLogOutput
     public LauncherState getLogState() {
@@ -835,51 +842,70 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     @AutoLogOutput
-    public String getLogControlMode() {
-        return getFlywheelControlMode().name();
-    }
-
-    @AutoLogOutput
-    public boolean getLogBusy() {
-        return isBusy();
-    }
-
-    @AutoLogOutput
     public int getLogQueuedShots() {
         return getQueuedShots();
     }
 
+    // --- MATCH TIER: Per-lane launcher data ---
+
     @AutoLogOutput
-    public double getLogStateElapsedSec() {
-        return getStateElapsedSeconds();
+    public double getLogLeftTargetRpm() {
+        return getTargetRpm(LauncherLane.LEFT);
     }
 
     @AutoLogOutput
-    public String getLogActiveShotLane() {
-        ShotRequest pendingShot = shotQueue.peekFirst();
-        return pendingShot == null ? "NONE" : pendingShot.lane.name();
+    public double getLogLeftCurrentRpm() {
+        return getCurrentRpm(LauncherLane.LEFT);
     }
 
     @AutoLogOutput
-    public double getLogActiveShotAgeMs() {
-        ShotRequest pendingShot = shotQueue.peekFirst();
-        if (pendingShot == null) {
-            return 0.0;
-        }
-        double now = clock.milliseconds();
-        return Math.max(0.0, now - pendingShot.scheduledTimeMs);
+    public double getLogLeftPower() {
+        return getLastPower(LauncherLane.LEFT);
     }
 
     @AutoLogOutput
-    public double getLogLastShotCompletionMs() {
-        double lastCompletionMs = 0.0;
-        for (LauncherLane lane : LauncherLane.values()) {
-            double deadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
-            if (deadline > 0.0) {
-                lastCompletionMs = Math.max(lastCompletionMs, deadline - timing.recoveryMs);
-            }
-        }
-        return lastCompletionMs;
+    public boolean getLogLeftReady() {
+        return isLaneReady(LauncherLane.LEFT);
+    }
+
+    @AutoLogOutput
+    public double getLogCenterTargetRpm() {
+        return getTargetRpm(LauncherLane.CENTER);
+    }
+
+    @AutoLogOutput
+    public double getLogCenterCurrentRpm() {
+        return getCurrentRpm(LauncherLane.CENTER);
+    }
+
+    @AutoLogOutput
+    public double getLogCenterPower() {
+        return getLastPower(LauncherLane.CENTER);
+    }
+
+    @AutoLogOutput
+    public boolean getLogCenterReady() {
+        return isLaneReady(LauncherLane.CENTER);
+    }
+
+    @AutoLogOutput
+    public double getLogRightTargetRpm() {
+        return getTargetRpm(LauncherLane.RIGHT);
+    }
+
+    @AutoLogOutput
+    public double getLogRightCurrentRpm() {
+        return getCurrentRpm(LauncherLane.RIGHT);
+    }
+
+    @AutoLogOutput
+    public double getLogRightPower() {
+        return getLastPower(LauncherLane.RIGHT);
+    }
+
+    @AutoLogOutput
+    public boolean getLogRightReady() {
+        return isLaneReady(LauncherLane.RIGHT);
     }
 
     @AutoLogOutput
@@ -897,21 +923,43 @@ public class LauncherSubsystem implements Subsystem {
         return getLastPower();
     }
 
-    public double getLogLeftTargetRpm() {
-        return getTargetRpm(LauncherLane.LEFT);
+    // --- DIAGNOSTIC: NOT auto-logged ---
+
+    public String getLogControlMode() {
+        return getFlywheelControlMode().name();
     }
 
-    public double getLogLeftCurrentRpm() {
-        return getCurrentRpm(LauncherLane.LEFT);
+    public boolean getLogBusy() {
+        return isBusy();
     }
 
-    public double getLogLeftPower() {
-        return getLastPower(LauncherLane.LEFT);
+    public double getLogStateElapsedSec() {
+        return getStateElapsedSeconds();
     }
 
-    @AutoLogOutput
-    public boolean getLogLeftReady() {
-        return isLaneReady(LauncherLane.LEFT);
+    public String getLogActiveShotLane() {
+        ShotRequest pendingShot = shotQueue.peekFirst();
+        return pendingShot == null ? "NONE" : pendingShot.lane.name();
+    }
+
+    public double getLogActiveShotAgeMs() {
+        ShotRequest pendingShot = shotQueue.peekFirst();
+        if (pendingShot == null) {
+            return 0.0;
+        }
+        double now = clock.milliseconds();
+        return Math.max(0.0, now - pendingShot.scheduledTimeMs);
+    }
+
+    public double getLogLastShotCompletionMs() {
+        double lastCompletionMs = 0.0;
+        for (LauncherLane lane : LauncherLane.values()) {
+            double deadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
+            if (deadline > 0.0) {
+                lastCompletionMs = Math.max(lastCompletionMs, deadline - timing.recoveryMs);
+            }
+        }
+        return lastCompletionMs;
     }
 
     public double getLogLeftFeederPosition() {
@@ -923,23 +971,6 @@ public class LauncherSubsystem implements Subsystem {
         return Math.max(0.0, recoveryDeadline - clock.milliseconds());
     }
 
-    public double getLogCenterTargetRpm() {
-        return getTargetRpm(LauncherLane.CENTER);
-    }
-
-    public double getLogCenterCurrentRpm() {
-        return getCurrentRpm(LauncherLane.CENTER);
-    }
-
-    public double getLogCenterPower() {
-        return getLastPower(LauncherLane.CENTER);
-    }
-
-    @AutoLogOutput
-    public boolean getLogCenterReady() {
-        return isLaneReady(LauncherLane.CENTER);
-    }
-
     public double getLogCenterFeederPosition() {
         return getFeederPosition(LauncherLane.CENTER);
     }
@@ -947,23 +978,6 @@ public class LauncherSubsystem implements Subsystem {
     public double getLogCenterRecoveryRemainingMs() {
         double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.CENTER, 0.0);
         return Math.max(0.0, recoveryDeadline - clock.milliseconds());
-    }
-
-    public double getLogRightTargetRpm() {
-        return getTargetRpm(LauncherLane.RIGHT);
-    }
-
-    public double getLogRightCurrentRpm() {
-        return getCurrentRpm(LauncherLane.RIGHT);
-    }
-
-    public double getLogRightPower() {
-        return getLastPower(LauncherLane.RIGHT);
-    }
-
-    @AutoLogOutput
-    public boolean getLogRightReady() {
-        return isLaneReady(LauncherLane.RIGHT);
     }
 
     public double getLogRightFeederPosition() {

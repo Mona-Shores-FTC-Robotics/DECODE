@@ -423,12 +423,14 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     // AutoLog Output Methods
     // These methods are automatically logged by KoalaLog to WPILOG files
     // and published to FTC Dashboard for AdvantageScope Lite
+    //
+    // Logging Tiers:
+    // - CRITICAL: Artifact state/count
+    // - MATCH: Launcher state/spin/shots, intake modes, lane colors
+    // - DIAGNOSTIC: NOT auto-logged (automation flags, overrides)
     // ========================================================================
 
-    @AutoLogOutput
-    public boolean getLightingRegistered() {
-        return lightingRegistered;
-    }
+    // --- CRITICAL TIER ---
 
     @AutoLogOutput
     public String getArtifactStateString() {
@@ -440,14 +442,21 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         return artifactState.count();
     }
 
+    // --- MATCH TIER ---
+
     @AutoLogOutput
-    public boolean getIntakeAutomationEnabled() {
-        return intakeAutomationEnabled;
+    public String getLauncherState() {
+        return launcher.getState().name();
     }
 
     @AutoLogOutput
-    public boolean getIntakeOverrideActive() {
-        return manualIntakeOverride != null;
+    public String getLauncherSpinMode() {
+        return launcher.getEffectiveSpinMode().name();
+    }
+
+    @AutoLogOutput
+    public int getLauncherQueuedShots() {
+        return launcher.getQueuedShots();
     }
 
     @AutoLogOutput
@@ -467,17 +476,6 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     }
 
     @AutoLogOutput
-    public boolean getAnyActiveLanes() {
-        for (LauncherLane lane : LauncherLane.values()) {
-            ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
-            if (color != ArtifactColor.NONE && color != ArtifactColor.UNKNOWN) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @AutoLogOutput
     public String getLeftColor() {
         return laneColors.getOrDefault(LauncherLane.LEFT, ArtifactColor.NONE).name();
     }
@@ -492,19 +490,28 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         return laneColors.getOrDefault(LauncherLane.RIGHT, ArtifactColor.NONE).name();
     }
 
-    @AutoLogOutput
-    public String getLauncherState() {
-        return launcher.getState().name();
+    // --- DIAGNOSTIC: NOT auto-logged ---
+
+    public boolean getLightingRegistered() {
+        return lightingRegistered;
     }
 
-    @AutoLogOutput
-    public String getLauncherSpinMode() {
-        return launcher.getEffectiveSpinMode().name();
+    public boolean getIntakeAutomationEnabled() {
+        return intakeAutomationEnabled;
     }
 
-    @AutoLogOutput
-    public int getLauncherQueuedShots() {
-        return launcher.getQueuedShots();
+    public boolean getIntakeOverrideActive() {
+        return manualIntakeOverride != null;
+    }
+
+    public boolean getAnyActiveLanes() {
+        for (LauncherLane lane : LauncherLane.values()) {
+            ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
+            if (color != ArtifactColor.NONE && color != ArtifactColor.UNKNOWN) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

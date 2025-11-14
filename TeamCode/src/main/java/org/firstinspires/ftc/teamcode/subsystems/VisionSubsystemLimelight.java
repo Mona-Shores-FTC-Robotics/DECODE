@@ -317,12 +317,14 @@ public class VisionSubsystemLimelight implements Subsystem {
     // AutoLog Output Methods
     // These methods are automatically logged by KoalaLog to WPILOG files
     // and published to FTC Dashboard for AdvantageScope Lite
+    //
+    // Logging Tiers:
+    // - CRITICAL: Has valid tag
+    // - MATCH: Current tag ID
+    // - DIAGNOSTIC: NOT auto-logged (state, timing)
     // ========================================================================
 
-    @AutoLogOutput
-    public String getVisionState() {
-        return state.name();
-    }
+    // --- CRITICAL TIER ---
 
     @AutoLogOutput
     public boolean getHasValidTag() {
@@ -330,17 +332,24 @@ public class VisionSubsystemLimelight implements Subsystem {
         return lastSnapshot != null;
     }
 
+    // --- MATCH TIER ---
+
     @AutoLogOutput
     public int getLoggedCurrentTagId() {
         refreshSnapshotIfStale();
         return lastSnapshot == null ? -1 : lastSnapshot.getTagId();
     }
 
+    // --- DIAGNOSTIC: NOT auto-logged ---
+
+    public String getVisionState() {
+        return state.name();
+    }
+
     public int getLastSeenTagId() {
         return lastSeenTagId;
     }
 
-    @AutoLogOutput
     public double getTimeSinceLastSeenMs() {
         return lastSnapshotTimestampMs == 0L
                 ? Double.POSITIVE_INFINITY
