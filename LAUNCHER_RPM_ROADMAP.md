@@ -67,7 +67,7 @@ driverPad.dpadUp().whenBecomesTrue(() -> {
 
 ### What It Does
 - Logs every shot: distance, RPM, robot pose, timestamp
-- Saves to CSV via PsiKit for offline analysis
+- Saves to CSV for offline analysis
 - Builds dataset to derive distance→RPM formula
 
 ### How to Enable (Optional for Practice 1)
@@ -106,7 +106,7 @@ robot.shotLogger.logShotAtPosition(
 );
 ```
 
-3. Collect CSV files from `/sdcard/FIRST/PsiKitLogs/` after practice
+3. Collect CSV files from robot storage after practice
 
 ### Data Analysis (After Practice 2-3)
 
@@ -293,7 +293,7 @@ A: Check `LauncherSubsystem` configs - ensure non-zero RPMs for enabled launcher
 ## Questions?
 
 - Check FTC Dashboard: `http://192.168.49.1:8080/dash`
-- Review AdvantageScope logs: `/sdcard/FIRST/PsiKitLogs/`
+- Review telemetry logs from robot
 - Test commands in `DecodeTeleOp` before autonomous
 
 **Good luck at competition! 🚀**
