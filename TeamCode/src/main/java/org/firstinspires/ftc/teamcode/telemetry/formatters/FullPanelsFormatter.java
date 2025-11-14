@@ -42,8 +42,11 @@ public class FullPanelsFormatter {
         panels.debug("gamepad/driver/buttons/relocalizeRequest(A)", data.gamepad.driver.buttonA);
         panels.debug("gamepad/driver/buttons/aimHold(B)", data.gamepad.driver.buttonB);
         panels.debug("gamepad/driver/buttons/aim(X)", data.gamepad.driver.buttonX);
+        panels.debug("gamepad/driver/buttons/Y(unmapped)", data.gamepad.driver.buttonY);
         panels.debug("gamepad/driver/buttons/rampHold(leftBumper)", data.gamepad.driver.leftBumper);
         panels.debug("gamepad/driver/buttons/slowHold(rightBumper)", data.gamepad.driver.rightBumper);
+        panels.debug("gamepad/driver/buttons/telemetryPageUp(dpadUp)", data.gamepad.driver.dpadUp);
+        panels.debug("gamepad/driver/buttons/telemetryPageDown(dpadDown)", data.gamepad.driver.dpadDown);
 
         // Operator axes
         panels.debug("gamepad/operator/axes/leftStickX", data.gamepad.operator.leftStickX);
@@ -58,6 +61,7 @@ public class FullPanelsFormatter {
         panels.debug("gamepad/operator/buttons/fireLongButton(B)", data.gamepad.operator.buttonB);
         panels.debug("gamepad/operator/buttons/fireShortButton(X)", data.gamepad.operator.buttonX);
         panels.debug("gamepad/operator/buttons/fireMidButton(Y)", data.gamepad.operator.buttonY);
+        panels.debug("gamepad/operator/buttons/leftBumper(unmapped)", data.gamepad.operator.leftBumper);
         panels.debug("gamepad/operator/buttons/intakeForwardHold(rightBumper)", data.gamepad.operator.rightBumper);
 
         // Drive commanded behavior (after processing)
