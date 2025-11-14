@@ -49,8 +49,8 @@ public class DriveSubsystem implements Subsystem {
 
     @Configurable
     public static class TeleOpDriveConfig {
-        public double slowMultiplier = 0.5;
-        public double slowTurnMultiplier = 0.2;
+        public double slowMultiplier = 0.2;
+        public double slowTurnMultiplier = 0.7;
         public double rotationOverrideThreshold = 0.05;
     }
 
@@ -662,114 +662,114 @@ public class DriveSubsystem implements Subsystem {
     // and published to FTC Dashboard for AdvantageScope Lite
     // ========================================================================
 
-    @AutoLogOutput
+    @DoNotLog
     public double getPoseXInches() {
         Pose pose = follower.getPose();
         return pose != null ? pose.getX() : 0.0;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getPoseYInches() {
         Pose pose = follower.getPose();
         return pose != null ? pose.getY() : 0.0;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getPoseHeadingDeg() {
         return Math.toDegrees(follower.getHeading());
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public boolean isRobotCentric() {
         return robotCentric;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public String getDriveModeString() {
         return activeMode.name();
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getRequestFieldX() {
         return lastRequestFieldX;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getRequestFieldY() {
         return lastRequestFieldY;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getRequestRotation() {
         return lastRequestRotation;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public boolean getRequestSlowMode() {
         return lastRequestSlowMode;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getCommandForward() {
         return lastCommandForward;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getCommandStrafeLeft() {
         return lastCommandStrafeLeft;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getCommandTurn() {
         return lastCommandTurn;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public boolean isFollowerBusyLogged() {
         return follower.isBusy();
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getLfPowerLogged() {
         return motorLf.getPower();
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getRfPowerLogged() {
         return motorRf.getPower();
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getLbPowerLogged() {
         return motorLb.getPower();
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getRbPowerLogged() {
         return motorRb.getPower();
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getLfCurrentAmps() {
         return readCurrentAmps(motorLf);
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getRfCurrentAmps() {
         return readCurrentAmps(motorRf);
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getLbCurrentAmps() {
         return readCurrentAmps(motorLb);
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getRbCurrentAmps() {
         return readCurrentAmps(motorRb);
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getDriveTotalCurrentAmps() {
         return sumCurrentAmps(
                 getLfCurrentAmps(),
@@ -779,44 +779,44 @@ public class DriveSubsystem implements Subsystem {
         );
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getLfVelocityIps() {
         return ticksToInchesPerSecond(motorLf.getVelocity());
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getRfVelocityIps() {
         return ticksToInchesPerSecond(motorRf.getVelocity());
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getLbVelocityIps() {
         return ticksToInchesPerSecond(motorLb.getVelocity());
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getRbVelocityIps() {
         return ticksToInchesPerSecond(motorRb.getVelocity());
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getFollowerSpeedIps() {
         return followerVelocityIps();
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getLastVisionAngleDeg() {
         return Double.isNaN(lastGoodVisionAngle) ? Double.NaN : Math.toDegrees(lastGoodVisionAngle);
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getVisionSampleAgeMs() {
         return lastVisionTimestamp == Double.NEGATIVE_INFINITY
                 ? Double.POSITIVE_INFINITY
                 : Math.max(0.0, clock.milliseconds() - lastVisionTimestamp);
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public boolean getFusionHasPose() {
         return poseFusion.getStateSnapshot().hasFusedPose;
     }
@@ -859,12 +859,12 @@ public class DriveSubsystem implements Subsystem {
         return Double.NaN;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public double getFusionVisionWeight() {
         return poseFusion.getStateSnapshot().lastVisionWeight;
     }
 
-    @AutoLogOutput
+    @DoNotLog
     public boolean getFusionVisionAccepted() {
         return poseFusion.getStateSnapshot().lastVisionAccepted;
     }
