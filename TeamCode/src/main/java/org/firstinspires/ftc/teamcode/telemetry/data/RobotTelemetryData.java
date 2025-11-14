@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.telemetry.data;
 
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
@@ -29,6 +30,7 @@ public class RobotTelemetryData {
     public final LauncherTelemetryData launcher;
     public final VisionTelemetryData vision;
     public final IntakeTelemetryData intake;
+    public final GamepadTelemetryData gamepad;
 
     public RobotTelemetryData(
             MatchContextData context,
@@ -36,7 +38,8 @@ public class RobotTelemetryData {
             DriveTelemetryData drive,
             LauncherTelemetryData launcher,
             VisionTelemetryData vision,
-            IntakeTelemetryData intake
+            IntakeTelemetryData intake,
+            GamepadTelemetryData gamepad
     ) {
         this.context = context;
         this.pose = pose;
@@ -44,6 +47,7 @@ public class RobotTelemetryData {
         this.launcher = launcher;
         this.vision = vision;
         this.intake = intake;
+        this.gamepad = gamepad;
     }
 
     /**
@@ -55,6 +59,8 @@ public class RobotTelemetryData {
      * @param vision Vision subsystem
      * @param coordinator Launcher coordinator (for artifact tracking)
      * @param driveRequest Current drive request from bindings
+     * @param gamepad1 Driver gamepad (may be null)
+     * @param gamepad2 Operator gamepad (may be null)
      * @param alliance Current alliance
      * @param runtimeSec OpMode runtime in seconds
      * @param matchTimeSec Match time remaining in seconds
@@ -70,6 +76,8 @@ public class RobotTelemetryData {
             VisionSubsystemLimelight vision,
             LauncherCoordinator coordinator,
             DriverBindings.DriveRequest driveRequest,
+            Gamepad gamepad1,
+            Gamepad gamepad2,
             Alliance alliance,
             double runtimeSec,
             double matchTimeSec,
@@ -115,13 +123,17 @@ public class RobotTelemetryData {
         LauncherTelemetryData launcherData = LauncherTelemetryData.capture(launcher);
         IntakeTelemetryData intakeData = IntakeTelemetryData.capture(intake, coordinator);
 
+        // Capture gamepad data
+        GamepadTelemetryData gamepadData = GamepadTelemetryData.capture(gamepad1, gamepad2);
+
         return new RobotTelemetryData(
                 context,
                 poseData,
                 driveData,
                 launcherData,
                 visionData,
-                intakeData
+                intakeData,
+                gamepadData
         );
     }
 }

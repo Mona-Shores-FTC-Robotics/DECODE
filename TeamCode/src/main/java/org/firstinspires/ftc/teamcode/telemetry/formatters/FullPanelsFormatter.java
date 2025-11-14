@@ -29,10 +29,15 @@ public class FullPanelsFormatter {
         panels.debug("mode/drive", data.drive.driveMode);
         panels.debug("mode/aim/enabled", data.drive.aimMode);
 
-        // Drive inputs and state
-        panels.debug("drive/lx", data.drive.requestX);
-        panels.debug("drive/ly", data.drive.requestY);
-        panels.debug("drive/rx", data.drive.requestRot);
+        // Gamepad inputs (raw driver inputs)
+        panels.debug("gamepad/driver/leftStickX", data.gamepad.driver.leftStickX);
+        panels.debug("gamepad/driver/leftStickY", data.gamepad.driver.leftStickY);
+        panels.debug("gamepad/driver/rightStickX", data.gamepad.driver.rightStickX);
+        panels.debug("gamepad/driver/rightStickY", data.gamepad.driver.rightStickY);
+        panels.debug("gamepad/driver/leftTrigger", data.gamepad.driver.leftTrigger);
+        panels.debug("gamepad/driver/rightTrigger", data.gamepad.driver.rightTrigger);
+
+        // Drive commanded behavior (after processing)
         panels.debug("drive/slowMode", data.drive.slowMode);
         panels.debug("drive/aimMode", data.drive.aimMode);
         panels.debug("drive/commandTurn", data.drive.commandTurn);

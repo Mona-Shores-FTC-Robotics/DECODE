@@ -7,19 +7,19 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 
 /**
  * Drive subsystem telemetry data.
- * Organized with clear four-motor hierarchy.
+ * Shows commanded robot behavior (after processing) and actual motor outputs.
+ * <p>
+ * For raw driver inputs, see GamepadTelemetryData.
+ * </p>
  */
 public class DriveTelemetryData {
-    // Drive mode
+    // Drive mode and state
     public final String driveMode;
     public final boolean aimMode;
     public final boolean slowMode;
-    public final double commandTurn;
 
-    // Driver inputs
-    public final double requestX;
-    public final double requestY;
-    public final double requestRot;
+    // Commanded values (after processing)
+    public final double commandTurn;
 
     // Motor data (organized by motor)
     public final MotorData leftFront;
@@ -32,9 +32,6 @@ public class DriveTelemetryData {
             boolean aimMode,
             boolean slowMode,
             double commandTurn,
-            double requestX,
-            double requestY,
-            double requestRot,
             MotorData leftFront,
             MotorData rightFront,
             MotorData leftBack,
@@ -44,9 +41,6 @@ public class DriveTelemetryData {
         this.aimMode = aimMode;
         this.slowMode = slowMode;
         this.commandTurn = commandTurn;
-        this.requestX = requestX;
-        this.requestY = requestY;
-        this.requestRot = requestRot;
         this.leftFront = leftFront;
         this.rightFront = rightFront;
         this.leftBack = leftBack;
@@ -69,9 +63,6 @@ public class DriveTelemetryData {
     }
 
     public static DriveTelemetryData capture(DriveSubsystem drive, DriverBindings.DriveRequest request) {
-        double requestX = request != null ? request.fieldX : 0.0;
-        double requestY = request != null ? request.fieldY : 0.0;
-        double requestRot = request != null ? request.rotation : 0.0;
         boolean slowMode = request != null && request.slowMode;
         boolean aimMode = request != null && request.aimMode;
 
@@ -85,9 +76,6 @@ public class DriveTelemetryData {
                 aimMode,
                 slowMode,
                 drive.getLastCommandTurn(),
-                requestX,
-                requestY,
-                requestRot,
                 lf, rf, lb, rb
         );
     }

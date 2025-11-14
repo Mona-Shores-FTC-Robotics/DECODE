@@ -91,13 +91,10 @@ public class DashboardFormatter {
         // Pose (all representations)
         addPoseData(packet, data);
 
-        // Drive detailed (four-motor hierarchy with underscores for grouping)
+        // Drive detailed (shows commanded behavior, not raw inputs)
         packet.put("drive/aim_mode", data.drive.aimMode);
         packet.put("drive/command_turn", data.drive.commandTurn);
         packet.put("drive/mode", data.drive.driveMode);
-        packet.put("drive/request_rot", data.drive.requestRot);
-        packet.put("drive/request_x", data.drive.requestX);
-        packet.put("drive/request_y", data.drive.requestY);
         packet.put("drive/slow_mode", data.drive.slowMode);
 
         // Drive motors (organized by motor, underscores group power/velocity)
@@ -144,6 +141,9 @@ public class DashboardFormatter {
         packet.put("vision/tx_deg", data.vision.txDeg);
         packet.put("vision/ty_deg", data.vision.tyDeg);
         packet.put("vision/yaw_deg", data.vision.yawDeg);
+
+        // Gamepad inputs (AdvantageScope-friendly naming for potential joystick visualization)
+        addGamepadData(packet, data);
 
         // Field overlay (with vision pose in DEBUG)
         addFieldOverlay(packet, data, true);
@@ -224,5 +224,60 @@ public class DashboardFormatter {
             overlay.strokeCircle(data.pose.visionPoseXIn, data.pose.visionPoseYIn, 2.0);
             overlay.strokeLine(data.pose.visionPoseXIn, data.pose.visionPoseYIn, visionEndX, visionEndY);
         }
+    }
+
+    /**
+     * Add gamepad telemetry data to packet (DEBUG mode only).
+     * Uses AdvantageScope/DriverStation-compatible naming to potentially enable joystick visualization.
+     * Format: DriverStation/Gamepad{1|2}/Axes/{0-5} and Buttons/{0-14}
+     */
+    private void addGamepadData(TelemetryPacket packet, RobotTelemetryData data) {
+        // Driver gamepad (Gamepad1)
+        packet.put("DriverStation/Gamepad1/Axes/0", data.gamepad.driver.leftStickX);
+        packet.put("DriverStation/Gamepad1/Axes/1", data.gamepad.driver.leftStickY);
+        packet.put("DriverStation/Gamepad1/Axes/2", data.gamepad.driver.leftTrigger);
+        packet.put("DriverStation/Gamepad1/Axes/3", data.gamepad.driver.rightTrigger);
+        packet.put("DriverStation/Gamepad1/Axes/4", data.gamepad.driver.rightStickX);
+        packet.put("DriverStation/Gamepad1/Axes/5", data.gamepad.driver.rightStickY);
+
+        packet.put("DriverStation/Gamepad1/Buttons/0", data.gamepad.driver.buttonA);
+        packet.put("DriverStation/Gamepad1/Buttons/1", data.gamepad.driver.buttonB);
+        packet.put("DriverStation/Gamepad1/Buttons/2", data.gamepad.driver.buttonX);
+        packet.put("DriverStation/Gamepad1/Buttons/3", data.gamepad.driver.buttonY);
+        packet.put("DriverStation/Gamepad1/Buttons/4", data.gamepad.driver.leftBumper);
+        packet.put("DriverStation/Gamepad1/Buttons/5", data.gamepad.driver.rightBumper);
+        packet.put("DriverStation/Gamepad1/Buttons/6", data.gamepad.driver.back);
+        packet.put("DriverStation/Gamepad1/Buttons/7", data.gamepad.driver.start);
+        packet.put("DriverStation/Gamepad1/Buttons/8", data.gamepad.driver.leftStickButton);
+        packet.put("DriverStation/Gamepad1/Buttons/9", data.gamepad.driver.rightStickButton);
+        packet.put("DriverStation/Gamepad1/Buttons/10", data.gamepad.driver.dpadUp);
+        packet.put("DriverStation/Gamepad1/Buttons/11", data.gamepad.driver.dpadDown);
+        packet.put("DriverStation/Gamepad1/Buttons/12", data.gamepad.driver.dpadLeft);
+        packet.put("DriverStation/Gamepad1/Buttons/13", data.gamepad.driver.dpadRight);
+        packet.put("DriverStation/Gamepad1/Buttons/14", data.gamepad.driver.guide);
+
+        // Operator gamepad (Gamepad2)
+        packet.put("DriverStation/Gamepad2/Axes/0", data.gamepad.operator.leftStickX);
+        packet.put("DriverStation/Gamepad2/Axes/1", data.gamepad.operator.leftStickY);
+        packet.put("DriverStation/Gamepad2/Axes/2", data.gamepad.operator.leftTrigger);
+        packet.put("DriverStation/Gamepad2/Axes/3", data.gamepad.operator.rightTrigger);
+        packet.put("DriverStation/Gamepad2/Axes/4", data.gamepad.operator.rightStickX);
+        packet.put("DriverStation/Gamepad2/Axes/5", data.gamepad.operator.rightStickY);
+
+        packet.put("DriverStation/Gamepad2/Buttons/0", data.gamepad.operator.buttonA);
+        packet.put("DriverStation/Gamepad2/Buttons/1", data.gamepad.operator.buttonB);
+        packet.put("DriverStation/Gamepad2/Buttons/2", data.gamepad.operator.buttonX);
+        packet.put("DriverStation/Gamepad2/Buttons/3", data.gamepad.operator.buttonY);
+        packet.put("DriverStation/Gamepad2/Buttons/4", data.gamepad.operator.leftBumper);
+        packet.put("DriverStation/Gamepad2/Buttons/5", data.gamepad.operator.rightBumper);
+        packet.put("DriverStation/Gamepad2/Buttons/6", data.gamepad.operator.back);
+        packet.put("DriverStation/Gamepad2/Buttons/7", data.gamepad.operator.start);
+        packet.put("DriverStation/Gamepad2/Buttons/8", data.gamepad.operator.leftStickButton);
+        packet.put("DriverStation/Gamepad2/Buttons/9", data.gamepad.operator.rightStickButton);
+        packet.put("DriverStation/Gamepad2/Buttons/10", data.gamepad.operator.dpadUp);
+        packet.put("DriverStation/Gamepad2/Buttons/11", data.gamepad.operator.dpadDown);
+        packet.put("DriverStation/Gamepad2/Buttons/12", data.gamepad.operator.dpadLeft);
+        packet.put("DriverStation/Gamepad2/Buttons/13", data.gamepad.operator.dpadRight);
+        packet.put("DriverStation/Gamepad2/Buttons/14", data.gamepad.operator.guide);
     }
 }

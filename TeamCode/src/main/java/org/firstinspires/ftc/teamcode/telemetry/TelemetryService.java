@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.bylazar.telemetry.TelemetryManager;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
@@ -106,6 +107,8 @@ public class TelemetryService {
      * @param vision Vision subsystem
      * @param launcherCoordinator Launcher coordinator (for artifact tracking)
      * @param driveRequest Current drive request from bindings (may be null)
+     * @param gamepad1 Driver gamepad (may be null)
+     * @param gamepad2 Operator gamepad (may be null)
      * @param alliance Current alliance
      * @param runtimeSec OpMode runtime in seconds
      * @param matchTimeSec Match time remaining in seconds
@@ -121,6 +124,8 @@ public class TelemetryService {
             VisionSubsystemLimelight vision,
             LauncherCoordinator launcherCoordinator,
             DriverBindings.DriveRequest driveRequest,
+            Gamepad gamepad1,
+            Gamepad gamepad2,
             Alliance alliance,
             double runtimeSec,
             double matchTimeSec,
@@ -137,6 +142,8 @@ public class TelemetryService {
                 vision,
                 launcherCoordinator,
                 driveRequest,
+                gamepad1,
+                gamepad2,
                 alliance,
                 runtimeSec,
                 matchTimeSec,
@@ -197,6 +204,8 @@ public class TelemetryService {
                 vision,
                 launcherCoordinator,
                 driveRequest,
+                null,  // gamepad1 (not available in old signature)
+                null,  // gamepad2 (not available in old signature)
                 alliance,
                 runtimeSec,
                 matchTimeSec,
