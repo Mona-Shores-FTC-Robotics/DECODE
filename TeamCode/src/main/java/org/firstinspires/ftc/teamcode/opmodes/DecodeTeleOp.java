@@ -332,7 +332,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
             long telemetryCallStartNs = nowNs;
             robot.telemetry.publishLoopTelemetry(
                     robot.drive,
-                    robot.launcher ,
+                    robot.launcher,
+                    robot.intake,
                     robot.vision,
                     request,
                     robot.launcherCoordinator,
@@ -456,7 +457,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
         }
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
-                robot.launcher ,
+                robot.launcher,
+                robot.intake,
                 robot.vision,
                 null,
                 robot.launcherCoordinator,
