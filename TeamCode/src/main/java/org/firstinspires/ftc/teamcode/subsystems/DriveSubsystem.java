@@ -203,7 +203,16 @@ public class DriveSubsystem implements Subsystem {
         follower.update();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
         updatePoseFusion();
-        // Pose logging already handled by @AutoLogOutput methods (getPoseXInches, etc.)
+
+        // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)
+        Pose pose = follower.getPose();
+        if (pose != null) {
+            // Convert inches to meters for AdvantageScope (SI units required)
+            double xMeters = pose.getX() * 0.0254;
+            double yMeters = pose.getY() * 0.0254;
+            double headingRadians = follower.getHeading();
+            KoalaLog.logPose2d("Robot/Pose", xMeters, yMeters, headingRadians, true);
+        }
     }
 
     public double getLastPeriodicMs() {
