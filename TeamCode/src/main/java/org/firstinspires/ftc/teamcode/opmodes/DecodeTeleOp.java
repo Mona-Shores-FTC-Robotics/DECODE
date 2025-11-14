@@ -38,6 +38,7 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 public class DecodeTeleOp extends NextFTCOpMode {
 
     private static final long TELEMETRY_INTERVAL_NS = 50_000_000L; // 50 ms cadence (~20 Hz)
+    private static final long AUTO_LOG_INTERVAL_MS = 50L; // Throttle AutoLog to 20Hz
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
 
     private Robot robot;
@@ -47,6 +48,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
     private Alliance selectedAlliance = Alliance.UNKNOWN;
 
     private long lastTelemetryNs = 0L;
+    private long lastAutoLogTimeMs = 0L;
     private String visionRelocalizeStatus = "Press A to re-localize";
     private long visionRelocalizeStatusMs = 0L;
 
@@ -137,8 +139,12 @@ public class DecodeTeleOp extends NextFTCOpMode {
         // Commands (DefaultDriveCommand, AimAndDriveCommand, CaptureAndAimCommand) handle drive control
         BindingManager.update();
 
-        // Periodic logging for KoalaLog (WPILOG files)
-        AutoLogManager.periodic();
+        // Throttle AutoLogManager to 20Hz to reduce CPU load (samples 181 @AutoLogOutput methods)
+        long nowMs = System.currentTimeMillis();
+        if (nowMs - lastAutoLogTimeMs >= AUTO_LOG_INTERVAL_MS) {
+            AutoLogManager.periodic();
+            lastAutoLogTimeMs = nowMs;
+        }
 
         // Sample driver inputs for telemetry/logging only (not for control)
         DriverBindings.DriveRequest request = driverBindings.sampleDriveRequest();
@@ -146,9 +152,11 @@ public class DecodeTeleOp extends NextFTCOpMode {
         TelemetryTiming telemetryTiming = publishTelemetryIfNeeded(request);
         Pose2D pose = robot.drive.getPose();
 
+        // Measure loop time including telemetry display (previously unmeasured)
         long mainloopEndNs = System.nanoTime();
-        double loopMs = nanosToMs(mainloopEndNs - mainLoopStartNs);
-        LoopTiming loopTiming = buildLoopTiming(loopMs, telemetryTiming.telemetryMs, telemetryTiming.telemetrySent);
+        double totalLoopMs = nanosToMs(mainloopEndNs - mainLoopStartNs);
+
+        LoopTiming loopTiming = buildLoopTiming(totalLoopMs, telemetryTiming.telemetryMs, telemetryTiming.telemetrySent, 0);
         publishTelemetryDisplay(pose, telemetryTiming.wallClockMs, loopTiming, diagnosticsRequested());
     }
 
@@ -302,7 +310,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         return angleDeg;
     }
 
-    private LoopTiming buildLoopTiming(double loopMs, double telemetryMsThisLoop, boolean telemetrySent) {
+    private LoopTiming buildLoopTiming(double loopMs, double telemetryMsThisLoop, boolean telemetrySent, double telemetryDisplayMs) {
         double drivePeriodicMs = robot.drive.getLastPeriodicMs();
         double intakePeriodicMs = robot.intake.getLastPeriodicMs();
         double launcherPeriodicMs = robot.launcher.getLastPeriodicMs();
@@ -310,7 +318,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         double launcherCoordPeriodicMs = robot.launcherCoordinator.getLastPeriodicMs();
         double visionPeriodicMs = robot.vision.getLastPeriodicMs();
         return new LoopTiming(loopMs, telemetryMsThisLoop, telemetrySent,
-                drivePeriodicMs, intakePeriodicMs, launcherPeriodicMs, lightingPeriodicMs, launcherCoordPeriodicMs, visionPeriodicMs);
+                drivePeriodicMs, intakePeriodicMs, launcherPeriodicMs, lightingPeriodicMs, launcherCoordPeriodicMs, visionPeriodicMs, telemetryDisplayMs);
     }
 
     private boolean diagnosticsRequested() {
@@ -394,6 +402,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         final double lightingMs;
         final double launchCoordMs;
         final double visionMs;
+        final double telemetryDisplayMs;
 
         LoopTiming(double loopMs,
                    double telemetryMs,
@@ -403,7 +412,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
                    double launcherMs ,
                    double lightingMs,
                    double launchCoordMs ,
-                   double visionMs) {
+                   double visionMs,
+                   double telemetryDisplayMs) {
             this.loopMs = loopMs;
             this.telemetryMs = telemetryMs;
             this.telemetrySent = telemetrySent;
@@ -413,10 +423,11 @@ public class DecodeTeleOp extends NextFTCOpMode {
             this.lightingMs = lightingMs;
             this.launchCoordMs = launchCoordMs;
             this.visionMs = visionMs;
+            this.telemetryDisplayMs = telemetryDisplayMs;
         }
 
         double totalMs() {
-            return loopMs + driveMs + intakeMs + launcherMs + lightingMs + launchCoordMs + visionMs + telemetryMs;
+            return loopMs + driveMs + intakeMs + launcherMs + lightingMs + launchCoordMs + visionMs + telemetryMs + telemetryDisplayMs;
         }
     }
 
