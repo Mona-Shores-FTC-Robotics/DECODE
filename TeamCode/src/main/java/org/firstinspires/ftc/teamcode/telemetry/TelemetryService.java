@@ -149,7 +149,7 @@ public class TelemetryService {
         }
 
         TelemetryManager panels = panelsTelemetry();
-        if (!suppressDriveTelemetry && panels != null) {
+        if (TelemetrySettings.enableFullPanelsTelemetry && !suppressDriveTelemetry && panels != null) {
             String label = modeLabel == null || modeLabel.isEmpty() ? "robot" : modeLabel.toLowerCase();
             panels.debug("mode/label", label);
             panels.debug("mode/drive", drive.getDriveMode());
@@ -208,7 +208,7 @@ public class TelemetryService {
                 displayTargetRpm - displayCurrentRpm
         );
 
-        if (panels != null) {
+        if (TelemetrySettings.enableFullPanelsTelemetry && panels != null) {
             panels.debug("launcher/control/mode", controlMode);
             panels.debug("launcher/lanes/left/targetRpm", leftTargetRpm);
             panels.debug("launcher/lanes/left/currentRpm", leftCurrentRpm);
@@ -230,7 +230,7 @@ public class TelemetryService {
             panels.debug("launcher/lanes/right/bangToHoldCount", rightBangToHoldCount);
         }
 
-        if (dsTelemetry != null && !suppressDriveTelemetry) {
+        if (TelemetrySettings.enableVerboseDriverStation && dsTelemetry != null && !suppressDriveTelemetry) {
             if (pose != null) {
                 dsTelemetry.addData("Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
                         poseXIn,
@@ -282,7 +282,9 @@ public class TelemetryService {
         }
 
         if (launcherCoordinator != null) {
-            launcherCoordinator.publishLaneTelemetry(dsTelemetry, panels);
+            TelemetryManager panelsForCoordinator = TelemetrySettings.enableFullPanelsTelemetry ? panels : null;
+            Telemetry dsForCoordinator = TelemetrySettings.enableVerboseDriverStation ? dsTelemetry : null;
+            launcherCoordinator.publishLaneTelemetry(dsForCoordinator, panelsForCoordinator);
         }
 
         if (dsTelemetry != null) {
