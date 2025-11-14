@@ -144,8 +144,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
         // Throttle AutoLogManager to 20Hz to reduce CPU load (samples 181 @AutoLogOutput methods)
         long nowMs = System.currentTimeMillis();
         if (nowMs - lastAutoLogTimeMs >= AUTO_LOG_INTERVAL_MS) {
-            AutoLogManager.periodic();
-            lastAutoLogTimeMs = nowMs;
+//            AutoLogManager.periodic();
+//            lastAutoLogTimeMs = nowMs;
         }
 
         // Sample driver inputs for telemetry/logging only (not for control)

@@ -49,8 +49,8 @@ public class DriveSubsystem implements Subsystem {
 
     @Configurable
     public static class TeleOpDriveConfig {
-        public double slowMultiplier = 0.07;
-        public double slowTurnMultiplier = 0.07;
+        public double slowMultiplier = 0.5;
+        public double slowTurnMultiplier = 0.2;
         public double rotationOverrideThreshold = 0.05;
     }
 
