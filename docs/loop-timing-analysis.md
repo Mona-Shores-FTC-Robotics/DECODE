@@ -310,15 +310,62 @@ Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
 3. **Document when to use each mode** in CLAUDE.md
 
 ### Future Considerations
+
 1. **Profile with Android Profiler** to find any remaining bottlenecks
-2. **Consider async telemetry** (background thread) for dashboard packets
-3. **Evaluate if FullPanels is worth the overhead** (currently disabled in good loop times)
+
+2. **Tolerance-based motor power caching** (LOW priority - ~1-3ms gain estimate)
+   - Article: [Dairy Foundation Loop Times](https://cookbook.dairy.foundation/improving_loop_times/improving_loop_times.html)
+   - SDK already caches exact equality (0.5 == 0.5 skips write)
+   - [CachingHardware library](https://github.com/Dairy-Foundation/CachingHardware) adds tolerance (0.5 vs 0.51 skips)
+   - **Current state:** Only 10 `setPower()` calls in subsystems, most in library code (Pedro)
+   - **When to implement:** If post-testing shows motor writes are >5ms overhead
+   - **Note:** IntakeSubsystem already manually tracks `appliedMotorPower` but no tolerance
+
+3. **Consider async telemetry** (background thread) for dashboard packets
+
+4. **Evaluate if FullPanels is worth the overhead** (currently disabled in good loop times)
 
 ### Competition Strategy
 - **Qualification matches:** MATCH mode (performance critical)
 - **Practice field:** PRACTICE mode (balance of visibility and performance)
 - **Pit testing:** DEBUG mode (full diagnostics)
 - **Between matches:** Switch via FTC Dashboard (no recompile needed)
+
+## Compliance with FTC Best Practices
+
+DECODE follows all major recommendations from the [Dairy Foundation Loop Time Guide](https://cookbook.dairy.foundation/improving_loop_times/improving_loop_times.html):
+
+### ✅ Implemented Optimizations
+
+1. **Bulk Hardware Reads** - Using `BulkReadComponent.INSTANCE` in all OpModes
+   - Reduces 50+ hardware reads per loop to 1 bulk command
+   - Biggest performance win for hardware I/O
+
+2. **Telemetry Throttling** - Tiered system (MATCH/PRACTICE/DEBUG)
+   - MATCH: 100ms AutoLog, no Dashboard packets
+   - PRACTICE: 50ms AutoLog, 100ms Dashboard
+   - DEBUG: Full logging (50ms AutoLog, 50ms Dashboard)
+   - Addresses primary bottleneck (50-75% improvement)
+
+3. **I2C Device Throttling** - Prevents slow sensors from blocking every loop
+   - Color sensors: 200ms interval (IntakeSubsystem:61)
+   - Limelight vision: 50ms interval (VisionSubsystem:55)
+
+4. **SDK Motor Power Caching** - Exact equality caching built into FTC SDK
+   - Prevents redundant identical setPower() commands
+   - No additional implementation needed
+
+### 📋 Not Implemented (Low Priority)
+
+**Tolerance-based Motor Power Caching**
+- [CachingHardware library](https://github.com/Dairy-Foundation/CachingHardware) provides this
+- Skips writes when power change is negligible (0.5 → 0.51)
+- **Why low priority:**
+  - Only 10 `setPower()` calls in subsystems
+  - Most motor control in Pedro Pathing (library code)
+  - Estimated 1-3ms improvement vs 30-75ms from telemetry
+  - Return on investment is low
+- **When to reconsider:** If post-testing shows motor writes >5ms overhead
 
 ## Conclusion
 
@@ -330,3 +377,5 @@ Loop timing issues are **100% telemetry overhead**, not subsystem logic. The tie
 All modes preserve post-match analysis via WPILOG files, so we don't lose offline debugging capability.
 
 **Estimated improvement:** 50-75% reduction in loop time (50-100ms → 15-25ms) in MATCH mode.
+
+**Dairy Foundation compliance:** ✅ All high-impact optimizations implemented.
