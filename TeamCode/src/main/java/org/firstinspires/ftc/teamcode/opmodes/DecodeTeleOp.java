@@ -335,13 +335,14 @@ public class DecodeTeleOp extends NextFTCOpMode {
                     robot.launcher,
                     robot.intake,
                     robot.vision,
-                    request,
                     robot.launcherCoordinator,
+                    request,
                     gamepad1,
                     gamepad2,
                     selectedAlliance,
                     getRuntime(),
                     null,
+                    telemetry,
                     "TeleOp",
                     false,
                     null
@@ -462,13 +463,14 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 robot.launcher,
                 robot.intake,
                 robot.vision,
-                null,
                 robot.launcherCoordinator,
+                null,  // driveRequest (not needed in init)
                 null,  // gamepad1 (not needed in init)
                 null,  // gamepad2 (not needed in init)
                 selectedAlliance,
                 getRuntime(),
                 null,
+                telemetry,
                 "TeleOpInit",
                 true,
                 null
