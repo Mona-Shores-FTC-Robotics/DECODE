@@ -82,9 +82,6 @@ DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. I
 
 ### Key Architectural Patterns
 
-**@AutoLog Logging Pattern:**
-All subsystems use KoalaLog's `@AutoLog` annotation for automatic logging. Methods annotated with `@AutoLogOutput` are automatically logged to WPILOG files and published to FTC Dashboard for AdvantageScope Lite viewing. No manual logging infrastructure is required.
-
 **Centralized Constants:**
 All hardware names, tuning parameters, and field names are defined in `pedroPathing/Constants.java`. Use `Constants.HardwareNames.*` for device names and `Constants.Naming.FieldNames.*` for telemetry keys.
 
@@ -121,7 +118,7 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 - `PoseFusion` blends Pinpoint odometry with AprilTag measurements
 - Configurable trust weights based on range and decision margin
 - Outlier rejection for invalid measurements
-- Diagnostics automatically logged via `@AutoLogOutput` methods
+- Diagnostics available for analysis
 - Not yet used for control, but logged for analysis
 
 **Odometry Updates:**
@@ -141,8 +138,6 @@ DECODE uses a **tiered telemetry system** to balance performance and visibility.
    - Driver station: Pose, alliance, launcher ready status, artifact count
    - FTC Dashboard: **Disabled** (no packets sent)
    - FullPanels: **Disabled**
-   - AutoLogManager: 100ms intervals (10 Hz)
-   - WPILOG files: Critical pose data preserved for post-match replay
    - **Use for:** Qualification and elimination matches
 
 2. **PRACTICE Mode** (default) - Moderate telemetry for tuning
@@ -150,16 +145,12 @@ DECODE uses a **tiered telemetry system** to balance performance and visibility.
    - Driver station: Pose, alliance, drive/launcher state, vision, artifacts
    - FTC Dashboard: Basic metrics (throttled to 100ms / 10 Hz)
    - FullPanels: Configurable (can be enabled/disabled)
-   - AutoLogManager: 50ms intervals (20 Hz)
-   - WPILOG files: All data preserved
    - **Use for:** Practice sessions, parameter tuning, debugging on practice field
 
 3. **DEBUG Mode** - Full telemetry for development
-   - All @AutoLogOutput methods logged
    - FTC Dashboard: Complete packets (50ms / 20 Hz)
    - FullPanels: Full diagnostics
    - Driver station: Detailed per-lane launcher metrics, heading diagnostics
-   - AutoLogManager: Configurable interval (default 50ms / 20 Hz)
    - **Use for:** Development, bench testing, detailed diagnostics
 
 **Changing Telemetry Level:**
@@ -179,8 +170,7 @@ During operation (no recompile needed):
 
 **Performance Impact:**
 - MATCH mode: ~15-25ms total loop time (vs 50-100ms in DEBUG)
-- All modes preserve critical pose logging for AdvantageScope replay
-- MATCH mode still produces useful WPILOG files for post-match analysis
+- All modes preserve critical telemetry for analysis
 
 ### Live Telemetry (During Matches)
 
@@ -194,7 +184,6 @@ During operation (no recompile needed):
 - Connects to robot via FTC Dashboard for live visualization
 - Streams telemetry data through FTC Dashboard packets (not NetworkTables)
 - View live 2D field plots and subsystem metrics
-- All subsystem inputs automatically published under `Subsystem/field` topics
 
 **FullPanels (FTControl Panels):**
 - Team-specific live metrics panel
@@ -203,79 +192,26 @@ During operation (no recompile needed):
 **Driver Station:**
 - Standard FTC telemetry display on driver station phone/tablet
 
-### Offline Logging (Post-Match Analysis)
-
-**KoalaLog WPILOG Logging:**
-- Produces `.wpilog` files compatible with AdvantageScope for full-featured offline replay
-- Automatically enabled via `KoalaLog.setup(hardwareMap)` in `Robot` constructor
-- `AutoLogManager.periodic()` called in all OpModes to sample logged data
-- Robot pose automatically logged in `DriveSubsystem.periodic()` for 2D/3D field visualization
-- Log files stored on Control Hub internal storage
-
-**Retrieving WPILOG Files:**
-1. Download LogPuller tools from [KoalaLog GitHub](https://github.com/Koala-Log/Koala-Log/tree/main/LogPuller)
-   - `FTCLogPuller.exe` - retrieves logs from robot
-   - `PullAndDeleteLogs.exe` - retrieves logs and clears storage
-2. Connect to robot via WiFi or USB-C + REV Hardware Client
-3. Run the executable and select destination folder
-4. Open `.wpilog` files in AdvantageScope (File → Open Logs)
-
-**Note:** First run requires internet connection to download ADB tools automatically.
-
-**Adding New Logged Fields:**
-1. Add a getter method to your subsystem class
-2. Annotate the method with `@AutoLogOutput` (or `@AutoLogOutput(key = "CustomKey")` for custom naming)
-3. Return the value to log (supports primitives, enums, strings, Pose2d, etc.)
-4. Field automatically published to AdvantageScope Lite and logged to WPILOG files
-
-**Example:**
-```java
-@AutoLog
-public class MySubsystem implements Subsystem {
-    private double motorPower = 0.0;
-
-    @AutoLogOutput
-    public double getMotorPower() {
-        return motorPower;
-    }
-
-    @AutoLogOutput(key = "Subsystem/CustomFieldName")
-    public String getCustomStatus() {
-        return "Running";
-    }
-}
-```
+### Telemetry Logging
 
 **Robot Status Logging:**
-All OpModes should log FTC Dashboard _Status fields to ensure WPILOG files match live AdvantageScope Lite data. Use `RobotStatusLogger.logStatus()` in both init and main loops:
+OpModes use `RobotStatusLogger.logStatus()` to log robot status information:
 
 ```java
 import org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger;
 
-// In init loop:
-while (!isStarted() && !isStopRequested()) {
-    RobotStatusLogger.logStatus(this, hardwareMap, false);
-    AutoLogManager.periodic();
-    sleep(25);
-}
-
 // In main loop:
 while (opModeIsActive()) {
     RobotStatusLogger.logStatus(this, hardwareMap, opModeIsActive());
-    AutoLogManager.periodic();
 }
 ```
 
-This automatically logs:
-- `RUNNING` - OpMode active state (root level)
-- `_Status/enabled` - Stop requested state
-- `_Status/activeOpmode` - OpMode name (from class name)
-- `_Status/activeOpModeStatus` - INIT or RUNNING
-- `_Status/errorMessage` - From RobotLog
-- `_Status/warningMessage` - From RobotLog
-- `_Status/batteryVoltage` - From hardware
-
-**Do NOT** add custom fields to `_Status/` namespace - use separate namespaces like `OpMode/` or `Subsystem/` for OpMode-specific data.
+This logs:
+- OpMode active state
+- Stop requested state
+- OpMode name and status
+- Error and warning messages
+- Battery voltage
 
 ## Coding Conventions
 
@@ -379,12 +315,6 @@ The pre-commit hook (in `.githooks/`) blocks commits that modify Gradle or SDK v
 - NetworkTables 4 streaming
 - 2D field visualization
 - Telemetry plotting and replay
-
-**KoalaLog (v1.4.0):**
-- WPILOG file generation for AdvantageScope offline replay
-- Annotation-based logging with `@AutoLog` and `@AutoLogOutput`
-- Pose2d logging for field visualization
-- Repository: [Koala-Log/Koala-Log](https://github.com/Koala-Log/Koala-Log)
 
 **FullPanels (v1.0.9):**
 - Dashboard panels integration

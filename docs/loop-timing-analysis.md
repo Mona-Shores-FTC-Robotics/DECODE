@@ -12,19 +12,12 @@ Loop timing issues are primarily caused by **telemetry publishing overhead**, no
 
 ### Recent Optimizations (Already Completed)
 
-1. **@AutoLogOutput reduction (52% cut)**
-   - IntakeSubsystem: 55 → 28 methods (-49%)
-   - LauncherSubsystem: 31 → 16 methods (-48%)
-   - DriveSubsystem: 44 → 33 methods (-25%)
-   - **Total: 162 → 77 methods**
-
-2. **Throttling implemented:**
-   - AutoLogManager: 1000ms (1 Hz) in TeleOp
+1. **Throttling implemented:**
    - Vision polling: 50ms (20 Hz)
    - Dashboard packets: 50ms (20 Hz)
    - Telemetry publishing: 200ms (~5 Hz)
 
-3. **Optimizations:**
+2. **Optimizations:**
    - Staleness caching in VisionSubsystem (avoids redundant `System.currentTimeMillis()`)
    - BulkReadComponent for batched hardware reads
    - Lazy diagnostics (RT trigger in TeleOp)
@@ -36,8 +29,6 @@ Loop timing issues are primarily caused by **telemetry publishing overhead**, no
 Comparing "good loop times" commit (5176aea) to current master shows that **all telemetry publishing was commented out** in the good version:
 
 **What's expensive:**
-- 86 @AutoLogOutput methods sampled every 50ms by AutoLogManager
-- Dual logging via helper methods (lines 375-393): log to BOTH FTC Dashboard AND KoalaLog
 - Extensive launcher data: 3 lanes × (RPM, power, phase, ready status, bang/hold/hybrid state, transition counts)
 - Vision snapshot processing and pose transformations
 - FullPanels telemetry (9+ debug fields)
@@ -60,10 +51,9 @@ Create three telemetry levels configurable via FTC Dashboard:
 **Use case:** Competition matches
 
 **Enabled:**
-- Critical pose logging (Robot/Pose) for AdvantageScope replay
 - Essential subsystem state (ready flags, mode)
 - Driver station essentials (pose, alliance, ready status)
-- RobotStatusLogger for WPILOG metadata
+- RobotStatusLogger for status metadata
 
 **Disabled:**
 - FTC Dashboard packet sending
@@ -73,7 +63,6 @@ Create three telemetry levels configurable via FTC Dashboard:
 - Pose fusion diagnostics
 
 **Throttling:**
-- AutoLogManager: 100ms (10 Hz)
 - Driver station: 200ms (5 Hz)
 - Vision: 50ms (20 Hz)
 
@@ -94,7 +83,6 @@ Create three telemetry levels configurable via FTC Dashboard:
 - Detailed pose fusion diagnostics
 
 **Throttling:**
-- AutoLogManager: 50ms (20 Hz)
 - Dashboard packets: 100ms (10 Hz)
 - Driver station: 200ms (5 Hz)
 
@@ -104,13 +92,11 @@ Create three telemetry levels configurable via FTC Dashboard:
 
 **Enabled:**
 - Everything (current full logging)
-- All @AutoLogOutput methods
 - Complete dashboard packets
 - Full FullPanels telemetry
 - All diagnostics
 
 **Throttling:**
-- AutoLogManager: 50ms (20 Hz)
 - Dashboard: 50ms (20 Hz)
 - Driver station: 100ms (10 Hz)
 
@@ -132,7 +118,6 @@ public static class TelemetryConfig {
     public TelemetryLevel level = TelemetryLevel.PRACTICE;
     public boolean enableDashboardPackets = true;
     public boolean enableFullPanels = true;
-    public long autoLogIntervalMs = 50L;
     public long dashboardIntervalMs = 50L;
 }
 
@@ -159,7 +144,7 @@ public void publishLoopTelemetry(...) {
 }
 
 private void publishMatchTelemetry(...) {
-    // Minimal: only critical fields for drivers + pose logging
+    // Minimal: only critical fields for drivers
     if (dsTelemetry != null) {
         dsTelemetry.addData("Pose", "...");
         dsTelemetry.addData("Alliance", ...);
@@ -171,31 +156,7 @@ private void publishMatchTelemetry(...) {
 }
 ```
 
-### Phase 3: Configurable AutoLogManager Throttle
-
-**File:** `DecodeTeleOp.java`
-
-```java
-// Replace static interval with configurable value
-long autoLogInterval = TelemetrySettings.config.autoLogIntervalMs;
-if (nowMs - lastAutoLogTimeMs >= autoLogInterval) {
-    AutoLogManager.periodic();
-    lastAutoLogTimeMs = nowMs;
-}
-```
-
-### Phase 4: Optimize Dual-Logging
-
-**Current issue:** Helper methods in TelemetryService (lines 375-393) call BOTH:
-- `packet.put(key, value)` - FTC Dashboard
-- `KoalaLog.log(key, value, true)` - WPILOG files
-
-**Solution:** Separate concerns
-- In MATCH mode: Skip FTC Dashboard entirely, only log to WPILOG
-- In PRACTICE/DEBUG: Dual-log only essential fields
-- Consider making some fields dashboard-only or log-only
-
-### Phase 5: Lazy Computation for Diagnostics
+### Phase 3: Lazy Computation for Diagnostics
 
 **Pattern already used in DecodeTeleOp:326:**
 ```java
@@ -214,7 +175,7 @@ private boolean diagnosticsRequested() {
 ### MATCH Mode
 - **Loop time:** ~15-25ms (vs current 50-100ms)
 - **Telemetry overhead:** ~10ms
-- **Tradeoff:** Limited live visibility, but full WPILOG replay available post-match
+- **Tradeoff:** Limited live visibility for optimal performance
 - **Driver visibility:** Pose, alliance, launcher ready status
 
 ### PRACTICE Mode
@@ -248,15 +209,7 @@ Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
 - Verify motor velocity reads are cached per loop
 - Batch all launcher lane queries into single method
 
-### 3. Remove Redundant Dual-Logging
-**Decision needed:** Do we need BOTH FTC Dashboard AND KoalaLog for every field?
-
-**Recommendation:**
-- **Dashboard:** Live tuning values (PIDs, powers, target RPM)
-- **KoalaLog:** Everything for offline analysis
-- **Both:** Critical match data (pose, alliance, ready status)
-
-### 4. Profile Actual Overhead
+### 3. Profile Actual Overhead
 **Current:** Subjective observations, commit comparisons
 
 **Needed:** Quantified measurements
@@ -281,8 +234,7 @@ Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
 **MATCH Mode:**
 - [ ] Loop time <25ms consistently
 - [ ] Drivers can see pose and ready status
-- [ ] WPILOG files contain Robot/Pose data
-- [ ] WPILOG files playable in AdvantageScope
+- [ ] Critical telemetry data preserved
 
 **PRACTICE Mode:**
 - [ ] Loop time <40ms consistently
@@ -298,7 +250,7 @@ Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
 1. Build with MATCH mode enabled
 2. Run TeleOp on robot
 3. Monitor loop timing telemetry
-4. Pull WPILOG file, verify in AdvantageScope
+4. Verify telemetry data accuracy
 5. Repeat for PRACTICE and DEBUG modes
 6. Document findings
 
@@ -373,8 +325,6 @@ Loop timing issues are **100% telemetry overhead**, not subsystem logic. The tie
 - **Performance when needed** (MATCH mode)
 - **Visibility when useful** (PRACTICE mode)
 - **Diagnostics when debugging** (DEBUG mode)
-
-All modes preserve post-match analysis via WPILOG files, so we don't lose offline debugging capability.
 
 **Estimated improvement:** 50-75% reduction in loop time (50-100ms → 15-25ms) in MATCH mode.
 

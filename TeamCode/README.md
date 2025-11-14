@@ -39,25 +39,17 @@ This scaffold marks the `Constants` class with `@Config` from the FTC Dashboard 
 
 ### Live Telemetry
 
-`TelemetryPublisher` sends values to the FTC Dashboard on every loop.  You can monitor:
+`TelemetryService` publishes telemetry data to multiple destinations:
+* FTC Dashboard for live graphs and configuration
+* Driver station telemetry display
+* FullPanels for team-specific metrics
 
-* `drive_lx`, `drive_ly`, `drive_rx` — joystick commands
-* `drive_x_in`, `drive_y_in`, `drive_heading_deg` — robot pose estimates (inches and degrees)
-* `fly_target_rpm`, `fly_rpm`, `fly_err`, `fly_power` — target flywheel speed, measured speed, error and applied motor power
+The system supports three telemetry levels:
+* **MATCH Mode**: Minimal telemetry for competition
+* **PRACTICE Mode**: Moderate telemetry for tuning
+* **DEBUG Mode**: Full telemetry for development
 
-Plots and tables of these values are available in the dashboard and AdvantageScope when connected live.
-
-### Offline Logs (KoalaLog WPILOG)
-
-For post-match analysis, the project uses KoalaLog to generate `.wpilog` files compatible with AdvantageScope. Log files are created automatically during OpMode execution and stored on the Control Hub's internal storage.
-
-To retrieve logs:
-1. Download LogPuller tools from [KoalaLog GitHub](https://github.com/Koala-Log/Koala-Log/tree/main/LogPuller)
-2. Connect to robot via WiFi or USB-C + REV Hardware Client
-3. Run `FTCLogPuller.exe` and select destination folder
-4. Open `.wpilog` files in AdvantageScope (File → Open Logs)
-
-WPILOG files provide full-featured offline replay with 2D/3D field visualization and time-series graphs of all telemetry data.
+Switch levels via FTC Dashboard Config tab without recompiling.
 
 ## FTC Dashboard and AdvantageScope
 
@@ -68,7 +60,7 @@ The scaffold includes the FTC Dashboard library (`ftc-dashboard 0.4.8`).  To vie
 3. Select the **Telemetry** tab to see live numbers for the drive inputs, pose, target RPM and current RPM.
 4. Expand the **Graph** section to plot variables over time (e.g., flywheel RPM vs. target RPM).
 
-AdvantageScope Lite can connect to the robot via FTC Dashboard packets for real-time visualization, providing live 2D field plots and telemetry graphs during testing. For offline analysis, use WPILOG files retrieved via LogPuller.
+AdvantageScope Lite can connect to the robot via FTC Dashboard packets for real-time visualization, providing live 2D field plots and telemetry graphs during testing.
 
 ## Adding Pedro and NextFTC
 
