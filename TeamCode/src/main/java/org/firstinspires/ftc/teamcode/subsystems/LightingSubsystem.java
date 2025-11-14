@@ -22,7 +22,6 @@ import java.util.Map;
  * OpModes can coordinate colours without touching hardware directly. Missing servos are
  * ignored gracefully, preserving compatibility with partial benches.
  */
-@AutoLog
 @Configurable
 public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorListener {
 
@@ -244,62 +243,51 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     // and published to FTC Dashboard for AdvantageScope Lite
     // ========================================================================
 
-    @AutoLogOutput
     public String getLightingStateString() {
         return state.name();
     }
 
-    @AutoLogOutput
     public String getAllianceString() {
         return alliance.name();
     }
 
-    @AutoLogOutput
     public String getLeftColorString() {
         ArtifactColor color = laneColors.getOrDefault(LauncherLane.LEFT, ArtifactColor.NONE);
         return color.name();
     }
 
-    @AutoLogOutput
     public double getLeftOutput() {
         return laneOutputs.getOrDefault(LauncherLane.LEFT, OFF_POS);
     }
 
-    @AutoLogOutput
     public boolean isLeftIndicatorPresent() {
         LaneIndicator indicator = laneIndicators.get(LauncherLane.LEFT);
         return indicator != null && indicator.isPresent();
     }
 
-    @AutoLogOutput
     public String getCenterColorString() {
         ArtifactColor color = laneColors.getOrDefault(LauncherLane.CENTER, ArtifactColor.NONE);
         return color.name();
     }
 
-    @AutoLogOutput
     public double getCenterOutput() {
         return laneOutputs.getOrDefault(LauncherLane.CENTER, OFF_POS);
     }
 
-    @AutoLogOutput
     public boolean isCenterIndicatorPresent() {
         LaneIndicator indicator = laneIndicators.get(LauncherLane.CENTER);
         return indicator != null && indicator.isPresent();
     }
 
-    @AutoLogOutput
     public String getRightColorString() {
         ArtifactColor color = laneColors.getOrDefault(LauncherLane.RIGHT, ArtifactColor.NONE);
         return color.name();
     }
 
-    @AutoLogOutput
     public double getRightOutput() {
         return laneOutputs.getOrDefault(LauncherLane.RIGHT, OFF_POS);
     }
 
-    @AutoLogOutput
     public boolean isRightIndicatorPresent() {
         LaneIndicator indicator = laneIndicators.get(LauncherLane.RIGHT);
         return indicator != null && indicator.isPresent();

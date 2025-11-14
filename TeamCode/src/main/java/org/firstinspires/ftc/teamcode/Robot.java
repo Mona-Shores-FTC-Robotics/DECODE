@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Light;
 
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
@@ -45,11 +46,11 @@ public class Robot {
         KoalaLog.setup(hardwareMap);
 
         // All subsystems use AutoLogged versions for automatic WPILOG and FTC Dashboard logging
-        vision = new org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelightAutoLogged(hardwareMap);
+        vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new org.firstinspires.ftc.teamcode.subsystems.DriveSubsystemAutoLogged(hardwareMap, vision);
         launcher = new org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystemAutoLogged(hardwareMap);
         intake = new org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystemAutoLogged(hardwareMap);
-        lighting = new org.firstinspires.ftc.teamcode.subsystems.LightingSubsystemAutoLogged(hardwareMap);
+        lighting = new LightingSubsystem(hardwareMap);
         launcherCoordinator = new org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinatorAutoLogged(launcher, intake, lighting);
         launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
         intakeCommands = new IntakeCommands(intake);

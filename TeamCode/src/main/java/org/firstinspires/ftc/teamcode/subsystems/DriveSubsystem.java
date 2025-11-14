@@ -49,7 +49,7 @@ public class DriveSubsystem implements Subsystem {
 
     @Configurable
     public static class TeleOpDriveConfig {
-        public double slowMultiplier = 0.07;
+        public double slowMultiplier = 0.20;
         public double rotationOverrideThreshold = 0.05;
     }
 
@@ -202,7 +202,7 @@ public class DriveSubsystem implements Subsystem {
         long start = System.nanoTime();
         follower.update();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
-        updatePoseFusion();
+//        updatePoseFusion();
 
         // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)
         Pose pose = follower.getPose();
