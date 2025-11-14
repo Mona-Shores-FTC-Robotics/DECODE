@@ -1029,17 +1029,14 @@ public class LauncherSubsystem implements Subsystem {
         return Math.max(0.0, recoveryDeadline - clock.milliseconds());
     }
 
-    @AutoLogOutput
     public double getLogLeftHoodPosition() {
         return getHoodPosition(LauncherLane.LEFT);
     }
 
-    @AutoLogOutput
     public double getLogCenterHoodPosition() {
         return getHoodPosition(LauncherLane.CENTER);
     }
 
-    @AutoLogOutput
     public double getLogRightHoodPosition() {
         return getHoodPosition(LauncherLane.RIGHT);
     }

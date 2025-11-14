@@ -36,8 +36,6 @@ public class Robot {
 
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
         telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
-
-        // All subsystems use AutoLogged versions for automatic WPILOG and FTC Dashboard logging
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
         launcher = new LauncherSubsystem(hardwareMap);
