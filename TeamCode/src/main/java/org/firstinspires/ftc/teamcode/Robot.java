@@ -44,11 +44,10 @@ public class Robot {
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
         launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
-        launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
-        intakeCommands = new IntakeCommands(intake);
-
         manualSpinController = launcherCoordinator.createManualSpinController();
 
+        launcherCommands = new LauncherCommands(launcher, launcherCoordinator, manualSpinController);
+        intakeCommands = new IntakeCommands(intake);
     }
 
     public void setAlliance(Alliance alliance) {
