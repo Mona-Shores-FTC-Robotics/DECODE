@@ -49,7 +49,8 @@ public class DriveSubsystem implements Subsystem {
 
     @Configurable
     public static class TeleOpDriveConfig {
-        public double slowMultiplier = 0.20;
+        public double slowMultiplier = 0.07;
+        public double slowTurnMultiplier = 0.07;
         public double rotationOverrideThreshold = 0.05;
     }
 
@@ -202,7 +203,7 @@ public class DriveSubsystem implements Subsystem {
         long start = System.nanoTime();
         follower.update();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
-//        updatePoseFusion();
+        updatePoseFusion();
 
         // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)
         Pose pose = follower.getPose();
@@ -288,10 +289,12 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = rotationInput;
         lastRequestSlowMode = slowMode;
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
-        double multiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
-        double targetForward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
-        double targetStrafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
-        double targetTurnCW = Range.clip(- rotationInput * multiplier , - 1.0 , 1.0);
+        double slowTurnMultiplier = Range.clip(teleOpDriveConfig.slowTurnMultiplier , 0.0 , 1.0);
+        double driveMultiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
+        double turnMultiplier = slowMode ? slowMultiplier : slowTurnMultiplier;
+        double targetForward = Range.clip(fieldY * driveMultiplier , - 1.0 , 1.0);
+        double targetStrafeLeft = Range.clip(- fieldX * driveMultiplier , - 1.0 , 1.0);
+        double targetTurnCW = Range.clip(- rotationInput * turnMultiplier , - 1.0 , 1.0);
 
         double appliedForward = targetForward;
         double appliedStrafeLeft = targetStrafeLeft;
