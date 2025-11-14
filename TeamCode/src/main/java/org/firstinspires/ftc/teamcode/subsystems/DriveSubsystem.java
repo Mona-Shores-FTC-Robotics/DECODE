@@ -657,24 +657,15 @@ public class DriveSubsystem implements Subsystem {
     // AutoLog Output Methods
     // These methods are automatically logged by KoalaLog to WPILOG files
     // and published to FTC Dashboard for AdvantageScope Lite
+    //
+    // Logging Tiers (configured via LoggingConfig):
+    // - CRITICAL (always on): Pose, drive mode, robot-centric
+    // - MATCH (default): Motor powers, command values, slow mode
+    // - DIAGNOSTIC (verbose): Motor currents, velocities, fusion data
     // ========================================================================
 
-    @AutoLogOutput
-    public double getPoseXInches() {
-        Pose pose = follower.getPose();
-        return pose != null ? pose.getX() : 0.0;
-    }
-
-    @AutoLogOutput
-    public double getPoseYInches() {
-        Pose pose = follower.getPose();
-        return pose != null ? pose.getY() : 0.0;
-    }
-
-    @AutoLogOutput
-    public double getPoseHeadingDeg() {
-        return Math.toDegrees(follower.getHeading());
-    }
+    // --- CRITICAL TIER: Always logged (Tier 0) ---
+    // Note: Robot/Pose is logged separately in periodic() via KoalaLog.logPose2d()
 
     @AutoLogOutput
     public boolean isRobotCentric() {
@@ -686,88 +677,145 @@ public class DriveSubsystem implements Subsystem {
         return activeMode.name();
     }
 
-    @AutoLogOutput
-    public double getRequestFieldX() {
-        return lastRequestFieldX;
-    }
-
-    @AutoLogOutput
-    public double getRequestFieldY() {
-        return lastRequestFieldY;
-    }
-
-    @AutoLogOutput
-    public double getRequestRotation() {
-        return lastRequestRotation;
-    }
+    // --- MATCH TIER: Essential match data (Tier 1) ---
 
     @AutoLogOutput
     public boolean getRequestSlowMode() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isMatchOrHigher()) {
+            return false;
+        }
         return lastRequestSlowMode;
     }
 
     @AutoLogOutput
     public double getCommandForward() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isMatchOrHigher()) {
+            return 0.0;
+        }
         return lastCommandForward;
     }
 
     @AutoLogOutput
     public double getCommandStrafeLeft() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isMatchOrHigher()) {
+            return 0.0;
+        }
         return lastCommandStrafeLeft;
     }
 
     @AutoLogOutput
     public double getCommandTurn() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isMatchOrHigher()) {
+            return 0.0;
+        }
         return lastCommandTurn;
     }
 
     @AutoLogOutput
-    public boolean isFollowerBusyLogged() {
-        return follower.isBusy();
-    }
-
-    @AutoLogOutput
     public double getLfPowerLogged() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isMatchOrHigher()) {
+            return 0.0;
+        }
         return motorLf.getPower();
     }
 
     @AutoLogOutput
     public double getRfPowerLogged() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isMatchOrHigher()) {
+            return 0.0;
+        }
         return motorRf.getPower();
     }
 
     @AutoLogOutput
     public double getLbPowerLogged() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isMatchOrHigher()) {
+            return 0.0;
+        }
         return motorLb.getPower();
     }
 
     @AutoLogOutput
     public double getRbPowerLogged() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isMatchOrHigher()) {
+            return 0.0;
+        }
         return motorRb.getPower();
     }
 
+    // --- DIAGNOSTIC TIER: Expensive detailed data (Tier 2) ---
+
+    // These are expensive because they require gamepad input sampling
+    @AutoLogOutput
+    public double getRequestFieldX() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isDiagnostic()) {
+            return 0.0;
+        }
+        return lastRequestFieldX;
+    }
+
+    @AutoLogOutput
+    public double getRequestFieldY() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isDiagnostic()) {
+            return 0.0;
+        }
+        return lastRequestFieldY;
+    }
+
+    @AutoLogOutput
+    public double getRequestRotation() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isDiagnostic()) {
+            return 0.0;
+        }
+        return lastRequestRotation;
+    }
+
+    @AutoLogOutput
+    public boolean isFollowerBusyLogged() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.isDiagnostic()) {
+            return false;
+        }
+        return follower.isBusy();
+    }
+
+    // Motor currents - VERY EXPENSIVE (I2C reads, ~5ms each)
     @AutoLogOutput
     public double getLfCurrentAmps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorCurrents()) {
+            return Double.NaN;
+        }
         return readCurrentAmps(motorLf);
     }
 
     @AutoLogOutput
     public double getRfCurrentAmps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorCurrents()) {
+            return Double.NaN;
+        }
         return readCurrentAmps(motorRf);
     }
 
     @AutoLogOutput
     public double getLbCurrentAmps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorCurrents()) {
+            return Double.NaN;
+        }
         return readCurrentAmps(motorLb);
     }
 
     @AutoLogOutput
     public double getRbCurrentAmps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorCurrents()) {
+            return Double.NaN;
+        }
         return readCurrentAmps(motorRb);
     }
 
     @AutoLogOutput
     public double getDriveTotalCurrentAmps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorCurrents()) {
+            return Double.NaN;
+        }
         return sumCurrentAmps(
                 getLfCurrentAmps(),
                 getRfCurrentAmps(),
@@ -776,45 +824,72 @@ public class DriveSubsystem implements Subsystem {
         );
     }
 
+    // Motor velocities - EXPENSIVE (encoder reads, ~2ms each)
     @AutoLogOutput
     public double getLfVelocityIps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorVelocities()) {
+            return Double.NaN;
+        }
         return ticksToInchesPerSecond(motorLf.getVelocity());
     }
 
     @AutoLogOutput
     public double getRfVelocityIps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorVelocities()) {
+            return Double.NaN;
+        }
         return ticksToInchesPerSecond(motorRf.getVelocity());
     }
 
     @AutoLogOutput
     public double getLbVelocityIps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorVelocities()) {
+            return Double.NaN;
+        }
         return ticksToInchesPerSecond(motorLb.getVelocity());
     }
 
     @AutoLogOutput
     public double getRbVelocityIps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorVelocities()) {
+            return Double.NaN;
+        }
         return ticksToInchesPerSecond(motorRb.getVelocity());
     }
 
     @AutoLogOutput
     public double getFollowerSpeedIps() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogMotorVelocities()) {
+            return Double.NaN;
+        }
         return followerVelocityIps();
     }
 
+    // Vision-related diagnostic data
     @AutoLogOutput
     public double getLastVisionAngleDeg() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogDetailedVision()) {
+            return Double.NaN;
+        }
         return Double.isNaN(lastGoodVisionAngle) ? Double.NaN : Math.toDegrees(lastGoodVisionAngle);
     }
 
     @AutoLogOutput
     public double getVisionSampleAgeMs() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogDetailedVision()) {
+            return Double.NaN;
+        }
         return lastVisionTimestamp == Double.NEGATIVE_INFINITY
                 ? Double.POSITIVE_INFINITY
                 : Math.max(0.0, clock.milliseconds() - lastVisionTimestamp);
     }
 
+    // PoseFusion diagnostics
     @AutoLogOutput
     public boolean getFusionHasPose() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogPoseFusion()) {
+            return false;
+        }
         return poseFusion.getStateSnapshot().hasFusedPose;
     }
 
@@ -858,11 +933,17 @@ public class DriveSubsystem implements Subsystem {
 
     @AutoLogOutput
     public double getFusionVisionWeight() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogPoseFusion()) {
+            return Double.NaN;
+        }
         return poseFusion.getStateSnapshot().lastVisionWeight;
     }
 
     @AutoLogOutput
     public boolean getFusionVisionAccepted() {
+        if (!org.firstinspires.ftc.teamcode.telemetry.LoggingConfig.shouldLogPoseFusion()) {
+            return false;
+        }
         return poseFusion.getStateSnapshot().lastVisionAccepted;
     }
 
