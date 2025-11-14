@@ -823,17 +823,14 @@ public class LauncherSubsystem implements Subsystem {
         return state;
     }
 
-    @AutoLogOutput
     public SpinMode getLogRequestedSpinMode() {
         return requestedSpinMode;
     }
 
-    @AutoLogOutput
     public SpinMode getLogEffectiveSpinMode() {
         return computeEffectiveSpinMode();
     }
 
-    @AutoLogOutput
     public String getLogControlMode() {
         return getFlywheelControlMode().name();
     }
@@ -848,18 +845,15 @@ public class LauncherSubsystem implements Subsystem {
         return getQueuedShots();
     }
 
-    @AutoLogOutput
     public double getLogStateElapsedSec() {
         return getStateElapsedSeconds();
     }
 
-    @AutoLogOutput
     public String getLogActiveShotLane() {
         ShotRequest pendingShot = shotQueue.peekFirst();
         return pendingShot == null ? "NONE" : pendingShot.lane.name();
     }
 
-    @AutoLogOutput
     public double getLogActiveShotAgeMs() {
         ShotRequest pendingShot = shotQueue.peekFirst();
         if (pendingShot == null) {
@@ -869,7 +863,6 @@ public class LauncherSubsystem implements Subsystem {
         return Math.max(0.0, now - pendingShot.scheduledTimeMs);
     }
 
-    @AutoLogOutput
     public double getLogLastShotCompletionMs() {
         double lastCompletionMs = 0.0;
         for (LauncherLane lane : LauncherLane.values()) {
@@ -886,12 +879,10 @@ public class LauncherSubsystem implements Subsystem {
         return getTargetRpm();
     }
 
-    @AutoLogOutput
     public double getLogAverageCurrentRpm() {
         return getCurrentRpm();
     }
 
-    @AutoLogOutput
     public double getLogAveragePower() {
         return getLastPower();
     }

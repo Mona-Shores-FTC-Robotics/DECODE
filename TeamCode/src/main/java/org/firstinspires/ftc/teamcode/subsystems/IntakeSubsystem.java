@@ -326,7 +326,6 @@ public class IntakeSubsystem implements Subsystem {
         return resolveMode();
     }
 
-    @AutoLogOutput
     public boolean isRollerPresent() {
         return rollerServo != null;
     }
@@ -658,22 +657,18 @@ public class IntakeSubsystem implements Subsystem {
     // and published to FTC Dashboard for AdvantageScope Lite
     // ========================================================================
 
-    @AutoLogOutput
     public String getAllianceString() {
         return alliance.name();
     }
 
-    @AutoLogOutput
     public boolean isAnyLaneSensorsPresent() {
         return anyLaneSensorsPresent;
     }
 
-    @AutoLogOutput
     public boolean isSensorPollingEnabled() {
         return laneSensorConfig.enablePolling;
     }
 
-    @AutoLogOutput
     public double getSensorSamplePeriodMs() {
         return laneSensorConfig.samplePeriodMs;
     }
@@ -683,7 +678,6 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneColor(LauncherLane.LEFT).name();
     }
 
-    @AutoLogOutput
     public boolean isLeftSensorPresent() {
         return getLaneSample(LauncherLane.LEFT).sensorPresent;
     }
@@ -696,7 +690,6 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.LEFT).distanceCm;
     }
 
-    @AutoLogOutput
     public boolean isLeftWithinDistance() {
         return getLaneSample(LauncherLane.LEFT).withinDistance;
     }
@@ -739,7 +732,6 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneColor(LauncherLane.CENTER).name();
     }
 
-    @AutoLogOutput
     public boolean isCenterSensorPresent() {
         return getLaneSample(LauncherLane.CENTER).sensorPresent;
     }
@@ -752,7 +744,6 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.CENTER).distanceCm;
     }
 
-    @AutoLogOutput
     public boolean isCenterWithinDistance() {
         return getLaneSample(LauncherLane.CENTER).withinDistance;
     }
@@ -795,7 +786,6 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneColor(LauncherLane.RIGHT).name();
     }
 
-    @AutoLogOutput
     public boolean isRightSensorPresent() {
         return getLaneSample(LauncherLane.RIGHT).sensorPresent;
     }
@@ -808,7 +798,6 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.RIGHT).distanceCm;
     }
 
-    @AutoLogOutput
     public boolean isRightWithinDistance() {
         return getLaneSample(LauncherLane.RIGHT).withinDistance;
     }
@@ -861,17 +850,14 @@ public class IntakeSubsystem implements Subsystem {
         return resolveMode().name();
     }
 
-    @AutoLogOutput
     public boolean isModeOverrideEnabled() {
         return manualModeConfig.enableOverride;
     }
 
-    @AutoLogOutput
     public String getModeOverride() {
         return manualModeConfig.overrideMode;
     }
 
-    @AutoLogOutput
     public double getLoggedRollerPosition() {
         return rollerServo != null ? lastRollerPosition : Double.NaN;
     }
@@ -882,22 +868,18 @@ public class IntakeSubsystem implements Subsystem {
                 && Math.abs(lastRollerPosition - rollerConfig.activePosition) < 1e-3;
     }
 
-    @AutoLogOutput
     public double getModeResolveMs() {
         return lastModeResolveMs;
     }
 
-    @AutoLogOutput
     public double getSensorPollMs() {
         return lastSensorPollMs;
     }
 
-    @AutoLogOutput
     public double getServoUpdateMs() {
         return lastServoUpdateMs;
     }
 
-    @AutoLogOutput
     public double getPeriodicTotalMs() {
         return lastPeriodicMs;
     }

@@ -50,6 +50,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
     private long lastAutoLogTimeMs = 0L;
     private String visionRelocalizeStatus = "Press A to re-localize";
     private long visionRelocalizeStatusMs = 0L;
+    private double previousTelemetryDisplayMs = 0.0;
 
     {
         addComponents(
@@ -152,12 +153,20 @@ public class DecodeTeleOp extends NextFTCOpMode {
         TelemetryTiming telemetryTiming = publishTelemetryIfNeeded(request);
         Pose2D pose = robot.drive.getPose();
 
-        // Measure loop time including telemetry display (previously unmeasured)
-        long mainloopEndNs = System.nanoTime();
-        double totalLoopMs = nanosToMs(mainloopEndNs - mainLoopStartNs);
+        // Measure main loop time (before telemetry display)
+        long beforeDisplayNs = System.nanoTime();
+        double loopBeforeDisplayMs = nanosToMs(beforeDisplayNs - mainLoopStartNs);
 
-        LoopTiming loopTiming = buildLoopTiming(totalLoopMs, telemetryTiming.telemetryMs, telemetryTiming.telemetrySent, 0);
+        // Build timing using previous loop's telemetry display time
+        LoopTiming loopTiming = buildLoopTiming(loopBeforeDisplayMs, telemetryTiming.telemetryMs, telemetryTiming.telemetrySent, previousTelemetryDisplayMs);
+
+        // Measure telemetry display time (includes expensive telemetry.update() call)
+        long displayStartNs = System.nanoTime();
         publishTelemetryDisplay(pose, telemetryTiming.wallClockMs, loopTiming, diagnosticsRequested());
+        long displayEndNs = System.nanoTime();
+
+        // Store for next loop's timing display
+        previousTelemetryDisplayMs = nanosToMs(displayEndNs - displayStartNs);
     }
 
     @Override
@@ -215,11 +224,12 @@ public class DecodeTeleOp extends NextFTCOpMode {
         telemetry.addData("Intake periodic", "%.1f ms", timing.intakeMs);
         telemetry.addData("Launcher periodic", "%.1f ms", timing.launcherMs);
         telemetry.addData("Lighting periodic", "%.1f ms", timing.lightingMs);
-        telemetry.addData("Launcher periodic", "%.1f ms", timing.launchCoordMs);
+        telemetry.addData("Launcher Coord periodic", "%.1f ms", timing.launchCoordMs);
         telemetry.addData("Vision periodic", "%.1f ms", timing.visionMs);
         telemetry.addData("Telemetry publish", timing.telemetrySent
                 ? String.format(Locale.US, "%.1f ms", timing.telemetryMs)
                 : "skipped");
+        telemetry.addData("Telemetry display", "%.1f ms", timing.telemetryDisplayMs);
         addHeadingDiagnostics();
     }
 
