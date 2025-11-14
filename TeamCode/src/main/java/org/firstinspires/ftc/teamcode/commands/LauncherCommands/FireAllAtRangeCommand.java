@@ -17,10 +17,11 @@ import java.util.Objects;
 /**
  * Fires all three launcher lanes at a specific range configuration.
  *
- * Sets RPM targets for all lanes based on the selected range (SHORT, MID, LONG),
+ * Sets RPM targets and hood angles for all lanes based on the selected range (SHORT, MID, LONG),
  * spins up flywheels to target speed, fires all lanes in sequence, then spins down.
  *
- * RPM values are configurable via FTC Dashboard for field tuning.
+ * RPM values and hood positions are configurable via FTC Dashboard for field tuning.
+ * Each lane's hood can have different servo values to account for mounting differences.
  */
 @Configurable
 public class FireAllAtRangeCommand extends Command {
@@ -102,8 +103,9 @@ public class FireAllAtRangeCommand extends Command {
         // Enter manual spin mode to prevent automation from changing RPMs
         manualSpinController.enterManualSpin();
 
-        // Set RPMs for all lanes based on range
+        // Set RPMs and hood angles for all lanes based on range
         setRpmsForRange();
+        launcher.setAllHoodsForRange(range);
 
         // Spin up to target
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
