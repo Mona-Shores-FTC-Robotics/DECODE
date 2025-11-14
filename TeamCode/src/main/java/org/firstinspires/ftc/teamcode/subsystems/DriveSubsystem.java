@@ -446,6 +446,13 @@ public class DriveSubsystem implements Subsystem {
         return motorRb.getPower();
     }
 
+    public double getLastCommandDrive() {
+        return lastCommandForward;
+    }
+    public double getLastCommandStrafe() {
+        return lastCommandStrafeLeft;
+    }
+
     public double getLastCommandTurn() {
         return lastCommandTurn;
     }

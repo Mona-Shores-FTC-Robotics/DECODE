@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.formatters.DashboardFormatter;
@@ -77,22 +78,6 @@ public class TelemetryService {
     }
 
     /**
-     * @deprecated Use data models and formatters directly. Legacy accessor for compatibility.
-     */
-    @Deprecated
-    public TelemetryPublisher publisher() {
-        return new TelemetryPublisher(panelsTelemetry);
-    }
-
-    /**
-     * @deprecated Access panelsTelemetry through formatters. Legacy accessor for compatibility.
-     */
-    @Deprecated
-    public TelemetryManager panelsTelemetry() {
-        return panelsTelemetry;
-    }
-
-    /**
      * Publish telemetry for the current loop to all available outputs.
      * <p>
      * Telemetry verbosity is controlled by TelemetrySettings.config.level:
@@ -105,6 +90,7 @@ public class TelemetryService {
      * @param launcher Launcher subsystem
      * @param intake Intake subsystem
      * @param vision Vision subsystem
+     * @param lighting Lighting subsystem (may be null)
      * @param launcherCoordinator Launcher coordinator (for artifact tracking)
      * @param driveRequest Current drive request from bindings (may be null)
      * @param gamepad1 Driver gamepad (may be null)
@@ -116,12 +102,16 @@ public class TelemetryService {
      * @param opMode OpMode name (e.g., "TeleOp", "Autonomous")
      * @param isAutonomous Whether this is autonomous mode (hides driver controls)
      * @param poseOverride Optional pose override for autonomous routines (may be null)
+     * @param prevMainLoopMs Main loop overhead from previous iteration (0 if not available)
+     * @param telemetryStartNs Telemetry overhead from previous iteration (0 if not available)
+
      */
     public void publishLoopTelemetry(
             DriveSubsystem drive,
             LauncherSubsystem launcher,
             IntakeSubsystem intake,
             VisionSubsystemLimelight vision,
+            LightingSubsystem lighting,
             LauncherCoordinator launcherCoordinator,
             DriverBindings.DriveRequest driveRequest,
             Gamepad gamepad1,
@@ -132,7 +122,9 @@ public class TelemetryService {
             Telemetry dsTelemetry,
             String opMode,
             boolean isAutonomous,
-            Pose poseOverride
+            Pose poseOverride,
+            double prevMainLoopMs,
+            long telemetryStartNs
     ) {
         // Capture all robot telemetry data once
         RobotTelemetryData data = RobotTelemetryData.capture(
@@ -140,6 +132,7 @@ public class TelemetryService {
                 launcher,
                 intake,
                 vision,
+                lighting,
                 launcherCoordinator,
                 driveRequest,
                 gamepad1,
@@ -149,71 +142,27 @@ public class TelemetryService {
                 matchTimeSec,
                 opMode,
                 isAutonomous,
-                poseOverride
+                poseOverride,
+                prevMainLoopMs,
+                telemetryStartNs
         );
 
         TelemetrySettings.TelemetryLevel level = TelemetrySettings.config.level;
 
-        // 1. Driver station telemetry (skip if autonomous and driver controls hidden)
-        if (dsTelemetry != null && !isAutonomous) {
-            publishDriverStationTelemetry(dsTelemetry, data, level);
-        }
 
-        // 2. FTC Dashboard packets (throttled based on level)
+
+        // 1. FTC Dashboard packets (throttled based on level)
         publishDashboardTelemetry(data, level);
 
-        // 3. FullPanels telemetry (DEBUG mode only)
+        // 2. FullPanels telemetry (DEBUG mode only)
         if (TelemetrySettings.shouldSendFullPanels() && panelsTelemetry != null) {
             fullPanelsFormatter.publish(panelsTelemetry, data);
         }
-    }
 
-    /**
-     * Overload for backward compatibility with existing OpMode calls.
-     * Adds intake parameter and calculates matchTimeSec automatically.
-     */
-    public void publishLoopTelemetry(
-            DriveSubsystem drive,
-            LauncherSubsystem launcher,
-            IntakeSubsystem intake,
-            VisionSubsystemLimelight vision,
-            DriverBindings.DriveRequest driveRequest,
-            LauncherCoordinator launcherCoordinator,
-            Alliance alliance,
-            double runtimeSec,
-            Telemetry dsTelemetry,
-            String opMode,
-            boolean suppressDriveTelemetry,
-            Pose poseOverride
-    ) {
-        // Calculate match time based on opMode
-        double matchTimeSec;
-        boolean isAutonomous;
-        if (opMode != null && opMode.toLowerCase().contains("auto")) {
-            matchTimeSec = Math.max(0.0, 30.0 - runtimeSec);
-            isAutonomous = true;
-        } else {
-            matchTimeSec = Math.max(0.0, 150.0 - runtimeSec);
-            isAutonomous = suppressDriveTelemetry;
+        // 3. Driver station telemetry (skip if autonomous and driver controls hidden)
+        if (dsTelemetry != null && !isAutonomous) {
+            publishDriverStationTelemetry(dsTelemetry, data, level);
         }
-
-        publishLoopTelemetry(
-                drive,
-                launcher,
-                intake,
-                vision,
-                launcherCoordinator,
-                driveRequest,
-                null,  // gamepad1 (not available in old signature)
-                null,  // gamepad2 (not available in old signature)
-                alliance,
-                runtimeSec,
-                matchTimeSec,
-                dsTelemetry,
-                opMode,
-                isAutonomous,
-                poseOverride
-        );
     }
 
     /**

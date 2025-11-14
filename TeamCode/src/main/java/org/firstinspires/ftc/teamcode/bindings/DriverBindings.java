@@ -32,7 +32,6 @@ public class DriverBindings {
     private final Button rampHold;
     private final Button aimHold;
     private final Button relocalizeRequest;
-    private final Button aim;
 
     public DriverBindings(GamepadEx driver, Robot robot) {
         fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND).negate();
@@ -40,7 +39,6 @@ public class DriverBindings {
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
         rampHold = driver.leftBumper();
-        aim = driver.x();
         aimHold = driver.b();
         relocalizeRequest = driver.a();
 
@@ -65,10 +63,6 @@ public class DriverBindings {
         );
         aimHold.whenBecomesTrue(aimAndDrive)
                 .whenBecomesFalse(aimAndDrive::cancel);
-
-        Command captureAim = new CaptureAndAimCommand(robot.drive, robot.vision);
-        aim.whenBecomesTrue(captureAim);
-
     }
 
     /**

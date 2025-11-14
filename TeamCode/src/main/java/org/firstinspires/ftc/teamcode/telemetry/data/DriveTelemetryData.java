@@ -19,6 +19,8 @@ public class DriveTelemetryData {
     public final boolean slowMode;
 
     // Commanded values (after processing)
+    public final double commandDrive;
+    public final double commandStrafe;
     public final double commandTurn;
 
     // Motor data (organized by motor)
@@ -31,6 +33,8 @@ public class DriveTelemetryData {
             String driveMode,
             boolean aimMode,
             boolean slowMode,
+            double commandDrive,
+            double commandStrafe,
             double commandTurn,
             MotorData leftFront,
             MotorData rightFront,
@@ -40,6 +44,8 @@ public class DriveTelemetryData {
         this.driveMode = driveMode;
         this.aimMode = aimMode;
         this.slowMode = slowMode;
+        this.commandDrive = commandDrive;
+        this.commandStrafe = commandStrafe;
         this.commandTurn = commandTurn;
         this.leftFront = leftFront;
         this.rightFront = rightFront;
@@ -75,6 +81,8 @@ public class DriveTelemetryData {
                 drive.getDriveMode().name(),
                 aimMode,
                 slowMode,
+                drive.getLastCommandDrive(),
+                drive.getLastCommandStrafe(),
                 drive.getLastCommandTurn(),
                 lf, rf, lb, rb
         );

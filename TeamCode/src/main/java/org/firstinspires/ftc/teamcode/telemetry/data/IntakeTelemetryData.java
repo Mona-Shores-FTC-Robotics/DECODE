@@ -17,6 +17,9 @@ public class IntakeTelemetryData {
     public final boolean rollerPresent;
     public final boolean rollerActive;
     public final double rollerPosition;
+    public final boolean prefeedPresent;
+    public final boolean prefeedActive;
+    public final double prefeedPosition;
 
     // Artifact tracking
     public final int artifactCount;
@@ -29,6 +32,9 @@ public class IntakeTelemetryData {
             boolean rollerPresent,
             boolean rollerActive,
             double rollerPosition,
+            boolean prefeedPresent,
+            boolean prefeedActive,
+            double prefeedPosition,
             int artifactCount,
             String artifactState
     ) {
@@ -38,6 +44,9 @@ public class IntakeTelemetryData {
         this.rollerPresent = rollerPresent;
         this.rollerActive = rollerActive;
         this.rollerPosition = rollerPosition;
+        this.prefeedPresent = prefeedActive;
+        this.prefeedActive = prefeedActive;
+        this.prefeedPosition = prefeedPosition;
         this.artifactCount = artifactCount;
         this.artifactState = artifactState;
     }
@@ -58,6 +67,9 @@ public class IntakeTelemetryData {
                 intake.isRollerPresent(),
                 intake.isRollerActive(),
                 intake.getRollerPosition(),
+                intake.isPrefeedPresent(),
+                intake.isPrefeedActive(),
+                intake.getPrefeedPosition(),
                 artifactCount,
                 artifactState
         );

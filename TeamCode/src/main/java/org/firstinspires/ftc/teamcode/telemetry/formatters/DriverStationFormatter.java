@@ -4,6 +4,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Formats telemetry for the driver station display.
@@ -22,10 +23,12 @@ public class DriverStationFormatter {
      * Telemetry page for DEBUG mode.
      */
     public enum DebugPage {
+
         OVERVIEW(1, "Overview"),
         DRIVE(2, "Drive"),
         LAUNCHER(3, "Launcher"),
-        VISION_INTAKE(4, "Vision/Intake");
+        VISION_INTAKE(4, "Vision/Intake"),
+        TIMING(5, "Timing");
 
         public final int number;
         public final String name;
@@ -190,6 +193,7 @@ public class DriverStationFormatter {
 
         // Render current page
         switch (currentPage) {
+
             case OVERVIEW:
                 publishDebugOverview(telemetry, data);
                 break;
@@ -202,9 +206,36 @@ public class DriverStationFormatter {
             case VISION_INTAKE:
                 publishDebugVisionIntake(telemetry, data);
                 break;
+            case TIMING:
+                publishDebugTiming(telemetry, data);
+                break;
         }
 
         telemetry.update();
+    }
+
+    /**
+     * Page 5: Timing - complete loop performance metrics.
+     * Shows timing breakdown from previous loop iteration (N-1).
+     */
+    private void publishDebugTiming(Telemetry telemetry, RobotTelemetryData data) {
+        double totalTelemetryMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - data.timing.telemetryStartNs);
+        // Total loop time
+        telemetry.addData("Total Loop", "%.1f ms", data.timing.totalLoopMs(totalTelemetryMs));
+
+        // Main loop overhead
+        telemetry.addData("Main Loop", "%.1f ms", data.timing.mainLoopMs);
+
+        telemetry.addData("Telemetry", "%.1f ms", totalTelemetryMs);
+
+        // Subsystem breakdown
+        telemetry.addData("Subsystems", "%.1f ms total", data.timing.totalSubsystemMs());
+        telemetry.addData("  Drive", "%.1f ms", data.timing.driveMs);
+        telemetry.addData("  Intake", "%.1f ms", data.timing.intakeMs);
+        telemetry.addData("  Launcher", "%.1f ms", data.timing.launcherMs);
+        telemetry.addData("  Lighting", "%.1f ms", data.timing.lightingMs);
+        telemetry.addData("  Vision", "%.1f ms", data.timing.visionMs);
+        telemetry.addData("  Launch Coordinator", "%.1f ms", data.timing.launcherCoordMs);
     }
 
     /**
@@ -243,6 +274,9 @@ public class DriverStationFormatter {
         telemetry.addData("Intake", "%s | artifacts=%d",
                 data.intake.mode,
                 data.intake.artifactCount);
+
+        double totalTelemetryMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - data.timing.telemetryStartNs);
+        telemetry.addData("Total Loop Time", "%.1f ms", data.timing.totalLoopMs(totalTelemetryMs));
     }
 
     /**
@@ -323,7 +357,7 @@ public class DriverStationFormatter {
             telemetry.addData("Pose", "x=%.1f  y=%.1f  h=%.1f°",
                     data.vision.poseXIn,
                     data.vision.poseYIn,
-                    data.vision.poseHeadingDeg);
+                    Math.toDegrees(data.vision.headingRad));
         } else {
             telemetry.addData("Vision", "No tag detected");
         }
@@ -352,4 +386,6 @@ public class DriverStationFormatter {
         int seconds = (int) (timeSec % 60.0);
         return String.format(Locale.US, "%d:%02d", minutes, seconds);
     }
+
+
 }

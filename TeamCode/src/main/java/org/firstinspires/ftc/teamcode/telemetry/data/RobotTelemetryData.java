@@ -9,6 +9,7 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 
@@ -31,6 +32,7 @@ public class RobotTelemetryData {
     public final VisionTelemetryData vision;
     public final IntakeTelemetryData intake;
     public final GamepadTelemetryData gamepad;
+    public final LoopTimingTelemetryData timing;
 
     public RobotTelemetryData(
             MatchContextData context,
@@ -39,7 +41,8 @@ public class RobotTelemetryData {
             LauncherTelemetryData launcher,
             VisionTelemetryData vision,
             IntakeTelemetryData intake,
-            GamepadTelemetryData gamepad
+            GamepadTelemetryData gamepad,
+            LoopTimingTelemetryData timing
     ) {
         this.context = context;
         this.pose = pose;
@@ -48,6 +51,7 @@ public class RobotTelemetryData {
         this.vision = vision;
         this.intake = intake;
         this.gamepad = gamepad;
+        this.timing = timing;
     }
 
     /**
@@ -57,6 +61,7 @@ public class RobotTelemetryData {
      * @param launcher Launcher subsystem
      * @param intake Intake subsystem
      * @param vision Vision subsystem
+     * @param lighting Lighting subsystem (may be null)
      * @param coordinator Launcher coordinator (for artifact tracking)
      * @param driveRequest Current drive request from bindings
      * @param gamepad1 Driver gamepad (may be null)
@@ -67,13 +72,15 @@ public class RobotTelemetryData {
      * @param opMode OpMode name (e.g., "TeleOp", "Autonomous")
      * @param isAutonomous Whether this is autonomous mode
      * @param poseOverride Optional pose override (for autonomous routines)
-     * @return Complete robot telemetry snapshot
+     * @param prevMainLoopMs Main loop overhead from previous iteration (0 if not available)
+     * @param telemetryStartNs Telemetry overhead from previous iteration (0 if not available)
      */
     public static RobotTelemetryData capture(
             DriveSubsystem drive,
             LauncherSubsystem launcher,
             IntakeSubsystem intake,
             VisionSubsystemLimelight vision,
+            LightingSubsystem lighting,
             LauncherCoordinator coordinator,
             DriverBindings.DriveRequest driveRequest,
             Gamepad gamepad1,
@@ -83,7 +90,9 @@ public class RobotTelemetryData {
             double matchTimeSec,
             String opMode,
             boolean isAutonomous,
-            Pose poseOverride
+            Pose poseOverride,
+            double prevMainLoopMs,
+            long telemetryStartNs
     ) {
         // Capture match context
         MatchContextData context = new MatchContextData(
@@ -126,6 +135,18 @@ public class RobotTelemetryData {
         // Capture gamepad data
         GamepadTelemetryData gamepadData = GamepadTelemetryData.capture(gamepad1, gamepad2);
 
+        // Capture loop timing data (includes previous loop's overhead + current subsystem times)
+        LoopTimingTelemetryData timingData = LoopTimingTelemetryData.capture(
+                prevMainLoopMs,
+                telemetryStartNs,
+                drive,
+                intake,
+                launcher,
+                lighting,
+                coordinator,
+                vision
+        );
+
         return new RobotTelemetryData(
                 context,
                 poseData,
@@ -133,7 +154,8 @@ public class RobotTelemetryData {
                 launcherData,
                 visionData,
                 intakeData,
-                gamepadData
+                gamepadData,
+                timingData
         );
     }
 }

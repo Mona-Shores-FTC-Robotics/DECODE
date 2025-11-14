@@ -15,7 +15,6 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
-import org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
@@ -122,9 +121,6 @@ public class TestPathVisualizationCodex extends LinearOpMode {
                 double headingRad = currentPose.getHeading();
             }
 
-            // Log FTC Dashboard _Status fields (matches AdvantageScope Lite)
-            RobotStatusLogger.logStatus(this, hardwareMap, false);
-
             updateInitTelemetry();
             sendDashboardPacket();
 
@@ -162,11 +158,6 @@ public class TestPathVisualizationCodex extends LinearOpMode {
             double xMeters = currentPose.getX() * 0.0254;
             double yMeters = currentPose.getY() * 0.0254;
             double headingRad = currentPose.getHeading();
-
-            // Log FTC Dashboard _Status fields (matches AdvantageScope Lite)
-            RobotStatusLogger.logStatus(this, hardwareMap, opModeIsActive());
-
-
 
             sendDashboardPacket();
             updateRuntimeTelemetry();

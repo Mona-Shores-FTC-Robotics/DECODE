@@ -86,6 +86,13 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     @Configurable
+    public static class PrefeedConfig {
+        public String servoName = "prefeed_roller";
+        public double activePosition = 1.0;
+        public double inactivePosition = 0.5;
+    }
+
+    @Configurable
     public static class ManualModeConfig {
         public boolean enableOverride = false;
         public String overrideMode = STOPPED.name();
@@ -94,6 +101,7 @@ public class IntakeSubsystem implements Subsystem {
     public static LaneSensorConfig laneSensorConfig = new LaneSensorConfig();
     public static MotorConfig motorConfig = new MotorConfig();
     public static RollerConfig rollerConfig = new RollerConfig();
+    public static PrefeedConfig prefeedConfig = new PrefeedConfig();
     public static ManualModeConfig manualModeConfig = new ManualModeConfig();
 
     public static final class LaneSample {
@@ -186,8 +194,11 @@ public class IntakeSubsystem implements Subsystem {
     private final DcMotorEx intakeMotor;
     private double appliedMotorPower = 0.0;
     private final Servo rollerServo;
+    private final Servo prefeedServo;
     private double lastRollerPosition = Double.NaN;
+    private double lastPrefeedPosition = Double.NaN;
     private boolean rollerEnabled = false;
+    private boolean prefeedEnabled = false;
 
     public IntakeSubsystem(HardwareMap hardwareMap) {
         intakeMotor = tryGetMotor(hardwareMap, motorConfig.motorName);
@@ -209,6 +220,13 @@ public class IntakeSubsystem implements Subsystem {
             rollerServo.setPosition(rollerConfig.inactivePosition);
         }
         rollerEnabled = false;
+        prefeedServo = tryGetServo(hardwareMap, prefeedConfig.servoName);
+        if (prefeedServo != null) {
+            lastPrefeedPosition = prefeedConfig.inactivePosition;
+            prefeedServo.setPosition(prefeedConfig.inactivePosition);
+        }
+        prefeedEnabled = false;
+
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
             laneSamples.put(lane, ABSENT_SAMPLE);
@@ -231,6 +249,11 @@ public class IntakeSubsystem implements Subsystem {
             lastRollerPosition = rollerConfig.inactivePosition;
         }
         rollerEnabled = false;
+        if (prefeedServo != null) {
+            prefeedServo.setPosition(prefeedConfig.inactivePosition);
+            lastPrefeedPosition = prefeedConfig.inactivePosition;
+        }
+        prefeedEnabled = false;
     }
 
     @Override
@@ -256,8 +279,13 @@ public class IntakeSubsystem implements Subsystem {
             rollerServo.setPosition(target);
             lastRollerPosition = target;
         }
-        lastServoUpdateMs = (System.nanoTime() - servoStart) / 1_000_000.0;
+        if (prefeedServo != null) {
+            double target = prefeedEnabled ? prefeedConfig.activePosition : prefeedConfig.inactivePosition;
+            prefeedServo.setPosition(target);
+            lastPrefeedPosition = target;
+        }
 
+        lastServoUpdateMs = (System.nanoTime() - servoStart) / 1_000_000.0;
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
@@ -279,11 +307,23 @@ public class IntakeSubsystem implements Subsystem {
         rollerEnabled = true;
     }
 
+    public void activatePrefeed() {
+        prefeedEnabled = true;
+    }
+
     public void deactivateRoller() {
         rollerEnabled = false;
         if (rollerServo != null) {
             rollerServo.setPosition(rollerConfig.inactivePosition);
             lastRollerPosition = rollerConfig.inactivePosition;
+        }
+    }
+
+    public void deactivatePrefeed() {
+        prefeedEnabled = false;
+        if (prefeedServo != null) {
+            prefeedServo.setPosition(prefeedConfig.inactivePosition);
+            lastPrefeedPosition = prefeedConfig.inactivePosition;
         }
     }
 
@@ -325,14 +365,27 @@ public class IntakeSubsystem implements Subsystem {
     public boolean isRollerPresent() {
         return rollerServo != null;
     }
+    public boolean isPrefeedPresent() {
+        return prefeedServo != null;
+    }
+
 
     public double getRollerPosition() {
         return rollerServo == null ? Double.NaN : lastRollerPosition;
     }
 
+    public double getPrefeedPosition() {
+        return prefeedServo == null ? Double.NaN : lastPrefeedPosition;
+    }
+
     public boolean isRollerActive() {
         return rollerServo != null
                 && Math.abs(lastRollerPosition - rollerConfig.activePosition) < 1e-3;
+    }
+
+    public boolean isPrefeedActive() {
+        return prefeedServo != null
+                && Math.abs(lastPrefeedPosition - prefeedConfig.activePosition) < 1e-3;
     }
 
     private void pollLaneSensorsIfNeeded() {

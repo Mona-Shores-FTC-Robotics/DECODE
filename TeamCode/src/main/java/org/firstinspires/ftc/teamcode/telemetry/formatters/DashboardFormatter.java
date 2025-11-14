@@ -7,6 +7,8 @@ import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import org.firstinspires.ftc.teamcode.telemetry.data.LauncherTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Formats telemetry packets for FTC Dashboard.
  * Uses hierarchical field naming with underscores for alphabetical grouping.
@@ -43,7 +45,7 @@ public class DashboardFormatter {
         TelemetryPacket packet = new TelemetryPacket();
 
         // Context
-        packet.put("alliance/id", data.context.alliance.name());
+        packet.put("context/alliance", data.context.alliance.name());
         packet.put("context/match_time_sec", data.context.matchTimeSec);
         packet.put("context/runtime_sec", data.context.runtimeSec);
 
@@ -53,7 +55,6 @@ public class DashboardFormatter {
         // Drive essentials
         packet.put("drive/aim_mode", data.drive.aimMode);
         packet.put("drive/mode", data.drive.driveMode);
-        packet.put("drive/slow_mode", data.drive.slowMode);
 
         // Launcher high-level
         packet.put("launcher/ready", data.launcher.ready);
@@ -83,7 +84,7 @@ public class DashboardFormatter {
         TelemetryPacket packet = new TelemetryPacket();
 
         // Context
-        packet.put("alliance/id", data.context.alliance.name());
+        packet.put("context/alliance", data.context.alliance.name());
         packet.put("context/match_time_sec", data.context.matchTimeSec);
         packet.put("context/opmode", data.context.opMode);
         packet.put("context/runtime_sec", data.context.runtimeSec);
@@ -93,27 +94,31 @@ public class DashboardFormatter {
 
         // Drive detailed (shows commanded behavior, not raw inputs)
         packet.put("drive/aim_mode", data.drive.aimMode);
-        packet.put("drive/command_turn", data.drive.commandTurn);
+        packet.put("drive/command/drive", data.drive.commandDrive);
+        packet.put("drive/command/strafe", data.drive.commandStrafe);
+        packet.put("drive/command/turn", data.drive.commandTurn);
         packet.put("drive/mode", data.drive.driveMode);
         packet.put("drive/slow_mode", data.drive.slowMode);
 
         // Drive motors (organized by motor, underscores group power/velocity)
-        packet.put("drive/motor_lb_power", data.drive.leftBack.power);
-        packet.put("drive/motor_lb_vel_ips", data.drive.leftBack.velocityIps);
-        packet.put("drive/motor_lf_power", data.drive.leftFront.power);
-        packet.put("drive/motor_lf_vel_ips", data.drive.leftFront.velocityIps);
-        packet.put("drive/motor_rb_power", data.drive.rightBack.power);
-        packet.put("drive/motor_rb_vel_ips", data.drive.rightBack.velocityIps);
-        packet.put("drive/motor_rf_power", data.drive.rightFront.power);
-        packet.put("drive/motor_rf_vel_ips", data.drive.rightFront.velocityIps);
+        packet.put("drive/motors/power/lb", data.drive.leftBack.power);
+        packet.put("drive/motors/power/lf", data.drive.leftFront.power);
+        packet.put("drive/motors/power/rb", data.drive.rightBack.power);
+        packet.put("drive/motors/power/rf", data.drive.rightFront.power);
+
+        packet.put("drive/motors/vel_ips/lb", data.drive.leftBack.velocityIps);
+        packet.put("drive/motors/vel_ips/lf", data.drive.leftFront.velocityIps);
+        packet.put("drive/motors/vel_ips/rb", data.drive.rightBack.velocityIps);
+        packet.put("drive/motors/vel_ips/rf", data.drive.rightFront.velocityIps);
 
         // Intake detailed
         packet.put("intake/artifact_count", data.intake.artifactCount);
         packet.put("intake/artifact_state", data.intake.artifactState);
-        packet.put("intake/mode", data.intake.mode);
-        packet.put("intake/power", data.intake.power);
+        packet.put("intake/motor/mode", data.intake.mode);
+        packet.put("intake/motor/power", data.intake.power);
         packet.put("intake/roller_active", data.intake.rollerActive);
-        packet.put("intake/roller_position", data.intake.rollerPosition);
+        packet.put("intake/prefeed_active", data.intake.prefeedActive);
+
 
         // Launcher high-level
         packet.put("launcher/control_mode", data.launcher.controlMode);
@@ -142,6 +147,9 @@ public class DashboardFormatter {
         packet.put("vision/ty_deg", data.vision.tyDeg);
         packet.put("vision/yaw_deg", data.vision.yawDeg);
 
+        // Loop timing (DEBUG mode only - full performance diagnostics)
+        addLoopTimingData(packet, data);
+
         // Gamepad inputs (AdvantageScope-friendly naming for potential joystick visualization)
         addGamepadData(packet, data);
 
@@ -157,24 +165,24 @@ public class DashboardFormatter {
      */
     private void addPoseData(TelemetryPacket packet, RobotTelemetryData data) {
         // Pedro pose (primary)
-        packet.put("Pose/Pose x", data.pose.poseXIn);
-        packet.put("Pose/Pose y", data.pose.poseYIn);
-        packet.put("Pose/Pose heading", data.pose.headingRad);
+        packet.put("Pose/Pedro x", data.pose.poseXIn);
+        packet.put("Pose/Pedro y", data.pose.poseYIn);
+        packet.put("Pose/Pedro heading", data.pose.headingRad);
 
         // FTC pose (for compatibility)
         if (!Double.isNaN(data.pose.ftcXIn) && !Double.isNaN(data.pose.ftcYIn)) {
-            packet.put("Pose/FTC Pose x", data.pose.ftcXIn);
-            packet.put("Pose/FTC Pose y", data.pose.ftcYIn);
+            packet.put("Pose/FTC x", data.pose.ftcXIn);
+            packet.put("Pose/FTC y", data.pose.ftcYIn);
         }
         if (!Double.isNaN(data.pose.ftcHeadingRad)) {
-            packet.put("Pose/FTC Pose heading", data.pose.ftcHeadingRad);
+            packet.put("Pose/FTC heading", data.pose.ftcHeadingRad);
         }
 
         // Vision pose (when available)
         if (data.pose.visionPoseValid) {
-            packet.put("Pose/Vision Pose x", data.pose.visionPoseXIn);
-            packet.put("Pose/Vision Pose y", data.pose.visionPoseYIn);
-            packet.put("Pose/Vision Pose heading", data.pose.visionHeadingRad);
+            packet.put("Pose/Vision x", data.pose.visionPoseXIn);
+            packet.put("Pose/Vision y", data.pose.visionPoseYIn);
+            packet.put("Pose/Vision heading", data.pose.visionHeadingRad);
         }
     }
 
@@ -193,6 +201,32 @@ public class DashboardFormatter {
         packet.put(prefix + "/power", lane.power);
         packet.put(prefix + "/ready", lane.ready);
         packet.put(prefix + "/target_rpm", lane.targetRpm);
+    }
+
+    /**
+     * Add loop timing data to packet (DEBUG mode only).
+     * Provides comprehensive performance diagnostics for loop optimization.
+     */
+    private void addLoopTimingData(TelemetryPacket packet, RobotTelemetryData data) {
+        double totalTelemetryMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - data.timing.telemetryStartNs);
+
+        // Total loop time
+        packet.put("timing/total_loop_ms", data.timing.totalLoopMs(totalTelemetryMs));
+
+        // Main loop overhead
+        packet.put("timing/main_loop_ms", data.timing.mainLoopMs);
+
+        // Subsystem periodic times
+        packet.put("timing/subsystem_total_ms", data.timing.totalSubsystemMs());
+        packet.put("timing/subsystems/drive_ms", data.timing.driveMs);
+        packet.put("timing/subsystems/intake_ms", data.timing.intakeMs);
+        packet.put("timing/subsystems/launcher_ms", data.timing.launcherMs);
+        packet.put("timing/subsystems/lighting_ms", data.timing.lightingMs);
+        packet.put("timing/subsystems/launcher_coord_ms", data.timing.launcherCoordMs);
+        packet.put("timing/subsystems/vision_ms", data.timing.visionMs);
+
+        // Telemetry and logging overhead
+        packet.put("timing/telemetry_ms", totalTelemetryMs);
     }
 
     /**
@@ -236,50 +270,50 @@ public class DashboardFormatter {
         packet.put("DriverStation/Gamepad1/Axes/fieldX(leftStickX)", data.gamepad.driver.leftStickX);
         packet.put("DriverStation/Gamepad1/Axes/fieldY(leftStickY)", data.gamepad.driver.leftStickY);
         packet.put("DriverStation/Gamepad1/Axes/rotationCcw(rightStickX)", data.gamepad.driver.rightStickX);
-        packet.put("DriverStation/Gamepad1/Axes/rightStickY", data.gamepad.driver.rightStickY);
-        packet.put("DriverStation/Gamepad1/Axes/leftTrigger", data.gamepad.driver.leftTrigger);
-        packet.put("DriverStation/Gamepad1/Axes/rightTrigger", data.gamepad.driver.rightTrigger);
+        packet.put("DriverStation/Gamepad1/Axes/Unmapped/rightStickY", data.gamepad.driver.rightStickY);
+        packet.put("DriverStation/Gamepad1/Axes/Unmapped/leftTrigger", data.gamepad.driver.leftTrigger);
+        packet.put("DriverStation/Gamepad1/Axes/Unmapped/rightTrigger", data.gamepad.driver.rightTrigger);
 
         // Driver buttons (named from DriverBindings)
         packet.put("DriverStation/Gamepad1/Buttons/relocalizeRequest(A)", data.gamepad.driver.buttonA);
         packet.put("DriverStation/Gamepad1/Buttons/aimHold(B)", data.gamepad.driver.buttonB);
-        packet.put("DriverStation/Gamepad1/Buttons/aim(X)", data.gamepad.driver.buttonX);
-        packet.put("DriverStation/Gamepad1/Buttons/Y(unmapped)", data.gamepad.driver.buttonY);
+        packet.put("DriverStation/Gamepad1/Buttons/Unmapped/X", data.gamepad.driver.buttonX);
+        packet.put("DriverStation/Gamepad1/Buttons/Unmapped/Y", data.gamepad.driver.buttonY);
         packet.put("DriverStation/Gamepad1/Buttons/rampHold(leftBumper)", data.gamepad.driver.leftBumper);
         packet.put("DriverStation/Gamepad1/Buttons/slowHold(rightBumper)", data.gamepad.driver.rightBumper);
-        packet.put("DriverStation/Gamepad1/Buttons/back(unmapped)", data.gamepad.driver.back);
-        packet.put("DriverStation/Gamepad1/Buttons/start(unmapped)", data.gamepad.driver.start);
-        packet.put("DriverStation/Gamepad1/Buttons/leftStickButton(unmapped)", data.gamepad.driver.leftStickButton);
-        packet.put("DriverStation/Gamepad1/Buttons/rightStickButton(unmapped)", data.gamepad.driver.rightStickButton);
+        packet.put("DriverStation/Gamepad1/Buttons/Unmapped/back", data.gamepad.driver.back);
+        packet.put("DriverStation/Gamepad1/Buttons/Unmapped/start", data.gamepad.driver.start);
+        packet.put("DriverStation/Gamepad1/Buttons/Unmapped/leftStickButton", data.gamepad.driver.leftStickButton);
+        packet.put("DriverStation/Gamepad1/Buttons/Unmapped/rightStickButton", data.gamepad.driver.rightStickButton);
         packet.put("DriverStation/Gamepad1/Buttons/telemetryPageUp(dpadUp)", data.gamepad.driver.dpadUp);
         packet.put("DriverStation/Gamepad1/Buttons/telemetryPageDown(dpadDown)", data.gamepad.driver.dpadDown);
-        packet.put("DriverStation/Gamepad1/Buttons/dpadLeft(unmapped)", data.gamepad.driver.dpadLeft);
-        packet.put("DriverStation/Gamepad1/Buttons/dpadRight(unmapped)", data.gamepad.driver.dpadRight);
-        packet.put("DriverStation/Gamepad1/Buttons/guide(unmapped)", data.gamepad.driver.guide);
+        packet.put("DriverStation/Gamepad1/Buttons/Unmapped/dpadLeft", data.gamepad.driver.dpadLeft);
+        packet.put("DriverStation/Gamepad1/Buttons/Unmapped/dpadRight", data.gamepad.driver.dpadRight);
+        packet.put("DriverStation/Gamepad1/Buttons/Unmapped/guide", data.gamepad.driver.guide);
 
         // Operator gamepad (Gamepad2) - stick axes
-        packet.put("DriverStation/Gamepad2/Axes/leftStickX", data.gamepad.operator.leftStickX);
-        packet.put("DriverStation/Gamepad2/Axes/leftStickY", data.gamepad.operator.leftStickY);
-        packet.put("DriverStation/Gamepad2/Axes/rightStickX", data.gamepad.operator.rightStickX);
-        packet.put("DriverStation/Gamepad2/Axes/rightStickY", data.gamepad.operator.rightStickY);
-        packet.put("DriverStation/Gamepad2/Axes/leftTrigger", data.gamepad.operator.leftTrigger);
-        packet.put("DriverStation/Gamepad2/Axes/rightTrigger", data.gamepad.operator.rightTrigger);
+        packet.put("DriverStation/Gamepad2/Axes/Unmapped/leftStickX", data.gamepad.operator.leftStickX);
+        packet.put("DriverStation/Gamepad2/Axes/Unmapped/leftStickY", data.gamepad.operator.leftStickY);
+        packet.put("DriverStation/Gamepad2/Axes/Unmapped/rightStickX", data.gamepad.operator.rightStickX);
+        packet.put("DriverStation/Gamepad2/Axes/Unmapped/rightStickY", data.gamepad.operator.rightStickY);
+        packet.put("DriverStation/Gamepad2/Axes/Unmapped/leftTrigger", data.gamepad.operator.leftTrigger);
+        packet.put("DriverStation/Gamepad2/Axes/Unmapped/rightTrigger", data.gamepad.operator.rightTrigger);
 
         // Operator buttons (named from OperatorBindings)
         packet.put("DriverStation/Gamepad2/Buttons/manualSpinButton(A)", data.gamepad.operator.buttonA);
         packet.put("DriverStation/Gamepad2/Buttons/fireLongButton(B)", data.gamepad.operator.buttonB);
         packet.put("DriverStation/Gamepad2/Buttons/fireShortButton(X)", data.gamepad.operator.buttonX);
         packet.put("DriverStation/Gamepad2/Buttons/fireMidButton(Y)", data.gamepad.operator.buttonY);
-        packet.put("DriverStation/Gamepad2/Buttons/leftBumper(unmapped)", data.gamepad.operator.leftBumper);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/leftBumper", data.gamepad.operator.leftBumper);
         packet.put("DriverStation/Gamepad2/Buttons/intakeForwardHold(rightBumper)", data.gamepad.operator.rightBumper);
-        packet.put("DriverStation/Gamepad2/Buttons/back(unmapped)", data.gamepad.operator.back);
-        packet.put("DriverStation/Gamepad2/Buttons/start(unmapped)", data.gamepad.operator.start);
-        packet.put("DriverStation/Gamepad2/Buttons/leftStickButton(unmapped)", data.gamepad.operator.leftStickButton);
-        packet.put("DriverStation/Gamepad2/Buttons/rightStickButton(unmapped)", data.gamepad.operator.rightStickButton);
-        packet.put("DriverStation/Gamepad2/Buttons/dpadUp(unmapped)", data.gamepad.operator.dpadUp);
-        packet.put("DriverStation/Gamepad2/Buttons/dpadDown(unmapped)", data.gamepad.operator.dpadDown);
-        packet.put("DriverStation/Gamepad2/Buttons/dpadLeft(unmapped)", data.gamepad.operator.dpadLeft);
-        packet.put("DriverStation/Gamepad2/Buttons/dpadRight(unmapped)", data.gamepad.operator.dpadRight);
-        packet.put("DriverStation/Gamepad2/Buttons/guide(unmapped)", data.gamepad.operator.guide);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/back", data.gamepad.operator.back);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/start", data.gamepad.operator.start);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/leftStickButton", data.gamepad.operator.leftStickButton);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/rightStickButton", data.gamepad.operator.rightStickButton);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/dpadUp", data.gamepad.operator.dpadUp);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/dpadDown", data.gamepad.operator.dpadDown);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/dpadLeft", data.gamepad.operator.dpadLeft);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/dpadRight", data.gamepad.operator.dpadRight);
+        packet.put("DriverStation/Gamepad2/Buttons/Unmapped/guide", data.gamepad.operator.guide);
     }
 }

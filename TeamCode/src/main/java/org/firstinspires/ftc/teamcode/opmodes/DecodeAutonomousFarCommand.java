@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
-import static org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger.logStatus;
-
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
@@ -86,7 +84,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     }
     @Override
     public void onInit() {
-        logStatus(this, hardwareMap, opModeIsActive());
         BindingManager.reset();
         robot = new Robot(hardwareMap);
 
@@ -127,7 +124,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Override
     public void onWaitForStart() {
-        logStatus(this, hardwareMap, opModeIsActive());
         BindingManager.update();
 
         // Detect alliance and start pose from AprilTag vision
@@ -155,7 +151,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
-        logStatus(this, hardwareMap, opModeIsActive());
         BindingManager.reset();
         allianceSelector.lockSelection();
 
@@ -170,13 +165,11 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        logStatus(this, hardwareMap, opModeIsActive());
         robot.telemetry.updateDriverStation(telemetry);
     }
 
     @Override
     public void onStop() {
-        logStatus(this, hardwareMap, opModeIsActive());
         allianceSelector.unlockSelection();
         BindingManager.reset();
         robot.launcher.abort();
