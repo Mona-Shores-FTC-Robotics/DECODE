@@ -29,13 +29,35 @@ public class FullPanelsFormatter {
         panels.debug("mode/drive", data.drive.driveMode);
         panels.debug("mode/aim/enabled", data.drive.aimMode);
 
-        // Gamepad inputs (raw driver inputs)
-        panels.debug("gamepad/driver/leftStickX", data.gamepad.driver.leftStickX);
-        panels.debug("gamepad/driver/leftStickY", data.gamepad.driver.leftStickY);
-        panels.debug("gamepad/driver/rightStickX", data.gamepad.driver.rightStickX);
-        panels.debug("gamepad/driver/rightStickY", data.gamepad.driver.rightStickY);
-        panels.debug("gamepad/driver/leftTrigger", data.gamepad.driver.leftTrigger);
-        panels.debug("gamepad/driver/rightTrigger", data.gamepad.driver.rightTrigger);
+        // Gamepad inputs (raw driver inputs) - axes
+        panels.debug("gamepad/driver/axes/fieldX", data.gamepad.driver.leftStickX);
+        panels.debug("gamepad/driver/axes/fieldY", data.gamepad.driver.leftStickY);
+        panels.debug("gamepad/driver/axes/rotationCcw", data.gamepad.driver.rightStickX);
+        panels.debug("gamepad/driver/axes/rightStickY", data.gamepad.driver.rightStickY);
+        panels.debug("gamepad/driver/axes/leftTrigger", data.gamepad.driver.leftTrigger);
+        panels.debug("gamepad/driver/axes/rightTrigger", data.gamepad.driver.rightTrigger);
+
+        // Driver buttons (named from DriverBindings)
+        panels.debug("gamepad/driver/buttons/relocalizeRequest", data.gamepad.driver.buttonA);
+        panels.debug("gamepad/driver/buttons/aimHold", data.gamepad.driver.buttonB);
+        panels.debug("gamepad/driver/buttons/aim", data.gamepad.driver.buttonX);
+        panels.debug("gamepad/driver/buttons/rampHold", data.gamepad.driver.leftBumper);
+        panels.debug("gamepad/driver/buttons/slowHold", data.gamepad.driver.rightBumper);
+
+        // Operator axes
+        panels.debug("gamepad/operator/axes/leftStickX", data.gamepad.operator.leftStickX);
+        panels.debug("gamepad/operator/axes/leftStickY", data.gamepad.operator.leftStickY);
+        panels.debug("gamepad/operator/axes/rightStickX", data.gamepad.operator.rightStickX);
+        panels.debug("gamepad/operator/axes/rightStickY", data.gamepad.operator.rightStickY);
+        panels.debug("gamepad/operator/axes/leftTrigger", data.gamepad.operator.leftTrigger);
+        panels.debug("gamepad/operator/axes/rightTrigger", data.gamepad.operator.rightTrigger);
+
+        // Operator buttons (named from OperatorBindings)
+        panels.debug("gamepad/operator/buttons/manualSpinButton", data.gamepad.operator.buttonA);
+        panels.debug("gamepad/operator/buttons/fireLongButton", data.gamepad.operator.buttonB);
+        panels.debug("gamepad/operator/buttons/fireShortButton", data.gamepad.operator.buttonX);
+        panels.debug("gamepad/operator/buttons/fireMidButton", data.gamepad.operator.buttonY);
+        panels.debug("gamepad/operator/buttons/intakeForwardHold", data.gamepad.operator.rightBumper);
 
         // Drive commanded behavior (after processing)
         panels.debug("drive/slowMode", data.drive.slowMode);
