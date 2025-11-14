@@ -413,10 +413,27 @@ No standing unit tests yet. Add new suites under `TeamCode/src/test/java` using 
 - Typically disabled for robot operation
 
 **Robot Modes:**
-- `RobotMode.DEBUG`: Full diagnostics enabled
-- `RobotMode.COMPETITION`: Optimized for match play
-- Set via `Robot.setRobotMode(mode)`
-- Affects logging verbosity and safety checks
+
+DECODE uses two separate configuration systems for different purposes:
+
+1. **RobotMode** (Subsystem Behavior Control)
+   - `RobotMode.MATCH`: Enable full functionality (sensors, automation, safety checks)
+   - `RobotMode.DEBUG`: Disable some features for bench testing
+   - Set via `Robot.setRobotMode(mode)`
+   - Controls whether subsystems enable hardware (e.g., color sensors, automation)
+   - Hardcoded in OpModes (typically `RobotMode.MATCH`)
+
+2. **TelemetryLevel** (Telemetry Verbosity Control)
+   - `TelemetryLevel.MATCH`: Minimal telemetry (<10ms target)
+   - `TelemetryLevel.PRACTICE`: Moderate telemetry (<20ms target)
+   - `TelemetryLevel.DEBUG`: Full telemetry (all diagnostics)
+   - Configured via FTC Dashboard (no recompile needed)
+   - Controls how much data is logged/published
+   - See "Tiered Telemetry System" section above for details
+
+**Important:** These are independent settings. Typical competition setup:
+- `RobotMode.MATCH` (enable all hardware)
+- `TelemetryLevel.MATCH` (minimal overhead)
 
 **Alliance Colors:**
 - Set via `Robot.setAlliance(Alliance.RED/BLUE)`
@@ -444,3 +461,11 @@ No standing unit tests yet. Add new suites under `TeamCode/src/test/java` using 
 - Verify robot WiFi connection
 - Check robot IP matches `192.168.49.1`
 - Ensure FTC Dashboard port 8080 is not blocked
+
+**Slow Loop Times:**
+- Switch to `TelemetryLevel.MATCH` via FTC Dashboard (target <25ms)
+- Verify `BulkReadComponent.INSTANCE` is registered in OpMode
+- Check that `RobotMode.MATCH` is set (enables sensor throttling)
+- I2C sensors automatically throttled: Color sensors (200ms), Limelight (50ms)
+- Review loop timing diagnostics: Hold RT on gamepad1 in TeleOp
+- See detailed analysis in `docs/loop-timing-analysis.md`
