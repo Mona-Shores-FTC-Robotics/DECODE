@@ -149,212 +149,212 @@ public class TelemetryService {
         }
 
         TelemetryManager panels = panelsTelemetry();
-//        if (!suppressDriveTelemetry && panels != null) {
-//            String label = modeLabel == null || modeLabel.isEmpty() ? "robot" : modeLabel.toLowerCase();
-//            panels.debug("mode/label", label);
-//            panels.debug("mode/drive", drive.getDriveMode());
-//            panels.debug("mode/aim/enabled", aimMode);
-//            panels.debug("vision/tag/visible", visionSnapshot.hasTag);
-//            panels.debug("vision/tag/id", visionSnapshot.tagId);
-//            panels.debug("vision/tag/rangeIn", visionSnapshot.rangeIn);
-//            panels.debug("vision/tag/bearingDeg", visionSnapshot.bearingDeg);
-//            panels.debug("vision/tag/yawDeg", visionSnapshot.yawDeg);
-//            panels.debug("vision/odometryPending", visionSnapshot.odometryPending);
-//        }
-//
-//        double leftTargetRpm = launcher.getTargetRpm(LauncherLane.LEFT);
-//        double centerTargetRpm = launcher.getTargetRpm(LauncherLane.CENTER);
-//        double rightTargetRpm = launcher.getTargetRpm(LauncherLane.RIGHT);
-//        double leftCurrentRpm = launcher.getCurrentRpm(LauncherLane.LEFT);
-//        double centerCurrentRpm = launcher.getCurrentRpm(LauncherLane.CENTER);
-//        double rightCurrentRpm = launcher.getCurrentRpm(LauncherLane.RIGHT);
-//        double leftPower = launcher.getLastPower(LauncherLane.LEFT);
-//        double centerPower = launcher.getLastPower(LauncherLane.CENTER);
-//        double rightPower = launcher.getLastPower(LauncherLane.RIGHT);
-//        boolean leftReady = launcher.isLaneReady(LauncherLane.LEFT);
-//        boolean centerReady = launcher.isLaneReady(LauncherLane.CENTER);
-//        boolean rightReady = launcher.isLaneReady(LauncherLane.RIGHT);
-//        String controlMode = LauncherSubsystem.getFlywheelControlMode().name();
-//        String leftPhase = launcher.getPhaseName(LauncherLane.LEFT);
-//        String centerPhase = launcher.getPhaseName(LauncherLane.CENTER);
-//        String rightPhase = launcher.getPhaseName(LauncherLane.RIGHT);
-//        boolean leftBang = "BANG".equals(leftPhase);
-//        boolean leftHold = "HOLD".equals(leftPhase);
-//        boolean leftHybrid = "HYBRID".equals(leftPhase);
-//        boolean centerBang = "BANG".equals(centerPhase);
-//        boolean centerHold = "HOLD".equals(centerPhase);
-//        boolean centerHybrid = "HYBRID".equals(centerPhase);
-//        boolean rightBang = "BANG".equals(rightPhase);
-//        boolean rightHold = "HOLD".equals(rightPhase);
-//        boolean rightHybrid = "HYBRID".equals(rightPhase);
-//        int leftBangToHoldCount = launcher.getBangToHoldCount(LauncherLane.LEFT);
-//        int centerBangToHoldCount = launcher.getBangToHoldCount(LauncherLane.CENTER);
-//        int rightBangToHoldCount = launcher.getBangToHoldCount(LauncherLane.RIGHT);
-//        double displayTargetRpm = Math.max(Math.max(leftTargetRpm, centerTargetRpm), rightTargetRpm);
-//        double displayCurrentRpm = Math.max(Math.max(leftCurrentRpm, centerCurrentRpm), rightCurrentRpm);
-//        double displayPower = Math.max(Math.max(leftPower, centerPower), rightPower);
+        if (!suppressDriveTelemetry && panels != null) {
+            String label = modeLabel == null || modeLabel.isEmpty() ? "robot" : modeLabel.toLowerCase();
+            panels.debug("mode/label", label);
+            panels.debug("mode/drive", drive.getDriveMode());
+            panels.debug("mode/aim/enabled", aimMode);
+            panels.debug("vision/tag/visible", visionSnapshot.hasTag);
+            panels.debug("vision/tag/id", visionSnapshot.tagId);
+            panels.debug("vision/tag/rangeIn", visionSnapshot.rangeIn);
+            panels.debug("vision/tag/bearingDeg", visionSnapshot.bearingDeg);
+            panels.debug("vision/tag/yawDeg", visionSnapshot.yawDeg);
+            panels.debug("vision/odometryPending", visionSnapshot.odometryPending);
+        }
 
-//        boolean launcherReady = launcher.atTarget();
-//        String launcherState = launcher.getState().name();
-//        String launcherSpinMode = launcher.getEffectiveSpinMode().name();
+        double leftTargetRpm = launcher.getTargetRpm(LauncherLane.LEFT);
+        double centerTargetRpm = launcher.getTargetRpm(LauncherLane.CENTER);
+        double rightTargetRpm = launcher.getTargetRpm(LauncherLane.RIGHT);
+        double leftCurrentRpm = launcher.getCurrentRpm(LauncherLane.LEFT);
+        double centerCurrentRpm = launcher.getCurrentRpm(LauncherLane.CENTER);
+        double rightCurrentRpm = launcher.getCurrentRpm(LauncherLane.RIGHT);
+        double leftPower = launcher.getLastPower(LauncherLane.LEFT);
+        double centerPower = launcher.getLastPower(LauncherLane.CENTER);
+        double rightPower = launcher.getLastPower(LauncherLane.RIGHT);
+        boolean leftReady = launcher.isLaneReady(LauncherLane.LEFT);
+        boolean centerReady = launcher.isLaneReady(LauncherLane.CENTER);
+        boolean rightReady = launcher.isLaneReady(LauncherLane.RIGHT);
+        String controlMode = LauncherSubsystem.getFlywheelControlMode().name();
+        String leftPhase = launcher.getPhaseName(LauncherLane.LEFT);
+        String centerPhase = launcher.getPhaseName(LauncherLane.CENTER);
+        String rightPhase = launcher.getPhaseName(LauncherLane.RIGHT);
+        boolean leftBang = "BANG".equals(leftPhase);
+        boolean leftHold = "HOLD".equals(leftPhase);
+        boolean leftHybrid = "HYBRID".equals(leftPhase);
+        boolean centerBang = "BANG".equals(centerPhase);
+        boolean centerHold = "HOLD".equals(centerPhase);
+        boolean centerHybrid = "HYBRID".equals(centerPhase);
+        boolean rightBang = "BANG".equals(rightPhase);
+        boolean rightHold = "HOLD".equals(rightPhase);
+        boolean rightHybrid = "HYBRID".equals(rightPhase);
+        int leftBangToHoldCount = launcher.getBangToHoldCount(LauncherLane.LEFT);
+        int centerBangToHoldCount = launcher.getBangToHoldCount(LauncherLane.CENTER);
+        int rightBangToHoldCount = launcher.getBangToHoldCount(LauncherLane.RIGHT);
+        double displayTargetRpm = Math.max(Math.max(leftTargetRpm, centerTargetRpm), rightTargetRpm);
+        double displayCurrentRpm = Math.max(Math.max(leftCurrentRpm, centerCurrentRpm), rightCurrentRpm);
+        double displayPower = Math.max(Math.max(leftPower, centerPower), rightPower);
 
-//       publisher.publishDrive(drive, requestX, requestY, requestRot, slowMode, aimMode);
+        boolean launcherReady = launcher.atTarget();
+        String launcherState = launcher.getState().name();
+        String launcherSpinMode = launcher.getEffectiveSpinMode().name();
 
-//        publisher.publishLauncher(
-//                displayTargetRpm,
-//                displayCurrentRpm,
-//                displayPower,
-//                displayTargetRpm - displayCurrentRpm
-//        );
+       publisher.publishDrive(drive, requestX, requestY, requestRot, slowMode, aimMode);
 
-//        if (panels != null) {
-//            panels.debug("launcher/control/mode", controlMode);
-//            panels.debug("launcher/lanes/left/targetRpm", leftTargetRpm);
-//            panels.debug("launcher/lanes/left/currentRpm", leftCurrentRpm);
-//            panels.debug("launcher/lanes/left/power", leftPower);
-//            panels.debug("launcher/lanes/left/ready", leftReady);
-//            panels.debug("launcher/lanes/left/phase", leftPhase);
-//            panels.debug("launcher/lanes/center/targetRpm", centerTargetRpm);
-//            panels.debug("launcher/lanes/center/currentRpm", centerCurrentRpm);
-//            panels.debug("launcher/lanes/center/power", centerPower);
-//            panels.debug("launcher/lanes/center/ready", centerReady);
-//            panels.debug("launcher/lanes/center/phase", centerPhase);
-//            panels.debug("launcher/lanes/right/targetRpm", rightTargetRpm);
-//            panels.debug("launcher/lanes/right/currentRpm", rightCurrentRpm);
-//            panels.debug("launcher/lanes/right/power", rightPower);
-//            panels.debug("launcher/lanes/right/ready", rightReady);
-//            panels.debug("launcher/lanes/right/phase", rightPhase);
-//            panels.debug("launcher/lanes/left/bangToHoldCount", leftBangToHoldCount);
-//            panels.debug("launcher/lanes/center/bangToHoldCount", centerBangToHoldCount);
-//            panels.debug("launcher/lanes/right/bangToHoldCount", rightBangToHoldCount);
-//        }
+        publisher.publishLauncher(
+                displayTargetRpm,
+                displayCurrentRpm,
+                displayPower,
+                displayTargetRpm - displayCurrentRpm
+        );
 
-//        if (dsTelemetry != null && !suppressDriveTelemetry) {
-//            if (pose != null) {
-//                dsTelemetry.addData("Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
-//                        poseXIn,
-//                        poseYIn,
-//                        headingDeg);
-//            } else {
-//                dsTelemetry.addData("Pose", "(unavailable)");
-//            }
-//
-//            Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
-//            dsTelemetry.addData("Alliance", activeAlliance.displayName());
-//            dsTelemetry.addData("Drive Aim Assist", aimMode ? "vision-locked" : "manual");
-//            dsTelemetry.addData("Drive Turn Cmd",
-//                    "%.2f (lock %.2f)",
-//                    drive.getLastCommandTurn());
-//            dsTelemetry.addData(
-//                    "launcher Mode",
-//                    "%s | ready=%s",
-//                    controlMode,
-//                    launcherReady
-//            );
-//            dsTelemetry.addData(
-//                    "launcher Left",
-//                    "T=%.0f  C=%.0f  P=%.2f  %s  %s",
-//                    leftTargetRpm,
-//                    leftCurrentRpm,
-//                    leftPower,
-//                    leftReady ? "READY" : "----",
-//                    leftPhase
-//            );
-//            dsTelemetry.addData(
-//                    "launcher Center",
-//                    "T=%.0f  C=%.0f  P=%.2f  %s  %s",
-//                    centerTargetRpm,
-//                    centerCurrentRpm,
-//                    centerPower,
-//                    centerReady ? "READY" : "----",
-//                    centerPhase
-//            );
-//            dsTelemetry.addData(
-//                    "launcher Right",
-//                    "T=%.0f  C=%.0f  P=%.2f  %s  %s",
-//                    rightTargetRpm,
-//                    rightCurrentRpm,
-//                    rightPower,
-//                    rightReady ? "READY" : "----",
-//                    rightPhase
-//            );
-//        }
+        if (panels != null) {
+            panels.debug("launcher/control/mode", controlMode);
+            panels.debug("launcher/lanes/left/targetRpm", leftTargetRpm);
+            panels.debug("launcher/lanes/left/currentRpm", leftCurrentRpm);
+            panels.debug("launcher/lanes/left/power", leftPower);
+            panels.debug("launcher/lanes/left/ready", leftReady);
+            panels.debug("launcher/lanes/left/phase", leftPhase);
+            panels.debug("launcher/lanes/center/targetRpm", centerTargetRpm);
+            panels.debug("launcher/lanes/center/currentRpm", centerCurrentRpm);
+            panels.debug("launcher/lanes/center/power", centerPower);
+            panels.debug("launcher/lanes/center/ready", centerReady);
+            panels.debug("launcher/lanes/center/phase", centerPhase);
+            panels.debug("launcher/lanes/right/targetRpm", rightTargetRpm);
+            panels.debug("launcher/lanes/right/currentRpm", rightCurrentRpm);
+            panels.debug("launcher/lanes/right/power", rightPower);
+            panels.debug("launcher/lanes/right/ready", rightReady);
+            panels.debug("launcher/lanes/right/phase", rightPhase);
+            panels.debug("launcher/lanes/left/bangToHoldCount", leftBangToHoldCount);
+            panels.debug("launcher/lanes/center/bangToHoldCount", centerBangToHoldCount);
+            panels.debug("launcher/lanes/right/bangToHoldCount", rightBangToHoldCount);
+        }
 
-//        if (launcherCoordinator != null) {
-//            launcherCoordinator.publishLaneTelemetry(dsTelemetry, panels);
-//        }
-//
-//        if (dsTelemetry != null) {
-//            dsTelemetry.update();
-//            updateDriverStation(dsTelemetry);
-//        }
-//
-//        if (sendDashboardThisLoop && enableDashboardTelemetry && dashboard != null) {
-//            sendDashboardPacket(
-//                    drive,
-//                    requestX,
-//                    requestY,
-//                    requestRot,
-//                    slowMode,
-//                    aimMode,
-//                    pose != null,
-//                    poseXIn,
-//                    poseYIn,
-//                    headingRad,
-//                    headingDeg,
-//                    ftcXIn,
-//                    ftcYIn,
-//                    ftcHeadingRad,
-//                    launcherReady,
-//                    launcherState,
-//                    launcherSpinMode,
-//                    launcherCoordinator,
-//                    alliance,
-//                    visionSnapshot.alliance,
-//                    runtimeSec,
-//                    visionSnapshot.hasTag,
-//                    visionSnapshot.tagId,
-//                    visionSnapshot.rangeIn,
-//                    visionSnapshot.bearingDeg,
-//                    visionSnapshot.yawDeg,
-//                    visionSnapshot.poseXIn,
-//                    visionSnapshot.poseYIn,
-//                    visionSnapshot.headingRad,
-//                    visionSnapshot.txDeg,
-//                    visionSnapshot.tyDeg,
-//                    visionSnapshot.taPercent,
-//                    visionSnapshot.odometryPending,
-//                    controlMode,
-//                    leftTargetRpm,
-//                    centerTargetRpm,
-//                    rightTargetRpm,
-//                    leftCurrentRpm,
-//                    centerCurrentRpm,
-//                    rightCurrentRpm,
-//                    leftPower,
-//                    centerPower,
-//                    rightPower,
-//                    leftReady,
-//                    centerReady,
-//                    rightReady,
-//                    leftPhase,
-//                    centerPhase,
-//                    rightPhase,
-//                    leftBang,
-//                    leftHold,
-//                    leftHybrid,
-//                    centerBang,
-//                    centerHold,
-//                    centerHybrid,
-//                    rightBang,
-//                    rightHold,
-//                    rightHybrid,
-//                    leftBangToHoldCount,
-//                    centerBangToHoldCount,
-//                    rightBangToHoldCount
-//            );
-//            lastDashboardPacketMs = nowMs;
-//        }
+        if (dsTelemetry != null && !suppressDriveTelemetry) {
+            if (pose != null) {
+                dsTelemetry.addData("Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
+                        poseXIn,
+                        poseYIn,
+                        headingDeg);
+            } else {
+                dsTelemetry.addData("Pose", "(unavailable)");
+            }
+
+            Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
+            dsTelemetry.addData("Alliance", activeAlliance.displayName());
+            dsTelemetry.addData("Drive Aim Assist", aimMode ? "vision-locked" : "manual");
+            dsTelemetry.addData("Drive Turn Cmd",
+                    "%.2f (lock %.2f)",
+                    drive.getLastCommandTurn());
+            dsTelemetry.addData(
+                    "launcher Mode",
+                    "%s | ready=%s",
+                    controlMode,
+                    launcherReady
+            );
+            dsTelemetry.addData(
+                    "launcher Left",
+                    "T=%.0f  C=%.0f  P=%.2f  %s  %s",
+                    leftTargetRpm,
+                    leftCurrentRpm,
+                    leftPower,
+                    leftReady ? "READY" : "----",
+                    leftPhase
+            );
+            dsTelemetry.addData(
+                    "launcher Center",
+                    "T=%.0f  C=%.0f  P=%.2f  %s  %s",
+                    centerTargetRpm,
+                    centerCurrentRpm,
+                    centerPower,
+                    centerReady ? "READY" : "----",
+                    centerPhase
+            );
+            dsTelemetry.addData(
+                    "launcher Right",
+                    "T=%.0f  C=%.0f  P=%.2f  %s  %s",
+                    rightTargetRpm,
+                    rightCurrentRpm,
+                    rightPower,
+                    rightReady ? "READY" : "----",
+                    rightPhase
+            );
+        }
+
+        if (launcherCoordinator != null) {
+            launcherCoordinator.publishLaneTelemetry(dsTelemetry, panels);
+        }
+
+        if (dsTelemetry != null) {
+            dsTelemetry.update();
+            updateDriverStation(dsTelemetry);
+        }
+
+        if (sendDashboardThisLoop && enableDashboardTelemetry && dashboard != null) {
+            sendDashboardPacket(
+                    drive,
+                    requestX,
+                    requestY,
+                    requestRot,
+                    slowMode,
+                    aimMode,
+                    pose != null,
+                    poseXIn,
+                    poseYIn,
+                    headingRad,
+                    headingDeg,
+                    ftcXIn,
+                    ftcYIn,
+                    ftcHeadingRad,
+                    launcherReady,
+                    launcherState,
+                    launcherSpinMode,
+                    launcherCoordinator,
+                    alliance,
+                    visionSnapshot.alliance,
+                    runtimeSec,
+                    visionSnapshot.hasTag,
+                    visionSnapshot.tagId,
+                    visionSnapshot.rangeIn,
+                    visionSnapshot.bearingDeg,
+                    visionSnapshot.yawDeg,
+                    visionSnapshot.poseXIn,
+                    visionSnapshot.poseYIn,
+                    visionSnapshot.headingRad,
+                    visionSnapshot.txDeg,
+                    visionSnapshot.tyDeg,
+                    visionSnapshot.taPercent,
+                    visionSnapshot.odometryPending,
+                    controlMode,
+                    leftTargetRpm,
+                    centerTargetRpm,
+                    rightTargetRpm,
+                    leftCurrentRpm,
+                    centerCurrentRpm,
+                    rightCurrentRpm,
+                    leftPower,
+                    centerPower,
+                    rightPower,
+                    leftReady,
+                    centerReady,
+                    rightReady,
+                    leftPhase,
+                    centerPhase,
+                    rightPhase,
+                    leftBang,
+                    leftHold,
+                    leftHybrid,
+                    centerBang,
+                    centerHold,
+                    centerHybrid,
+                    rightBang,
+                    rightHold,
+                    rightHybrid,
+                    leftBangToHoldCount,
+                    centerBangToHoldCount,
+                    rightBangToHoldCount
+            );
+            lastDashboardPacketMs = nowMs;
+        }
     }
 
     private FtcDashboard safelyGetDashboard() {

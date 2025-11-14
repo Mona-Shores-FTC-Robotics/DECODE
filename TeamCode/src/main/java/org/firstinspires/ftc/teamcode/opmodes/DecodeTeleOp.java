@@ -40,7 +40,7 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 public class DecodeTeleOp extends NextFTCOpMode {
 
     public static long TELEMETRY_INTERVAL_NS = 200_000_000L; // 50 ms cadence (~20 Hz)
-    public static long AUTO_LOG_INTERVAL_MS = 400L; // Throttle AutoLog to 20Hz
+    public static long AUTO_LOG_INTERVAL_MS = 1000L; // Throttle AutoLog to 20Hz
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
 
     private Robot robot;
@@ -144,8 +144,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
         // Throttle AutoLogManager to 20Hz to reduce CPU load (samples 181 @AutoLogOutput methods)
         long nowMs = System.currentTimeMillis();
         if (nowMs - lastAutoLogTimeMs >= AUTO_LOG_INTERVAL_MS) {
-//            AutoLogManager.periodic();
-//            lastAutoLogTimeMs = nowMs;
+            AutoLogManager.periodic();
+            lastAutoLogTimeMs = nowMs;
         }
 
         // Sample driver inputs for telemetry/logging only (not for control)
