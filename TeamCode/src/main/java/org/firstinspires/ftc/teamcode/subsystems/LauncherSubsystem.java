@@ -12,7 +12,6 @@ import com.qualcomm.robotcore.util.Range;
 import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
-import org.firstinspires.ftc.teamcode.util.RobotMode;
 
 import Ori.Coval.Logging.AutoLog;
 import Ori.Coval.Logging.AutoLogOutput;

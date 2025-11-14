@@ -13,7 +13,6 @@ import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
-import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 
@@ -30,8 +29,6 @@ public class Robot {
 
     public final LauncherCommands launcherCommands;
     public final IntakeCommands intakeCommands;
-
-    private RobotMode robotMode = RobotMode.DEBUG;
 
     public ManualSpinController manualSpinController;
 
@@ -86,23 +83,6 @@ public class Robot {
         intake.initialize();
         vision.initialize();
         launcherCoordinator.initialize();
-    }
-
-    public void setRobotMode(RobotMode mode) {
-        robotMode = RobotMode.orDefault(mode);
-        applyRobotMode(robotMode);
-    }
-
-    public RobotMode getRobotMode() {
-        return robotMode;
-    }
-
-    private void applyRobotMode(RobotMode mode) {
-        drive.setRobotMode(mode);
-        intake.setRobotMode(mode);
-        lighting.setRobotMode(mode);
-        vision.setRobotMode(mode);
-        launcherCoordinator.setRobotMode(mode);
     }
 
     public void attachPedroFollower() {

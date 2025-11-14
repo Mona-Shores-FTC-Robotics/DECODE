@@ -9,7 +9,6 @@ import dev.nextftc.core.subsystems.Subsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
-import org.firstinspires.ftc.teamcode.util.RobotMode;
 
 import Ori.Coval.Logging.AutoLog;
 import Ori.Coval.Logging.AutoLogOutput;
@@ -52,7 +51,6 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private LightingState state = LightingState.OFF;
     private Alliance alliance = Alliance.UNKNOWN;
     private double lastPeriodicMs = 0.0;
-    private RobotMode robotMode = RobotMode.DEBUG;
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(
@@ -78,10 +76,6 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         long start = System.nanoTime();
         // No periodic work required – kept for interface completeness.
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
-    }
-
-    public void setRobotMode(RobotMode mode) {
-        robotMode = RobotMode.orDefault(mode);
     }
 
     public double getLastPeriodicMs() {

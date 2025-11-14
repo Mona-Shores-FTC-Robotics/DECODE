@@ -30,7 +30,6 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
-import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
@@ -40,7 +39,6 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 public class DecodeTeleOp extends NextFTCOpMode {
 
     public static long TELEMETRY_INTERVAL_NS = 200_000_000L; // 200 ms cadence (~5 Hz)
-    private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
 
     private Robot robot;
     private DriverBindings driverBindings;
@@ -66,7 +64,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
     public void onInit() {
 
         robot = new Robot(hardwareMap);
-        robot.setRobotMode(ACTIVE_MODE);
 
         robot.attachPedroFollower();
 

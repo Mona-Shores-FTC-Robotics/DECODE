@@ -25,7 +25,6 @@ import Ori.Coval.Logging.AutoLogOutput;
 
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
-import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
@@ -193,7 +192,6 @@ public class IntakeSubsystem implements Subsystem {
     private final Servo rollerServo;
     private double lastRollerPosition = Double.NaN;
     private boolean rollerEnabled = false;
-    private RobotMode robotMode = RobotMode.DEBUG;
 
     public IntakeSubsystem(HardwareMap hardwareMap) {
         intakeMotor = tryGetMotor(hardwareMap, motorConfig.motorName);
@@ -253,9 +251,7 @@ public class IntakeSubsystem implements Subsystem {
         lastModeResolveMs = (System.nanoTime() - modeResolveStart) / 1_000_000.0;
 
         long sensorPollStart = System.nanoTime();
-        if (robotMode == RobotMode.MATCH) {
-            pollLaneSensorsIfNeeded();
-        }
+        pollLaneSensorsIfNeeded();
         lastSensorPollMs = (System.nanoTime() - sensorPollStart) / 1_000_000.0;
 
         long servoStart = System.nanoTime();
@@ -281,10 +277,6 @@ public class IntakeSubsystem implements Subsystem {
 
     public Alliance getAlliance() {
         return alliance;
-    }
-
-    public void setRobotMode(RobotMode mode) {
-        robotMode = RobotMode.orDefault(mode);
     }
 
     public void activateRoller() {

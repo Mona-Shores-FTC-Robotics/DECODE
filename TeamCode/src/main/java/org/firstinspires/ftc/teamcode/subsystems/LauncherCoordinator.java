@@ -8,7 +8,6 @@ import dev.nextftc.core.subsystems.Subsystem;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
-import org.firstinspires.ftc.teamcode.util.RobotMode;
 
 import Ori.Coval.Logging.AutoLog;
 import Ori.Coval.Logging.AutoLogOutput;
@@ -66,7 +65,6 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
     private IntakeSubsystem.IntakeMode manualIntakeOverride = IntakeSubsystem.IntakeMode.STOPPED;
     private IntakeSubsystem.IntakeMode appliedIntakeMode = IntakeSubsystem.IntakeMode.STOPPED;
     private boolean intakeLocked = false;
-    private RobotMode robotMode = RobotMode.DEBUG;
 
     public LauncherCoordinator(LauncherSubsystem launcher ,
                                IntakeSubsystem intake,
@@ -216,10 +214,6 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
 
     private void recomputeSpinMode() {
         if (manualSpinOverride) {
-            return;
-        }
-        if (robotMode != RobotMode.MATCH) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.OFF);
             return;
         }
         boolean anyActive = false;
@@ -386,29 +380,13 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         return lastPeriodicMs;
     }
 
-    public void setRobotMode(RobotMode mode) {
-        robotMode = RobotMode.orDefault(mode);
-        if (robotMode == RobotMode.DEBUG) {
-            setIntakeAutomationEnabled(false);
-        } else {
-            setIntakeAutomationEnabled(true);
-        }
-        refreshLightingRegistration();
-        manualSpinOverride = false;
-        recomputeSpinMode();
-    }
-
     private void refreshLightingRegistration() {
         if (lighting == null) {
             return;
         }
-        if (robotMode == RobotMode.MATCH) {
-            if (!lightingRegistered) {
-                intake.addLaneColorListener(lighting);
-                lightingRegistered = true;
-            }
-        } else {
-            removeLightingListener();
+        if (!lightingRegistered) {
+            intake.addLaneColorListener(lighting);
+            lightingRegistered = true;
         }
     }
 

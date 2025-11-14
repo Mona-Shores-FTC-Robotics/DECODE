@@ -412,28 +412,22 @@ No standing unit tests yet. Add new suites under `TeamCode/src/test/java` using 
 - When enabled, simulates robot movement without motors
 - Typically disabled for robot operation
 
-**Robot Modes:**
+**Telemetry Configuration:**
 
-DECODE uses two separate configuration systems for different purposes:
+DECODE uses a tiered telemetry system to balance performance and visibility:
 
-1. **RobotMode** (Subsystem Behavior Control)
-   - `RobotMode.MATCH`: Enable full functionality (sensors, automation, safety checks)
-   - `RobotMode.DEBUG`: Disable some features for bench testing
-   - Set via `Robot.setRobotMode(mode)`
-   - Controls whether subsystems enable hardware (e.g., color sensors, automation)
-   - Hardcoded in OpModes (typically `RobotMode.MATCH`)
+**TelemetryLevel** (Telemetry Verbosity Control)
+- `TelemetryLevel.MATCH`: Minimal telemetry (<10ms target)
+- `TelemetryLevel.PRACTICE`: Moderate telemetry (<20ms target)
+- `TelemetryLevel.DEBUG`: Full telemetry (all diagnostics)
+- Configured via FTC Dashboard (no recompile needed)
+- Controls how much data is logged/published
+- See "Tiered Telemetry System" section above for detailed information
 
-2. **TelemetryLevel** (Telemetry Verbosity Control)
-   - `TelemetryLevel.MATCH`: Minimal telemetry (<10ms target)
-   - `TelemetryLevel.PRACTICE`: Moderate telemetry (<20ms target)
-   - `TelemetryLevel.DEBUG`: Full telemetry (all diagnostics)
-   - Configured via FTC Dashboard (no recompile needed)
-   - Controls how much data is logged/published
-   - See "Tiered Telemetry System" section above for details
-
-**Important:** These are independent settings. Typical competition setup:
-- `RobotMode.MATCH` (enable all hardware)
-- `TelemetryLevel.MATCH` (minimal overhead)
+**Competition setup:**
+- Switch to `TelemetryLevel.MATCH` via FTC Dashboard for qualification/elimination matches
+- Use `TelemetryLevel.PRACTICE` for practice sessions and parameter tuning
+- Use `TelemetryLevel.DEBUG` for pit testing and detailed diagnostics
 
 **Alliance Colors:**
 - Set via `Robot.setAlliance(Alliance.RED/BLUE)`
@@ -465,7 +459,6 @@ DECODE uses two separate configuration systems for different purposes:
 **Slow Loop Times:**
 - Switch to `TelemetryLevel.MATCH` via FTC Dashboard (target <25ms)
 - Verify `BulkReadComponent.INSTANCE` is registered in OpMode
-- Check that `RobotMode.MATCH` is set (enables sensor throttling)
 - I2C sensors automatically throttled: Color sensors (200ms), Limelight (50ms)
 - Review loop timing diagnostics: Hold RT on gamepad1 in TeleOp
 - See detailed analysis in `docs/loop-timing-analysis.md`

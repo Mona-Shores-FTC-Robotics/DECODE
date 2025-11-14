@@ -23,7 +23,6 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
-import org.firstinspires.ftc.teamcode.util.RobotMode;
 
 import Ori.Coval.Logging.AutoLogManager;
 import Ori.Coval.Logging.Logger.KoalaLog;
@@ -58,7 +57,6 @@ import dev.nextftc.ftc.components.BulkReadComponent;
 public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
-    private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
 
     @Configurable
     public static class AutoMotionConfig {
@@ -93,7 +91,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         logStatus(this, hardwareMap, opModeIsActive());
         BindingManager.reset();
         robot = new Robot(hardwareMap);
-        robot.setRobotMode(ACTIVE_MODE);
 
         robot.attachPedroFollower();
 

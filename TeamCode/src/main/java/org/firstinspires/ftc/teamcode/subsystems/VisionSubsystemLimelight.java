@@ -13,7 +13,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
-import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.core.subsystems.Subsystem;
@@ -49,7 +48,6 @@ public class VisionSubsystemLimelight implements Subsystem {
     private int lastSeenTagId = -1;
 
     private double lastPeriodicMs = 0.0;
-    private RobotMode robotMode = RobotMode.DEBUG;
 
     // Throttle vision polling to 20Hz (50ms) instead of every loop
     private static final long VISION_POLL_INTERVAL_MS = 50L;
@@ -103,10 +101,6 @@ public class VisionSubsystemLimelight implements Subsystem {
         limelight.stop();
         state = VisionState.OFF;
         clearSnapshot();
-    }
-
-    public void setRobotMode(RobotMode mode) {
-        robotMode = RobotMode.orDefault(mode);
     }
 
     public VisionState getState() {

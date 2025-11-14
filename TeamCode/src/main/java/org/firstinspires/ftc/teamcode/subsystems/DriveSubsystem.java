@@ -32,7 +32,6 @@ import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFusion;
 import org.firstinspires.ftc.teamcode.util.PoseTransforms;
-import org.firstinspires.ftc.teamcode.util.RobotMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
@@ -111,7 +110,6 @@ public class DriveSubsystem implements Subsystem {
     private double lastCommandStrafeLeft = 0.0;
     private double lastCommandTurn = 0.0;
     private double lastAimErrorRad = Double.NaN;
-    private RobotMode robotMode = RobotMode.DEBUG;
     private boolean rampModeActive = false;
     private double rampForward = 0.0;
     private double rampStrafeLeft = 0.0;
@@ -157,10 +155,6 @@ public class DriveSubsystem implements Subsystem {
     public void setRobotCentric(boolean enabled) {
         robotCentric = enabled;
         robotCentricConfig = enabled;
-    }
-
-    public void setRobotMode(RobotMode mode) {
-        robotMode = RobotMode.orDefault(mode);
     }
 
     public void setTeleOpControlEnabled(boolean enabled) {
