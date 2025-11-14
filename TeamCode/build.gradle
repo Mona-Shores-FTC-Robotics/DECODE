@@ -32,6 +32,7 @@ repositories {
     maven { url = "https://mymaven.bylazar.com/releases" }
     maven { url = "https://repo.dairy.foundation/releases"}
     maven { url = 'https://jitpack.io' }
+
 }
 
 dependencies {
@@ -50,10 +51,14 @@ dependencies {
     //Panels
     implementation('com.bylazar:fullpanels:1.0.9')
 
+    //FTC Dashboard
     implementation('com.acmerobotics.dashboard:dashboard:0.5.1') {
         exclude group: 'org.firstinspires.ftc'
     }
 
     // AdvantageScope Lite - enables AdvantageScope connection via FTC Dashboard packets
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
+
+    implementation("gay.zharel.fateweaver:ftc:0.3.3")
+
 }
