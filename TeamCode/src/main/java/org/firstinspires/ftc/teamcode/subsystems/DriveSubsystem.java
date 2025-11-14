@@ -291,7 +291,7 @@ public class DriveSubsystem implements Subsystem {
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double slowTurnMultiplier = Range.clip(teleOpDriveConfig.slowTurnMultiplier , 0.0 , 1.0);
         double driveMultiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
-        double turnMultiplier = slowMode ? slowTurnMultiplier : NORMAL_MULTIPLIER;
+        double turnMultiplier = slowMode ? slowMultiplier : slowTurnMultiplier;
         double targetForward = Range.clip(fieldY * driveMultiplier , - 1.0 , 1.0);
         double targetStrafeLeft = Range.clip(- fieldX * driveMultiplier , - 1.0 , 1.0);
         double targetTurnCW = Range.clip(- rotationInput * turnMultiplier , - 1.0 , 1.0);
