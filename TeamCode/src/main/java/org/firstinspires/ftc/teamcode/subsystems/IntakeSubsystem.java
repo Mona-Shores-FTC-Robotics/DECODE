@@ -696,12 +696,10 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.LEFT).sensorPresent;
     }
 
-    @AutoLogOutput
     public boolean isLeftDistanceAvailable() {
         return getLaneSample(LauncherLane.LEFT).distanceAvailable;
     }
 
-    @AutoLogOutput
     public double getLeftDistanceCm() {
         return getLaneSample(LauncherLane.LEFT).distanceCm;
     }
@@ -711,17 +709,14 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.LEFT).withinDistance;
     }
 
-    @AutoLogOutput
     public float getLeftHue() {
         return getLaneSample(LauncherLane.LEFT).hue;
     }
 
-    @AutoLogOutput
     public float getLeftSaturation() {
         return getLaneSample(LauncherLane.LEFT).saturation;
     }
 
-    @AutoLogOutput
     public float getLeftValue() {
         return getLaneSample(LauncherLane.LEFT).value;
     }
@@ -731,22 +726,18 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.LEFT).color.name();
     }
 
-    @AutoLogOutput
     public String getLeftHsvColor() {
         return getLaneSample(LauncherLane.LEFT).hsvColor.name();
     }
 
-    @AutoLogOutput
     public int getLeftRawRed() {
         return getLaneSample(LauncherLane.LEFT).rawRed;
     }
 
-    @AutoLogOutput
     public int getLeftRawGreen() {
         return getLaneSample(LauncherLane.LEFT).rawGreen;
     }
 
-    @AutoLogOutput
     public int getLeftRawBlue() {
         return getLaneSample(LauncherLane.LEFT).rawBlue;
     }
@@ -761,12 +752,10 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.CENTER).sensorPresent;
     }
 
-    @AutoLogOutput
     public boolean isCenterDistanceAvailable() {
         return getLaneSample(LauncherLane.CENTER).distanceAvailable;
     }
 
-    @AutoLogOutput
     public double getCenterDistanceCm() {
         return getLaneSample(LauncherLane.CENTER).distanceCm;
     }
@@ -776,17 +765,14 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.CENTER).withinDistance;
     }
 
-    @AutoLogOutput
     public float getCenterHue() {
         return getLaneSample(LauncherLane.CENTER).hue;
     }
 
-    @AutoLogOutput
     public float getCenterSaturation() {
         return getLaneSample(LauncherLane.CENTER).saturation;
     }
 
-    @AutoLogOutput
     public float getCenterValue() {
         return getLaneSample(LauncherLane.CENTER).value;
     }
@@ -796,22 +782,18 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.CENTER).color.name();
     }
 
-    @AutoLogOutput
     public String getCenterHsvColor() {
         return getLaneSample(LauncherLane.CENTER).hsvColor.name();
     }
 
-    @AutoLogOutput
     public int getCenterRawRed() {
         return getLaneSample(LauncherLane.CENTER).rawRed;
     }
 
-    @AutoLogOutput
     public int getCenterRawGreen() {
         return getLaneSample(LauncherLane.CENTER).rawGreen;
     }
 
-    @AutoLogOutput
     public int getCenterRawBlue() {
         return getLaneSample(LauncherLane.CENTER).rawBlue;
     }
@@ -826,12 +808,10 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.RIGHT).sensorPresent;
     }
 
-    @AutoLogOutput
     public boolean isRightDistanceAvailable() {
         return getLaneSample(LauncherLane.RIGHT).distanceAvailable;
     }
 
-    @AutoLogOutput
     public double getRightDistanceCm() {
         return getLaneSample(LauncherLane.RIGHT).distanceCm;
     }
@@ -841,17 +821,14 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.RIGHT).withinDistance;
     }
 
-    @AutoLogOutput
     public float getRightHue() {
         return getLaneSample(LauncherLane.RIGHT).hue;
     }
 
-    @AutoLogOutput
     public float getRightSaturation() {
         return getLaneSample(LauncherLane.RIGHT).saturation;
     }
 
-    @AutoLogOutput
     public float getRightValue() {
         return getLaneSample(LauncherLane.RIGHT).value;
     }
@@ -861,22 +838,18 @@ public class IntakeSubsystem implements Subsystem {
         return getLaneSample(LauncherLane.RIGHT).color.name();
     }
 
-    @AutoLogOutput
     public String getRightHsvColor() {
         return getLaneSample(LauncherLane.RIGHT).hsvColor.name();
     }
 
-    @AutoLogOutput
     public int getRightRawRed() {
         return getLaneSample(LauncherLane.RIGHT).rawRed;
     }
 
-    @AutoLogOutput
     public int getRightRawGreen() {
         return getLaneSample(LauncherLane.RIGHT).rawGreen;
     }
 
-    @AutoLogOutput
     public int getRightRawBlue() {
         return getLaneSample(LauncherLane.RIGHT).rawBlue;
     }
