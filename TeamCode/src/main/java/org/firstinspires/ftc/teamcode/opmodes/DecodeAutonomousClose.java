@@ -219,7 +219,7 @@ public class DecodeAutonomousClose extends NextFTCOpMode {
         logStatus(this, hardwareMap, opModeIsActive());
         autonomousStep();
 
-        // Periodic logging for KoalaLog (WPILOG files)
+        // Periodic logging for KoalaLog (WPILOG files) - throttled based on telemetry level
         AutoLogManager.periodic();
 
         robot.telemetry.updateDriverStation(telemetry);

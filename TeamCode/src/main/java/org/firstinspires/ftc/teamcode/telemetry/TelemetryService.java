@@ -100,6 +100,7 @@ public class TelemetryService {
 
     /**
      * Publishes telemetry for the current loop to all available outputs.
+     * Telemetry verbosity is controlled by TelemetrySettings.config.level.
      */
     public void publishLoopTelemetry(DriveSubsystem drive,
                                      LauncherSubsystem launcher,
@@ -112,6 +113,239 @@ public class TelemetryService {
                                      String modeLabel,
                                      boolean suppressDriveTelemetry,
                                      Pose poseOverride) {
+        TelemetrySettings.TelemetryLevel level = TelemetrySettings.config.level;
+
+        switch (level) {
+            case MATCH:
+                publishMatchTelemetry(drive, launcher, vision, launcherCoordinator, alliance, dsTelemetry, poseOverride);
+                break;
+            case PRACTICE:
+                publishPracticeTelemetry(drive, launcher, vision, driveRequest, launcherCoordinator, alliance, runtimeSec, dsTelemetry, modeLabel, suppressDriveTelemetry, poseOverride);
+                break;
+            case DEBUG:
+            default:
+                publishDebugTelemetry(drive, launcher, vision, driveRequest, launcherCoordinator, alliance, runtimeSec, dsTelemetry, modeLabel, suppressDriveTelemetry, poseOverride);
+                break;
+        }
+    }
+
+    /**
+     * MATCH mode: Minimal telemetry for competition (<10ms target).
+     * - Essential driver station info only
+     * - Critical pose logging preserved (done in DriveSubsystem.periodic)
+     * - No FTC Dashboard packets
+     * - No FullPanels telemetry
+     */
+    private void publishMatchTelemetry(DriveSubsystem drive,
+                                       LauncherSubsystem launcher,
+                                       VisionSubsystemLimelight vision,
+                                       LauncherCoordinator launcherCoordinator,
+                                       Alliance alliance,
+                                       Telemetry dsTelemetry,
+                                       Pose poseOverride) {
+        if (dsTelemetry == null) {
+            return;
+        }
+
+        // Pose (essential for driver awareness)
+        Pose2D pose = drive.getPose();
+        if (poseOverride != null) {
+            pose = new Pose2D(
+                    DistanceUnit.INCH,
+                    poseOverride.getX(),
+                    poseOverride.getY(),
+                    AngleUnit.RADIANS,
+                    poseOverride.getHeading()
+            );
+        }
+
+        if (pose != null) {
+            dsTelemetry.addData("Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
+                    pose.getX(DistanceUnit.INCH),
+                    pose.getY(DistanceUnit.INCH),
+                    pose.getHeading(AngleUnit.DEGREES));
+        } else {
+            dsTelemetry.addData("Pose", "(unavailable)");
+        }
+
+        // Alliance
+        Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
+        dsTelemetry.addData("Alliance", activeAlliance.displayName());
+
+        // Launcher ready status (critical for driver)
+        boolean launcherReady = launcher.atTarget();
+        dsTelemetry.addData("Launcher", launcherReady ? "READY" : "NOT READY");
+
+        // Vision tag detection (helpful for relocalization awareness)
+        if (vision.hasValidTag()) {
+            dsTelemetry.addData("Vision", "Tag %d", vision.getCurrentTagId());
+        }
+
+        // Artifact count (critical for match strategy)
+        if (launcherCoordinator != null) {
+            dsTelemetry.addData("Artifacts", "%d", launcherCoordinator.getArtifactCount());
+        }
+
+        dsTelemetry.update();
+    }
+
+    /**
+     * PRACTICE mode: Moderate telemetry for tuning sessions (<20ms target).
+     * - Basic FTC Dashboard metrics
+     * - High-level subsystem state
+     * - Suitable for real-time parameter adjustment
+     */
+    private void publishPracticeTelemetry(DriveSubsystem drive,
+                                          LauncherSubsystem launcher,
+                                          VisionSubsystemLimelight vision,
+                                          DriverBindings.DriveRequest driveRequest,
+                                          LauncherCoordinator launcherCoordinator,
+                                          Alliance alliance,
+                                          double runtimeSec,
+                                          Telemetry dsTelemetry,
+                                          String modeLabel,
+                                          boolean suppressDriveTelemetry,
+                                          Pose poseOverride) {
+        double requestX = driveRequest != null ? driveRequest.fieldX : 0.0;
+        double requestY = driveRequest != null ? driveRequest.fieldY : 0.0;
+        double requestRot = driveRequest != null ? driveRequest.rotation : 0.0;
+        boolean slowMode = driveRequest != null && driveRequest.slowMode;
+        boolean aimMode = driveRequest != null && driveRequest.aimMode;
+
+        Pose pedroPose = poseOverride != null ? poseOverride : drive.getFollowerPose();
+        Pose2D pose = drive.getPose();
+        if (poseOverride != null) {
+            pose = new Pose2D(
+                    DistanceUnit.INCH,
+                    poseOverride.getX(),
+                    poseOverride.getY(),
+                    AngleUnit.RADIANS,
+                    poseOverride.getHeading()
+            );
+        }
+
+        double poseXIn = pose != null ? pose.getX(DistanceUnit.INCH) : 0.0;
+        double poseYIn = pose != null ? pose.getY(DistanceUnit.INCH) : 0.0;
+        double headingDeg = pose != null ? pose.getHeading(AngleUnit.DEGREES) : 0.0;
+        double headingRad = pose != null ? pose.getHeading(AngleUnit.RADIANS) : 0.0;
+
+        VisionSnapshot visionSnapshot = captureVisionSnapshot(vision, alliance);
+        boolean launcherReady = launcher.atTarget();
+        String launcherState = launcher.getState().name();
+
+        // Driver station telemetry (moderate detail)
+        if (dsTelemetry != null && !suppressDriveTelemetry) {
+            if (pose != null) {
+                dsTelemetry.addData("Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
+                        poseXIn, poseYIn, headingDeg);
+            } else {
+                dsTelemetry.addData("Pose", "(unavailable)");
+            }
+
+            Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
+            dsTelemetry.addData("Alliance", activeAlliance.displayName());
+            dsTelemetry.addData("Drive", "%s | aim=%s",
+                    drive.getDriveMode().name(),
+                    aimMode ? "ON" : "OFF");
+            dsTelemetry.addData("Launcher", "%s | ready=%s",
+                    launcherState,
+                    launcherReady ? "YES" : "NO");
+
+            if (visionSnapshot.hasTag) {
+                dsTelemetry.addData("Vision", "Tag %d @ %.1f in",
+                        visionSnapshot.tagId,
+                        visionSnapshot.rangeIn);
+            }
+
+            if (launcherCoordinator != null) {
+                dsTelemetry.addData("Artifacts", "%d", launcherCoordinator.getArtifactCount());
+            }
+
+            dsTelemetry.update();
+        }
+
+        // FTC Dashboard packets (throttled to 100ms in PRACTICE mode)
+        long nowMs = SystemClock.uptimeMillis();
+        long dashboardInterval = TelemetrySettings.getDashboardInterval();
+        boolean sendDashboardThisLoop = (dashboardInterval > 0) &&
+                                        (nowMs - lastDashboardPacketMs >= dashboardInterval);
+
+        if (sendDashboardThisLoop && TelemetrySettings.shouldSendDashboardPackets() && dashboard != null) {
+            Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
+            double ftcXIn = ftcPose != null ? ftcPose.getX() : Double.NaN;
+            double ftcYIn = ftcPose != null ? ftcPose.getY() : Double.NaN;
+            double ftcHeadingRad = ftcPose != null ? ftcPose.getHeading() : Double.NaN;
+
+            TelemetryPacket packet = new TelemetryPacket();
+
+            // Essential pose data
+            packet.put("Pose/Pose x", poseXIn);
+            packet.put("Pose/Pose y", poseYIn);
+            packet.put("Pose/Pose heading", headingRad);
+            if (!Double.isNaN(ftcXIn) && !Double.isNaN(ftcYIn)) {
+                packet.put("Pose/FTC Pose x", ftcXIn);
+                packet.put("Pose/FTC Pose y", ftcYIn);
+            }
+            if (!Double.isNaN(ftcHeadingRad)) {
+                packet.put("Pose/FTC Pose heading", ftcHeadingRad);
+            }
+
+            // Drive state
+            packet.put("drive/mode", drive.getDriveMode().name());
+            packet.put("drive/aimMode", aimMode);
+            packet.put("drive/slowMode", slowMode);
+
+            // Launcher high-level state
+            packet.put("launcher/ready", launcherReady);
+            packet.put("launcher/state", launcherState);
+
+            // Vision essentials
+            packet.put("vision/hasTag", visionSnapshot.hasTag);
+            packet.put("vision/tagId", visionSnapshot.tagId);
+            packet.put("vision/rangeIn", visionSnapshot.rangeIn);
+
+            // Alliance
+            Alliance activeAlliance = alliance == null ? Alliance.UNKNOWN : alliance;
+            packet.put("alliance/id", activeAlliance.name());
+
+            // Runtime
+            packet.put("runtimeSec", runtimeSec);
+
+            // Field overlay
+            Canvas overlay = packet.fieldOverlay();
+            if (pose != null) {
+                double headingLength = 6.0;
+                double endX = poseXIn + Math.cos(headingRad) * headingLength;
+                double endY = poseYIn + Math.sin(headingRad) * headingLength;
+                overlay.setStroke("white");
+                overlay.setStrokeWidth(2);
+                overlay.strokeCircle(poseXIn, poseYIn, 1.5);
+                overlay.strokeLine(poseXIn, poseYIn, endX, endY);
+            }
+
+            dashboard.sendTelemetryPacket(packet);
+            lastDashboardPacketMs = nowMs;
+        }
+    }
+
+    /**
+     * DEBUG mode: Full telemetry for development and debugging (current behavior).
+     * - All @AutoLogOutput methods
+     * - Complete dashboard packets
+     * - Full FullPanels telemetry
+     * - All diagnostics
+     */
+    private void publishDebugTelemetry(DriveSubsystem drive,
+                                       LauncherSubsystem launcher,
+                                       VisionSubsystemLimelight vision,
+                                       DriverBindings.DriveRequest driveRequest,
+                                       LauncherCoordinator launcherCoordinator,
+                                       Alliance alliance,
+                                       double runtimeSec,
+                                       Telemetry dsTelemetry,
+                                       String modeLabel,
+                                       boolean suppressDriveTelemetry,
+                                       Pose poseOverride) {
         double requestX = driveRequest != null ? driveRequest.fieldX : 0.0;
         double requestY = driveRequest != null ? driveRequest.fieldY : 0.0;
         double requestRot = driveRequest != null ? driveRequest.rotation : 0.0;

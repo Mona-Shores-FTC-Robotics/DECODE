@@ -39,8 +39,7 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 @Configurable
 public class DecodeTeleOp extends NextFTCOpMode {
 
-    public static long TELEMETRY_INTERVAL_NS = 200_000_000L; // 50 ms cadence (~20 Hz)
-    public static long AUTO_LOG_INTERVAL_MS = 1000L; // Throttle AutoLog to 20Hz
+    public static long TELEMETRY_INTERVAL_NS = 200_000_000L; // 200 ms cadence (~5 Hz)
     private static final RobotMode ACTIVE_MODE = RobotMode.MATCH;
 
     private Robot robot;
@@ -141,9 +140,11 @@ public class DecodeTeleOp extends NextFTCOpMode {
         // Commands (DefaultDriveCommand, AimAndDriveCommand, CaptureAndAimCommand) handle drive control
         BindingManager.update();
 
-        // Throttle AutoLogManager to 20Hz to reduce CPU load (samples 181 @AutoLogOutput methods)
+        // Throttle AutoLogManager based on telemetry level (samples 86 @AutoLogOutput methods)
+        // MATCH: 100ms (10 Hz), PRACTICE: 50ms (20 Hz), DEBUG: configurable
         long nowMs = System.currentTimeMillis();
-        if (nowMs - lastAutoLogTimeMs >= AUTO_LOG_INTERVAL_MS) {
+        long autoLogInterval = org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings.getAutoLogInterval();
+        if (nowMs - lastAutoLogTimeMs >= autoLogInterval) {
             AutoLogManager.periodic();
             lastAutoLogTimeMs = nowMs;
         }

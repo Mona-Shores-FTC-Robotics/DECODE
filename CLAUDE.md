@@ -130,6 +130,58 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 
 ## Logging and Telemetry
 
+### Tiered Telemetry System
+
+DECODE uses a **tiered telemetry system** to balance performance and visibility. Loop timing is heavily impacted by telemetry overhead, so different telemetry levels are provided for different operational contexts.
+
+**Telemetry Levels** (configurable via FTC Dashboard → Config → TelemetrySettings):
+
+1. **MATCH Mode** - Minimal telemetry for competition matches
+   - Target: <10ms telemetry overhead
+   - Driver station: Pose, alliance, launcher ready status, artifact count
+   - FTC Dashboard: **Disabled** (no packets sent)
+   - FullPanels: **Disabled**
+   - AutoLogManager: 100ms intervals (10 Hz)
+   - WPILOG files: Critical pose data preserved for post-match replay
+   - **Use for:** Qualification and elimination matches
+
+2. **PRACTICE Mode** (default) - Moderate telemetry for tuning
+   - Target: <20ms telemetry overhead
+   - Driver station: Pose, alliance, drive/launcher state, vision, artifacts
+   - FTC Dashboard: Basic metrics (throttled to 100ms / 10 Hz)
+   - FullPanels: Configurable (can be enabled/disabled)
+   - AutoLogManager: 50ms intervals (20 Hz)
+   - WPILOG files: All data preserved
+   - **Use for:** Practice sessions, parameter tuning, debugging on practice field
+
+3. **DEBUG Mode** - Full telemetry for development
+   - All @AutoLogOutput methods logged
+   - FTC Dashboard: Complete packets (50ms / 20 Hz)
+   - FullPanels: Full diagnostics
+   - Driver station: Detailed per-lane launcher metrics, heading diagnostics
+   - AutoLogManager: Configurable interval (default 50ms / 20 Hz)
+   - **Use for:** Development, bench testing, detailed diagnostics
+
+**Changing Telemetry Level:**
+
+During operation (no recompile needed):
+1. Connect to FTC Dashboard: `http://192.168.49.1:8080/dash`
+2. Navigate to **Config** tab
+3. Find **TelemetrySettings** → **config**
+4. Change **level** dropdown to MATCH, PRACTICE, or DEBUG
+5. Changes take effect immediately on next loop
+
+**Competition Strategy:**
+- **Qualification matches:** MATCH mode (performance critical, 15-25ms loop times)
+- **Practice field:** PRACTICE mode (good visibility for quick adjustments)
+- **Pit testing:** DEBUG mode (full diagnostics to find issues)
+- **Between matches:** Switch via FTC Dashboard (instant, no code changes)
+
+**Performance Impact:**
+- MATCH mode: ~15-25ms total loop time (vs 50-100ms in DEBUG)
+- All modes preserve critical pose logging for AdvantageScope replay
+- MATCH mode still produces useful WPILOG files for post-match analysis
+
 ### Live Telemetry (During Matches)
 
 **FTC Dashboard:**
