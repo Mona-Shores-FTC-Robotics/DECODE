@@ -106,7 +106,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         // Initialize command factories
         intakeCommands = new IntakeCommands(robot.intake);
-        launcherCommands = new LauncherCommands(robot.launcher, robot.launcherCoordinator);
+        launcherCommands = new LauncherCommands(robot.launcher, robot.launcherCoordinator, robot.manualSpinController);
 
         // Register init-phase controls
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
