@@ -341,7 +341,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                     gamepad2,
                     selectedAlliance,
                     getRuntime(),
-                    null,
+                    Math.max(0.0, 150.0 - getRuntime()),
                     telemetry,
                     "TeleOp",
                     false,
@@ -469,7 +469,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 null,  // gamepad2 (not needed in init)
                 selectedAlliance,
                 getRuntime(),
-                null,
+                150.0,  // Full TeleOp duration (match hasn't started yet)
                 telemetry,
                 "TeleOpInit",
                 true,
