@@ -228,24 +228,25 @@ public class DashboardFormatter {
 
     /**
      * Add gamepad telemetry data to packet (DEBUG mode only).
-     * Uses meaningful binding names from DriverBindings and OperatorBindings classes.
+     * Uses meaningful binding names with physical button/stick names in parentheses.
+     * Format: functionName(physicalControl) - gives best of both worlds!
      */
     private void addGamepadData(TelemetryPacket packet, RobotTelemetryData data) {
         // Driver gamepad (Gamepad1) - stick axes
-        packet.put("DriverStation/Gamepad1/Axes/fieldX", data.gamepad.driver.leftStickX);
-        packet.put("DriverStation/Gamepad1/Axes/fieldY", data.gamepad.driver.leftStickY);
-        packet.put("DriverStation/Gamepad1/Axes/rotationCcw", data.gamepad.driver.rightStickX);
+        packet.put("DriverStation/Gamepad1/Axes/fieldX(leftStickX)", data.gamepad.driver.leftStickX);
+        packet.put("DriverStation/Gamepad1/Axes/fieldY(leftStickY)", data.gamepad.driver.leftStickY);
+        packet.put("DriverStation/Gamepad1/Axes/rotationCcw(rightStickX)", data.gamepad.driver.rightStickX);
         packet.put("DriverStation/Gamepad1/Axes/rightStickY", data.gamepad.driver.rightStickY);
         packet.put("DriverStation/Gamepad1/Axes/leftTrigger", data.gamepad.driver.leftTrigger);
         packet.put("DriverStation/Gamepad1/Axes/rightTrigger", data.gamepad.driver.rightTrigger);
 
         // Driver buttons (named from DriverBindings)
-        packet.put("DriverStation/Gamepad1/Buttons/relocalizeRequest", data.gamepad.driver.buttonA);
-        packet.put("DriverStation/Gamepad1/Buttons/aimHold", data.gamepad.driver.buttonB);
-        packet.put("DriverStation/Gamepad1/Buttons/aim", data.gamepad.driver.buttonX);
-        packet.put("DriverStation/Gamepad1/Buttons/buttonY", data.gamepad.driver.buttonY);
-        packet.put("DriverStation/Gamepad1/Buttons/rampHold", data.gamepad.driver.leftBumper);
-        packet.put("DriverStation/Gamepad1/Buttons/slowHold", data.gamepad.driver.rightBumper);
+        packet.put("DriverStation/Gamepad1/Buttons/relocalizeRequest(A)", data.gamepad.driver.buttonA);
+        packet.put("DriverStation/Gamepad1/Buttons/aimHold(B)", data.gamepad.driver.buttonB);
+        packet.put("DriverStation/Gamepad1/Buttons/aim(X)", data.gamepad.driver.buttonX);
+        packet.put("DriverStation/Gamepad1/Buttons/Y", data.gamepad.driver.buttonY);
+        packet.put("DriverStation/Gamepad1/Buttons/rampHold(leftBumper)", data.gamepad.driver.leftBumper);
+        packet.put("DriverStation/Gamepad1/Buttons/slowHold(rightBumper)", data.gamepad.driver.rightBumper);
         packet.put("DriverStation/Gamepad1/Buttons/back", data.gamepad.driver.back);
         packet.put("DriverStation/Gamepad1/Buttons/start", data.gamepad.driver.start);
         packet.put("DriverStation/Gamepad1/Buttons/leftStickButton", data.gamepad.driver.leftStickButton);
@@ -265,12 +266,12 @@ public class DashboardFormatter {
         packet.put("DriverStation/Gamepad2/Axes/rightTrigger", data.gamepad.operator.rightTrigger);
 
         // Operator buttons (named from OperatorBindings)
-        packet.put("DriverStation/Gamepad2/Buttons/manualSpinButton", data.gamepad.operator.buttonA);
-        packet.put("DriverStation/Gamepad2/Buttons/fireLongButton", data.gamepad.operator.buttonB);
-        packet.put("DriverStation/Gamepad2/Buttons/fireShortButton", data.gamepad.operator.buttonX);
-        packet.put("DriverStation/Gamepad2/Buttons/fireMidButton", data.gamepad.operator.buttonY);
+        packet.put("DriverStation/Gamepad2/Buttons/manualSpinButton(A)", data.gamepad.operator.buttonA);
+        packet.put("DriverStation/Gamepad2/Buttons/fireLongButton(B)", data.gamepad.operator.buttonB);
+        packet.put("DriverStation/Gamepad2/Buttons/fireShortButton(X)", data.gamepad.operator.buttonX);
+        packet.put("DriverStation/Gamepad2/Buttons/fireMidButton(Y)", data.gamepad.operator.buttonY);
         packet.put("DriverStation/Gamepad2/Buttons/leftBumper", data.gamepad.operator.leftBumper);
-        packet.put("DriverStation/Gamepad2/Buttons/intakeForwardHold", data.gamepad.operator.rightBumper);
+        packet.put("DriverStation/Gamepad2/Buttons/intakeForwardHold(rightBumper)", data.gamepad.operator.rightBumper);
         packet.put("DriverStation/Gamepad2/Buttons/back", data.gamepad.operator.back);
         packet.put("DriverStation/Gamepad2/Buttons/start", data.gamepad.operator.start);
         packet.put("DriverStation/Gamepad2/Buttons/leftStickButton", data.gamepad.operator.leftStickButton);
