@@ -897,17 +897,14 @@ public class LauncherSubsystem implements Subsystem {
         return getLastPower();
     }
 
-    @AutoLogOutput
     public double getLogLeftTargetRpm() {
         return getTargetRpm(LauncherLane.LEFT);
     }
 
-    @AutoLogOutput
     public double getLogLeftCurrentRpm() {
         return getCurrentRpm(LauncherLane.LEFT);
     }
 
-    @AutoLogOutput
     public double getLogLeftPower() {
         return getLastPower(LauncherLane.LEFT);
     }
@@ -917,28 +914,23 @@ public class LauncherSubsystem implements Subsystem {
         return isLaneReady(LauncherLane.LEFT);
     }
 
-    @AutoLogOutput
     public double getLogLeftFeederPosition() {
         return getFeederPosition(LauncherLane.LEFT);
     }
 
-    @AutoLogOutput
     public double getLogLeftRecoveryRemainingMs() {
         double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.LEFT, 0.0);
         return Math.max(0.0, recoveryDeadline - clock.milliseconds());
     }
 
-    @AutoLogOutput
     public double getLogCenterTargetRpm() {
         return getTargetRpm(LauncherLane.CENTER);
     }
 
-    @AutoLogOutput
     public double getLogCenterCurrentRpm() {
         return getCurrentRpm(LauncherLane.CENTER);
     }
 
-    @AutoLogOutput
     public double getLogCenterPower() {
         return getLastPower(LauncherLane.CENTER);
     }
@@ -948,28 +940,23 @@ public class LauncherSubsystem implements Subsystem {
         return isLaneReady(LauncherLane.CENTER);
     }
 
-    @AutoLogOutput
     public double getLogCenterFeederPosition() {
         return getFeederPosition(LauncherLane.CENTER);
     }
 
-    @AutoLogOutput
     public double getLogCenterRecoveryRemainingMs() {
         double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.CENTER, 0.0);
         return Math.max(0.0, recoveryDeadline - clock.milliseconds());
     }
 
-    @AutoLogOutput
     public double getLogRightTargetRpm() {
         return getTargetRpm(LauncherLane.RIGHT);
     }
 
-    @AutoLogOutput
     public double getLogRightCurrentRpm() {
         return getCurrentRpm(LauncherLane.RIGHT);
     }
 
-    @AutoLogOutput
     public double getLogRightPower() {
         return getLastPower(LauncherLane.RIGHT);
     }
@@ -979,12 +966,10 @@ public class LauncherSubsystem implements Subsystem {
         return isLaneReady(LauncherLane.RIGHT);
     }
 
-    @AutoLogOutput
     public double getLogRightFeederPosition() {
         return getFeederPosition(LauncherLane.RIGHT);
     }
 
-    @AutoLogOutput
     public double getLogRightRecoveryRemainingMs() {
         double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.RIGHT, 0.0);
         return Math.max(0.0, recoveryDeadline - clock.milliseconds());
