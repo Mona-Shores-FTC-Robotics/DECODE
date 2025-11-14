@@ -52,10 +52,9 @@ public class Robot {
         intake = new org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystemAutoLogged(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
         launcherCoordinator = new org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinatorAutoLogged(launcher, intake, lighting);
-        launcherCommands = new LauncherCommands(launcher, launcherCoordinator);
-        intakeCommands = new IntakeCommands(intake);
-
         manualSpinController = launcherCoordinator.createManualSpinController();
+        launcherCommands = new LauncherCommands(launcher, launcherCoordinator, manualSpinController);
+        intakeCommands = new IntakeCommands(intake);
         applyRobotMode(robotMode);
     }
 

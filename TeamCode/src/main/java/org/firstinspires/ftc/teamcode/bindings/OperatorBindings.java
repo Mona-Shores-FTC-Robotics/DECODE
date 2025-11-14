@@ -6,41 +6,39 @@ import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireLaneCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ManualSpinController;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinHoldCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinLaneCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
-import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 /**
  * Match-oriented operator bindings. Keeps the intake running in reverse by default,
  * forwards when the operator pulls the trigger, and maps launcher commands to the
  * standard match buttons.
+ *
+ * Button assignments:
+ * - X: Fire all lanes at SHORT range (~2700 RPM)
+ * - Y: Fire all lanes at MID range (~3600 RPM)
+ * - B: Fire all lanes at LONG range (~4200 RPM)
+ * - A: Manual spin hold (for pre-spinning before shots)
+ * - Left Bumper: (previously manual spin, now available for other use)
+ * - Right Bumper: Intake forward
  */
 public class OperatorBindings {
 
     private final Robot robot;
     private final LauncherCoordinator launcherCoordinator;
-    private final SpinLaneCommand spinLeft;
-    private final SpinLaneCommand spinCenter;
-    private final SpinLaneCommand spinRight;
-    private final FireLaneCommand fireLeft;
-    private final FireLaneCommand fireCenter;
-    private final FireLaneCommand fireRight;
-    private final SpinHoldCommand launchAllSpinner;
-    private final FireAllCommand fireAll;
+    private final FireAllAtRangeCommand fireShortRange;
+    private final FireAllAtRangeCommand fireMidRange;
+    private final FireAllAtRangeCommand fireLongRange;
     private final SpinHoldCommand manualSpinHold;
     private final SetIntakeModeCommand intakeForwardCommand;
     private final SetIntakeModeCommand intakeReverseCommand;
-    private final Button spinModeFull;
-    private final Button launchLeft;
-    private final Button launchCenter;
-    private final Button launchRight;
-    private final Button launchAll;
+    private final Button fireShortButton;
+    private final Button fireMidButton;
+    private final Button fireLongButton;
+    private final Button manualSpinButton;
     private final Button intakeForwardHold;
     private boolean manualIntakeActive = false;
 
@@ -54,25 +52,22 @@ public class OperatorBindings {
         this.launcherCoordinator = robot.launcherCoordinator;
         this.launcherCommands = robot.launcherCommands;
 
+        // Button assignments
         intakeForwardHold = operator.rightBumper();
+        fireShortButton = operator.x();
+        fireMidButton = operator.y();
+        fireLongButton = operator.b();
+        manualSpinButton = operator.a();
 
-        spinModeFull = operator.leftBumper();
-        launchLeft = operator.x();
-        launchCenter = operator.y();
-        launchRight = operator.b();
-        launchAll = operator.a();
+        // Range-based shooting commands
+        fireShortRange = launcherCommands.fireAllShortRange();
+        fireMidRange = launcherCommands.fireAllMidRange();
+        fireLongRange = launcherCommands.fireAllLongRange();
 
-        spinLeft = new SpinLaneCommand(robot.launcher, robot.manualSpinController);
-        spinCenter = new SpinLaneCommand(robot.launcher, robot.manualSpinController);
-        spinRight = new SpinLaneCommand(robot.launcher, robot.manualSpinController);
-
-        fireLeft = new FireLaneCommand(robot.launcher, LauncherLane.LEFT, true, robot.manualSpinController);
-        fireCenter = new FireLaneCommand(robot.launcher, LauncherLane.CENTER, true, robot.manualSpinController);
-        fireRight = new FireLaneCommand(robot.launcher, LauncherLane.RIGHT, true, robot.manualSpinController);
-
-        launchAllSpinner = new SpinHoldCommand(robot.launcher, robot.manualSpinController);
-        fireAll = new FireAllCommand(robot.launcher, true, robot.manualSpinController);
+        // Manual spin hold for pre-spinning
         manualSpinHold = new SpinHoldCommand(robot.launcher, robot.manualSpinController);
+
+        // Intake control commands
         intakeForwardCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         intakeReverseCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
 
@@ -86,21 +81,16 @@ public class OperatorBindings {
         }
         syncLightingWithIntake();
 
-        spinModeFull.whenTrue(manualSpinHold);
-        spinModeFull.whenBecomesFalse(launcherCommands::setSpinModeToOff);
+        // Range-based shooting: press button to fire all lanes at that range
+        fireShortButton.whenBecomesTrue(fireShortRange);
+        fireMidButton.whenBecomesTrue(fireMidRange);
+        fireLongButton.whenBecomesTrue(fireLongRange);
 
-        launchLeft.whenTrue(spinLeft);
-        launchLeft.whenBecomesFalse(fireLeft);
+        // Manual spin hold: hold A to pre-spin flywheels, release to spin down
+        manualSpinButton.whenTrue(manualSpinHold);
+        manualSpinButton.whenBecomesFalse(launcherCommands::setSpinModeToOff);
 
-        launchCenter.whenTrue(spinCenter);
-        launchCenter.whenBecomesFalse(fireCenter);
-
-        launchRight.whenTrue(spinRight);
-        launchRight.whenBecomesFalse(fireRight);
-
-        launchAll.whenTrue(launchAllSpinner);
-        launchAll.whenBecomesFalse(fireAll);
-
+        // Intake control
         intakeForwardHold.whenBecomesTrue(intakeForwardCommand);
         intakeForwardHold.whenBecomesFalse(intakeReverseCommand);
     }
