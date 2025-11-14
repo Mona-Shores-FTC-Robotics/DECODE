@@ -16,9 +16,6 @@ import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
-import gay.zharel.fateweaver.flight.FlightLogChannel;
-import gay.zharel.fateweaver.flight.FlightRecorder;
-import gay.zharel.fateweaver.schemas.LongSchema;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -37,7 +34,6 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.RobotState;
-import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
 
 @TeleOp(name = "Decode TeleOp", group = "TeleOp")
@@ -55,9 +51,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
     private long lastAutoLogTimeMs = 0L;
     private String visionRelocalizeStatus = "Press A to re-localize";
     private long visionRelocalizeStatusMs = 0L;
-
-    FlightLogChannel<Long> timestamps;
-    FlightLogChannel<Pose2D> poses;
 
     {
         addComponents(
@@ -96,8 +89,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 new SubsystemComponent(robot.vision),
                 new SubsystemComponent(robot.launcherCoordinator)
         );
-        timestamps = FlightRecorder.createChannel("TIMESTAMP", LongSchema.INSTANCE);
-        poses = FlightRecorder.createChannel("Robot/Pose", Pose2D.class);
     }
 
     @Override
@@ -141,18 +132,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
     public void onUpdate() {
         logStatus(this, hardwareMap, opModeIsActive());
         long mainLoopStartNs = System.nanoTime();
-
-        Pose pedroPose = robot.drive.getFollower().getPose();
-        Pose2D pose2d = new Pose2D(DistanceUnit.INCH, pedroPose.getX(), pedroPose.getY(), AngleUnit.RADIANS, pedroPose.getHeading());
-        Vector pedroVector = robot.drive.getFollower().getVelocity();
-        Velocity velocity = new Velocity(DistanceUnit.INCH, pedroVector.getXComponent(), pedroVector.getYComponent(), 0, mainLoopStartNs);
-
-        timestamps.put(mainLoopStartNs);
-        FlightRecorder.write("Robot/Velocity", velocity);
-        poses.put(pose2d);
-        FlightRecorder.INSTANCE.addData("Runtime", getRuntime());
-        FlightRecorder.INSTANCE.addData("Heading", "%.1f degrees", robot.drive.getPose().getHeading(AngleUnit.DEGREES));
-        FlightRecorder.INSTANCE.update();
 
         // Update bindings and command scheduler
         // Commands (DefaultDriveCommand, AimAndDriveCommand, CaptureAndAimCommand) handle drive control
