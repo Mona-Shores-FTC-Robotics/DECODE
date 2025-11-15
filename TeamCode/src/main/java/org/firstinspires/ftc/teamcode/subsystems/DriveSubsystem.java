@@ -618,17 +618,17 @@ public class DriveSubsystem implements Subsystem {
         return Double.NaN;
     }
 
-    public boolean correctInitialHeadingFromVision() {
-        if (!vision.hasValidTag()) {
-            RobotLog.dd(LOG_TAG, "No AprilTag visible - cannot correct heading");
-            return false;
-        }
-        boolean success = forceRelocalizeFromVision();
-        if (!success) {
-            RobotLog.dd(LOG_TAG, "Vision pose unavailable - cannot correct heading");
-        }
-        return success;
-    }
+//    public boolean correctInitialHeadingFromVision() {
+//        if (!vision.hasValidTag()) {
+//            RobotLog.dd(LOG_TAG, "No AprilTag visible - cannot correct heading");
+//            return false;
+//        }
+//        boolean success = forceRelocalizeFromVision();
+//        if (!success) {
+//            RobotLog.dd(LOG_TAG, "Vision pose unavailable - cannot correct heading");
+//        }
+//        return success;
+//    }
 
     private static double distanceBetween(Pose a , Pose b) {
         return Math.hypot(a.getX() - b.getX() , a.getY() - b.getY());

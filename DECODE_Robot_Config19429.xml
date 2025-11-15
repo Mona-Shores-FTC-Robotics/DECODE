@@ -32,8 +32,8 @@
 
             <!-- Expansion Hub Servos (Intake rollers and hoods) -->
             <Servo name="intake_roller" port="0"/>
-            <Servo name="prefeed_roller" port="1"/>
-            <Servo name="hood_left" port="2"/>
+            <Servo name="hood_left" port="1"/>
+            <Servo name="prefeed_roller" port="2"/> //This is a guess
             <Servo name="hood_center" port="3"/>
             <Servo name="hood_right" port="4"/>
 
