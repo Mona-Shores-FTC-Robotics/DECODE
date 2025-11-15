@@ -222,14 +222,12 @@ public class DriverStationFormatter {
 
     /**
      * Page 5: Controls - driver and operator bindings reference.
-     * Shows gamepad button/stick mappings for quick reference during tuning.
+     * Shows button mappings for quick reference during tuning.
      */
     private void publishDebugControls(Telemetry telemetry, RobotTelemetryData data) {
         // Driver controls (Gamepad 1)
         telemetry.addLine("=== DRIVER (GP1) ===");
-        telemetry.addData("L-Stick", "Field-centric drive");
-        telemetry.addData("R-Stick X", "Rotation");
-        telemetry.addData("L-Bumper", "Ramp mode (hold)");
+        telemetry.addData("L-Bumper", "Smooth accel (ramp)");
         telemetry.addData("R-Bumper", "Slow mode (hold)");
         telemetry.addData("A", "Vision relocalize");
         telemetry.addData("B", "Aim at target (hold)");
@@ -237,9 +235,9 @@ public class DriverStationFormatter {
         // Operator controls (Gamepad 2)
         telemetry.addLine();
         telemetry.addLine("=== OPERATOR (GP2) ===");
-        telemetry.addData("X", "Fire SHORT (~2700 RPM)");
-        telemetry.addData("Y", "Fire MID (~3600 RPM)");
-        telemetry.addData("B", "Fire LONG (~4200 RPM)");
+        telemetry.addData("X", "Fire ALL SHORT (~2700)");
+        telemetry.addData("Y", "Fire ALL MID (~3600)");
+        telemetry.addData("B", "Fire ALL LONG (~4200)");
         telemetry.addData("A", "Manual spin (hold)");
         telemetry.addData("R-Bumper", "Intake forward (hold)");
     }
