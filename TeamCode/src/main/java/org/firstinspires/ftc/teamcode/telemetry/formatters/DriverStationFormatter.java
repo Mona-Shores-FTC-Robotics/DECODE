@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit;
  * - Page 2: Drive (modes, motor powers/velocities)
  * - Page 3: Launcher (per-lane detailed info)
  * - Page 4: Vision & Intake (tag detection, intake state)
+ * - Page 5: Timing (loop performance breakdown)
+ * - Page 6: Color Sensors (per-lane RGB/HSV values for tuning)
  * </p>
  */
 public class DriverStationFormatter {
@@ -28,7 +30,8 @@ public class DriverStationFormatter {
         DRIVE(2, "Drive"),
         LAUNCHER(3, "Launcher"),
         VISION_INTAKE(4, "Vision/Intake"),
-        TIMING(5, "Timing");
+        TIMING(5, "Timing"),
+        COLOR_SENSORS(6, "Color Sensors"); // Why was 6 afraid of 7? Because 7 ate 9!
 
         public final int number;
         public final String name;
@@ -209,6 +212,9 @@ public class DriverStationFormatter {
             case TIMING:
                 publishDebugTiming(telemetry, data);
                 break;
+            case COLOR_SENSORS:
+                publishDebugColorSensors(telemetry, data);
+                break;
         }
 
         telemetry.update();
@@ -373,6 +379,62 @@ public class DriverStationFormatter {
         telemetry.addData("Artifacts", "%d (%s)",
                 data.intake.artifactCount,
                 data.intake.artifactState);
+    }
+
+    /**
+     * Page 6: Color Sensors - per-lane RGB/HSV values for tuning.
+     */
+    private void publishDebugColorSensors(Telemetry telemetry, RobotTelemetryData data) {
+        // Left lane
+        telemetry.addData("LEFT", "%s | dist=%.1f cm",
+                data.intake.laneLeftSummary.color,
+                data.intake.laneLeftSummary.distanceCm);
+
+        var leftSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.LEFT);
+        if (leftSample != null && leftSample.sensorPresent) {
+            telemetry.addData("  HSV", "H=%.0f° S=%.3f V=%.3f",
+                    leftSample.hue,
+                    leftSample.saturation,
+                    leftSample.value);
+            telemetry.addData("  RGB", "R=%d G=%d B=%d",
+                    leftSample.scaledRed,
+                    leftSample.scaledGreen,
+                    leftSample.scaledBlue);
+        }
+
+        // Center lane
+        telemetry.addData("CENTER", "%s | dist=%.1f cm",
+                data.intake.laneCenterSummary.color,
+                data.intake.laneCenterSummary.distanceCm);
+
+        var centerSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.CENTER);
+        if (centerSample != null && centerSample.sensorPresent) {
+            telemetry.addData("  HSV", "H=%.0f° S=%.3f V=%.3f",
+                    centerSample.hue,
+                    centerSample.saturation,
+                    centerSample.value);
+            telemetry.addData("  RGB", "R=%d G=%d B=%d",
+                    centerSample.scaledRed,
+                    centerSample.scaledGreen,
+                    centerSample.scaledBlue);
+        }
+
+        // Right lane
+        telemetry.addData("RIGHT", "%s | dist=%.1f cm",
+                data.intake.laneRightSummary.color,
+                data.intake.laneRightSummary.distanceCm);
+
+        var rightSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.RIGHT);
+        if (rightSample != null && rightSample.sensorPresent) {
+            telemetry.addData("  HSV", "H=%.0f° S=%.3f V=%.3f",
+                    rightSample.hue,
+                    rightSample.saturation,
+                    rightSample.value);
+            telemetry.addData("  RGB", "R=%d G=%d B=%d",
+                    rightSample.scaledRed,
+                    rightSample.scaledGreen,
+                    rightSample.scaledBlue);
+        }
     }
 
     /**
