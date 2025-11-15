@@ -36,11 +36,15 @@ public class OperatorBindings {
     private final SetIntakeModeCommand intakeForwardCommand;
     private final SetIntakeModeCommand intakeReverseCommand;
     private final Button fireShortButton;
-    private final Button fireMidButton;
+//    private final Button fireMidButton;
     private final Button fireLongButton;
     private final Button manualSpinButton;
     private final Button intakeForwardHold;
+
+    private final Button flywheelHumanLoadingButton;
+
     private boolean manualIntakeActive = false;
+
 
     private final LauncherCommands launcherCommands;
 
@@ -55,9 +59,10 @@ public class OperatorBindings {
         // Button assignments
         intakeForwardHold = operator.rightBumper();
         fireShortButton = operator.x();
-        fireMidButton = operator.y();
+//        fireMidButton = operator.y();
         fireLongButton = operator.b();
         manualSpinButton = operator.a();
+
 
         // Range-based shooting commands
         fireShortRange = launcherCommands.fireAllShortRange();
@@ -71,6 +76,9 @@ public class OperatorBindings {
         intakeForwardCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         intakeReverseCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
 
+        flywheelHumanLoadingButton = operator.y();
+
+
         configureMatchBindings();
     }
 
@@ -83,7 +91,7 @@ public class OperatorBindings {
 
         // Range-based shooting: press button to fire all lanes at that range
         fireShortButton.whenBecomesTrue(fireShortRange);
-        fireMidButton.whenBecomesTrue(fireMidRange);
+//        fireMidButton.whenBecomesTrue(fireMidRange);
         fireLongButton.whenBecomesTrue(fireLongRange);
 
         // Manual spin hold: hold A to pre-spin flywheels, release to spin down
@@ -93,6 +101,10 @@ public class OperatorBindings {
         // Intake control
         intakeForwardHold.whenBecomesTrue(intakeForwardCommand);
         intakeForwardHold.whenBecomesFalse(intakeReverseCommand);
+
+        flywheelHumanLoadingButton
+                .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
+                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading);
     }
 
     private void requestForwardIntake() {
