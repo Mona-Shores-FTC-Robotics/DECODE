@@ -48,7 +48,7 @@ dependencies {
     implementation('com.pedropathing:telemetry:1.0.0')
 
     //Panels
-    implementation('com.bylazar:fullpanels:1.0.9')
+    implementation('com.bylazar:fullpanels:1.0.10')
 
     //FTC Dashboard
     implementation('com.acmerobotics.dashboard:dashboard:0.5.1') {

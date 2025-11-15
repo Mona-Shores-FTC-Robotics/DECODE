@@ -8,7 +8,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.LaneSample;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 
 import java.util.ArrayList;

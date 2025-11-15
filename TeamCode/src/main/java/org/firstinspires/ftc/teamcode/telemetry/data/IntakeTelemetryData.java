@@ -44,7 +44,7 @@ public class IntakeTelemetryData {
         this.rollerPresent = rollerPresent;
         this.rollerActive = rollerActive;
         this.rollerPosition = rollerPosition;
-        this.prefeedPresent = prefeedActive;
+        this.prefeedPresent = prefeedPresent;
         this.prefeedActive = prefeedActive;
         this.prefeedPosition = prefeedPosition;
         this.artifactCount = artifactCount;
