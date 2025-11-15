@@ -121,7 +121,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        long mainLoopStartMs = System.nanoTime();
+        long mainLoopStartMs = System.currentTimeMillis();
         BindingManager.update();
         relocalizeWithVision(mainLoopStartMs);
 

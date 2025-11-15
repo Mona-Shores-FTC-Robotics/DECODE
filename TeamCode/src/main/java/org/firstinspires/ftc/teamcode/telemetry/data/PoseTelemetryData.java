@@ -59,12 +59,12 @@ public class PoseTelemetryData {
             this.ftcHeadingRad = Double.NaN;
         }
 
-        // Vision pose (Pedro Pose type from vision subsystem)
+        // Vision pose (FTC Pose type from vision subsystem)
         if (visionPose != null) {
             this.visionPoseValid = true;
-            this.visionPoseXIn = visionPose.getX();      // Pedro Pose uses inches directly
-            this.visionPoseYIn = visionPose.getY();      // Pedro Pose uses inches directly
-            this.visionHeadingRad = visionPose.getHeading();  // Pedro Pose uses radians directly
+            this.visionPoseXIn = visionPose.getX();      // FTC Pose uses inches directly
+            this.visionPoseYIn = visionPose.getY();      // FTC Pose uses inches directly
+            this.visionHeadingRad = visionPose.getHeading();  // FTC Pose uses radians directly
         } else {
             this.visionPoseValid = false;
             this.visionPoseXIn = Double.NaN;
