@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.telemetry.formatters;
 
 import com.bylazar.telemetry.TelemetryManager;
 
+import org.firstinspires.ftc.teamcode.telemetry.data.IntakeTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.data.LauncherTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 
@@ -113,6 +114,11 @@ public class FullPanelsFormatter {
         panels.debug("intake/artifactState", data.intake.artifactState);
         panels.debug("intake/roller/active", data.intake.rollerActive);
         panels.debug("intake/roller/position", data.intake.rollerPosition);
+
+        // Color Sensors - per-lane telemetry for tuning
+        publishColorSensorData(panels, "colorSensor/left", data.intake.laneLeftSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.LEFT));
+        publishColorSensorData(panels, "colorSensor/center", data.intake.laneCenterSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.CENTER));
+        publishColorSensorData(panels, "colorSensor/right", data.intake.laneRightSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.RIGHT));
     }
 
     /**
@@ -127,5 +133,42 @@ public class FullPanelsFormatter {
         panels.debug(prefix + "/bangToHoldCount", lane.bangToHoldCount);
         panels.debug(prefix + "/hoodPosition", lane.hoodPosition);
         panels.debug(prefix + "/feederPosition", lane.feederPosition);
+    }
+
+    /**
+     * Publish per-lane color sensor data to FullPanels for tuning.
+     * Includes all metrics needed to tune color detection thresholds.
+     */
+    private void publishColorSensorData(TelemetryManager panels, String prefix,
+                                        IntakeTelemetryData.LaneTelemetrySummary summary,
+                                        org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.LaneSample sample) {
+        // Basic status
+        panels.debug(prefix + "/sensorPresent", summary.sensorPresent);
+        panels.debug(prefix + "/detected", summary.detected);
+        panels.debug(prefix + "/distanceCm", summary.distanceCm);
+
+        // Color detection results
+        panels.debug(prefix + "/color", summary.color);
+        panels.debug(prefix + "/hsvColor", summary.hsvColor);
+
+        // Detailed sample data (if available) for tuning
+        if (sample != null && sample.sensorPresent) {
+            // RGB values - both raw and scaled
+            panels.debug(prefix + "/rgb/rawR", sample.rawRed);
+            panels.debug(prefix + "/rgb/rawG", sample.rawGreen);
+            panels.debug(prefix + "/rgb/rawB", sample.rawBlue);
+            panels.debug(prefix + "/rgb/scaledR", sample.scaledRed);
+            panels.debug(prefix + "/rgb/scaledG", sample.scaledGreen);
+            panels.debug(prefix + "/rgb/scaledB", sample.scaledBlue);
+
+            // HSV values - critical for tuning thresholds
+            panels.debug(prefix + "/hsv/hue", sample.hue);
+            panels.debug(prefix + "/hsv/saturation", sample.saturation);
+            panels.debug(prefix + "/hsv/value", sample.value);
+
+            // Distance sensor data
+            panels.debug(prefix + "/distance/available", sample.distanceAvailable);
+            panels.debug(prefix + "/distance/withinRange", sample.withinDistance);
+        }
     }
 }
