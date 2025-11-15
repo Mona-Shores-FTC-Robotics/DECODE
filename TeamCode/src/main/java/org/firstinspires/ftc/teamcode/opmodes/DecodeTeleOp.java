@@ -20,8 +20,10 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.TimeUnit;
 
 
@@ -172,15 +174,22 @@ public class DecodeTeleOp extends NextFTCOpMode {
             return;
         }
         boolean tagVisible = robot.vision.hasValidTag();
-        boolean success = robot.drive.forceRelocalizeFromVision();
-        if (success) {
-            visionRelocalizeStatus = "Pose updated from Limelight";
-        } else if (!tagVisible) {
-            visionRelocalizeStatus = "No AprilTag visible";
+
+        if (tagVisible &&
+                (robot.vision.getCurrentTagId() == FieldConstants.BLUE_GOAL_TAG_ID ||
+                        robot.vision.getCurrentTagId() == FieldConstants.RED_GOAL_TAG_ID)) {
+            boolean success = robot.drive.forceRelocalizeFromVision();
+            if (success) {
+                visionRelocalizeStatus = "Pose updated from Limelight";
+            } else {
+                visionRelocalizeStatus = "Failed to update pose from Limelight";
+            }
+        } else if (tagVisible) {
+                visionRelocalizeStatus = "No Goal AprilTag visible";
         } else {
-            visionRelocalizeStatus = "Vision pose unavailable";
+                visionRelocalizeStatus = "No AprilTag visible";
         }
-        visionRelocalizeStatusMs = System.currentTimeMillis();
+            visionRelocalizeStatusMs = System.currentTimeMillis();
     }
 
     private void syncVisionDuringInit() {
