@@ -370,7 +370,11 @@ public class DriveSubsystem implements Subsystem {
             targetHeading = lastGoodVisionAngle;
         } else {
             Pose pose = follower.getPose();
-            Pose targetPose = vision.getTargetGoalPose().orElse(FieldConstants.BLUE_GOAL_TAG);
+            Pose targetPose = vision.getTargetGoalPose().orElseGet(() -> {
+                // Alliance-aware fallback - don't hardcode blue goal
+                Alliance alliance = vision.getAlliance();
+                return alliance == Alliance.RED ? FieldConstants.RED_GOAL_TAG : FieldConstants.BLUE_GOAL_TAG;
+            });
             targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
         }
 

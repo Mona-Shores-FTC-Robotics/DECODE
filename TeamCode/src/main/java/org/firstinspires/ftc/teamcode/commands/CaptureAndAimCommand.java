@@ -7,6 +7,7 @@ import dev.nextftc.core.commands.Command;
 
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
+import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 
 import java.util.Objects;
@@ -187,8 +188,11 @@ public class CaptureAndAimCommand extends Command {
             return drive.getFollower().getHeading();
         }
 
-        // Get alliance-specific goal pose
-        Pose targetPose = vision.getTargetGoalPose().orElse(FieldConstants.BLUE_GOAL_TAG);
+        // Get alliance-specific goal pose with alliance-aware fallback
+        Pose targetPose = vision.getTargetGoalPose().orElseGet(() -> {
+            Alliance alliance = vision.getAlliance();
+            return alliance == Alliance.RED ? FieldConstants.RED_GOAL_TAG : FieldConstants.BLUE_GOAL_TAG;
+        });
         return FieldConstants.getAimAngleTo(currentPose, targetPose);
     }
 

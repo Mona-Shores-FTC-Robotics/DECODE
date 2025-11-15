@@ -57,6 +57,14 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
         robot.attachPedroFollower();
 
+        // Apply alliance from previous OpMode (auto) before initializing
+        // so lighting subsystem shows correct color from the start
+        Alliance persistedAlliance = RobotState.getAlliance();
+        if (persistedAlliance != null && persistedAlliance != Alliance.UNKNOWN) {
+            robot.setAlliance(persistedAlliance);
+            selectedAlliance = persistedAlliance;
+        }
+
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.launcherCoordinator.lockIntake();
 
