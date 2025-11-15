@@ -47,6 +47,19 @@ public class IntakeSubsystem implements Subsystem {
         STOPPED
     }
 
+    /**
+     * Artifact color classifier mode.
+     * Determines which algorithm is used to classify GREEN vs PURPLE.
+     */
+    public enum ClassifierMode {
+        /** Range-based: Independent hue ranges for green and purple (legacy) */
+        RANGE_BASED,
+        /** Decision boundary: Single hue threshold between green and purple (default, most robust) */
+        DECISION_BOUNDARY,
+        /** Distance-based: Euclidean distance in HSV space to color targets */
+        DISTANCE_BASED
+    }
+
     @Configurable
     public static class LaneSensorConfig {
         public boolean enablePolling = true;
@@ -55,16 +68,47 @@ public class IntakeSubsystem implements Subsystem {
         public String rightSensor = "lane_right_color";
         public double samplePeriodMs = 200.0;
 
+        // Classifier mode selector
+        public String classifierMode = ClassifierMode.DECISION_BOUNDARY.name();
+
+        // Quality thresholds (used by all classifiers)
         public double minValue = 0.02;
         public double minSaturation = 0.15;
 
+        // RANGE_BASED mode parameters (legacy)
         public double greenHueMin = 80.0;
         public double greenHueMax = 160.0;
-
         public double purpleHueMin = 260.0;
         public double purpleHueMax = 330.0;
         public double purpleHueWrapMax = 40.0;
 
+        // DECISION_BOUNDARY mode parameters (default, recommended)
+        /** Typical green hue (set from calibration) */
+        public double greenHueTarget = 120.0;
+        /** Typical purple hue unwrapped (set from calibration, typically ~290°) */
+        public double purpleHueTarget = 290.0;
+        /** Hue decision boundary - classify as GREEN if hue < boundary, PURPLE otherwise */
+        public double hueDecisionBoundary = 205.0;
+        /** Distance from boundary for low confidence warning (degrees) */
+        public double lowConfidenceMargin = 15.0;
+
+        // DISTANCE_BASED mode parameters
+        /** Weight for hue component in distance calculation */
+        public double hueWeight = 2.0;
+        /** Weight for saturation component in distance calculation */
+        public double saturationWeight = 0.5;
+        /** Weight for value component in distance calculation */
+        public double valueWeight = 0.3;
+        /** Target saturation for green artifacts */
+        public double greenSatTarget = 0.45;
+        /** Target value for green artifacts */
+        public double greenValTarget = 0.50;
+        /** Target saturation for purple artifacts */
+        public double purpleSatTarget = 0.40;
+        /** Target value for purple artifacts */
+        public double purpleValTarget = 0.45;
+
+        // Distance gating (used by all classifiers)
         public boolean useDistance = true;
         public double presenceDistanceCm = 3.0;
     }
@@ -120,6 +164,8 @@ public class IntakeSubsystem implements Subsystem {
         public final float value;
         public final ArtifactColor hsvColor;
         public final ArtifactColor color;
+        /** Classification confidence (0.0 = uncertain, 1.0 = very confident) */
+        public final double confidence;
 
         private LaneSample(boolean sensorPresent,
                            boolean distanceAvailable,
@@ -129,7 +175,8 @@ public class IntakeSubsystem implements Subsystem {
                            int scaledRed, int scaledGreen, int scaledBlue,
                            float hue, float saturation, float value,
                            ArtifactColor hsvColor,
-                           ArtifactColor color) {
+                           ArtifactColor color,
+                           double confidence) {
             this.sensorPresent = sensorPresent;
             this.distanceAvailable = distanceAvailable;
             this.distanceCm = distanceCm;
@@ -145,13 +192,14 @@ public class IntakeSubsystem implements Subsystem {
             this.value = value;
             this.hsvColor = hsvColor == null ? ArtifactColor.NONE : hsvColor;
             this.color = color == null ? ArtifactColor.NONE : color;
+            this.confidence = confidence;
         }
 
         private static LaneSample absent() {
             return new LaneSample(false, false, Double.NaN, false,
                     0, 0, 0, 0, 0, 0,
                     0.0f, 0.0f, 0.0f,
-                    ArtifactColor.NONE, ArtifactColor.NONE);
+                    ArtifactColor.NONE, ArtifactColor.NONE, 0.0);
         }
 
         private static LaneSample present(boolean distanceAvailable,
@@ -161,7 +209,8 @@ public class IntakeSubsystem implements Subsystem {
                                           int scaledRed, int scaledGreen, int scaledBlue,
                                           float hue, float saturation, float value,
                                           ArtifactColor hsvColor,
-                                          ArtifactColor color) {
+                                          ArtifactColor color,
+                                          double confidence) {
             return new LaneSample(true,
                     distanceAvailable,
                     distanceCm,
@@ -169,7 +218,7 @@ public class IntakeSubsystem implements Subsystem {
                     rawRed, rawGreen, rawBlue,
                     scaledRed, scaledGreen, scaledBlue,
                     hue, saturation, value,
-                    hsvColor, color);
+                    hsvColor, color, confidence);
         }
     }
 
@@ -557,7 +606,11 @@ public class IntakeSubsystem implements Subsystem {
             value = hsvBuffer[2];
         }
 
-        ArtifactColor hsvColor = classifyColorFromHsv(hue, saturation, value, maxComponent > 0);
+        // Classify color using selected classifier mode
+        ClassificationResult result = classifyColor(hue, saturation, value, maxComponent > 0);
+        ArtifactColor hsvColor = result.color;
+        double confidence = result.confidence;
+
         ArtifactColor finalColor = hsvColor;
         if (laneSensorConfig.useDistance && distanceAvailable && !withinDistance) {
             finalColor = ArtifactColor.NONE;
@@ -571,25 +624,168 @@ public class IntakeSubsystem implements Subsystem {
                 scaledRed, scaledGreen, scaledBlue,
                 hue, saturation, value,
                 hsvColor,
-                finalColor
+                finalColor,
+                confidence
         );
     }
 
-    private ArtifactColor classifyColorFromHsv(float hue, float saturation, float value, boolean hasSignal) {
+    /**
+     * Classification result with color and confidence.
+     */
+    private static class ClassificationResult {
+        final ArtifactColor color;
+        final double confidence;  // 0.0 = very uncertain, 1.0 = very confident
+
+        ClassificationResult(ArtifactColor color, double confidence) {
+            this.color = color;
+            this.confidence = confidence;
+        }
+    }
+
+    /**
+     * Classify color using the configured classifier mode.
+     */
+    private ClassificationResult classifyColor(float hue, float saturation, float value, boolean hasSignal) {
+        // Parse classifier mode
+        ClassifierMode mode;
+        try {
+            mode = ClassifierMode.valueOf(laneSensorConfig.classifierMode.toUpperCase(Locale.US));
+        } catch (IllegalArgumentException e) {
+            mode = ClassifierMode.DECISION_BOUNDARY; // Default
+        }
+
+        // Route to appropriate classifier
+        switch (mode) {
+            case RANGE_BASED:
+                return classifyColorRangeBased(hue, saturation, value, hasSignal);
+            case DECISION_BOUNDARY:
+                return classifyColorDecisionBoundary(hue, saturation, value, hasSignal);
+            case DISTANCE_BASED:
+                return classifyColorDistanceBased(hue, saturation, value, hasSignal);
+            default:
+                return new ClassificationResult(ArtifactColor.NONE, 0.0);
+        }
+    }
+
+    /**
+     * RANGE_BASED classifier: Independent hue ranges for green and purple (legacy).
+     * Returns UNKNOWN if hue is outside both ranges.
+     */
+    private ClassificationResult classifyColorRangeBased(float hue, float saturation, float value, boolean hasSignal) {
         if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
-            return ArtifactColor.NONE;
+            return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
 
+        // Check green range
         if (hue >= laneSensorConfig.greenHueMin && hue <= laneSensorConfig.greenHueMax) {
-            return ArtifactColor.GREEN;
+            // Confidence based on how far from range edges
+            double distFromMin = hue - laneSensorConfig.greenHueMin;
+            double distFromMax = laneSensorConfig.greenHueMax - hue;
+            double distFromEdge = Math.min(distFromMin, distFromMax);
+            double confidence = Math.min(1.0, distFromEdge / 20.0); // 20° margin
+            return new ClassificationResult(ArtifactColor.GREEN, confidence);
         }
 
+        // Check purple range (with wrap-around)
         if ((hue >= laneSensorConfig.purpleHueMin && hue <= laneSensorConfig.purpleHueMax)
                 || hue <= laneSensorConfig.purpleHueWrapMax) {
-            return ArtifactColor.PURPLE;
+            double confidence = 0.7; // Fixed confidence for purple (wrap makes it harder to compute)
+            return new ClassificationResult(ArtifactColor.PURPLE, confidence);
         }
 
-        return ArtifactColor.UNKNOWN;
+        // Outside both ranges
+        return new ClassificationResult(ArtifactColor.UNKNOWN, 0.0);
+    }
+
+    /**
+     * DECISION_BOUNDARY classifier: Single hue threshold between green and purple (recommended).
+     * Always returns GREEN or PURPLE, never UNKNOWN (two-class problem).
+     */
+    private ClassificationResult classifyColorDecisionBoundary(float hue, float saturation, float value, boolean hasSignal) {
+        if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
+            return new ClassificationResult(ArtifactColor.NONE, 0.0);
+        }
+
+        // Unwrap hue to handle purple wrap-around
+        // Purple spans 0° (e.g., 270-30°), so we map to continuous range
+        // Green ~120°, Purple ~290° (unwrapped from 0-30° → 360-390°)
+        float unwrappedHue = hue;
+        if (hue < 90.0f) {  // Likely purple on the wrap side (0-40°)
+            unwrappedHue = hue + 360.0f;  // Map 0-40° → 360-400°
+        }
+
+        // Classify based on which side of decision boundary
+        ArtifactColor color;
+        float distanceFromBoundary;
+
+        if (unwrappedHue < laneSensorConfig.hueDecisionBoundary) {
+            color = ArtifactColor.GREEN;
+            distanceFromBoundary = (float) (laneSensorConfig.hueDecisionBoundary - unwrappedHue);
+        } else {
+            color = ArtifactColor.PURPLE;
+            distanceFromBoundary = (float) (unwrappedHue - laneSensorConfig.hueDecisionBoundary);
+        }
+
+        // Confidence based on distance from boundary
+        // High confidence if far from boundary, low if close
+        double confidence = Math.min(1.0, distanceFromBoundary / laneSensorConfig.lowConfidenceMargin);
+
+        return new ClassificationResult(color, confidence);
+    }
+
+    /**
+     * DISTANCE_BASED classifier: Euclidean distance in HSV space to color targets.
+     * Picks the closer target (green or purple).
+     */
+    private ClassificationResult classifyColorDistanceBased(float hue, float saturation, float value, boolean hasSignal) {
+        if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
+            return new ClassificationResult(ArtifactColor.NONE, 0.0);
+        }
+
+        // Compute weighted distance to green target
+        double distToGreen = hsvDistance(hue, saturation, value,
+                laneSensorConfig.greenHueTarget,
+                laneSensorConfig.greenSatTarget,
+                laneSensorConfig.greenValTarget);
+
+        // Compute weighted distance to purple target
+        double distToPurple = hsvDistance(hue, saturation, value,
+                laneSensorConfig.purpleHueTarget,
+                laneSensorConfig.purpleSatTarget,
+                laneSensorConfig.purpleValTarget);
+
+        // Pick closer color
+        ArtifactColor color = (distToGreen < distToPurple) ? ArtifactColor.GREEN : ArtifactColor.PURPLE;
+
+        // Confidence based on separation between distances
+        // High confidence if one is much closer than the other
+        double minDist = Math.min(distToGreen, distToPurple);
+        double maxDist = Math.max(distToGreen, distToPurple);
+        double separation = maxDist - minDist;
+        double confidence = Math.min(1.0, separation / 30.0); // 30° weighted separation for full confidence
+
+        return new ClassificationResult(color, confidence);
+    }
+
+    /**
+     * Compute weighted distance in HSV space, handling hue wrap-around.
+     */
+    private double hsvDistance(float hue, float saturation, float value,
+                               double targetHue, double targetSat, double targetVal) {
+        // Hue distance (circular, 0-360°)
+        double hueDiff = Math.abs(hue - targetHue);
+        if (hueDiff > 180.0) {
+            hueDiff = 360.0 - hueDiff;  // Shortest path on circle
+        }
+
+        // Saturation and value differences (linear, 0-1)
+        double satDiff = Math.abs(saturation - targetSat);
+        double valDiff = Math.abs(value - targetVal);
+
+        // Weighted Euclidean distance
+        return laneSensorConfig.hueWeight * hueDiff
+                + laneSensorConfig.saturationWeight * satDiff * 100.0  // Scale to ~0-100
+                + laneSensorConfig.valueWeight * valDiff * 100.0;      // Scale to ~0-100
     }
 
     public boolean hasLaneSensors() {

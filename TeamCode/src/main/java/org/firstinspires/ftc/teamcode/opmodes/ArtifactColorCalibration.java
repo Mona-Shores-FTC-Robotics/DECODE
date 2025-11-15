@@ -288,11 +288,154 @@ public class ArtifactColorCalibration extends LinearOpMode {
                     telemetry.addLine("⚠ " + assessment);
                 }
                 packet.put("Separation/Assessment", assessment);
+
+                // Compute parameters for all classifier modes
+                computeClassifierParameters(packet);
             }
         }
 
         telemetry.update();
         dashboard.sendTelemetryPacket(packet);
+    }
+
+    /**
+     * Compute recommended parameters for all three classifier modes.
+     */
+    private void computeClassifierParameters(TelemetryPacket packet) {
+        if (greenSamples.isEmpty() || purpleSamples.isEmpty()) {
+            return; // Need both colors
+        }
+
+        telemetry.addLine();
+        telemetry.addLine("=== CLASSIFIER PARAMETERS ===");
+
+        // Compute average hues
+        float greenHueAvg = average(greenSamples, s -> s.hue);
+        float purpleHueAvg = average(purpleSamples, s -> s.hue);
+
+        // Unwrap purple if needed (purple samples might be ~300° or ~20°)
+        float purpleHueUnwrapped = unwrapPurpleHue(purpleSamples, purpleHueAvg);
+
+        // --- DECISION_BOUNDARY parameters (recommended) ---
+        float decisionBoundary = (greenHueAvg + purpleHueUnwrapped) / 2.0f;
+        if (decisionBoundary > 360.0f) {
+            decisionBoundary -= 360.0f;
+        }
+
+        telemetry.addLine("→ DECISION_BOUNDARY (recommended):");
+        telemetry.addData("  greenHueTarget", "%.0f", greenHueAvg);
+        telemetry.addData("  purpleHueTarget", "%.0f", purpleHueUnwrapped);
+        telemetry.addData("  hueDecisionBoundary", "%.0f", decisionBoundary);
+
+        packet.put("DECISION_BOUNDARY/greenHueTarget", greenHueAvg);
+        packet.put("DECISION_BOUNDARY/purpleHueTarget", purpleHueUnwrapped);
+        packet.put("DECISION_BOUNDARY/hueDecisionBoundary", decisionBoundary);
+
+        // --- DISTANCE_BASED parameters ---
+        float greenSatAvg = average(greenSamples, s -> s.saturation);
+        float greenValAvg = average(greenSamples, s -> s.value);
+        float purpleSatAvg = average(purpleSamples, s -> s.saturation);
+        float purpleValAvg = average(purpleSamples, s -> s.value);
+
+        telemetry.addLine("→ DISTANCE_BASED:");
+        telemetry.addData("  greenHueTarget", "%.0f", greenHueAvg);
+        telemetry.addData("  greenSatTarget", "%.2f", greenSatAvg);
+        telemetry.addData("  greenValTarget", "%.2f", greenValAvg);
+        telemetry.addData("  purpleHueTarget", "%.0f", purpleHueUnwrapped);
+        telemetry.addData("  purpleSatTarget", "%.2f", purpleSatAvg);
+        telemetry.addData("  purpleValTarget", "%.2f", purpleValAvg);
+
+        packet.put("DISTANCE_BASED/greenHueTarget", greenHueAvg);
+        packet.put("DISTANCE_BASED/greenSatTarget", greenSatAvg);
+        packet.put("DISTANCE_BASED/greenValTarget", greenValAvg);
+        packet.put("DISTANCE_BASED/purpleHueTarget", purpleHueUnwrapped);
+        packet.put("DISTANCE_BASED/purpleSatTarget", purpleSatAvg);
+        packet.put("DISTANCE_BASED/purpleValTarget", purpleValAvg);
+
+        // --- RANGE_BASED parameters (legacy) ---
+        float greenHueMin = min(greenSamples, s -> s.hue);
+        float greenHueMax = max(greenSamples, s -> s.hue);
+        float purpleHueMin = min(purpleSamples, s -> s.hue);
+        float purpleHueMax = max(purpleSamples, s -> s.hue);
+
+        // Add margins
+        float greenHueMinRec = (float) Math.max(0, greenHueMin - 10.0f);
+        float greenHueMaxRec = (float) Math.min(180, greenHueMax + 10.0f);
+
+        telemetry.addLine("→ RANGE_BASED (legacy):");
+        telemetry.addData("  greenHueMin", "%.0f", greenHueMinRec);
+        telemetry.addData("  greenHueMax", "%.0f", greenHueMaxRec);
+
+        packet.put("RANGE_BASED/greenHueMin", greenHueMinRec);
+        packet.put("RANGE_BASED/greenHueMax", greenHueMaxRec);
+
+        // Purple wrap handling for range-based
+        if (purpleHueAvg > 180) {
+            float purpleHueMinRec = (float) Math.max(0, purpleHueMin - 15.0f);
+            float purpleHueMaxRec = (float) Math.min(360, purpleHueMax + 15.0f);
+            telemetry.addData("  purpleHueMin", "%.0f", purpleHueMinRec);
+            telemetry.addData("  purpleHueMax", "%.0f", purpleHueMaxRec);
+            packet.put("RANGE_BASED/purpleHueMin", purpleHueMinRec);
+            packet.put("RANGE_BASED/purpleHueMax", purpleHueMaxRec);
+        } else {
+            float purpleWrapMaxRec = (float) Math.min(60, purpleHueMax + 15.0f);
+            telemetry.addData("  purpleHueWrapMax", "%.0f", purpleWrapMaxRec);
+            packet.put("RANGE_BASED/purpleHueWrapMax", purpleWrapMaxRec);
+        }
+
+        // Common quality thresholds
+        float minSat = Math.min(
+                min(greenSamples, s -> s.saturation),
+                min(purpleSamples, s -> s.saturation)
+        );
+        float minVal = Math.min(
+                min(greenSamples, s -> s.value),
+                min(purpleSamples, s -> s.value)
+        );
+
+        float recMinSat = (float) Math.max(0.05f, minSat - 0.05f);
+        float recMinVal = (float) Math.max(0.01f, minVal - 0.02f);
+
+        telemetry.addLine("→ Common (all modes):");
+        telemetry.addData("  minSaturation", "%.2f", recMinSat);
+        telemetry.addData("  minValue", "%.2f", recMinVal);
+
+        packet.put("Common/minSaturation", recMinSat);
+        packet.put("Common/minValue", recMinVal);
+    }
+
+    /**
+     * Unwrap purple hue to handle 0° wrap-around.
+     * Purple typically spans 270-30° (crosses 0°), so we map to ~290° unwrapped.
+     */
+    private float unwrapPurpleHue(List<ColorSample> purpleSamples, float purpleHueAvg) {
+        // If purple average is < 90°, it's on the wrap side (0-40°)
+        float purpleHueUnwrapped = purpleHueAvg;
+        if (purpleHueAvg < 90) {
+            purpleHueUnwrapped = purpleHueAvg + 360;
+        }
+
+        // Check if purple samples span the wrap (some at ~300°, some at ~20°)
+        boolean purpleSpansWrap = false;
+        for (ColorSample s : purpleSamples) {
+            if (s.hue < 90 && purpleHueAvg > 180) {
+                purpleSpansWrap = true;
+                break;
+            }
+        }
+
+        if (purpleSpansWrap) {
+            // Recalculate purple average with unwrapping
+            float sum = 0;
+            for (ColorSample s : purpleSamples) {
+                float h = s.hue;
+                if (h < 90) h += 360;
+                sum += h;
+            }
+            purpleHueUnwrapped = sum / purpleSamples.size();
+        }
+
+        return purpleHueUnwrapped;
     }
 
     private void displayRecommendations(String colorName, List<ColorSample> samples, TelemetryPacket packet) {

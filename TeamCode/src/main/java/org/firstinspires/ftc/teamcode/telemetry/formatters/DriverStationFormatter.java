@@ -385,12 +385,16 @@ public class DriverStationFormatter {
      * Page 6: Color Sensors - per-lane RGB/HSV values for tuning.
      */
     private void publishDebugColorSensors(Telemetry telemetry, RobotTelemetryData data) {
-        // Left lane
-        telemetry.addData("LEFT", "%s | dist=%.1f cm",
-                data.intake.laneLeftSummary.color,
-                data.intake.laneLeftSummary.distanceCm);
+        // Show classifier mode at top
+        String classifierMode = org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.laneSensorConfig.classifierMode;
+        telemetry.addData("Classifier", classifierMode);
 
+        // Left lane
         var leftSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.LEFT);
+        telemetry.addData("LEFT", "%s | conf=%.2f",
+                data.intake.laneLeftSummary.color,
+                leftSample != null ? leftSample.confidence : 0.0);
+
         if (leftSample != null && leftSample.sensorPresent) {
             telemetry.addData("  HSV", "H=%.0f° S=%.3f V=%.3f",
                     leftSample.hue,
@@ -403,11 +407,11 @@ public class DriverStationFormatter {
         }
 
         // Center lane
-        telemetry.addData("CENTER", "%s | dist=%.1f cm",
-                data.intake.laneCenterSummary.color,
-                data.intake.laneCenterSummary.distanceCm);
-
         var centerSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.CENTER);
+        telemetry.addData("CENTER", "%s | conf=%.2f",
+                data.intake.laneCenterSummary.color,
+                centerSample != null ? centerSample.confidence : 0.0);
+
         if (centerSample != null && centerSample.sensorPresent) {
             telemetry.addData("  HSV", "H=%.0f° S=%.3f V=%.3f",
                     centerSample.hue,
@@ -420,11 +424,11 @@ public class DriverStationFormatter {
         }
 
         // Right lane
-        telemetry.addData("RIGHT", "%s | dist=%.1f cm",
-                data.intake.laneRightSummary.color,
-                data.intake.laneRightSummary.distanceCm);
-
         var rightSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.RIGHT);
+        telemetry.addData("RIGHT", "%s | conf=%.2f",
+                data.intake.laneRightSummary.color,
+                rightSample != null ? rightSample.confidence : 0.0);
+
         if (rightSample != null && rightSample.sensorPresent) {
             telemetry.addData("  HSV", "H=%.0f° S=%.3f V=%.3f",
                     rightSample.hue,

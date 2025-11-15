@@ -116,6 +116,7 @@ public class FullPanelsFormatter {
         panels.debug("intake/roller/position", data.intake.rollerPosition);
 
         // Color Sensors - per-lane telemetry for tuning
+        panels.debug("colorSensor/classifierMode", org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.laneSensorConfig.classifierMode);
         publishColorSensorData(panels, "colorSensor/left", data.intake.laneLeftSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.LEFT));
         publishColorSensorData(panels, "colorSensor/center", data.intake.laneCenterSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.CENTER));
         publishColorSensorData(panels, "colorSensor/right", data.intake.laneRightSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.RIGHT));
@@ -153,6 +154,9 @@ public class FullPanelsFormatter {
 
         // Detailed sample data (if available) for tuning
         if (sample != null && sample.sensorPresent) {
+            // Confidence metric (how certain classifier is about the color)
+            panels.debug(prefix + "/confidence", sample.confidence);
+
             // RGB values - both raw and scaled
             panels.debug(prefix + "/rgb/rawR", sample.rawRed);
             panels.debug(prefix + "/rgb/rawG", sample.rawGreen);
