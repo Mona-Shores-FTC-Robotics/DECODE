@@ -74,8 +74,6 @@ public class OperatorBindings {
         flywheelHumanLoadingButton = operator.y();
 
 
-
-
         // Range-based shooting commands
 //        fireShortRange = launcherCommands.fireAllShortRange();
 //        fireMidRange = launcherCommands.fireAllMidRange();
