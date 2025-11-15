@@ -2,8 +2,6 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import static org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger.logStatus;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.WebHandlerManager;
@@ -45,7 +43,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
     private OperatorBindings operatorBindings;
     private AllianceSelector allianceSelector;
     private Alliance selectedAlliance = Alliance.UNKNOWN;
-    private FtcDashboard dashboard;
 
     private long lastTelemetryNs = 0L;
     private long lastAutoLogTimeMs = 0L;
@@ -63,7 +60,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onInit() {
-        dashboard = FtcDashboard.getInstance();
         robot = new Robot(hardwareMap);
 
         robot.attachPedroFollower();
@@ -148,9 +144,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
         double mainLoopMs = nanosToMs(mainloopEndNs - mainLoopStartNs);
 
         TelemetryTiming telemetryTiming = publishTelemetryIfNeeded(request);
-
-        // Publish sensor diagnostics to FTC Dashboard
-        publishSensorDiagnosticsToDashboard();
 
         long autoLogStart = System.nanoTime();
 
@@ -292,48 +285,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
         }
     }
 
-    private void publishSensorDiagnosticsToDashboard() {
-        if (dashboard == null) {
-            return;
-        }
-
-        TelemetryPacket packet = new TelemetryPacket();
-
-        for (org.firstinspires.ftc.teamcode.subsystems.LauncherLane lane : org.firstinspires.ftc.teamcode.subsystems.LauncherLane.values()) {
-            IntakeSubsystem.LaneSample sample = robot.intake.getLaneSample(lane);
-            String lanePrefix = "Sensors/" + lane.toString();
-
-            packet.put(lanePrefix + "/Present", sample.sensorPresent);
-
-            if (sample.sensorPresent) {
-                packet.put(lanePrefix + "/Color", sample.color.toString());
-                packet.put(lanePrefix + "/Hue", sample.hue);
-                packet.put(lanePrefix + "/Saturation", sample.saturation);
-                packet.put(lanePrefix + "/Value", sample.value);
-
-                if (sample.distanceAvailable) {
-                    packet.put(lanePrefix + "/Distance (cm)", sample.distanceCm);
-                    packet.put(lanePrefix + "/Within Distance", sample.withinDistance);
-                }
-
-                // RGB values
-                packet.put(lanePrefix + "/Red Raw", sample.scaledRed);
-                packet.put(lanePrefix + "/Green Raw", sample.scaledGreen);
-                packet.put(lanePrefix + "/Blue Raw", sample.scaledBlue);
-
-                // RGB ratios
-                float total = sample.scaledRed + sample.scaledGreen + sample.scaledBlue;
-                if (total > 0.01f) {
-                    packet.put(lanePrefix + "/Red Ratio", sample.scaledRed / total);
-                    packet.put(lanePrefix + "/Green Ratio", sample.scaledGreen / total);
-                    packet.put(lanePrefix + "/Blue Ratio", sample.scaledBlue / total);
-                }
-            }
-        }
-
-        dashboard.sendTelemetryPacket(packet);
-    }
-
     private void addHeadingDiagnostics() {
         telemetry.addLine("--- HEADING DIAGNOSTICS ---");
 
@@ -417,10 +368,11 @@ public class DecodeTeleOp extends NextFTCOpMode {
             long telemetryCallStartNs = nowNs;
             robot.telemetry.publishLoopTelemetry(
                     robot.drive,
-                    robot.launcher ,
+                    robot.launcher,
                     robot.vision,
                     request,
                     robot.launcherCoordinator,
+                    robot.intake,
                     selectedAlliance,
                     getRuntime(),
                     null,
@@ -541,10 +493,11 @@ public class DecodeTeleOp extends NextFTCOpMode {
         }
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
-                robot.launcher ,
+                robot.launcher,
                 robot.vision,
                 null,
                 robot.launcherCoordinator,
+                robot.intake,
                 selectedAlliance,
                 getRuntime(),
                 null,

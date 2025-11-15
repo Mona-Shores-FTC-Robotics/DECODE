@@ -170,10 +170,11 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
-                robot.launcher ,
+                robot.launcher,
                 robot.vision,
                 null,
                 robot.launcherCoordinator,
+                robot.intake,
                 activeAlliance,
                 getRuntime(),
                 null,
@@ -220,10 +221,11 @@ public class DecodeAutonomousFar extends NextFTCOpMode {
         robot.telemetry.setRoutineStepTelemetry(routineStep.name(), routineStep.ordinal());
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
-                robot.launcher ,
+                robot.launcher,
                 robot.vision,
                 null,
                 robot.launcherCoordinator,
+                robot.intake,
                 activeAlliance,
                 getRuntime(),
                 null,

@@ -18,6 +18,7 @@ import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
@@ -105,6 +106,7 @@ public class TelemetryService {
                                      VisionSubsystemLimelight vision,
                                      DriverBindings.DriveRequest driveRequest,
                                      LauncherCoordinator launcherCoordinator,
+                                     IntakeSubsystem intake,
                                      Alliance alliance,
                                      double runtimeSec,
                                      Telemetry dsTelemetry,
@@ -122,7 +124,7 @@ public class TelemetryService {
                 break;
             case DEBUG:
             default:
-                publishDebugTelemetry(drive, launcher, vision, driveRequest, launcherCoordinator, alliance, runtimeSec, dsTelemetry, modeLabel, suppressDriveTelemetry, poseOverride);
+                publishDebugTelemetry(drive, launcher, vision, driveRequest, launcherCoordinator, intake, alliance, runtimeSec, dsTelemetry, modeLabel, suppressDriveTelemetry, poseOverride);
                 break;
         }
     }
@@ -338,6 +340,7 @@ public class TelemetryService {
                                        VisionSubsystemLimelight vision,
                                        DriverBindings.DriveRequest driveRequest,
                                        LauncherCoordinator launcherCoordinator,
+                                       IntakeSubsystem intake,
                                        Alliance alliance,
                                        double runtimeSec,
                                        Telemetry dsTelemetry,
@@ -524,6 +527,7 @@ public class TelemetryService {
         if (sendDashboardThisLoop && enableDashboardTelemetry && dashboard != null) {
             sendDashboardPacket(
                     drive,
+                    intake,
                     requestX,
                     requestY,
                     requestRot,
@@ -624,6 +628,7 @@ public class TelemetryService {
      * Sends a telemetry packet to the FTC Dashboard.
      */
     private void sendDashboardPacket(DriveSubsystem drive,
+                                     IntakeSubsystem intake,
                                      double requestX,
                                      double requestY,
                                      double requestRot,
@@ -785,6 +790,41 @@ public class TelemetryService {
             log(packet, "Pose/Vision Pose x", visionPoseXIn);
             log(packet, "Pose/Vision Pose y", visionPoseYIn);
             log(packet, "Pose/Vision Pose heading", visionHeadingRad);
+        }
+
+        // Intake lane sensor telemetry
+        if (intake != null) {
+            for (LauncherLane lane : LauncherLane.values()) {
+                IntakeSubsystem.LaneSample sample = intake.getLaneSample(lane);
+                String lanePrefix = "Sensors/" + lane.toString();
+
+                log(packet, lanePrefix + "/Present", sample.sensorPresent);
+
+                if (sample.sensorPresent) {
+                    log(packet, lanePrefix + "/Color", sample.color.toString());
+                    log(packet, lanePrefix + "/Hue", (double) sample.hue);
+                    log(packet, lanePrefix + "/Saturation", (double) sample.saturation);
+                    log(packet, lanePrefix + "/Value", (double) sample.value);
+
+                    if (sample.distanceAvailable) {
+                        log(packet, lanePrefix + "/Distance (cm)", sample.distanceCm);
+                        log(packet, lanePrefix + "/Within Distance", sample.withinDistance);
+                    }
+
+                    // RGB values
+                    log(packet, lanePrefix + "/Red Raw", sample.scaledRed);
+                    log(packet, lanePrefix + "/Green Raw", sample.scaledGreen);
+                    log(packet, lanePrefix + "/Blue Raw", sample.scaledBlue);
+
+                    // RGB ratios
+                    float total = sample.scaledRed + sample.scaledGreen + sample.scaledBlue;
+                    if (total > 0.01f) {
+                        log(packet, lanePrefix + "/Red Ratio", (double) (sample.scaledRed / total));
+                        log(packet, lanePrefix + "/Green Ratio", (double) (sample.scaledGreen / total));
+                        log(packet, lanePrefix + "/Blue Ratio", (double) (sample.scaledBlue / total));
+                    }
+                }
+            }
         }
 
         Canvas overlay = packet.fieldOverlay();
