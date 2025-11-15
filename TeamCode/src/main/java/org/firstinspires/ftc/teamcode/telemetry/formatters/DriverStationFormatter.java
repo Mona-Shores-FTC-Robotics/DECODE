@@ -227,7 +227,7 @@ public class DriverStationFormatter {
     private void publishDebugControls(Telemetry telemetry, RobotTelemetryData data) {
         // Driver controls (Gamepad 1)
         telemetry.addLine("=== DRIVER (GP1) ===");
-        telemetry.addData("L-Bumper", "Ramp mode (hold)");
+        telemetry.addData("L-Bumper", "Smooth accel (ramp)");
         telemetry.addData("R-Bumper", "Slow mode (hold)");
         telemetry.addData("A", "Vision relocalize");
         telemetry.addData("B", "Aim at target (hold)");
