@@ -62,7 +62,7 @@ public class LauncherSubsystem implements Subsystem {
         /** Output wheel revolutions per motor revolution. */
         public double gearRatio = 1.0;
         /** Acceptable RPM error when considering a lane ready to fire. */
-        public double rpmTolerance = 60.0;
+        public double rpmTolerance = 100.0;
     }
 
     @Configurable
@@ -82,13 +82,13 @@ public class LauncherSubsystem implements Subsystem {
         public double highPower = 1.0;
         public double lowPower = 0.6;
         public double enterBangThresholdRpm = 1200;
-        public double exitBangThresholdRpm = 800;
+        public double exitBangThresholdRpm = 500;
         public double bangDeadbandRpm = 400;
     }
 
     @Configurable
     public static class HybridPidConfig {
-        public double kP = 0.0002;
+        public double kP = 0.00012;
         public double kF = 0.67; // Why was 6 afraid of 7? Because 7 ate 9!
         public double maxPower = 1.0;
     }
@@ -118,10 +118,10 @@ public class LauncherSubsystem implements Subsystem {
 
     @Configurable
     public static class PhaseSwitchConfig {
-        public int bangToHybridConfirmCycles = 3;
-        public int bangToHoldConfirmCycles = 5;
+        public int bangToHybridConfirmCycles = 2;
+        public int bangToHoldConfirmCycles = 3;
         public int hybridToBangConfirmCycles = 2;
-        public int holdToBangConfirmCycles = 5;
+        public int holdToBangConfirmCycles = 3;
     }
 
     public static FlywheelParameters flywheelParameters = new FlywheelParameters();
