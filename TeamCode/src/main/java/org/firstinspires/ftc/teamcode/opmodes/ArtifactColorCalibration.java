@@ -23,13 +23,16 @@ import java.util.Locale;
  * 2. Press A to capture multiple GREEN samples
  * 3. Place a PURPLE artifact in the lane
  * 4. Press B to capture multiple PURPLE samples
- * 5. Review recommended threshold values on telemetry
- * 6. Update values in FTC Dashboard Config → IntakeSubsystem → LaneSensorConfig
+ * 5. Point sensor at empty space / field mat
+ * 6. Press LEFT_BUMPER to capture BACKGROUND samples
+ * 7. Review recommended threshold values on telemetry
+ * 8. Update values in FTC Dashboard Config → IntakeSubsystem → LaneSensorConfig
  *
  * Controls:
  * - D-pad Up/Down: Cycle through lanes (LEFT/CENTER/RIGHT)
  * - A: Capture GREEN artifact sample
  * - B: Capture PURPLE artifact sample
+ * - LEFT_BUMPER: Capture BACKGROUND sample (empty space)
  * - X: Clear all samples and start over
  * - Y: Toggle continuous sampling mode
  */
@@ -41,6 +44,7 @@ public class ArtifactColorCalibration extends LinearOpMode {
     private LauncherLane selectedLane = LauncherLane.CENTER;
     private final List<ColorSample> greenSamples = new ArrayList<>();
     private final List<ColorSample> purpleSamples = new ArrayList<>();
+    private final List<ColorSample> backgroundSamples = new ArrayList<>();
     private boolean continuousSampling = false;
     private final ElapsedTime sampleTimer = new ElapsedTime();
     private static final double SAMPLE_INTERVAL_MS = 200.0; // Match IntakeSubsystem polling rate
@@ -102,6 +106,7 @@ public class ArtifactColorCalibration extends LinearOpMode {
         boolean lastB = false;
         boolean lastX = false;
         boolean lastY = false;
+        boolean lastLeftBumper = false;
 
         while (opModeIsActive()) {
 
@@ -132,6 +137,9 @@ public class ArtifactColorCalibration extends LinearOpMode {
             } else if (gamepad1.b && !lastB) {
                 shouldCapture = true;
                 captureColor = ArtifactColor.PURPLE;
+            } else if (gamepad1.left_bumper && !lastLeftBumper) {
+                shouldCapture = true;
+                captureColor = ArtifactColor.BACKGROUND;
             } else if (continuousSampling && sampleTimer.milliseconds() >= SAMPLE_INTERVAL_MS) {
                 // Auto-capture based on detected color
                 LaneSample sample = intake.getLaneSample(selectedLane);
@@ -143,6 +151,7 @@ public class ArtifactColorCalibration extends LinearOpMode {
             }
             lastA = gamepad1.a;
             lastB = gamepad1.b;
+            lastLeftBumper = gamepad1.left_bumper;
 
             // Capture sample
             if (shouldCapture && captureColor != null) {
@@ -153,8 +162,10 @@ public class ArtifactColorCalibration extends LinearOpMode {
                     ColorSample colorSample = new ColorSample(sample);
                     if (captureColor == ArtifactColor.GREEN) {
                         greenSamples.add(colorSample);
-                    } else {
+                    } else if (captureColor == ArtifactColor.PURPLE) {
                         purpleSamples.add(colorSample);
+                    } else if (captureColor == ArtifactColor.BACKGROUND) {
+                        backgroundSamples.add(colorSample);
                     }
                 }
             }
@@ -163,6 +174,7 @@ public class ArtifactColorCalibration extends LinearOpMode {
             if (gamepad1.x && !lastX) {
                 greenSamples.clear();
                 purpleSamples.clear();
+                backgroundSamples.clear();
             }
             lastX = gamepad1.x;
 
@@ -235,11 +247,13 @@ public class ArtifactColorCalibration extends LinearOpMode {
         telemetry.addLine();
         telemetry.addData("GREEN Samples", "%d (Press A)", greenSamples.size());
         telemetry.addData("PURPLE Samples", "%d (Press B)", purpleSamples.size());
+        telemetry.addData("BACKGROUND Samples", "%d (Press LB)", backgroundSamples.size());
         telemetry.addData("Continuous Mode", "%s (Press Y)", continuousSampling ? "ON" : "OFF");
         telemetry.addData("Clear All", "Press X");
 
         packet.put("Samples/Green Count", greenSamples.size());
         packet.put("Samples/Purple Count", purpleSamples.size());
+        packet.put("Samples/Background Count", backgroundSamples.size());
         packet.put("Continuous Sampling", continuousSampling);
 
         // Analysis and recommendations
@@ -288,11 +302,207 @@ public class ArtifactColorCalibration extends LinearOpMode {
                     telemetry.addLine("⚠ " + assessment);
                 }
                 packet.put("Separation/Assessment", assessment);
+
+                // Compute parameters for all classifier modes
+                computeClassifierParameters(packet);
             }
         }
 
         telemetry.update();
         dashboard.sendTelemetryPacket(packet);
+    }
+
+    /**
+     * Compute recommended parameters for all three classifier modes.
+     */
+    private void computeClassifierParameters(TelemetryPacket packet) {
+        if (greenSamples.isEmpty() || purpleSamples.isEmpty()) {
+            return; // Need both colors
+        }
+
+        telemetry.addLine();
+        telemetry.addLine("=== CLASSIFIER PARAMETERS ===");
+
+        // Compute average hues
+        float greenHueAvg = average(greenSamples, s -> s.hue);
+        float purpleHueAvg = average(purpleSamples, s -> s.hue);
+
+        // Unwrap purple if needed (purple samples might be ~300° or ~20°)
+        float purpleHueUnwrapped = unwrapPurpleHue(purpleSamples, purpleHueAvg);
+
+        // --- DECISION_BOUNDARY parameters (recommended) ---
+        float decisionBoundary = (greenHueAvg + purpleHueUnwrapped) / 2.0f;
+        if (decisionBoundary > 360.0f) {
+            decisionBoundary -= 360.0f;
+        }
+
+        telemetry.addLine("→ DECISION_BOUNDARY (recommended):");
+        telemetry.addData("  greenHueTarget", "%.0f", greenHueAvg);
+        telemetry.addData("  purpleHueTarget", "%.0f", purpleHueUnwrapped);
+        telemetry.addData("  hueDecisionBoundary", "%.0f", decisionBoundary);
+
+        packet.put("DECISION_BOUNDARY/greenHueTarget", greenHueAvg);
+        packet.put("DECISION_BOUNDARY/purpleHueTarget", purpleHueUnwrapped);
+        packet.put("DECISION_BOUNDARY/hueDecisionBoundary", decisionBoundary);
+
+        // --- DISTANCE_BASED parameters ---
+        float greenSatAvg = average(greenSamples, s -> s.saturation);
+        float greenValAvg = average(greenSamples, s -> s.value);
+        float purpleSatAvg = average(purpleSamples, s -> s.saturation);
+        float purpleValAvg = average(purpleSamples, s -> s.value);
+
+        telemetry.addLine("→ DISTANCE_BASED:");
+        telemetry.addData("  greenHueTarget", "%.0f", greenHueAvg);
+        telemetry.addData("  greenSatTarget", "%.2f", greenSatAvg);
+        telemetry.addData("  greenValTarget", "%.2f", greenValAvg);
+        telemetry.addData("  purpleHueTarget", "%.0f", purpleHueUnwrapped);
+        telemetry.addData("  purpleSatTarget", "%.2f", purpleSatAvg);
+        telemetry.addData("  purpleValTarget", "%.2f", purpleValAvg);
+
+        packet.put("DISTANCE_BASED/greenHueTarget", greenHueAvg);
+        packet.put("DISTANCE_BASED/greenSatTarget", greenSatAvg);
+        packet.put("DISTANCE_BASED/greenValTarget", greenValAvg);
+        packet.put("DISTANCE_BASED/purpleHueTarget", purpleHueUnwrapped);
+        packet.put("DISTANCE_BASED/purpleSatTarget", purpleSatAvg);
+        packet.put("DISTANCE_BASED/purpleValTarget", purpleValAvg);
+
+        // --- RANGE_BASED parameters (legacy) ---
+        float greenHueMin = min(greenSamples, s -> s.hue);
+        float greenHueMax = max(greenSamples, s -> s.hue);
+        float purpleHueMin = min(purpleSamples, s -> s.hue);
+        float purpleHueMax = max(purpleSamples, s -> s.hue);
+
+        // Add margins
+        float greenHueMinRec = (float) Math.max(0, greenHueMin - 10.0f);
+        float greenHueMaxRec = (float) Math.min(180, greenHueMax + 10.0f);
+
+        telemetry.addLine("→ RANGE_BASED (legacy):");
+        telemetry.addData("  greenHueMin", "%.0f", greenHueMinRec);
+        telemetry.addData("  greenHueMax", "%.0f", greenHueMaxRec);
+
+        packet.put("RANGE_BASED/greenHueMin", greenHueMinRec);
+        packet.put("RANGE_BASED/greenHueMax", greenHueMaxRec);
+
+        // Purple wrap handling for range-based
+        if (purpleHueAvg > 180) {
+            float purpleHueMinRec = (float) Math.max(0, purpleHueMin - 15.0f);
+            float purpleHueMaxRec = (float) Math.min(360, purpleHueMax + 15.0f);
+            telemetry.addData("  purpleHueMin", "%.0f", purpleHueMinRec);
+            telemetry.addData("  purpleHueMax", "%.0f", purpleHueMaxRec);
+            packet.put("RANGE_BASED/purpleHueMin", purpleHueMinRec);
+            packet.put("RANGE_BASED/purpleHueMax", purpleHueMaxRec);
+        } else {
+            float purpleWrapMaxRec = (float) Math.min(60, purpleHueMax + 15.0f);
+            telemetry.addData("  purpleHueWrapMax", "%.0f", purpleWrapMaxRec);
+            packet.put("RANGE_BASED/purpleHueWrapMax", purpleWrapMaxRec);
+        }
+
+        // Common quality thresholds
+        float minSat = Math.min(
+                min(greenSamples, s -> s.saturation),
+                min(purpleSamples, s -> s.saturation)
+        );
+        float minVal = Math.min(
+                min(greenSamples, s -> s.value),
+                min(purpleSamples, s -> s.value)
+        );
+
+        float recMinSat = (float) Math.max(0.05f, minSat - 0.05f);
+        float recMinVal = (float) Math.max(0.01f, minVal - 0.02f);
+
+        telemetry.addLine("→ Common (all modes):");
+        telemetry.addData("  minSaturation", "%.2f", recMinSat);
+        telemetry.addData("  minValue", "%.2f", recMinVal);
+
+        packet.put("Common/minSaturation", recMinSat);
+        packet.put("Common/minValue", recMinVal);
+
+        // --- BACKGROUND detection parameters ---
+        if (!backgroundSamples.isEmpty()) {
+            float bgHueAvg = average(backgroundSamples, s -> s.hue);
+            float bgSatAvg = average(backgroundSamples, s -> s.saturation);
+            float bgValAvg = average(backgroundSamples, s -> s.value);
+
+            telemetry.addLine("→ BACKGROUND detection:");
+            telemetry.addData("  backgroundHue", "%.0f", bgHueAvg);
+            telemetry.addData("  backgroundSaturation", "%.2f", bgSatAvg);
+            telemetry.addData("  backgroundValue", "%.2f", bgValAvg);
+
+            packet.put("BACKGROUND/backgroundHue", bgHueAvg);
+            packet.put("BACKGROUND/backgroundSaturation", bgSatAvg);
+            packet.put("BACKGROUND/backgroundValue", bgValAvg);
+
+            // Recommend maxBackgroundDistance based on how close artifacts are to background
+            if (!greenSamples.isEmpty() || !purpleSamples.isEmpty()) {
+                // Compute minimum distance from any artifact to background
+                double minDistToBackground = Double.MAX_VALUE;
+                for (ColorSample s : greenSamples) {
+                    double dist = computeSampleDistance(s, bgHueAvg, bgSatAvg, bgValAvg);
+                    if (dist < minDistToBackground) minDistToBackground = dist;
+                }
+                for (ColorSample s : purpleSamples) {
+                    double dist = computeSampleDistance(s, bgHueAvg, bgSatAvg, bgValAvg);
+                    if (dist < minDistToBackground) minDistToBackground = dist;
+                }
+
+                // Set threshold to half the minimum distance (safety margin)
+                double recommendedMaxDist = minDistToBackground * 0.5;
+                telemetry.addData("  maxBackgroundDistance", "%.0f", recommendedMaxDist);
+                packet.put("BACKGROUND/maxBackgroundDistance", recommendedMaxDist);
+            }
+        } else {
+            telemetry.addLine("→ BACKGROUND detection:");
+            telemetry.addLine("  (Capture background samples with LB)");
+        }
+    }
+
+    /**
+     * Compute HSV distance for a sample to target values.
+     */
+    private double computeSampleDistance(ColorSample s, float targetHue, float targetSat, float targetVal) {
+        // Hue distance (circular)
+        double hueDiff = Math.abs(s.hue - targetHue);
+        if (hueDiff > 180.0) hueDiff = 360.0 - hueDiff;
+
+        double satDiff = Math.abs(s.saturation - targetSat);
+        double valDiff = Math.abs(s.value - targetVal);
+
+        // Use same weights as DISTANCE_BASED classifier (hue=2.0, sat=0.5, val=0.3)
+        return 2.0 * hueDiff + 0.5 * satDiff * 100.0 + 0.3 * valDiff * 100.0;
+    }
+
+    /**
+     * Unwrap purple hue to handle 0° wrap-around.
+     * Purple typically spans 270-30° (crosses 0°), so we map to ~290° unwrapped.
+     */
+    private float unwrapPurpleHue(List<ColorSample> purpleSamples, float purpleHueAvg) {
+        // If purple average is < 90°, it's on the wrap side (0-40°)
+        float purpleHueUnwrapped = purpleHueAvg;
+        if (purpleHueAvg < 90) {
+            purpleHueUnwrapped = purpleHueAvg + 360;
+        }
+
+        // Check if purple samples span the wrap (some at ~300°, some at ~20°)
+        boolean purpleSpansWrap = false;
+        for (ColorSample s : purpleSamples) {
+            if (s.hue < 90 && purpleHueAvg > 180) {
+                purpleSpansWrap = true;
+                break;
+            }
+        }
+
+        if (purpleSpansWrap) {
+            // Recalculate purple average with unwrapping
+            float sum = 0;
+            for (ColorSample s : purpleSamples) {
+                float h = s.hue;
+                if (h < 90) h += 360;
+                sum += h;
+            }
+            purpleHueUnwrapped = sum / purpleSamples.size();
+        }
+
+        return purpleHueUnwrapped;
     }
 
     private void displayRecommendations(String colorName, List<ColorSample> samples, TelemetryPacket packet) {
