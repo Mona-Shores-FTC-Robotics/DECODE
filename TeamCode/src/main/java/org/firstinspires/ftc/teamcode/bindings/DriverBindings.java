@@ -34,12 +34,16 @@ public class DriverBindings {
     private final Button relocalizeRequest;
 
     public DriverBindings(GamepadEx driver, Robot robot) {
+
+        // Finalized Driver Buttons
         fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND).negate();
         fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND);
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
-        rampHold = driver.leftBumper();
         aimHold = driver.b();
+
+        //Test Buttons
+        rampHold = driver.leftBumper();
         relocalizeRequest = driver.a();
 
         // Set up default drive command - runs when no other command uses drive subsystem

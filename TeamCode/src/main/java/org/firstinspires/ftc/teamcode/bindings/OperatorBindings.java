@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinHoldCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 /**
  * Match-oriented operator bindings. Keeps the intake running in reverse by default,
@@ -29,18 +30,26 @@ public class OperatorBindings {
 
     private final Robot robot;
     private final LauncherCoordinator launcherCoordinator;
-    private final FireAllAtRangeCommand fireShortRange;
-    private final FireAllAtRangeCommand fireMidRange;
-    private final FireAllAtRangeCommand fireLongRange;
+
+//
+//    private final FireAllAtRangeCommand fireShortRange;
+//    private final FireAllAtRangeCommand fireMidRange;
+//    private final FireAllAtRangeCommand fireLongRange;
     private final SpinHoldCommand manualSpinHold;
     private final SetIntakeModeCommand intakeForwardCommand;
     private final SetIntakeModeCommand intakeReverseCommand;
-    private final Button fireShortButton;
-    private final Button fireMidButton;
-    private final Button fireLongButton;
+//    private final Button fireShortButton;
+//    private final Button fireMidButton;
+//    private final Button fireLongButton;
     private final Button manualSpinButton;
     private final Button intakeForwardHold;
+
+    private final Button kickAll;
+
+    private final Button flywheelHumanLoadingButton;
+
     private boolean manualIntakeActive = false;
+
 
     private final LauncherCommands launcherCommands;
 
@@ -52,17 +61,30 @@ public class OperatorBindings {
         this.launcherCoordinator = robot.launcherCoordinator;
         this.launcherCommands = robot.launcherCommands;
 
-        // Button assignments
+        // Planned Final Button Assignments
         intakeForwardHold = operator.rightBumper();
-        fireShortButton = operator.x();
-        fireMidButton = operator.y();
-        fireLongButton = operator.b();
+//        fireShortButton = operator.x();
+//        fireMidButton = operator.y();
+//        fireLongButton = operator.b();
+
+
+        //Temp buttons for testing
         manualSpinButton = operator.a();
+        kickAll = operator.x();
+        flywheelHumanLoadingButton = operator.y();
 
         // Range-based shooting commands
-        fireShortRange = launcherCommands.fireAllShortRange();
-        fireMidRange = launcherCommands.fireAllMidRange();
-        fireLongRange = launcherCommands.fireAllLongRange();
+//        fireShortRange = launcherCommands.fireAllShortRange();
+//        fireMidRange = launcherCommands.fireAllMidRange();
+//        fireLongRange = launcherCommands.fireAllLongRange();
+
+        kickAll.whenBecomesTrue(()->robot.launcher.moveFeederToFire(LauncherLane.LEFT))
+                .whenBecomesTrue(()->robot.launcher.moveFeederToFire(LauncherLane.CENTER))
+                .whenBecomesTrue(()->robot.launcher.moveFeederToFire(LauncherLane.RIGHT));
+
+        kickAll.whenBecomesFalse(()->robot.launcher.moveFeederToLoad(LauncherLane.LEFT))
+                .whenBecomesFalse(()->robot.launcher.moveFeederToLoad(LauncherLane.CENTER))
+                .whenBecomesFalse(()->robot.launcher.moveFeederToLoad(LauncherLane.RIGHT));
 
         // Manual spin hold for pre-spinning
         manualSpinHold = new SpinHoldCommand(robot.launcher, robot.manualSpinController);
@@ -82,9 +104,9 @@ public class OperatorBindings {
         syncLightingWithIntake();
 
         // Range-based shooting: press button to fire all lanes at that range
-        fireShortButton.whenBecomesTrue(fireShortRange);
-        fireMidButton.whenBecomesTrue(fireMidRange);
-        fireLongButton.whenBecomesTrue(fireLongRange);
+//        fireShortButton.whenBecomesTrue(fireShortRange);
+//        fireMidButton.whenBecomesTrue(fireMidRange);
+//        fireLongButton.whenBecomesTrue(fireLongRange);
 
         // Manual spin hold: hold A to pre-spin flywheels, release to spin down
         manualSpinButton.whenTrue(manualSpinHold);
@@ -93,6 +115,10 @@ public class OperatorBindings {
         // Intake control
         intakeForwardHold.whenBecomesTrue(intakeForwardCommand);
         intakeForwardHold.whenBecomesFalse(intakeReverseCommand);
+
+        flywheelHumanLoadingButton
+                .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
+                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading);
     }
 
     private void requestForwardIntake() {

@@ -81,7 +81,7 @@ public class IntakeSubsystem implements Subsystem {
     @Configurable
     public static class RollerConfig {
         public String servoName = "intake_roller";
-        public double activePosition = 1.0;
+        public double activePosition = 0;
         public double inactivePosition = 0.5;
     }
 
