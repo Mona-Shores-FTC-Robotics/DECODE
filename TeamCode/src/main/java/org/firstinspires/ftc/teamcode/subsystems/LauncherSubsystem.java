@@ -126,8 +126,8 @@ public class LauncherSubsystem implements Subsystem {
     public static class LeftFlywheelConfig {
         public String motorName = "launcher_left";
         public boolean reversed = true;
-        public double launchRpm = 3600;
-        public double idleRpm = 2600;
+        public double launchRpm = 0;
+        public double idleRpm = 0;
     }
 
     @Configurable
@@ -142,35 +142,35 @@ public class LauncherSubsystem implements Subsystem {
     public static class RightFlywheelConfig { //actually left
         public String motorName = "launcher_right";
         public boolean reversed = true;
-        public double launchRpm = 3600;
-        public double idleRpm = 2800;
+        public double launchRpm = 0;
+        public double idleRpm = 0;
     }
 
     @Configurable
     public static class LeftFeederConfig {
         public String servoName = "feeder_left";
         public boolean reversed = false;
-        public double loadPosition = .93;
-        public double firePosition = .65;
-        public double holdMs = 4000;
+        public double loadPosition = .5;
+        public double firePosition = .7; //toward 1 moves toward fire position
+        public double holdMs = 1000;
     }
 
     @Configurable
     public static class CenterFeederConfig {
         public String servoName = "feeder_center";
         public boolean reversed = false;
-        public double loadPosition = 1.0;
-        public double firePosition = .7;
-        public double holdMs = 4000;
+        public double loadPosition = .2;
+        public double firePosition = 0; //toward 0 moves toward fire position
+        public double holdMs = 1000;
     }
 
     @Configurable
     public static class RightFeederConfig {
         public String servoName = "feeder_right";
         public boolean reversed = false;
-        public double loadPosition = .7;
-        public double firePosition = .3;
-        public double holdMs = 2000;
+        public double loadPosition = .6;
+        public double firePosition = .35; //toward 0 moves toward fire position
+        public double holdMs = 1000;
     }
 
     @Configurable
