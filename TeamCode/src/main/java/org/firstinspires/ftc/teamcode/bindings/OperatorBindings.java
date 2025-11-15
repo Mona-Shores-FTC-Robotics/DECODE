@@ -45,7 +45,12 @@ public class OperatorBindings {
     private final Button intakeForwardHold;
 
     private final Button kickAll;
+
+    private final Button flywheelHumanLoadingButton;
+
     private boolean manualIntakeActive = false;
+
+
     private final LauncherCommands launcherCommands;
 
 
@@ -63,6 +68,7 @@ public class OperatorBindings {
 //        fireShortButton = operator.x();
 //        fireMidButton = operator.y();
 //        fireLongButton = operator.b();
+
 
         // Range-based shooting commands
 //        fireShortRange = launcherCommands.fireAllShortRange();
@@ -83,6 +89,9 @@ public class OperatorBindings {
         // Intake control commands
         intakeForwardCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         intakeReverseCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+
+        flywheelHumanLoadingButton = operator.y();
+
 
         configureMatchBindings();
     }
@@ -106,6 +115,10 @@ public class OperatorBindings {
         // Intake control
         intakeForwardHold.whenBecomesTrue(intakeForwardCommand);
         intakeForwardHold.whenBecomesFalse(intakeReverseCommand);
+
+        flywheelHumanLoadingButton
+                .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
+                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading);
     }
 
     private void requestForwardIntake() {
