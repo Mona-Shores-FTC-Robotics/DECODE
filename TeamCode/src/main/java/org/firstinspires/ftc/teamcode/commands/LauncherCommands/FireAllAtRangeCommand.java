@@ -29,22 +29,22 @@ public class FireAllAtRangeCommand extends Command {
     @Configurable
     public static class RangeRpmConfig {
         /** Short range configuration */
-        public double shortLeftRpm = 2700.0;
-        public double shortCenterRpm = 0.0; // Center disabled by default
-        public double shortRightRpm = 2700.0;
+        public double shortLeftRpm = 2000.0;
+        public double shortCenterRpm = 2000.0; // Center disabled by default
+        public double shortRightRpm = 2000.0;
 
         /** Mid range configuration (default/current values) */
-        public double midLeftRpm = 3600.0;
-        public double midCenterRpm = 0.0; // Center disabled by default
-        public double midRightRpm = 3600.0;
+        public double midLeftRpm = 3000.0;
+        public double midCenterRpm = 3000.0; // Center disabled by default
+        public double midRightRpm = 3000.0;
 
         /** Long range configuration */
         public double longLeftRpm = 4200.0;
-        public double longCenterRpm = 0.0; // Center disabled by default
+        public double longCenterRpm = 42000; // Center disabled by default
         public double longRightRpm = 4200.0;
 
         /** Timeout in seconds before giving up on spin-up */
-        public double timeoutSeconds = 3.0;
+        public double timeoutSeconds = 8.0;
     }
 
     public static RangeRpmConfig rangeRpmConfig = new RangeRpmConfig();

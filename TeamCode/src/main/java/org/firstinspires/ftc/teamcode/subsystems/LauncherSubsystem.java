@@ -72,7 +72,7 @@ public class LauncherSubsystem implements Subsystem {
         /** If encoders are unavailable, treat the wheel as ready after this many milliseconds at full power. */
         public double fallbackReadyMs = 1000;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-        public double recoveryMs = 1000;
+        public double recoveryMs = 3000;
         /** Delay between sequential shots when bursting all three lanes (ms). */
         public double burstSpacingMs = 120.0;
     }
@@ -80,10 +80,10 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class BangBangConfig {
         public double highPower = 1.0;
-        public double lowPower = 0.3;
+        public double lowPower = 0.6;
         public double enterBangThresholdRpm = 1200;
         public double exitBangThresholdRpm = 800;
-        public double bangDeadbandRpm = 50;
+        public double bangDeadbandRpm = 400;
     }
 
     @Configurable
@@ -138,7 +138,7 @@ public class LauncherSubsystem implements Subsystem {
         public String motorName = "launcher_left";
         public boolean reversed = true;
         public double launchRpm = 0;
-        public double idleRpm = 0;
+        public double idleRpm = 500;
     }
 
     @Configurable
@@ -146,7 +146,7 @@ public class LauncherSubsystem implements Subsystem {
         public String motorName = "launcher_center";
         public boolean reversed = false;
         public double launchRpm = 0;
-        public double idleRpm = 0;
+        public double idleRpm = 500;
     }
 
     @Configurable
@@ -154,15 +154,15 @@ public class LauncherSubsystem implements Subsystem {
         public String motorName = "launcher_right";
         public boolean reversed = true;
         public double launchRpm = 0;
-        public double idleRpm = 0;
+        public double idleRpm = 500;
     }
 
     @Configurable
     public static class LeftFeederConfig {
         public String servoName = "feeder_left";
         public boolean reversed = false;
-        public double loadPosition = .5;
-        public double firePosition = .7; //toward 1 moves toward fire position
+        public double loadPosition = .53;
+        public double firePosition = .1; //toward 1 moves toward fire position
         public double holdMs = 1000;
     }
 
@@ -170,7 +170,7 @@ public class LauncherSubsystem implements Subsystem {
     public static class CenterFeederConfig {
         public String servoName = "feeder_center";
         public boolean reversed = false;
-        public double loadPosition = .2;
+        public double loadPosition = .53;
         public double firePosition = 0; //toward 0 moves toward fire position
         public double holdMs = 1000;
     }
@@ -179,8 +179,8 @@ public class LauncherSubsystem implements Subsystem {
     public static class RightFeederConfig {
         public String servoName = "feeder_right";
         public boolean reversed = false;
-        public double loadPosition = .6;
-        public double firePosition = .35; //toward 0 moves toward fire position
+        public double loadPosition = .73;
+        public double firePosition = .1; //toward 0 moves toward fire position
         public double holdMs = 1000;
     }
 
@@ -189,11 +189,11 @@ public class LauncherSubsystem implements Subsystem {
         public String servoName = "hood_left";
         public boolean reversed = false;
         /** Hood position for short range shots */
-        public double shortPosition = 0.5;
+        public double shortPosition = .75;
         /** Hood position for mid range shots */
         public double midPosition = 0.5;
         /** Hood position for long range shots */
-        public double longPosition = 0.5;
+        public double longPosition = .25;
     }
 
     @Configurable
@@ -201,11 +201,11 @@ public class LauncherSubsystem implements Subsystem {
         public String servoName = "hood_center";
         public boolean reversed = false;
         /** Hood position for short range shots */
-        public double shortPosition = 0.5;
+        public double shortPosition = .75;
         /** Hood position for mid range shots */
         public double midPosition = 0.5;
         /** Hood position for long range shots */
-        public double longPosition = 0.5;
+        public double longPosition = .25;
     }
 
     @Configurable
@@ -213,17 +213,17 @@ public class LauncherSubsystem implements Subsystem {
         public String servoName = "hood_right";
         public boolean reversed = false;
         /** Hood position for short range shots */
-        public double shortPosition = 0.5;
+        public double shortPosition = .75;
         /** Hood position for mid range shots */
         public double midPosition = 0.5;
         /** Hood position for long range shots */
-        public double longPosition = 0.5;
+        public double longPosition = .25;
     }
 
     @Configurable
     public static class ReverseFlywheelForHumanLoadingConfig {
         /** Power level for reverse intake (negative runs motors backward) */
-        public double reversePower = -0.25;
+        public double reversePower = -0.3;
     }
 
     public static LeftFlywheelConfig leftFlywheelConfig = new LeftFlywheelConfig();
@@ -1591,7 +1591,7 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    private static double hoodShortPositionFor(LauncherLane lane) {
+    public static double hoodShortPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
                 return clampServo(leftHoodConfig.shortPosition);
@@ -1603,7 +1603,7 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    private static double hoodMidPositionFor(LauncherLane lane) {
+    public static double hoodMidPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
                 return clampServo(leftHoodConfig.midPosition);
@@ -1615,7 +1615,7 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    private static double hoodLongPositionFor(LauncherLane lane) {
+    public static double hoodLongPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
                 return clampServo(leftHoodConfig.longPosition);
@@ -1626,5 +1626,7 @@ public class LauncherSubsystem implements Subsystem {
                 return clampServo(rightHoodConfig.longPosition);
         }
     }
+
+
 
 }
