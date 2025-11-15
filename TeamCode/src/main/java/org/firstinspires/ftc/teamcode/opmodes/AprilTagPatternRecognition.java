@@ -7,6 +7,11 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * OpMode that recognizes AprilTag IDs for DECODE patterns and allows operator
  * to offset the pattern using dpad controls.
@@ -29,6 +34,10 @@ public class AprilTagPatternRecognition extends LinearOpMode {
 
     // Pattern definitions
     private static final String[] BASE_PATTERNS = {"GPP", "PGP", "PPG"};
+
+    // Tag detection history
+    private Map<Integer, TagDetectionInfo> detectedTags = new HashMap<>();
+    private int lastSeenTagId = -1;
 
     @Override
     public void runOpMode() {
@@ -59,6 +68,9 @@ public class AprilTagPatternRecognition extends LinearOpMode {
             // Get current AprilTag ID
             int currentTagId = vision.getCurrentTagId();
 
+            // Track detected tags
+            trackDetectedTag(currentTagId);
+
             // Update telemetry
             updateTelemetry(currentTagId);
         }
@@ -78,6 +90,30 @@ public class AprilTagPatternRecognition extends LinearOpMode {
         } else if (gamepad2.dpad_right) {
             patternOffset = 2;
         }
+    }
+
+    /**
+     * Tracks detected AprilTags throughout the OpMode
+     */
+    private void trackDetectedTag(int tagId) {
+        if (tagId == -1) {
+            lastSeenTagId = -1;
+            return;
+        }
+
+        double currentTime = getRuntime();
+
+        // Check if this is a new tag or an existing one
+        if (!detectedTags.containsKey(tagId)) {
+            // New tag detected - save it
+            String pattern = getBasePattern(tagId);
+            detectedTags.put(tagId, new TagDetectionInfo(tagId, pattern, currentTime));
+        } else {
+            // Existing tag - update last seen time and increment count
+            detectedTags.get(tagId).updateLastSeen(currentTime);
+        }
+
+        lastSeenTagId = tagId;
     }
 
     /**
@@ -112,9 +148,31 @@ public class AprilTagPatternRecognition extends LinearOpMode {
         telemetry.addLine("Dpad Left = 0 | Dpad Up = 1 | Dpad Right = 2");
         telemetry.addLine();
 
+        // Display detected tags history
+        telemetry.addLine("--- DETECTED TAGS HISTORY ---");
+        if (detectedTags.isEmpty()) {
+            telemetry.addLine("No tags detected yet");
+        } else {
+            // Sort tags by ID for consistent display
+            List<Integer> sortedIds = new ArrayList<>(detectedTags.keySet());
+            sortedIds.sort(Integer::compareTo);
+
+            for (Integer id : sortedIds) {
+                TagDetectionInfo info = detectedTags.get(id);
+                telemetry.addData("Tag " + id,
+                    String.format("%s | Count: %d | First: %.1fs | Last: %.1fs",
+                        info.pattern,
+                        info.detectionCount,
+                        info.firstSeenTime,
+                        info.lastSeenTime));
+            }
+        }
+        telemetry.addLine();
+
         // Display vision status
         telemetry.addData("Vision State", vision.getState());
         telemetry.addData("Has Valid Tag", vision.hasValidTag());
+        telemetry.addData("Total Tags Detected", detectedTags.size());
 
         telemetry.update();
     }
@@ -160,5 +218,29 @@ public class AprilTagPatternRecognition extends LinearOpMode {
         }
 
         return new String(result);
+    }
+
+    /**
+     * Helper class to store information about detected AprilTags
+     */
+    private static class TagDetectionInfo {
+        final int tagId;
+        final String pattern;
+        final double firstSeenTime;
+        double lastSeenTime;
+        int detectionCount;
+
+        TagDetectionInfo(int tagId, String pattern, double firstSeenTime) {
+            this.tagId = tagId;
+            this.pattern = pattern;
+            this.firstSeenTime = firstSeenTime;
+            this.lastSeenTime = firstSeenTime;
+            this.detectionCount = 1;
+        }
+
+        void updateLastSeen(double time) {
+            this.lastSeenTime = time;
+            this.detectionCount++;
+        }
     }
 }
