@@ -41,6 +41,7 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     private TagSnapshot lastSnapshot;
     private Pose lastRobotPose;
+    private Pose lastRobotPoseFtc;
     private boolean odometryUpdatePending;
     private long lastSnapshotTimestampMs = 0L;
     private int lastSeenTagId = -1;
@@ -127,6 +128,11 @@ public class VisionSubsystemLimelight implements Subsystem {
     public Optional<Pose> getRobotPoseFromTag() {
         refreshSnapshotIfStale();
         return Optional.ofNullable(lastRobotPose);
+    }
+
+    public Optional<Pose> getRobotPoseFromTagFtc() {
+        refreshSnapshotIfStale();
+        return Optional.ofNullable(lastRobotPoseFtc);
     }
 
     public boolean shouldUpdateOdometry() {
@@ -231,8 +237,10 @@ public class VisionSubsystemLimelight implements Subsystem {
         lastSnapshot = snapshot;
         lastSnapshotTimestampMs = now;
         Optional<Pose> poseOpt = snapshot.getRobotPose();
+        Optional<Pose> ftcPoseOpt = snapshot.getFtcPose();
         if (poseOpt.isPresent()) {
             lastRobotPose = poseOpt.get();
+            lastRobotPoseFtc = ftcPoseOpt.orElse(null);
             boolean newTag = snapshot.getTagId() != lastSeenTagId;
             if (newTag || stale) {
                 odometryUpdatePending = true;
@@ -262,6 +270,7 @@ public class VisionSubsystemLimelight implements Subsystem {
             odometryUpdatePending = false;
             lastSnapshot = null;
             lastRobotPose = null;
+            lastRobotPoseFtc = null;
             lastSeenTagId = -1;
         }
     }
@@ -282,6 +291,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     private void clearSnapshot() {
         lastSnapshot = null;
         lastRobotPose = null;
+        lastRobotPoseFtc = null;
         odometryUpdatePending = false;
         lastSnapshotTimestampMs = 0L;
         lastSeenTagId = -1;
@@ -292,6 +302,7 @@ public class VisionSubsystemLimelight implements Subsystem {
             return;
         }
         lastRobotPose = pose;
+        lastRobotPoseFtc = convertPedroToFtcPose(pose);
         lastSnapshotTimestampMs = System.currentTimeMillis();
     }
 
@@ -492,6 +503,14 @@ public class VisionSubsystemLimelight implements Subsystem {
         double pedroY = halfField - ftcX;
         double pedroHeading = AngleUnit.normalizeRadians(Math.toRadians(headingDeg) - Math.PI / 2.0);
         return new Pose(pedroX, pedroY, pedroHeading);
+    }
+
+    private static Pose convertPedroToFtcPose(Pose pedroPose) {
+        double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
+        double ftcX = halfField - pedroPose.getY();
+        double ftcY = pedroPose.getX() - halfField;
+        double ftcHeading = AngleUnit.normalizeRadians(pedroPose.getHeading() + Math.PI / 2.0);
+        return new Pose(ftcX, ftcY, ftcHeading);
     }
 
     private static double getTargetAreaSafe(LLResultTypes.FiducialResult fiducial) {

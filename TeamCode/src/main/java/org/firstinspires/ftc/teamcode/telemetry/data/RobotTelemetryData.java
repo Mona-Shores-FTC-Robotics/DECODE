@@ -106,10 +106,10 @@ public class RobotTelemetryData {
         // Capture vision data (needed for pose)
         VisionTelemetryData visionData = VisionTelemetryData.capture(vision, alliance);
 
-        // Build vision pose for PoseTelemetryData (Pedro Pose type from vision subsystem)
+        // Build vision pose for PoseTelemetryData (FTC Pose type from vision subsystem)
         Pose visionPose = null;
         if (visionData.hasTag && !Double.isNaN(visionData.poseXIn) && !Double.isNaN(visionData.poseYIn)) {
-            visionPose = vision.getRobotPoseFromTag().orElse(null);
+            visionPose = vision.getRobotPoseFromTagFtc().orElse(null);
         }
 
         // Capture pose data (with optional override)
