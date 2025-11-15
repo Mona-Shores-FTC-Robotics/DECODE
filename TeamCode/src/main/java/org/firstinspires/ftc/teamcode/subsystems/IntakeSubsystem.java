@@ -111,6 +111,34 @@ public class IntakeSubsystem implements Subsystem {
         // Distance gating (used by all classifiers)
         public boolean useDistance = true;
         public double presenceDistanceCm = 3.0;
+
+        // Background detection - distinguishes empty space from artifacts
+        /** Enable background similarity checking */
+        public boolean enableBackgroundDetection = true;
+        /** Background hue (set from calibration, typically ~40-60° for field mat) */
+        public double backgroundHue = 50.0;
+        /** Background saturation (set from calibration, typically low ~0.1-0.3) */
+        public double backgroundSaturation = 0.20;
+        /** Background value (set from calibration, brightness of empty space) */
+        public double backgroundValue = 0.30;
+        /** Maximum weighted distance to background to classify as BACKGROUND */
+        public double maxBackgroundDistance = 40.0;
+
+        // Multi-factor presence detection - improves artifact vs background discrimination
+        /** Enable enhanced presence scoring (not just distance) */
+        public boolean enablePresenceScoring = true;
+        /** Minimum total RGB intensity for artifact presence (0-765 range) */
+        public double minTotalIntensity = 50.0;
+        /** Weight for distance factor in presence score */
+        public double presenceDistanceWeight = 0.4;
+        /** Weight for saturation factor in presence score */
+        public double presenceSaturationWeight = 0.3;
+        /** Weight for value factor in presence score */
+        public double presenceValueWeight = 0.2;
+        /** Weight for intensity factor in presence score */
+        public double presenceIntensityWeight = 0.1;
+        /** Minimum presence score (0-1) to consider artifact present */
+        public double minPresenceScore = 0.5;
     }
 
     @Configurable
@@ -606,15 +634,22 @@ public class IntakeSubsystem implements Subsystem {
             value = hsvBuffer[2];
         }
 
-        // Classify color using selected classifier mode
-        ClassificationResult result = classifyColor(hue, saturation, value, maxComponent > 0);
+        // Compute total RGB intensity for presence detection
+        int totalIntensity = scaledRed + scaledGreen + scaledBlue;
+
+        // Classify color using selected classifier mode with enhanced presence/background detection
+        ClassificationResult result = classifyColor(
+                hue, saturation, value,
+                maxComponent > 0,
+                totalIntensity,
+                distanceValid ? distanceCm : Double.NaN,
+                withinDistance
+        );
         ArtifactColor hsvColor = result.color;
         double confidence = result.confidence;
 
+        // Final color already accounts for distance, presence, and background checks
         ArtifactColor finalColor = hsvColor;
-        if (laneSensorConfig.useDistance && distanceAvailable && !withinDistance) {
-            finalColor = ArtifactColor.NONE;
-        }
 
         return LaneSample.present(
                 distanceAvailable,
@@ -643,9 +678,44 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     /**
-     * Classify color using the configured classifier mode.
+     * Classify color using the configured classifier mode with enhanced presence and background detection.
+     *
+     * @param hue Hue value (0-360°)
+     * @param saturation Saturation value (0-1)
+     * @param value Value/brightness (0-1)
+     * @param hasSignal Whether sensor has a valid signal
+     * @param totalIntensity Total RGB intensity (0-765)
+     * @param distanceCm Distance reading in cm (or NaN if unavailable)
+     * @param withinDistance Whether distance is within presence threshold
+     * @return Classification result with color and confidence
      */
-    private ClassificationResult classifyColor(float hue, float saturation, float value, boolean hasSignal) {
+    private ClassificationResult classifyColor(float hue, float saturation, float value,
+                                               boolean hasSignal, int totalIntensity,
+                                               double distanceCm, boolean withinDistance) {
+        // Basic quality check - no signal
+        if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
+            return new ClassificationResult(ArtifactColor.NONE, 0.0);
+        }
+
+        // Multi-factor presence detection - is something actually there?
+        if (laneSensorConfig.enablePresenceScoring) {
+            double presenceScore = computePresenceScore(saturation, value, totalIntensity, distanceCm, withinDistance);
+            if (presenceScore < laneSensorConfig.minPresenceScore) {
+                // Not enough evidence that an artifact is present
+                return new ClassificationResult(ArtifactColor.NONE, 0.0);
+            }
+        }
+
+        // Background similarity check - does this look like empty space / field mat?
+        if (laneSensorConfig.enableBackgroundDetection) {
+            double backgroundDistance = computeBackgroundDistance(hue, saturation, value);
+            if (backgroundDistance < laneSensorConfig.maxBackgroundDistance) {
+                // Looks like background, not an artifact
+                double confidence = 1.0 - (backgroundDistance / laneSensorConfig.maxBackgroundDistance);
+                return new ClassificationResult(ArtifactColor.BACKGROUND, confidence);
+            }
+        }
+
         // Parse classifier mode
         ClassifierMode mode;
         try {
@@ -654,7 +724,7 @@ public class IntakeSubsystem implements Subsystem {
             mode = ClassifierMode.DECISION_BOUNDARY; // Default
         }
 
-        // Route to appropriate classifier
+        // Route to appropriate color classifier (GREEN vs PURPLE)
         switch (mode) {
             case RANGE_BASED:
                 return classifyColorRangeBased(hue, saturation, value, hasSignal);
@@ -665,6 +735,63 @@ public class IntakeSubsystem implements Subsystem {
             default:
                 return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
+    }
+
+    /**
+     * Compute presence score - how confident are we that an artifact is actually present?
+     * Combines distance, saturation, value, and total intensity.
+     *
+     * @return Presence score 0.0-1.0 (higher = more confident artifact is present)
+     */
+    private double computePresenceScore(float saturation, float value, int totalIntensity,
+                                        double distanceCm, boolean withinDistance) {
+        double score = 0.0;
+
+        // Distance factor - is something close enough?
+        if (!Double.isNaN(distanceCm) && laneSensorConfig.useDistance) {
+            if (withinDistance) {
+                // Linear scoring: closer = higher score
+                double distanceFactor = 1.0 - (distanceCm / laneSensorConfig.presenceDistanceCm);
+                score += laneSensorConfig.presenceDistanceWeight * Math.max(0.0, distanceFactor);
+            }
+            // else: distance factor contributes 0 (too far)
+        } else {
+            // No distance sensor or not using it - assume distance is OK
+            score += laneSensorConfig.presenceDistanceWeight;
+        }
+
+        // Saturation factor - artifacts have more saturated colors than background
+        if (saturation > laneSensorConfig.minSaturation) {
+            double saturationFactor = Math.min(1.0, saturation / 0.5);  // Scale: 0-0.5 sat → 0-1 factor
+            score += laneSensorConfig.presenceSaturationWeight * saturationFactor;
+        }
+
+        // Value factor - artifacts reflect more light than empty space
+        if (value > laneSensorConfig.minValue) {
+            double valueFactor = Math.min(1.0, value / 0.5);  // Scale: 0-0.5 val → 0-1 factor
+            score += laneSensorConfig.presenceValueWeight * valueFactor;
+        }
+
+        // Intensity factor - total RGB brightness
+        if (totalIntensity > laneSensorConfig.minTotalIntensity) {
+            double intensityFactor = Math.min(1.0, totalIntensity / 200.0);  // Scale: 0-200 → 0-1
+            score += laneSensorConfig.presenceIntensityWeight * intensityFactor;
+        }
+
+        return Math.min(1.0, score);  // Clamp to 0-1
+    }
+
+    /**
+     * Compute weighted distance to background characteristics in HSV space.
+     * Lower distance = more similar to background.
+     *
+     * @return Weighted distance to background (lower = more like background)
+     */
+    private double computeBackgroundDistance(float hue, float saturation, float value) {
+        return hsvDistance(hue, saturation, value,
+                laneSensorConfig.backgroundHue,
+                laneSensorConfig.backgroundSaturation,
+                laneSensorConfig.backgroundValue);
     }
 
     /**

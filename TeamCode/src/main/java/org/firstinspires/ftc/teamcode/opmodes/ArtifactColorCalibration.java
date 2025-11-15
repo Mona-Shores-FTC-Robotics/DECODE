@@ -23,13 +23,16 @@ import java.util.Locale;
  * 2. Press A to capture multiple GREEN samples
  * 3. Place a PURPLE artifact in the lane
  * 4. Press B to capture multiple PURPLE samples
- * 5. Review recommended threshold values on telemetry
- * 6. Update values in FTC Dashboard Config → IntakeSubsystem → LaneSensorConfig
+ * 5. Point sensor at empty space / field mat
+ * 6. Press LEFT_BUMPER to capture BACKGROUND samples
+ * 7. Review recommended threshold values on telemetry
+ * 8. Update values in FTC Dashboard Config → IntakeSubsystem → LaneSensorConfig
  *
  * Controls:
  * - D-pad Up/Down: Cycle through lanes (LEFT/CENTER/RIGHT)
  * - A: Capture GREEN artifact sample
  * - B: Capture PURPLE artifact sample
+ * - LEFT_BUMPER: Capture BACKGROUND sample (empty space)
  * - X: Clear all samples and start over
  * - Y: Toggle continuous sampling mode
  */
@@ -41,6 +44,7 @@ public class ArtifactColorCalibration extends LinearOpMode {
     private LauncherLane selectedLane = LauncherLane.CENTER;
     private final List<ColorSample> greenSamples = new ArrayList<>();
     private final List<ColorSample> purpleSamples = new ArrayList<>();
+    private final List<ColorSample> backgroundSamples = new ArrayList<>();
     private boolean continuousSampling = false;
     private final ElapsedTime sampleTimer = new ElapsedTime();
     private static final double SAMPLE_INTERVAL_MS = 200.0; // Match IntakeSubsystem polling rate
@@ -102,6 +106,7 @@ public class ArtifactColorCalibration extends LinearOpMode {
         boolean lastB = false;
         boolean lastX = false;
         boolean lastY = false;
+        boolean lastLeftBumper = false;
 
         while (opModeIsActive()) {
 
@@ -132,6 +137,9 @@ public class ArtifactColorCalibration extends LinearOpMode {
             } else if (gamepad1.b && !lastB) {
                 shouldCapture = true;
                 captureColor = ArtifactColor.PURPLE;
+            } else if (gamepad1.left_bumper && !lastLeftBumper) {
+                shouldCapture = true;
+                captureColor = ArtifactColor.BACKGROUND;
             } else if (continuousSampling && sampleTimer.milliseconds() >= SAMPLE_INTERVAL_MS) {
                 // Auto-capture based on detected color
                 LaneSample sample = intake.getLaneSample(selectedLane);
@@ -143,6 +151,7 @@ public class ArtifactColorCalibration extends LinearOpMode {
             }
             lastA = gamepad1.a;
             lastB = gamepad1.b;
+            lastLeftBumper = gamepad1.left_bumper;
 
             // Capture sample
             if (shouldCapture && captureColor != null) {
@@ -153,8 +162,10 @@ public class ArtifactColorCalibration extends LinearOpMode {
                     ColorSample colorSample = new ColorSample(sample);
                     if (captureColor == ArtifactColor.GREEN) {
                         greenSamples.add(colorSample);
-                    } else {
+                    } else if (captureColor == ArtifactColor.PURPLE) {
                         purpleSamples.add(colorSample);
+                    } else if (captureColor == ArtifactColor.BACKGROUND) {
+                        backgroundSamples.add(colorSample);
                     }
                 }
             }
@@ -163,6 +174,7 @@ public class ArtifactColorCalibration extends LinearOpMode {
             if (gamepad1.x && !lastX) {
                 greenSamples.clear();
                 purpleSamples.clear();
+                backgroundSamples.clear();
             }
             lastX = gamepad1.x;
 
@@ -235,11 +247,13 @@ public class ArtifactColorCalibration extends LinearOpMode {
         telemetry.addLine();
         telemetry.addData("GREEN Samples", "%d (Press A)", greenSamples.size());
         telemetry.addData("PURPLE Samples", "%d (Press B)", purpleSamples.size());
+        telemetry.addData("BACKGROUND Samples", "%d (Press LB)", backgroundSamples.size());
         telemetry.addData("Continuous Mode", "%s (Press Y)", continuousSampling ? "ON" : "OFF");
         telemetry.addData("Clear All", "Press X");
 
         packet.put("Samples/Green Count", greenSamples.size());
         packet.put("Samples/Purple Count", purpleSamples.size());
+        packet.put("Samples/Background Count", backgroundSamples.size());
         packet.put("Continuous Sampling", continuousSampling);
 
         // Analysis and recommendations
@@ -402,6 +416,59 @@ public class ArtifactColorCalibration extends LinearOpMode {
 
         packet.put("Common/minSaturation", recMinSat);
         packet.put("Common/minValue", recMinVal);
+
+        // --- BACKGROUND detection parameters ---
+        if (!backgroundSamples.isEmpty()) {
+            float bgHueAvg = average(backgroundSamples, s -> s.hue);
+            float bgSatAvg = average(backgroundSamples, s -> s.saturation);
+            float bgValAvg = average(backgroundSamples, s -> s.value);
+
+            telemetry.addLine("→ BACKGROUND detection:");
+            telemetry.addData("  backgroundHue", "%.0f", bgHueAvg);
+            telemetry.addData("  backgroundSaturation", "%.2f", bgSatAvg);
+            telemetry.addData("  backgroundValue", "%.2f", bgValAvg);
+
+            packet.put("BACKGROUND/backgroundHue", bgHueAvg);
+            packet.put("BACKGROUND/backgroundSaturation", bgSatAvg);
+            packet.put("BACKGROUND/backgroundValue", bgValAvg);
+
+            // Recommend maxBackgroundDistance based on how close artifacts are to background
+            if (!greenSamples.isEmpty() || !purpleSamples.isEmpty()) {
+                // Compute minimum distance from any artifact to background
+                double minDistToBackground = Double.MAX_VALUE;
+                for (ColorSample s : greenSamples) {
+                    double dist = computeSampleDistance(s, bgHueAvg, bgSatAvg, bgValAvg);
+                    if (dist < minDistToBackground) minDistToBackground = dist;
+                }
+                for (ColorSample s : purpleSamples) {
+                    double dist = computeSampleDistance(s, bgHueAvg, bgSatAvg, bgValAvg);
+                    if (dist < minDistToBackground) minDistToBackground = dist;
+                }
+
+                // Set threshold to half the minimum distance (safety margin)
+                double recommendedMaxDist = minDistToBackground * 0.5;
+                telemetry.addData("  maxBackgroundDistance", "%.0f", recommendedMaxDist);
+                packet.put("BACKGROUND/maxBackgroundDistance", recommendedMaxDist);
+            }
+        } else {
+            telemetry.addLine("→ BACKGROUND detection:");
+            telemetry.addLine("  (Capture background samples with LB)");
+        }
+    }
+
+    /**
+     * Compute HSV distance for a sample to target values.
+     */
+    private double computeSampleDistance(ColorSample s, float targetHue, float targetSat, float targetVal) {
+        // Hue distance (circular)
+        double hueDiff = Math.abs(s.hue - targetHue);
+        if (hueDiff > 180.0) hueDiff = 360.0 - hueDiff;
+
+        double satDiff = Math.abs(s.saturation - targetSat);
+        double valDiff = Math.abs(s.value - targetVal);
+
+        // Use same weights as DISTANCE_BASED classifier (hue=2.0, sat=0.5, val=0.3)
+        return 2.0 * hueDiff + 0.5 * satDiff * 100.0 + 0.3 * valDiff * 100.0;
     }
 
     /**
