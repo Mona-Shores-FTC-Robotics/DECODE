@@ -174,15 +174,23 @@ public class DriveSubsystem implements Subsystem {
         follower.setStartingPose(seed);
         follower.setPose(seed);
         follower.update();
-        if (teleOpControlEnabled) {
-            follower.startTeleopDrive();
-        } else {
-            follower.breakFollowing();
-        }
+        // Always break following during init to prevent driving before match starts
+        // Call startTeleopDrive() explicitly when ready to enable motors
+        follower.breakFollowing();
         fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
         visionHeadingCalibrated = false;
         poseFusion.reset(seed, System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
+    }
+
+    /**
+     * Starts teleop drive mode, enabling motor control.
+     * Should be called when the match starts (after init phase).
+     */
+    public void startTeleopDrive() {
+        if (teleOpControlEnabled) {
+            follower.startTeleopDrive();
+        }
     }
 
     private double lastPeriodicMs = 0.0;

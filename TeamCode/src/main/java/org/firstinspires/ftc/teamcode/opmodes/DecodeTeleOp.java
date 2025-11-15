@@ -105,6 +105,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
+        // Enable drive motors now that match is starting
+        robot.drive.startTeleopDrive();
+
         robot.launcherCoordinator.unlockIntake();
         robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
         if (allianceSelector != null) {
