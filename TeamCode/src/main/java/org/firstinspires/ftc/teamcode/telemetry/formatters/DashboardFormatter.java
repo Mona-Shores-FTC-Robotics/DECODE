@@ -39,7 +39,7 @@ public class DashboardFormatter {
 
     /**
      * Create PRACTICE level packet - essential metrics for tuning.
-     * Target: 10 Hz / 100ms interval, ~20 fields
+     * Target: 10 Hz / 100ms interval, ~30 fields
      */
     private TelemetryPacket createPracticePacket(RobotTelemetryData data) {
         TelemetryPacket packet = new TelemetryPacket();
@@ -55,6 +55,18 @@ public class DashboardFormatter {
         // Drive essentials
         packet.put("drive/aim_mode", data.drive.aimMode);
         packet.put("drive/mode", data.drive.driveMode);
+
+        // Drive motor powers
+        packet.put("drive/motors/power/lb", data.drive.leftBack.power);
+        packet.put("drive/motors/power/lf", data.drive.leftFront.power);
+        packet.put("drive/motors/power/rb", data.drive.rightBack.power);
+        packet.put("drive/motors/power/rf", data.drive.rightFront.power);
+
+        // Drive motor velocities
+        packet.put("drive/motors/vel_ips/lb", data.drive.leftBack.velocityIps);
+        packet.put("drive/motors/vel_ips/lf", data.drive.leftFront.velocityIps);
+        packet.put("drive/motors/vel_ips/rb", data.drive.rightBack.velocityIps);
+        packet.put("drive/motors/vel_ips/rf", data.drive.rightFront.velocityIps);
 
         // Launcher high-level
         packet.put("launcher/ready", data.launcher.ready);

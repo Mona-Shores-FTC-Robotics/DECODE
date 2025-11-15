@@ -59,12 +59,13 @@ public class PoseTelemetryData {
             this.ftcHeadingRad = Double.NaN;
         }
 
-        // Vision pose (Pedro Pose type from vision subsystem)
-        if (visionPose != null) {
+        // Vision pose (convert from Pedro to FTC coordinates for dashboard)
+        Pose visionFtcPose = PoseTransforms.toFtcPose(visionPose);
+        if (visionFtcPose != null) {
             this.visionPoseValid = true;
-            this.visionPoseXIn = visionPose.getX();      // Pedro Pose uses inches directly
-            this.visionPoseYIn = visionPose.getY();      // Pedro Pose uses inches directly
-            this.visionHeadingRad = visionPose.getHeading();  // Pedro Pose uses radians directly
+            this.visionPoseXIn = visionFtcPose.getX();      // FTC coordinates
+            this.visionPoseYIn = visionFtcPose.getY();      // FTC coordinates
+            this.visionHeadingRad = visionFtcPose.getHeading();  // FTC heading (Pedro + 90°)
         } else {
             this.visionPoseValid = false;
             this.visionPoseXIn = Double.NaN;
