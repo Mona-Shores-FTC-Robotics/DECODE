@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -35,6 +37,7 @@ import java.util.Locale;
 public class ArtifactColorCalibration extends LinearOpMode {
 
     private IntakeSubsystem intake;
+    private FtcDashboard dashboard;
     private LauncherLane selectedLane = LauncherLane.CENTER;
     private final List<ColorSample> greenSamples = new ArrayList<>();
     private final List<ColorSample> purpleSamples = new ArrayList<>();
@@ -76,8 +79,11 @@ public class ArtifactColorCalibration extends LinearOpMode {
         telemetry.addLine("Initializing Artifact Color Calibration...");
         telemetry.update();
 
-        // Initialize intake subsystem (no telemetry service needed for calibration)
-        intake = new IntakeSubsystem(hardwareMap, null);
+        // Initialize FTC Dashboard
+        dashboard = FtcDashboard.getInstance();
+
+        // Initialize intake subsystem
+        intake = new IntakeSubsystem(hardwareMap);
 
         telemetry.addLine("✓ Ready!");
         telemetry.addLine();
@@ -172,11 +178,16 @@ public class ArtifactColorCalibration extends LinearOpMode {
     }
 
     private void displayTelemetry() {
+        // Create FTC Dashboard packet
+        TelemetryPacket packet = new TelemetryPacket();
+
         telemetry.addLine("=== ARTIFACT COLOR CALIBRATION ===");
         telemetry.addLine();
 
         // Current lane info
         telemetry.addData("Selected Lane", "%s (D-pad ↑↓)", selectedLane);
+        packet.put("Selected Lane", selectedLane.toString());
+
         LaneSample current = intake.getLaneSample(selectedLane);
 
         if (current.sensorPresent) {
@@ -187,17 +198,36 @@ public class ArtifactColorCalibration extends LinearOpMode {
             telemetry.addData("HSV", "H:%.0f° S:%.2f V:%.2f",
                 current.hue, current.saturation, current.value);
 
+            // FTC Dashboard - current reading
+            packet.put("Current/Distance (cm)", current.distanceCm);
+            packet.put("Current/Detected Color", current.color.toString());
+            packet.put("Current/Hue", current.hue);
+            packet.put("Current/Saturation", current.saturation);
+            packet.put("Current/Value", current.value);
+
             float total = current.scaledRed + current.scaledGreen + current.scaledBlue;
             if (total > 0.01f) {
-                telemetry.addData("RGB Ratios", "R:%.2f G:%.2f B:%.2f",
-                    current.scaledRed / total,
-                    current.scaledGreen / total,
-                    current.scaledBlue / total);
+                float rRatio = current.scaledRed / total;
+                float gRatio = current.scaledGreen / total;
+                float bRatio = current.scaledBlue / total;
+
+                telemetry.addData("RGB Ratios", "R:%.2f G:%.2f B:%.2f", rRatio, gRatio, bRatio);
+
+                // FTC Dashboard - RGB ratios
+                packet.put("Current/Red Ratio", rRatio);
+                packet.put("Current/Green Ratio", gRatio);
+                packet.put("Current/Blue Ratio", bRatio);
             }
             telemetry.addData("RGB Raw", "R:%d G:%d B:%d",
                 current.scaledRed, current.scaledGreen, current.scaledBlue);
+
+            // FTC Dashboard - raw RGB
+            packet.put("Current/Red Raw", current.scaledRed);
+            packet.put("Current/Green Raw", current.scaledGreen);
+            packet.put("Current/Blue Raw", current.scaledBlue);
         } else {
             telemetry.addData("Sensor", "NOT PRESENT in %s lane", selectedLane);
+            packet.put("Error", "Sensor NOT PRESENT in " + selectedLane + " lane");
         }
 
         // Sample counts
@@ -207,17 +237,21 @@ public class ArtifactColorCalibration extends LinearOpMode {
         telemetry.addData("Continuous Mode", "%s (Press Y)", continuousSampling ? "ON" : "OFF");
         telemetry.addData("Clear All", "Press X");
 
+        packet.put("Samples/Green Count", greenSamples.size());
+        packet.put("Samples/Purple Count", purpleSamples.size());
+        packet.put("Continuous Sampling", continuousSampling);
+
         // Analysis and recommendations
         if (!greenSamples.isEmpty() || !purpleSamples.isEmpty()) {
             telemetry.addLine();
             telemetry.addLine("=== RECOMMENDED THRESHOLDS ===");
 
             if (!greenSamples.isEmpty()) {
-                displayRecommendations("GREEN", greenSamples);
+                displayRecommendations("GREEN", greenSamples, packet);
             }
 
             if (!purpleSamples.isEmpty()) {
-                displayRecommendations("PURPLE", purpleSamples);
+                displayRecommendations("PURPLE", purpleSamples, packet);
             }
 
             // Cross-analysis for separation
@@ -230,24 +264,37 @@ public class ArtifactColorCalibration extends LinearOpMode {
                 float greenGRatioAvg = average(greenSamples, s -> s.greenRatio);
                 float purpleGRatioAvg = average(purpleSamples, s -> s.greenRatio);
 
-                telemetry.addData("Hue Separation", "%.0f°", Math.abs(greenHueAvg - purpleHueAvg));
-                telemetry.addData("Green Ratio Sep", "%.2f", Math.abs(greenGRatioAvg - purpleGRatioAvg));
+                float hueSep = Math.abs(greenHueAvg - purpleHueAvg);
+                float ratioSep = Math.abs(greenGRatioAvg - purpleGRatioAvg);
+
+                telemetry.addData("Hue Separation", "%.0f°", hueSep);
+                telemetry.addData("Green Ratio Sep", "%.2f", ratioSep);
+
+                // FTC Dashboard - separation analysis
+                packet.put("Separation/Hue (degrees)", hueSep);
+                packet.put("Separation/Green Ratio", ratioSep);
 
                 // Confidence assessment
-                if (Math.abs(greenGRatioAvg - purpleGRatioAvg) > 0.2) {
-                    telemetry.addLine("✓ Good separation - RGB ratios reliable");
-                } else if (Math.abs(greenHueAvg - purpleHueAvg) > 60) {
-                    telemetry.addLine("✓ Good separation - HSV hue reliable");
+                String assessment;
+                if (ratioSep > 0.2) {
+                    assessment = "Good separation - RGB ratios reliable";
+                    telemetry.addLine("✓ " + assessment);
+                } else if (hueSep > 60) {
+                    assessment = "Good separation - HSV hue reliable";
+                    telemetry.addLine("✓ " + assessment);
                 } else {
-                    telemetry.addLine("⚠ Poor separation - may need better lighting");
+                    assessment = "Poor separation - may need better lighting";
+                    telemetry.addLine("⚠ " + assessment);
                 }
+                packet.put("Separation/Assessment", assessment);
             }
         }
 
         telemetry.update();
+        dashboard.sendTelemetryPacket(packet);
     }
 
-    private void displayRecommendations(String colorName, List<ColorSample> samples) {
+    private void displayRecommendations(String colorName, List<ColorSample> samples, TelemetryPacket packet) {
         telemetry.addLine(String.format("--- %s (n=%d) ---", colorName, samples.size()));
 
         // HSV stats
@@ -263,6 +310,15 @@ public class ArtifactColorCalibration extends LinearOpMode {
         telemetry.addData("  Saturation", "%.2f - %.2f (avg: %.2f)", satMin, 1.0f, satAvg);
         telemetry.addData("  Value", "%.2f min (avg: %.2f)", valMin, valAvg);
 
+        // FTC Dashboard - HSV stats
+        packet.put(colorName + "/Hue Min", hueMin);
+        packet.put(colorName + "/Hue Avg", hueAvg);
+        packet.put(colorName + "/Hue Max", hueMax);
+        packet.put(colorName + "/Saturation Min", satMin);
+        packet.put(colorName + "/Saturation Avg", satAvg);
+        packet.put(colorName + "/Value Min", valMin);
+        packet.put(colorName + "/Value Avg", valAvg);
+
         // RGB ratio stats
         float rRatioAvg = average(samples, s -> s.redRatio);
         float gRatioAvg = average(samples, s -> s.greenRatio);
@@ -273,30 +329,65 @@ public class ArtifactColorCalibration extends LinearOpMode {
         telemetry.addData("  RGB Ratios", "R:%.2f G:%.2f B:%.2f", rRatioAvg, gRatioAvg, bRatioAvg);
         telemetry.addData("  Green Ratio", "%.2f - %.2f", gRatioMin, gRatioMax);
 
+        // FTC Dashboard - RGB ratio stats
+        packet.put(colorName + "/Red Ratio Avg", rRatioAvg);
+        packet.put(colorName + "/Green Ratio Avg", gRatioAvg);
+        packet.put(colorName + "/Green Ratio Min", gRatioMin);
+        packet.put(colorName + "/Green Ratio Max", gRatioMax);
+        packet.put(colorName + "/Blue Ratio Avg", bRatioAvg);
+
         // Distance stats
         double distAvg = average(samples, s -> (float) s.distanceCm);
         double distMax = max(samples, s -> (float) s.distanceCm);
         telemetry.addData("  Distance", "%.1f cm avg (max: %.1f cm)", distAvg, distMax);
 
+        packet.put(colorName + "/Distance Avg (cm)", distAvg);
+        packet.put(colorName + "/Distance Max (cm)", distMax);
+
         // Specific recommendations
         if (colorName.equals("GREEN")) {
             float hueMargin = 10.0f;
-            telemetry.addData("  → greenHueMin", "%.0f", Math.max(0, hueMin - hueMargin));
-            telemetry.addData("  → greenHueMax", "%.0f", Math.min(180, hueMax + hueMargin));
-            telemetry.addData("  → greenRatioMin", "%.2f", gRatioMin - 0.05f);
+            float recHueMin = (float) Math.max(0, hueMin - hueMargin);
+            float recHueMax = (float) Math.min(180, hueMax + hueMargin);
+            float recGRatioMin = gRatioMin - 0.05f;
+
+            telemetry.addData("  → greenHueMin", "%.0f", recHueMin);
+            telemetry.addData("  → greenHueMax", "%.0f", recHueMax);
+            telemetry.addData("  → greenRatioMin", "%.2f", recGRatioMin);
+
+            packet.put("Recommended/greenHueMin", recHueMin);
+            packet.put("Recommended/greenHueMax", recHueMax);
+            packet.put("Recommended/greenRatioMin", recGRatioMin);
         } else {
             float hueMargin = 15.0f;
             // Handle purple wrap-around (purple is typically 270-330 or 0-30)
             if (hueAvg > 180) {
-                telemetry.addData("  → purpleHueMin", "%.0f", Math.max(0, hueMin - hueMargin));
-                telemetry.addData("  → purpleHueMax", "%.0f", Math.min(360, hueMax + hueMargin));
+                float recPurpleHueMin = (float) Math.max(0, hueMin - hueMargin);
+                float recPurpleHueMax = (float) Math.min(360, hueMax + hueMargin);
+
+                telemetry.addData("  → purpleHueMin", "%.0f", recPurpleHueMin);
+                telemetry.addData("  → purpleHueMax", "%.0f", recPurpleHueMax);
+
+                packet.put("Recommended/purpleHueMin", recPurpleHueMin);
+                packet.put("Recommended/purpleHueMax", recPurpleHueMax);
             } else {
-                telemetry.addData("  → purpleHueWrapMax", "%.0f", Math.min(60, hueMax + hueMargin));
+                float recPurpleWrapMax = (float) Math.min(60, hueMax + hueMargin);
+                telemetry.addData("  → purpleHueWrapMax", "%.0f", recPurpleWrapMax);
+                packet.put("Recommended/purpleHueWrapMax", recPurpleWrapMax);
             }
-            telemetry.addData("  → purpleGreenMax", "%.2f", gRatioMax + 0.05f);
+            float recPurpleGMax = gRatioMax + 0.05f;
+            telemetry.addData("  → purpleGreenMax", "%.2f", recPurpleGMax);
+            packet.put("Recommended/purpleGreenMax", recPurpleGMax);
         }
-        telemetry.addData("  → minValue", "%.2f", Math.max(0.01f, valMin - 0.02f));
-        telemetry.addData("  → minSaturation", "%.2f", Math.max(0.05f, satMin - 0.05f));
+
+        float recMinValue = (float) Math.max(0.01f, valMin - 0.02f);
+        float recMinSat = (float) Math.max(0.05f, satMin - 0.05f);
+
+        telemetry.addData("  → minValue", "%.2f", recMinValue);
+        telemetry.addData("  → minSaturation", "%.2f", recMinSat);
+
+        packet.put("Recommended/minValue", recMinValue);
+        packet.put("Recommended/minSaturation", recMinSat);
     }
 
     private float average(List<ColorSample> samples, SampleExtractor extractor) {
