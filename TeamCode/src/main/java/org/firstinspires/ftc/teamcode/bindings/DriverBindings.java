@@ -32,8 +32,10 @@ public class DriverBindings {
     private final Button rampHold;
     private final Button aimHold;
     private final Button relocalizeRequest;
+    private final Robot robot;
 
     public DriverBindings(GamepadEx driver, Robot robot) {
+        this.robot = robot;
 
         // Finalized Driver Buttons
         fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND).negate();
@@ -46,7 +48,24 @@ public class DriverBindings {
         rampHold = driver.leftBumper();
         relocalizeRequest = driver.a();
 
-        // Set up default drive command - runs when no other command uses drive subsystem
+        // B button (hold): Continuous aim-and-drive
+        // Tracks target continuously, allows driver translation
+        // Set up immediately so button binding is ready (command won't run until default is set)
+        Command aimAndDrive = new AimAndDriveCommand(
+                fieldX::get,
+                fieldY::get,
+                slowHold::get,
+                robot.drive
+        );
+        aimHold.whenBecomesTrue(aimAndDrive)
+                .whenBecomesFalse(aimAndDrive::cancel);
+    }
+
+    /**
+     * Enables drive control by setting up the default drive command.
+     * Should be called when the match starts (after init) to prevent driving during init.
+     */
+    public void enableDriveControl() {
         Command defaultDrive = new DefaultDriveCommand(
                 fieldX::get,
                 fieldY::get,
@@ -56,17 +75,6 @@ public class DriverBindings {
                 robot.drive
         );
         robot.drive.setDefaultCommand(defaultDrive);
-
-        // B button (hold): Continuous aim-and-drive
-        // Tracks target continuously, allows driver translation
-        Command aimAndDrive = new AimAndDriveCommand(
-                fieldX::get,
-                fieldY::get,
-                slowHold::get,
-                robot.drive
-        );
-        aimHold.whenBecomesTrue(aimAndDrive)
-                .whenBecomesFalse(aimAndDrive::cancel);
     }
 
     /**

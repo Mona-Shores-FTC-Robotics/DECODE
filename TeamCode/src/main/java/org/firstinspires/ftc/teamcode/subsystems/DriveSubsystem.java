@@ -25,6 +25,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
+import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFusion;
 import org.firstinspires.ftc.teamcode.util.PoseTransforms;
@@ -174,15 +175,23 @@ public class DriveSubsystem implements Subsystem {
         follower.setStartingPose(seed);
         follower.setPose(seed);
         follower.update();
-        if (teleOpControlEnabled) {
-            follower.startTeleopDrive();
-        } else {
-            follower.breakFollowing();
-        }
+        // Always break following during init to prevent driving before match starts
+        // Call startTeleopDrive() explicitly when ready to enable motors
+        follower.breakFollowing();
         fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
         visionHeadingCalibrated = false;
         poseFusion.reset(seed, System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
+    }
+
+    /**
+     * Starts teleop drive mode, enabling motor control.
+     * Should be called when the match starts (after init phase).
+     */
+    public void startTeleopDrive() {
+        if (teleOpControlEnabled) {
+            follower.startTeleopDrive();
+        }
     }
 
     private double lastPeriodicMs = 0.0;
@@ -362,7 +371,11 @@ public class DriveSubsystem implements Subsystem {
             targetHeading = lastGoodVisionAngle;
         } else {
             Pose pose = follower.getPose();
-            Pose targetPose = vision.getTargetGoalPose().orElse(FieldConstants.BLUE_GOAL_TAG);
+            Pose targetPose = vision.getTargetGoalPose().orElseGet(() -> {
+                // Alliance-aware fallback - don't hardcode blue goal
+                Alliance alliance = vision.getAlliance();
+                return alliance == Alliance.RED ? FieldConstants.RED_GOAL_TAG : FieldConstants.BLUE_GOAL_TAG;
+            });
             targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
         }
 

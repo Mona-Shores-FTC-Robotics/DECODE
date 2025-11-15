@@ -59,6 +59,14 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
         robot.attachPedroFollower();
 
+        // Apply alliance from previous OpMode (auto) before initializing
+        // so lighting subsystem shows correct color from the start
+        Alliance persistedAlliance = RobotState.getAlliance();
+        if (persistedAlliance != null && persistedAlliance != Alliance.UNKNOWN) {
+            robot.setAlliance(persistedAlliance);
+            selectedAlliance = persistedAlliance;
+        }
+
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.launcherCoordinator.lockIntake();
 
@@ -96,6 +104,10 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
+        // Enable drive motors and command control now that match is starting
+        robot.drive.startTeleopDrive();
+        driverBindings.enableDriveControl();
+
         robot.launcherCoordinator.unlockIntake();
         robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
         if (allianceSelector != null) {
