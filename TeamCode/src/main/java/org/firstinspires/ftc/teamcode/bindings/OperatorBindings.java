@@ -61,13 +61,19 @@ public class OperatorBindings {
         this.launcherCoordinator = robot.launcherCoordinator;
         this.launcherCommands = robot.launcherCommands;
 
-        // Button assignments
+        // Planned Final Button Assignments
         intakeForwardHold = operator.rightBumper();
-        manualSpinButton = operator.a();
-        kickAll = operator.x();
 //        fireShortButton = operator.x();
 //        fireMidButton = operator.y();
 //        fireLongButton = operator.b();
+
+
+        //Temp buttons for testing
+        manualSpinButton = operator.a();
+        kickAll = operator.x();
+        flywheelHumanLoadingButton = operator.y();
+
+
 
 
         // Range-based shooting commands
@@ -89,9 +95,6 @@ public class OperatorBindings {
         // Intake control commands
         intakeForwardCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         intakeReverseCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
-
-        flywheelHumanLoadingButton = operator.y();
-
 
         configureMatchBindings();
     }
