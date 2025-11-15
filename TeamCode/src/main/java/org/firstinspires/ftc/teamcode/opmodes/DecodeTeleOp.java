@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import static org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger.logStatus;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.WebHandlerManager;
@@ -43,6 +45,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
     private OperatorBindings operatorBindings;
     private AllianceSelector allianceSelector;
     private Alliance selectedAlliance = Alliance.UNKNOWN;
+    private FtcDashboard dashboard;
 
     private long lastTelemetryNs = 0L;
     private long lastAutoLogTimeMs = 0L;
@@ -60,6 +63,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        dashboard = FtcDashboard.getInstance();
         robot = new Robot(hardwareMap);
 
         robot.attachPedroFollower();
@@ -145,6 +149,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
         TelemetryTiming telemetryTiming = publishTelemetryIfNeeded(request);
 
+        // Publish sensor diagnostics to FTC Dashboard
+        publishSensorDiagnosticsToDashboard();
 
         long autoLogStart = System.nanoTime();
 
@@ -247,6 +253,85 @@ public class DecodeTeleOp extends NextFTCOpMode {
                             ? String.format(Locale.US, "override -> %s", coordinator.getRequestedIntakeMode())
                             : "automation");
         }
+
+        // Add lane sensor diagnostics
+        telemetry.addLine("--- LANE SENSORS ---");
+        addLaneSensorDiagnostics();
+    }
+
+    private void addLaneSensorDiagnostics() {
+        for (org.firstinspires.ftc.teamcode.subsystems.LauncherLane lane : org.firstinspires.ftc.teamcode.subsystems.LauncherLane.values()) {
+            IntakeSubsystem.LaneSample sample = robot.intake.getLaneSample(lane);
+
+            if (!sample.sensorPresent) {
+                telemetry.addData(lane.toString(), "SENSOR NOT PRESENT");
+                continue;
+            }
+
+            // Show color detection and key metrics
+            String status = String.format(Locale.US, "%s | H:%.0f° S:%.2f V:%.2f",
+                sample.color,
+                sample.hue,
+                sample.saturation,
+                sample.value);
+
+            if (sample.distanceAvailable) {
+                status += String.format(Locale.US, " | D:%.1fcm", sample.distanceCm);
+            }
+
+            // Add RGB ratios
+            float total = sample.scaledRed + sample.scaledGreen + sample.scaledBlue;
+            if (total > 0.01f) {
+                status += String.format(Locale.US, " | RGB:%.2f/%.2f/%.2f",
+                    sample.scaledRed / total,
+                    sample.scaledGreen / total,
+                    sample.scaledBlue / total);
+            }
+
+            telemetry.addData(lane.toString(), status);
+        }
+    }
+
+    private void publishSensorDiagnosticsToDashboard() {
+        if (dashboard == null) {
+            return;
+        }
+
+        TelemetryPacket packet = new TelemetryPacket();
+
+        for (org.firstinspires.ftc.teamcode.subsystems.LauncherLane lane : org.firstinspires.ftc.teamcode.subsystems.LauncherLane.values()) {
+            IntakeSubsystem.LaneSample sample = robot.intake.getLaneSample(lane);
+            String lanePrefix = "Sensors/" + lane.toString();
+
+            packet.put(lanePrefix + "/Present", sample.sensorPresent);
+
+            if (sample.sensorPresent) {
+                packet.put(lanePrefix + "/Color", sample.color.toString());
+                packet.put(lanePrefix + "/Hue", sample.hue);
+                packet.put(lanePrefix + "/Saturation", sample.saturation);
+                packet.put(lanePrefix + "/Value", sample.value);
+
+                if (sample.distanceAvailable) {
+                    packet.put(lanePrefix + "/Distance (cm)", sample.distanceCm);
+                    packet.put(lanePrefix + "/Within Distance", sample.withinDistance);
+                }
+
+                // RGB values
+                packet.put(lanePrefix + "/Red Raw", sample.scaledRed);
+                packet.put(lanePrefix + "/Green Raw", sample.scaledGreen);
+                packet.put(lanePrefix + "/Blue Raw", sample.scaledBlue);
+
+                // RGB ratios
+                float total = sample.scaledRed + sample.scaledGreen + sample.scaledBlue;
+                if (total > 0.01f) {
+                    packet.put(lanePrefix + "/Red Ratio", sample.scaledRed / total);
+                    packet.put(lanePrefix + "/Green Ratio", sample.scaledGreen / total);
+                    packet.put(lanePrefix + "/Blue Ratio", sample.scaledBlue / total);
+                }
+            }
+        }
+
+        dashboard.sendTelemetryPacket(packet);
     }
 
     private void addHeadingDiagnostics() {

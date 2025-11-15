@@ -85,10 +85,58 @@ public class ArtifactColorCalibration extends LinearOpMode {
         // Initialize intake subsystem
         intake = new IntakeSubsystem(hardwareMap);
 
-        telemetry.addLine("✓ Ready!");
+        // Check sensor presence and report
+        telemetry.clear();
+        telemetry.addLine("=== SENSOR INITIALIZATION ===");
         telemetry.addLine();
-        telemetry.addLine("Place GREEN artifact in lane, then press A");
-        telemetry.addLine("Place PURPLE artifact in lane, then press B");
+
+        TelemetryPacket initPacket = new TelemetryPacket();
+        initPacket.put("Initialization", "Checking Sensors");
+
+        boolean anySensorPresent = false;
+        for (LauncherLane lane : LauncherLane.values()) {
+            LaneSample sample = intake.getLaneSample(lane);
+            String status = sample.sensorPresent ? "✓ PRESENT" : "✗ NOT FOUND";
+            telemetry.addData(lane.toString(), status);
+
+            // Send to FTC Dashboard
+            initPacket.put("Init/" + lane + "/Present", sample.sensorPresent);
+
+            if (sample.sensorPresent) {
+                anySensorPresent = true;
+                telemetry.addData("  " + lane + " Initial",
+                    String.format("H:%.0f° S:%.2f V:%.2f D:%.1fcm",
+                        sample.hue, sample.saturation, sample.value, sample.distanceCm));
+
+                // Send initial readings to FTC Dashboard
+                initPacket.put("Init/" + lane + "/Hue", sample.hue);
+                initPacket.put("Init/" + lane + "/Saturation", sample.saturation);
+                initPacket.put("Init/" + lane + "/Value", sample.value);
+                initPacket.put("Init/" + lane + "/Distance", sample.distanceCm);
+            }
+        }
+
+        dashboard.sendTelemetryPacket(initPacket);
+
+        telemetry.addLine();
+        if (!anySensorPresent) {
+            telemetry.addLine("⚠ WARNING: NO SENSORS DETECTED!");
+            telemetry.addLine();
+            telemetry.addLine("Expected sensor names:");
+            telemetry.addData("  LEFT", IntakeSubsystem.laneSensorConfig.leftSensor);
+            telemetry.addData("  CENTER", IntakeSubsystem.laneSensorConfig.centerSensor);
+            telemetry.addData("  RIGHT", IntakeSubsystem.laneSensorConfig.rightSensor);
+            telemetry.addLine();
+            telemetry.addLine("Check:");
+            telemetry.addLine("1. Sensors are plugged into Expansion Hub I2C ports");
+            telemetry.addLine("2. Sensor names match robot configuration XML");
+            telemetry.addLine("3. Expansion Hub is connected and powered");
+        } else {
+            telemetry.addLine("✓ Ready!");
+            telemetry.addLine();
+            telemetry.addLine("Place GREEN artifact in lane, then press A");
+            telemetry.addLine("Place PURPLE artifact in lane, then press B");
+        }
         telemetry.addLine();
         telemetry.addLine("Press START to begin");
         telemetry.update();
