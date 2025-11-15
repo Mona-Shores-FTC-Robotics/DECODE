@@ -120,6 +120,8 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
                 new SubsystemComponent(robot.vision),
                 new SubsystemComponent(robot.launcherCoordinator)
         );
+
+
     }
 
     @Override
@@ -146,8 +148,11 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             applyAlliance(activeAlliance, null);
         }
 
-        robot.telemetry.updateDriverStation(telemetry);
-    }
+        telemetry.clear();
+        telemetry.addData("Alliance", activeAlliance.displayName());
+        telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
+        telemetry.addLine("Press START when ready");
+        telemetry.update();    }
 
     @Override
     public void onStartButtonPressed() {

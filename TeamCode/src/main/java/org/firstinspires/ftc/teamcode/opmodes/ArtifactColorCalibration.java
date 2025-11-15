@@ -104,6 +104,7 @@ public class ArtifactColorCalibration extends LinearOpMode {
         boolean lastY = false;
 
         while (opModeIsActive()) {
+
             // Lane selection (D-pad)
             if (gamepad1.dpad_up && !lastDpadUp) {
                 selectedLane = nextLane(selectedLane, 1);
