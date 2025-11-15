@@ -62,7 +62,7 @@ public class LauncherSubsystem implements Subsystem {
         /** Output wheel revolutions per motor revolution. */
         public double gearRatio = 1.0;
         /** Acceptable RPM error when considering a lane ready to fire. */
-        public double rpmTolerance = 60.0;
+        public double rpmTolerance = 200.0;
     }
 
     @Configurable
@@ -80,10 +80,10 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class BangBangConfig {
         public double highPower = 1.0;
-        public double lowPower = 0.6;
-        public double enterBangThresholdRpm = 1200;
-        public double exitBangThresholdRpm = 800;
-        public double bangDeadbandRpm = 400;
+        public double lowPower = 0.3;
+        public double enterBangThresholdRpm = 200;
+        public double exitBangThresholdRpm = 500;
+        public double bangDeadbandRpm = 20;
     }
 
     @Configurable
@@ -119,9 +119,9 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class PhaseSwitchConfig {
         public int bangToHybridConfirmCycles = 3;
-        public int bangToHoldConfirmCycles = 5;
+        public int bangToHoldConfirmCycles = 3;
         public int hybridToBangConfirmCycles = 2;
-        public int holdToBangConfirmCycles = 5;
+        public int holdToBangConfirmCycles = 3;
     }
 
     public static FlywheelParameters flywheelParameters = new FlywheelParameters();
@@ -138,7 +138,7 @@ public class LauncherSubsystem implements Subsystem {
         public String motorName = "launcher_left";
         public boolean reversed = true;
         public double launchRpm = 0;
-        public double idleRpm = 500;
+        public double idleRpm = 0;
     }
 
     @Configurable
@@ -146,7 +146,7 @@ public class LauncherSubsystem implements Subsystem {
         public String motorName = "launcher_center";
         public boolean reversed = false;
         public double launchRpm = 0;
-        public double idleRpm = 500;
+        public double idleRpm = 0;
     }
 
     @Configurable
@@ -154,7 +154,7 @@ public class LauncherSubsystem implements Subsystem {
         public String motorName = "launcher_right";
         public boolean reversed = true;
         public double launchRpm = 0;
-        public double idleRpm = 500;
+        public double idleRpm = 0;
     }
 
     @Configurable

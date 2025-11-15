@@ -108,10 +108,10 @@ public class AprilTagPatternRecognition extends LinearOpMode {
      * Initializes drive motors from hardware map
      */
     private void initializeDriveMotors() {
-        motorLf = hardwareMap.get(DcMotorEx.class, Constants.HardwareNames.lf);
-        motorRf = hardwareMap.get(DcMotorEx.class, Constants.HardwareNames.rf);
-        motorLb = hardwareMap.get(DcMotorEx.class, Constants.HardwareNames.lb);
-        motorRb = hardwareMap.get(DcMotorEx.class, Constants.HardwareNames.rb);
+        motorLf = hardwareMap.get(DcMotorEx.class, Constants.HardwareNames.LF);
+        motorRf = hardwareMap.get(DcMotorEx.class, Constants.HardwareNames.RF);
+        motorLb = hardwareMap.get(DcMotorEx.class, Constants.HardwareNames.LB);
+        motorRb = hardwareMap.get(DcMotorEx.class, Constants.HardwareNames.RB);
 
         // Set motor directions (left side reversed for mecanum)
         motorLf.setDirection(DcMotor.Direction.REVERSE);

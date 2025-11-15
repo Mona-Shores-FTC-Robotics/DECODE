@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.telemetry.formatters;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 
 import java.util.Locale;
@@ -33,9 +34,8 @@ public class DriverStationFormatter {
         LAUNCHER(3, "Launcher"),
         VISION_INTAKE(4, "Vision/Intake"),
         CONTROLS(5, "Controls"),
-        TIMING(6, "Timing");
-        TIMING(5, "Timing"),
-        COLOR_SENSORS(6, "Color Sensors"); // Why was 6 afraid of 7? Because 7 ate 9!
+        TIMING(6, "Timing"),
+        COLOR_SENSORS(7, "Color Sensors"); // Why was 6 afraid of 7? Because 7 ate 9!
 
         public final int number;
         public final String name;
@@ -419,7 +419,7 @@ public class DriverStationFormatter {
         telemetry.addData("Classifier", classifierMode);
 
         // Left lane
-        var leftSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.LEFT);
+        IntakeSubsystem.LaneSample leftSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.LEFT);
         telemetry.addData("LEFT", "%s | conf=%.2f",
                 data.intake.laneLeftSummary.color,
                 leftSample != null ? leftSample.confidence : 0.0);
@@ -436,7 +436,7 @@ public class DriverStationFormatter {
         }
 
         // Center lane
-        var centerSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.CENTER);
+        IntakeSubsystem.LaneSample centerSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.CENTER);
         telemetry.addData("CENTER", "%s | conf=%.2f",
                 data.intake.laneCenterSummary.color,
                 centerSample != null ? centerSample.confidence : 0.0);
@@ -453,7 +453,7 @@ public class DriverStationFormatter {
         }
 
         // Right lane
-        var rightSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.RIGHT);
+        IntakeSubsystem.LaneSample rightSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.RIGHT);
         telemetry.addData("RIGHT", "%s | conf=%.2f",
                 data.intake.laneRightSummary.color,
                 rightSample != null ? rightSample.confidence : 0.0);
