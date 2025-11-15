@@ -30,6 +30,8 @@ public class OperatorBindings {
 
     private final Robot robot;
     private final LauncherCoordinator launcherCoordinator;
+
+//
 //    private final FireAllAtRangeCommand fireShortRange;
 //    private final FireAllAtRangeCommand fireMidRange;
 //    private final FireAllAtRangeCommand fireLongRange;
@@ -42,11 +44,8 @@ public class OperatorBindings {
     private final Button manualSpinButton;
     private final Button intakeForwardHold;
 
-
     private final Button kickAll;
-
     private boolean manualIntakeActive = false;
-
     private final LauncherCommands launcherCommands;
 
 
@@ -59,12 +58,11 @@ public class OperatorBindings {
 
         // Button assignments
         intakeForwardHold = operator.rightBumper();
+        manualSpinButton = operator.a();
+        kickAll = operator.x();
 //        fireShortButton = operator.x();
 //        fireMidButton = operator.y();
 //        fireLongButton = operator.b();
-        manualSpinButton = operator.a();
-
-        kickAll = operator.x();
 
         // Range-based shooting commands
 //        fireShortRange = launcherCommands.fireAllShortRange();
