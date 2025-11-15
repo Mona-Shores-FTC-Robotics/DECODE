@@ -283,7 +283,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 150.0,  // Full TeleOp duration (match hasn't started yet)
                 telemetry,
                 "TeleOpInit",
-                true,
+                false,
                 null,
                 0,      // prevMainLoopMs (no previous loop in init)
                 0      // prevTelemetryMs (no previous loop in init)
