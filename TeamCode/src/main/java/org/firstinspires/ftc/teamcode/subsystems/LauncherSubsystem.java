@@ -210,7 +210,7 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     @Configurable
-    public static class ReverseIntakeConfig {
+    public static class ReverseFlywheelForHumanLoadingConfig {
         /** Power level for reverse intake (negative runs motors backward) */
         public double reversePower = -0.25;
     }
@@ -224,7 +224,7 @@ public class LauncherSubsystem implements Subsystem {
     public static LeftHoodConfig leftHoodConfig = new LeftHoodConfig();
     public static CenterHoodConfig centerHoodConfig = new CenterHoodConfig();
     public static RightHoodConfig rightHoodConfig = new RightHoodConfig();
-    public static ReverseIntakeConfig reverseIntakeConfig = new ReverseIntakeConfig();
+    public static ReverseFlywheelForHumanLoadingConfig reverseFlywheelForHumanLoadingConfig = new ReverseFlywheelForHumanLoadingConfig();
 
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);
@@ -239,7 +239,7 @@ public class LauncherSubsystem implements Subsystem {
     private SpinMode requestedSpinMode = SpinMode.OFF;
     private LauncherState state = LauncherState.DISABLED;
     private double lastPeriodicMs = 0.0;
-    private boolean reverseIntakeActive = false;
+    private boolean reverseFlywheelActive = false;
 
     /**
      * Safely retrieves a motor from the hardware map. Returns null if the motor
@@ -299,7 +299,7 @@ public class LauncherSubsystem implements Subsystem {
         stateTimer.reset();
         shotQueue.clear();
         requestedSpinMode = SpinMode.OFF;
-        reverseIntakeActive = false;
+        reverseFlywheelActive = false;
 
         for (Map.Entry<LauncherLane, Flywheel> entry : flywheels.entrySet()) {
             entry.getValue().initialize();
@@ -416,7 +416,7 @@ public class LauncherSubsystem implements Subsystem {
 
     public void abort() {
         clearQueue();
-        reverseIntakeActive = false;
+        reverseFlywheelActive = false;
         double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
             laneRecoveryDeadlineMs.put(lane, now + timing.recoveryMs);
@@ -621,8 +621,8 @@ public class LauncherSubsystem implements Subsystem {
      * Runs all launcher motors in reverse at low speed for human player intake.
      * This allows game pieces to be fed into the launcher from above.
      */
-    public void runReverseIntake() {
-        reverseIntakeActive = true;
+    public void runReverseFlywheelForHumanLoading() {
+        reverseFlywheelActive = true;
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel != null) {
@@ -634,8 +634,8 @@ public class LauncherSubsystem implements Subsystem {
     /**
      * Stops the reverse intake mode and returns motors to normal control.
      */
-    public void stopReverseIntake() {
-        reverseIntakeActive = false;
+    public void stopReverseFlywheelForHumanLoading() {
+        reverseFlywheelActive = false;
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel != null) {
@@ -647,8 +647,8 @@ public class LauncherSubsystem implements Subsystem {
     /**
      * Returns true if reverse intake mode is currently active.
      */
-    public boolean isReverseIntakeActive() {
-        return reverseIntakeActive;
+    public boolean isReverseFlywheelForHumanLoadingActive() {
+        return reverseFlywheelActive;
     }
 
     private void scheduleShot(LauncherLane lane, double delayMs) {
@@ -725,7 +725,7 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     private void applySpinMode(SpinMode mode) {
-        if (debugOverrideEnabled || reverseIntakeActive) {
+        if (debugOverrideEnabled || reverseFlywheelActive) {
             return;
         }
 
@@ -1156,7 +1156,7 @@ public class LauncherSubsystem implements Subsystem {
             commandedRpm = 0.0;
             launchCommandActive = false;
             if (motor != null) {
-                motor.setPower(reverseIntakeConfig.reversePower);
+                motor.setPower(reverseFlywheelForHumanLoadingConfig.reversePower);
             }
         }
 
@@ -1205,7 +1205,7 @@ public class LauncherSubsystem implements Subsystem {
             }
 
             // Skip normal control if reverse intake is active
-            if (reverseIntakeActive) {
+            if (reverseFlywheelActive) {
                 return;
             }
 
