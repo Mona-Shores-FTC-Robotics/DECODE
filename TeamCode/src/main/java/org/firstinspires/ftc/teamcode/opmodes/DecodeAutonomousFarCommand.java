@@ -101,8 +101,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         launcherCommands = new LauncherCommands(robot.launcher, robot.launcherCoordinator, robot.manualSpinController);
 
         // Register init-phase controls
+        // Use Alliance.UNKNOWN as default to enable automatic vision detection
+        // Manual overrides (D-pad left/right) still work as expected
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
-        allianceSelector = new AllianceSelector(driverPad, DEFAULT_ALLIANCE);
+        allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
         driverPad.y().whenBecomesTrue(() -> applyAlliance(allianceSelector.getSelectedAlliance(), lastAppliedStartPosePedro));
         driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
         driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
