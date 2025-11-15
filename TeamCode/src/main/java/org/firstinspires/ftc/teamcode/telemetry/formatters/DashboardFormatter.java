@@ -3,10 +3,14 @@ package org.firstinspires.ftc.teamcode.telemetry.formatters;
 import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
+import org.firstinspires.ftc.teamcode.telemetry.data.IntakeTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.data.LauncherTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -69,6 +73,7 @@ public class DashboardFormatter {
         // Intake
         packet.put("intake/artifact_count", data.intake.artifactCount);
         packet.put("intake/mode", data.intake.mode);
+        addPracticeLaneSummaries(packet, data.intake);
 
         // Field overlay
         addFieldOverlay(packet, data, false);
@@ -118,6 +123,7 @@ public class DashboardFormatter {
         packet.put("intake/motor/power", data.intake.power);
         packet.put("intake/roller_active", data.intake.rollerActive);
         packet.put("intake/prefeed_active", data.intake.prefeedActive);
+        addDebugLaneSamples(packet, data.intake);
 
 
         // Launcher high-level
@@ -157,6 +163,62 @@ public class DashboardFormatter {
         addFieldOverlay(packet, data, true);
 
         return packet;
+    }
+
+    private void addPracticeLaneSummaries(TelemetryPacket packet, IntakeTelemetryData intake) {
+        if (intake == null) {
+            return;
+        }
+
+        addLaneSummary(packet, "intake/lane_left", intake.laneLeftSummary);
+        addLaneSummary(packet, "intake/lane_center", intake.laneCenterSummary);
+        addLaneSummary(packet, "intake/lane_right", intake.laneRightSummary);
+    }
+
+    private void addLaneSummary(TelemetryPacket packet, String prefix, IntakeTelemetryData.LaneTelemetrySummary summary) {
+        if (summary == null) {
+            return;
+        }
+
+        packet.put(prefix + "/present", summary.detected);
+        packet.put(prefix + "/distance_cm", summary.distanceCm);
+        packet.put(prefix + "/color", summary.color);
+    }
+
+    private void addDebugLaneSamples(TelemetryPacket packet, IntakeTelemetryData intake) {
+        if (intake == null || intake.laneSamples == null || intake.laneSamples.isEmpty()) {
+            return;
+        }
+
+        for (LauncherLane lane : LauncherLane.values()) {
+            IntakeSubsystem.LaneSample sample = intake.laneSamples.get(lane);
+            if (sample == null) {
+                continue;
+            }
+
+            String prefix = lanePrefix(lane);
+            packet.put(prefix + "/sensor_present", sample.sensorPresent);
+            packet.put(prefix + "/distance_available", sample.distanceAvailable);
+            packet.put(prefix + "/within_distance", sample.withinDistance);
+            packet.put(prefix + "/distance_cm", sample.distanceCm);
+            packet.put(prefix + "/color", sample.color.name());
+            packet.put(prefix + "/color_hsv", sample.hsvColor.name());
+            packet.put(prefix + "/raw_rgb", formatRgb(sample.rawRed, sample.rawGreen, sample.rawBlue));
+            packet.put(prefix + "/scaled_rgb", formatRgb(sample.scaledRed, sample.scaledGreen, sample.scaledBlue));
+            packet.put(prefix + "/hsv", formatHsv(sample.hue, sample.saturation, sample.value));
+        }
+    }
+
+    private static String lanePrefix(LauncherLane lane) {
+        return "intake/lane_" + lane.name().toLowerCase();
+    }
+
+    private static String formatRgb(int red, int green, int blue) {
+        return red + "," + green + "," + blue;
+    }
+
+    private static String formatHsv(float hue, float saturation, float value) {
+        return String.format(Locale.US, "%.1f,%.3f,%.3f", hue, saturation, value);
     }
 
     /**
