@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit;
  * - Page 2: Drive (modes, motor powers/velocities)
  * - Page 3: Launcher (per-lane detailed info)
  * - Page 4: Vision & Intake (tag detection, intake state)
+ * - Page 5: Controls (driver and operator bindings)
+ * - Page 6: Timing (loop performance metrics)
  * </p>
  */
 public class DriverStationFormatter {
@@ -28,7 +30,8 @@ public class DriverStationFormatter {
         DRIVE(2, "Drive"),
         LAUNCHER(3, "Launcher"),
         VISION_INTAKE(4, "Vision/Intake"),
-        TIMING(5, "Timing");
+        CONTROLS(5, "Controls"),
+        TIMING(6, "Timing");
 
         public final int number;
         public final String name;
@@ -206,6 +209,9 @@ public class DriverStationFormatter {
             case VISION_INTAKE:
                 publishDebugVisionIntake(telemetry, data);
                 break;
+            case CONTROLS:
+                publishDebugControls(telemetry, data);
+                break;
             case TIMING:
                 publishDebugTiming(telemetry, data);
                 break;
@@ -215,7 +221,31 @@ public class DriverStationFormatter {
     }
 
     /**
-     * Page 5: Timing - complete loop performance metrics.
+     * Page 5: Controls - driver and operator bindings reference.
+     * Shows gamepad button/stick mappings for quick reference during tuning.
+     */
+    private void publishDebugControls(Telemetry telemetry, RobotTelemetryData data) {
+        // Driver controls (Gamepad 1)
+        telemetry.addLine("=== DRIVER (GP1) ===");
+        telemetry.addData("L-Stick", "Field-centric drive");
+        telemetry.addData("R-Stick X", "Rotation");
+        telemetry.addData("L-Bumper", "Ramp mode (hold)");
+        telemetry.addData("R-Bumper", "Slow mode (hold)");
+        telemetry.addData("A", "Vision relocalize");
+        telemetry.addData("B", "Aim at target (hold)");
+
+        // Operator controls (Gamepad 2)
+        telemetry.addLine();
+        telemetry.addLine("=== OPERATOR (GP2) ===");
+        telemetry.addData("X", "Fire SHORT (~2700 RPM)");
+        telemetry.addData("Y", "Fire MID (~3600 RPM)");
+        telemetry.addData("B", "Fire LONG (~4200 RPM)");
+        telemetry.addData("A", "Manual spin (hold)");
+        telemetry.addData("R-Bumper", "Intake forward (hold)");
+    }
+
+    /**
+     * Page 6: Timing - complete loop performance metrics.
      * Shows timing breakdown from previous loop iteration (N-1).
      */
     private void publishDebugTiming(Telemetry telemetry, RobotTelemetryData data) {
