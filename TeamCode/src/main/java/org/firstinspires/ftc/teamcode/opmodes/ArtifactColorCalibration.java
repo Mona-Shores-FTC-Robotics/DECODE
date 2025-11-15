@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.LaneSample;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
@@ -36,6 +37,7 @@ import java.util.Locale;
 @TeleOp(name = "Artifact Color Calibration", group = "Tuning")
 public class ArtifactColorCalibration extends LinearOpMode {
 
+    private Robot robot;
     private IntakeSubsystem intake;
     private FtcDashboard dashboard;
     private LauncherLane selectedLane = LauncherLane.CENTER;
@@ -82,8 +84,12 @@ public class ArtifactColorCalibration extends LinearOpMode {
         // Initialize FTC Dashboard
         dashboard = FtcDashboard.getInstance();
 
-        // Initialize intake subsystem
-        intake = new IntakeSubsystem(hardwareMap);
+        // Initialize robot (same pattern as DecodeTeleOp)
+        robot = new Robot(hardwareMap);
+        intake = robot.intake;
+
+        // Initialize intake subsystem (ensures sensors are ready)
+        intake.initialize();
 
         telemetry.addLine("✓ Ready!");
         telemetry.addLine();
@@ -104,6 +110,9 @@ public class ArtifactColorCalibration extends LinearOpMode {
         boolean lastY = false;
 
         while (opModeIsActive()) {
+            // Run intake periodic to ensure sensors are polled (matches DecodeTeleOp pattern)
+            intake.periodic();
+
             // Lane selection (D-pad)
             if (gamepad1.dpad_up && !lastDpadUp) {
                 selectedLane = nextLane(selectedLane, 1);
