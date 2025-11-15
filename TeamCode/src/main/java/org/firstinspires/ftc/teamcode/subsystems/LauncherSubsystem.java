@@ -88,17 +88,27 @@ public class LauncherSubsystem implements Subsystem {
 
     @Configurable
     public static class HybridPidConfig {
-        public double kP = 0.000075;
-        public double kF = 0.32;
+        public double kP = 0.0002;
+        public double kF = 0.67; // Why was 6 afraid of 7? Because 7 ate 9!
         public double maxPower = 1.0;
     }
 
     @Configurable
     public static class HoldConfig {
-        public double baseHoldPower = 0.5;
-        public double rpmPowerGain = 0.000075;
+        public double baseHoldPower = 0.6;
+        public double rpmPowerGain = 0.00012;
         public double minHoldPower = 0.2;
         public double maxHoldPower = 1.0;
+    }
+
+    @Configurable
+    public static class VoltageCompensationConfig {
+        /** Enable battery voltage compensation for consistent motor performance */
+        public boolean enabled = true;
+        /** Nominal battery voltage for calibration (typically 12.5V for full charge) */
+        public double nominalVoltage = 12.5;
+        /** Minimum voltage threshold - below this, compensation is clamped for safety */
+        public double minVoltage = 9.0;
     }
 
     @Configurable
@@ -119,6 +129,7 @@ public class LauncherSubsystem implements Subsystem {
     public static BangBangConfig bangBangConfig = new BangBangConfig();
     public static HybridPidConfig hybridPidConfig = new HybridPidConfig();
     public static HoldConfig holdConfig = new HoldConfig();
+    public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
     public static FlywheelModeConfig flywheelModeConfig = new FlywheelModeConfig();
     public static PhaseSwitchConfig phaseSwitchConfig = new PhaseSwitchConfig();
 
@@ -226,6 +237,7 @@ public class LauncherSubsystem implements Subsystem {
     public static RightHoodConfig rightHoodConfig = new RightHoodConfig();
     public static ReverseFlywheelForHumanLoadingConfig reverseFlywheelForHumanLoadingConfig = new ReverseFlywheelForHumanLoadingConfig();
 
+    private final HardwareMap hardwareMap;
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Hood> hoods = new EnumMap<>(LauncherLane.class);
@@ -285,6 +297,7 @@ public class LauncherSubsystem implements Subsystem {
     private boolean debugOverrideEnabled = false;
 
     public LauncherSubsystem(HardwareMap hardwareMap) {
+        this.hardwareMap = hardwareMap;
         for (LauncherLane lane : LauncherLane.values()) {
             flywheels.put(lane, new Flywheel(lane, hardwareMap));
             feeders.put(lane, new Feeder(lane, hardwareMap));
@@ -649,6 +662,50 @@ public class LauncherSubsystem implements Subsystem {
      */
     public boolean isReverseFlywheelForHumanLoadingActive() {
         return reverseFlywheelActive;
+    }
+
+    /**
+     * Calculates voltage compensation multiplier to maintain consistent motor performance
+     * across different battery voltage levels.
+     *
+     * @return Multiplier to apply to motor power (1.0 = no compensation needed)
+     */
+    private double getVoltageCompensationMultiplier() {
+        if (!voltageCompensationConfig.enabled) {
+            return 1.0;
+        }
+
+        try {
+            // Get current battery voltage from the control hub
+            double currentVoltage = hardwareMap.voltageSensor.iterator().next().getVoltage();
+
+            // Clamp to minimum safe voltage to prevent excessive compensation
+            currentVoltage = Math.max(currentVoltage, voltageCompensationConfig.minVoltage);
+
+            // Calculate compensation: (nominalVoltage / currentVoltage)
+            // When battery is lower than nominal, multiplier > 1.0 to compensate
+            // When battery is at nominal, multiplier = 1.0
+            double multiplier = voltageCompensationConfig.nominalVoltage / currentVoltage;
+
+            // Clamp multiplier to reasonable range (0.5 to 2.0) for safety
+            return Range.clip(multiplier, 0.5, 2.0);
+        } catch (Exception e) {
+            // If voltage sensor unavailable, disable compensation
+            return 1.0;
+        }
+    }
+
+    /**
+     * Gets the current battery voltage for telemetry/logging.
+     *
+     * @return Current battery voltage in volts, or 0.0 if unavailable
+     */
+    public double getBatteryVoltage() {
+        try {
+            return hardwareMap.voltageSensor.iterator().next().getVoltage();
+        } catch (Exception e) {
+            return 0.0;
+        }
     }
 
     private void scheduleShot(LauncherLane lane, double delayMs) {
@@ -1085,6 +1142,18 @@ public class LauncherSubsystem implements Subsystem {
         return getHoodPosition(LauncherLane.RIGHT);
     }
 
+    public double getLogBatteryVoltage() {
+        return getBatteryVoltage();
+    }
+
+    public double getLogVoltageCompensationMultiplier() {
+        return getVoltageCompensationMultiplier();
+    }
+
+    public boolean getLogVoltageCompensationEnabled() {
+        return voltageCompensationConfig.enabled;
+    }
+
     private static class ShotRequest {
         final LauncherLane lane;
         final double scheduledTimeMs;
@@ -1303,6 +1372,12 @@ public class LauncherSubsystem implements Subsystem {
             double threshold = Math.max(0.0, bangBangConfig.bangDeadbandRpm);
             double high = Range.clip(bangBangConfig.highPower, -1.0, 1.0);
             double low = Range.clip(bangBangConfig.lowPower, -1.0, 1.0);
+
+            // Apply voltage compensation
+            double voltageMultiplier = getVoltageCompensationMultiplier();
+            high = Range.clip(high * voltageMultiplier, -1.0, 1.0);
+            low = Range.clip(low * voltageMultiplier, -1.0, 1.0);
+
             if (error > threshold) {
                 motor.setPower(high);
             } else if (error < -threshold) {
@@ -1315,14 +1390,25 @@ public class LauncherSubsystem implements Subsystem {
         private void applyHybridControl(double error) {
             double power = hybridPidConfig.kF + hybridPidConfig.kP * error;
             power = Range.clip(power, 0.0, Math.max(0.0, hybridPidConfig.maxPower));
+
+            // Apply voltage compensation
+            double voltageMultiplier = getVoltageCompensationMultiplier();
+            power = Range.clip(power * voltageMultiplier, 0.0, 1.0);
+
             motor.setPower(power);
         }
 
         private void applyHoldControl(double error) {
             double holdPower = holdConfig.baseHoldPower + holdConfig.rpmPowerGain * commandedRpm;
             holdPower = Range.clip(holdPower, holdConfig.minHoldPower, holdConfig.maxHoldPower);
+
+            // Apply voltage compensation
+            double voltageMultiplier = getVoltageCompensationMultiplier();
+            holdPower = Range.clip(holdPower * voltageMultiplier, 0.0, 1.0);
+            double lowPower = Range.clip(bangBangConfig.lowPower * voltageMultiplier, 0.0, 1.0);
+
             if (error < 0.0) {
-                motor.setPower(bangBangConfig.lowPower);
+                motor.setPower(lowPower);
             } else {
                 motor.setPower(holdPower);
             }
