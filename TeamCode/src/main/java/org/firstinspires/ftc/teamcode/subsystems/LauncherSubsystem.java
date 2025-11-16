@@ -171,8 +171,8 @@ public class LauncherSubsystem implements Subsystem {
         public static class LeftFeederConfig {
             public String servoName = "feeder_left";
             public boolean reversed = false;
-            public double loadPosition = .85;
-            public double firePosition = .7; //toward 0 moves toward fire position
+            public double loadPosition = .83;
+            public double firePosition = .73; //toward 0 moves toward fire position
             public double holdMs = 1000;
         }
 

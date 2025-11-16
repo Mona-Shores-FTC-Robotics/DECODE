@@ -33,9 +33,9 @@ public class FireAllAtRangeCommand extends Command {
         public double shortRightRpm = 1000;
 
         /** Mid range configuration (default/current values) */
-        public double midLeftRpm = 2450;
-        public double midCenterRpm = 2450; // Center disabled by default
-        public double midRightRpm = 2450;
+        public double midLeftRpm = 2550;
+        public double midCenterRpm = 2550; // Center disabled by default
+        public double midRightRpm = 2550;
 
         /** Long range configuration */
         public double longLeftRpm = 2900;
