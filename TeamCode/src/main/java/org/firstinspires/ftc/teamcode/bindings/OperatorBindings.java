@@ -145,9 +145,7 @@ public class OperatorBindings {
 
         flywheelHumanLoadingButton
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
-                .whenBecomesTrue(robot.intake::activatePrefeed)
-                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
-                .whenBecomesFalse(robot.intake::deactivatePrefeed);
+                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading);
     }
 
     private void requestForwardIntake() {
