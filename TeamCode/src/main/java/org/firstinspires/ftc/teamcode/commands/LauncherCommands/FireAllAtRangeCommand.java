@@ -10,9 +10,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
-import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -50,8 +48,6 @@ public class FireAllAtRangeCommand extends Command {
 
     public static RangeRpmConfig rangeRpmConfig = new RangeRpmConfig();
 
-    private static final double READY_STABLE_MS = 50.0;
-
     private enum Stage {
         SPINNING_UP,
         WAITING_FOR_READY,
@@ -65,7 +61,6 @@ public class FireAllAtRangeCommand extends Command {
     private final LauncherRange range;
     private final boolean spinDownAfterShot;
 
-    private final Map<LauncherLane, Double> readySinceMs = new EnumMap<>(LauncherLane.class);
     private final EnumSet<LauncherLane> queuedLanes = EnumSet.noneOf(LauncherLane.class);
     private final ElapsedTime timer = new ElapsedTime();
 
@@ -101,7 +96,6 @@ public class FireAllAtRangeCommand extends Command {
         timer.reset();
         stage = Stage.SPINNING_UP;
         queuedLanes.clear();
-        readySinceMs.clear();
         manualSpinActive = true;
         spinDownApplied = false;
 
@@ -220,10 +214,9 @@ public class FireAllAtRangeCommand extends Command {
     }
 
     /**
-     * Checks each lane for readiness and queues shots when stable.
+     * Checks each lane for readiness and queues shots immediately when ready.
      */
     private void checkLaneReadiness() {
-        double now = timer.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
             if (queuedLanes.contains(lane)) {
                 continue;
@@ -235,17 +228,10 @@ public class FireAllAtRangeCommand extends Command {
                 continue;
             }
 
-            // Check if lane is at target speed
+            // Queue shot immediately when lane is ready - no stability wait
             if (launcher.isLaneReady(lane)) {
-                double since = readySinceMs.getOrDefault(lane, -1.0);
-                if (since < 0.0) {
-                    readySinceMs.put(lane, now);
-                } else if (now - since >= READY_STABLE_MS) {
-                    launcher.queueShot(lane);
-                    queuedLanes.add(lane);
-                }
-            } else {
-                readySinceMs.put(lane, -1.0);
+                launcher.queueShot(lane);
+                queuedLanes.add(lane);
             }
         }
     }
