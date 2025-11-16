@@ -62,7 +62,7 @@ public class LauncherSubsystem implements Subsystem {
         /** Output wheel revolutions per motor revolution. */
         public double gearRatio = 1.0;
         /** Acceptable RPM error when considering a lane ready to fire. */
-        public double rpmTolerance = 200.0;
+        public double rpmTolerance = 100;
     }
 
     @Configurable
@@ -80,10 +80,10 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class BangBangConfig {
         public double highPower = 1.0;
-        public double lowPower = 0.3;
+        public double lowPower = 0.6;
         public double enterBangThresholdRpm = 200;
         public double exitBangThresholdRpm = 500;
-        public double bangDeadbandRpm = 20;
+        public double bangDeadbandRpm = 400;
     }
 
     @Configurable

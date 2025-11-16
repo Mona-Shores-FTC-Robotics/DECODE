@@ -18,7 +18,7 @@ import java.util.Objects;
  */
 public class FireLaneCommand extends Command {
 
-    private static final double READY_STABLE_MS = 50.0;
+    private static final double READY_STABLE_MS = 5;
 
     private enum Stage {
         WAITING_FOR_READY,
