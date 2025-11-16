@@ -73,7 +73,7 @@ public class LauncherSubsystem implements Subsystem {
         /** If encoders are unavailable, treat the wheel as ready after this many milliseconds at full power. */
         public double fallbackReadyMs = 500;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-        public double recoveryMs = 3000;
+        public double recoveryMs = 500;
         /** Delay between sequential shots when bursting all three lanes (ms). */
         public double burstSpacingMs = 120.0;
     }
@@ -82,15 +82,15 @@ public class LauncherSubsystem implements Subsystem {
     public static class BangBangConfig {
         public double highPower = 1.0;
         public double lowPower = 0.6;
-        public double enterBangThresholdRpm = 200;
-        public double exitBangThresholdRpm = 500;
-        public double bangDeadbandRpm = 400;
+        public double enterBangThresholdRpm = 800;
+        public double exitBangThresholdRpm = 1200;
+//        public double bangDeadbandRpm = 400;
     }
 
     @Configurable
     public static class HybridPidConfig {
-        public double kP = 0.0002;
-        public double kF = 0.67; // Why was 6 afraid of 7? Because 7 ate 9!
+        public double kP = .0025;
+        public double kF = .22; // Why was 6 afraid of 7? Because 7 ate 9!
         public double maxPower = 1.0;
     }
 
@@ -114,14 +114,14 @@ public class LauncherSubsystem implements Subsystem {
 
     @Configurable
     public static class FlywheelModeConfig {
-        public FlywheelControlMode mode = FlywheelControlMode.PURE_BANG_BANG;
+        public FlywheelControlMode mode = FlywheelControlMode.HYBRID;
     }
 
     @Configurable
     public static class PhaseSwitchConfig {
-        public int bangToHybridConfirmCycles = 3;
+        public int bangToHybridConfirmCycles = 1;
         public int bangToHoldConfirmCycles = 3;
-        public int hybridToBangConfirmCycles = 2;
+        public int hybridToBangConfirmCycles = 3;
         public int holdToBangConfirmCycles = 3;
     }
 
@@ -139,7 +139,7 @@ public class LauncherSubsystem implements Subsystem {
         public String motorName = "launcher_left";
         public boolean reversed = true;
         public double launchRpm = 0;
-        public double idleRpm = 0;
+        public double idleRpm = 2000;
     }
 
     @Configurable
@@ -147,7 +147,7 @@ public class LauncherSubsystem implements Subsystem {
         public String motorName = "launcher_center";
         public boolean reversed = false;
         public double launchRpm = 0;
-        public double idleRpm = 0;
+        public double idleRpm = 2000;
     }
 
     @Configurable
@@ -155,7 +155,7 @@ public class LauncherSubsystem implements Subsystem {
         public String motorName = "launcher_right";
         public boolean reversed = true;
         public double launchRpm = 0;
-        public double idleRpm = 0;
+        public double idleRpm = 2000;
     }
 
     @Configurable
@@ -171,8 +171,8 @@ public class LauncherSubsystem implements Subsystem {
     public static class CenterFeederConfig {
         public String servoName = "feeder_center";
         public boolean reversed = false;
-        public double loadPosition = .53;
-        public double firePosition = 0; //toward 0 moves toward fire position
+        public double loadPosition = .7;
+        public double firePosition = .4; //toward 0 moves toward fire position
         public double holdMs = 1000;
     }
 
@@ -190,11 +190,11 @@ public class LauncherSubsystem implements Subsystem {
         public String servoName = "hood_left";
         public boolean reversed = false;
         /** Hood position for short range shots */
-        public double shortPosition = .75;
+        public double shortPosition = .5;
         /** Hood position for mid range shots */
-        public double midPosition = 0.5;
+        public double midPosition = 0;
         /** Hood position for long range shots */
-        public double longPosition = .25;
+        public double longPosition = 0;
     }
 
     @Configurable
@@ -202,11 +202,11 @@ public class LauncherSubsystem implements Subsystem {
         public String servoName = "hood_center";
         public boolean reversed = false;
         /** Hood position for short range shots */
-        public double shortPosition = .75;
+        public double shortPosition = .5;
         /** Hood position for mid range shots */
-        public double midPosition = 0.5;
+        public double midPosition = 0;
         /** Hood position for long range shots */
-        public double longPosition = .25;
+        public double longPosition = 0;
     }
 
     @Configurable
@@ -214,11 +214,11 @@ public class LauncherSubsystem implements Subsystem {
         public String servoName = "hood_right";
         public boolean reversed = false;
         /** Hood position for short range shots */
-        public double shortPosition = .75;
+        public double shortPosition = .5;
         /** Hood position for mid range shots */
-        public double midPosition = 0.5;
+        public double midPosition = 0;
         /** Hood position for long range shots */
-        public double longPosition = .25;
+        public double longPosition = 0;
     }
 
     @Configurable

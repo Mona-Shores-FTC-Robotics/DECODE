@@ -100,6 +100,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         BindingManager.update();
         syncVisionDuringInit();
         pushInitTelemetry();
+
     }
 
     @Override

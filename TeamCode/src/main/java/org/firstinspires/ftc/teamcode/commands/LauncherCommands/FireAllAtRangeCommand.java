@@ -28,14 +28,14 @@ public class FireAllAtRangeCommand extends Command {
     @Configurable
     public static class RangeRpmConfig {
         /** Short range configuration */
-        public double shortLeftRpm = 2000.0;
-        public double shortCenterRpm = 2000.0; // Center disabled by default
-        public double shortRightRpm = 2000.0;
+        public double shortLeftRpm = 1000;
+        public double shortCenterRpm = 1000; // Center disabled by default
+        public double shortRightRpm = 1000;
 
         /** Mid range configuration (default/current values) */
-        public double midLeftRpm = 3000.0;
-        public double midCenterRpm = 0; // Center disabled by default
-        public double midRightRpm = 0;
+        public double midLeftRpm = 2450;
+        public double midCenterRpm = 2450; // Center disabled by default
+        public double midRightRpm = 2450;
 
         /** Long range configuration */
         public double longLeftRpm = 4200.0;

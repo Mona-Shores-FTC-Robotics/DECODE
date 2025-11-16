@@ -153,7 +153,7 @@ public class IntakeSubsystem implements Subsystem {
     @Configurable
     public static class RollerConfig {
         public String servoName = "intake_roller";
-        public double activePosition = .5;
+        public double activePosition = 0;
         public double inactivePosition = 0.5;
     }
 
@@ -161,9 +161,10 @@ public class IntakeSubsystem implements Subsystem {
     public static class PrefeedConfig {
         public String servoName = "prefeed_roller";
         /** Reverse speed (default) - prevents accidental feeding (continuous servo: 0.0 = full reverse) */
-        public double reversePosition = 0.0;
+        public double reversePosition = 1.0;
         /** Forward speed - helps feed artifacts when firing (continuous servo: 1.0 = full forward) */
-        public double forwardPosition = 1.0;
+        public double forwardPosition = 0.0;
+        public double inactivePosition = .5;
     }
 
     @Configurable
@@ -301,10 +302,9 @@ public class IntakeSubsystem implements Subsystem {
         rollerEnabled = false;
         prefeedServo = tryGetServo(hardwareMap, prefeedConfig.servoName);
         if (prefeedServo != null) {
-            lastPrefeedPosition = prefeedConfig.reversePosition;
-            prefeedServo.setPosition(prefeedConfig.reversePosition);
+            prefeedServo.setPosition(prefeedConfig.inactivePosition);
+            lastPrefeedPosition = prefeedConfig.inactivePosition;
         }
-        prefeedEnabled = false;
 
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
@@ -329,11 +329,13 @@ public class IntakeSubsystem implements Subsystem {
         }
         rollerEnabled = false;
         if (prefeedServo != null) {
-            prefeedServo.setPosition(prefeedConfig.reversePosition);
-            lastPrefeedPosition = prefeedConfig.reversePosition;
+            prefeedServo.setPosition(prefeedConfig.inactivePosition);
+            lastPrefeedPosition = prefeedConfig.inactivePosition;
         }
         prefeedEnabled = false;
     }
+
+
 
     @Override
     public void periodic() {
@@ -359,10 +361,11 @@ public class IntakeSubsystem implements Subsystem {
             lastRollerPosition = target;
         }
         if (prefeedServo != null) {
-            double target = prefeedEnabled ? prefeedConfig.forwardPosition : prefeedConfig.reversePosition;
+            double target = prefeedEnabled ? prefeedConfig.forwardPosition : prefeedConfig.inactivePosition;
             prefeedServo.setPosition(target);
             lastPrefeedPosition = target;
         }
+        //TODO write code to make this tertiary so we can be more than just enabled, but reversed for forward.
 
         lastServoUpdateMs = (System.nanoTime() - servoStart) / 1_000_000.0;
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
