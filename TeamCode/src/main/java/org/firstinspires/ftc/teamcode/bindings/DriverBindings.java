@@ -50,6 +50,15 @@ public class DriverBindings {
         rampHold = driver.leftBumper();
         relocalizeRequest = driver.a();
 
+
+
+    }
+
+    /**
+     * Enables drive control by setting up the default drive command.
+     * Should be called when the match starts (after init) to prevent driving during init.
+     */
+    public void configureTeleopBindings() {
         defaultDrive = new DefaultDriveCommand(
                 fieldX::get,
                 fieldY::get,
@@ -65,15 +74,6 @@ public class DriverBindings {
                 slowHold::get,
                 robot.drive
         );
-
-    }
-
-    /**
-     * Enables drive control by setting up the default drive command.
-     * Should be called when the match starts (after init) to prevent driving during init.
-     */
-    public void configureTeleopBindings() {
-
         robot.drive.setDefaultCommand(defaultDrive);
 
         aimHold.whenBecomesTrue(aimAndDrive)

@@ -40,16 +40,6 @@ public class OperatorBindings {
     private final Button spinLetGoToShoot;
     private final Button fireAllInSequence;
 
-    //Commands
-    private final FireAllAtRangeCommand fireShortRangeCommand;
-    private final FireAllAtRangeCommand fireMidRangeCommand;
-    private final FireAllAtRangeCommand fireLongRangeCommand;
-
-    //Commands
-    private final SpinUpUntilReadyCommand spinUpCommand;
-    private final FireAllCommand fireAllCommand;
-    private final LaunchBurstCommand fireAllInSequenceCommand;
-
     public OperatorBindings(GamepadEx operator,
                             Robot robot) {
         this.robot = robot;
@@ -63,14 +53,7 @@ public class OperatorBindings {
         spinLetGoToShoot = operator.leftBumper();
         fireAllInSequence = operator.dpadDown();
 
-        // Range-based shooting commands
-        fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
-        fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
-        fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
-        spinUpCommand = robot.launcherCommands.spinUpUntilReady();
-        fireAllCommand = robot.launcherCommands.fireAll(true);
-        fireAllInSequenceCommand = robot.launcherCommands.launchAllInSequence();
 
         //TODO analyze the launcher commands to make a command that sets RPM based on distance to goal
                 // use AprilTag range for RPM calculation (maybe pose geometry as fallback)
@@ -85,7 +68,16 @@ public class OperatorBindings {
     }
 
     public void configureTeleopBindings() {
+        // Range-based shooting commands
+        //Commands
+        FireAllAtRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
+        FireAllAtRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
+        FireAllAtRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
+        //Commands
+        SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
+        FireAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
+        LaunchBurstCommand fireAllInSequenceCommand = robot.launcherCommands.launchAllInSequence();
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
