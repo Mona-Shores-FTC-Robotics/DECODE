@@ -788,8 +788,9 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         double now = clock.milliseconds();
-        boolean shotDrivenFull = !shotQueue.isEmpty() && requestedSpinMode != SpinMode.FULL;
-        Set<LauncherLane> queuedLanes = shotDrivenFull ? lanesWithQueuedShots() : EnumSet.noneOf(LauncherLane.class);
+        // Get lanes with queued shots for per-lane spin control
+        Set<LauncherLane> queuedLanes = !shotQueue.isEmpty() ? lanesWithQueuedShots() : EnumSet.noneOf(LauncherLane.class);
+
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel == null) {
@@ -801,8 +802,9 @@ public class LauncherSubsystem implements Subsystem {
                 continue;
             }
 
+            // Per-lane control: only spin to FULL if lane has a queued shot
             SpinMode laneMode = mode;
-            if (shotDrivenFull && !queuedLanes.contains(lane)) {
+            if (mode == SpinMode.FULL && !queuedLanes.contains(lane)) {
                 laneMode = SpinMode.IDLE;
             }
 
