@@ -130,7 +130,6 @@ public class LauncherSubsystem implements Subsystem {
     public static class LeftFlywheelConfig {
         public String motorName = "launcher_left";
         public boolean reversed = true;
-        public double launchRpm = 0;
         public double idleRpm = 2000;
     }
 
@@ -138,7 +137,6 @@ public class LauncherSubsystem implements Subsystem {
     public static class CenterFlywheelConfig {
         public String motorName = "launcher_center";
         public boolean reversed = false;
-        public double launchRpm = 0;
         public double idleRpm = 2000;
     }
 
@@ -146,7 +144,6 @@ public class LauncherSubsystem implements Subsystem {
     public static class RightFlywheelConfig { //actually left
         public String motorName = "launcher_right";
         public boolean reversed = true;
-        public double launchRpm = 0;
         public double idleRpm = 2000;
     }
 
@@ -912,20 +909,21 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    /**
+     * Returns the launch RPM for a lane. Launch RPM must be set explicitly by commands
+     * via setLaunchRpm() - there is no default because optimal RPM depends on shot context
+     * (range, distance to target, etc.).
+     *
+     * @param lane The launcher lane
+     * @return The launch RPM if set via setLaunchRpm(), otherwise 0.0 (lane disabled)
+     */
     protected double launchRpmFor(LauncherLane lane) {
         Double override = launchRpmOverrides.get(lane);
         if (override != null && override > 0.0) {
             return override;
         }
-        switch (lane) {
-            case LEFT:
-                return Math.max(0.0, leftFlywheelConfig.launchRpm);
-            case CENTER:
-                return Math.max(0.0, centerFlywheelConfig.launchRpm);
-            case RIGHT:
-            default:
-                return Math.max(0.0, rightFlywheelConfig.launchRpm);
-        }
+        // No default launch RPM - commands must set explicitly via setLaunchRpm()
+        return 0.0;
     }
 
     protected double idleRpmFor(LauncherLane lane) {

@@ -5,6 +5,11 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 /**
  * Command that queues a predefined burst of launcher lanes with fixed spacing.
+ *
+ * IMPORTANT: This command assumes launch RPMs have already been set via setLaunchRpm().
+ * If no RPMs are set, lanes will be treated as disabled (RPM = 0) and won't fire.
+ *
+ * Typically used after FireAllAtRangeCommand or other commands that set RPMs explicitly.
  */
 public class LaunchBurstCommand extends LauncherCommand {
 

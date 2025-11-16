@@ -8,6 +8,10 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 /**
  * Base class for launcher-oriented commands. Handles shooter requirements and spin mode management
  * so concrete commands only need to describe which shots to queue.
+ *
+ * IMPORTANT: Commands extending this class assume launch RPMs have already been set externally
+ * (via setLaunchRpm()). They do NOT set RPMs themselves. For commands that manage their own
+ * shot lifecycle (range-based, vision-based), extend Command directly and use ManualSpinController.
  */
 abstract class LauncherCommand extends Command {
 
