@@ -63,15 +63,15 @@ public class LauncherSubsystem implements Subsystem {
         /** Output wheel revolutions per motor revolution. */
         public double gearRatio = 1.0;
         /** Acceptable RPM error when considering a lane ready to fire. */
-        public double rpmTolerance = 100;
+        public double rpmTolerance = 200;
     }
 
     @Configurable
     public static class Timing {
         /** Minimum time the wheel should be commanded at launch speed before trusting fallback readiness. */
-        public double minimalSpinUpMs = 1000;
+        public double minimalSpinUpMs = 500;
         /** If encoders are unavailable, treat the wheel as ready after this many milliseconds at full power. */
-        public double fallbackReadyMs = 1000;
+        public double fallbackReadyMs = 500;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
         public double recoveryMs = 3000;
         /** Delay between sequential shots when bursting all three lanes (ms). */
