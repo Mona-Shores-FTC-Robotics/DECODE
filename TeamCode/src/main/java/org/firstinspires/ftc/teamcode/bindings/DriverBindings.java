@@ -31,13 +31,12 @@ public class DriverBindings {
     private final Button rampHold;
     private final Button aimHold;
     private final Button relocalizeRequest;
-    private final Robot robot;
+    private Robot robot;
 
     Command defaultDrive;
     Command aimAndDrive;
 
-    public DriverBindings(GamepadEx driver, Robot robot) {
-        this.robot = robot;
+    public DriverBindings(GamepadEx driver) {
 
         // Finalized Driver Buttons
         fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND).negate();
@@ -58,7 +57,8 @@ public class DriverBindings {
      * Enables drive control by setting up the default drive command.
      * Should be called when the match starts (after init) to prevent driving during init.
      */
-    public void configureTeleopBindings() {
+    public void configureTeleopBindings(Robot robot) {
+        this.robot = robot;
         defaultDrive = new DefaultDriveCommand(
                 fieldX::get,
                 fieldY::get,

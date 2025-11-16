@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.pedroPathing;
 
+import android.health.connect.datatypes.units.Mass;
+
 import com.pedropathing.control.FilteredPIDFCoefficients;
 import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.follower.Follower;
@@ -72,7 +74,7 @@ public class Constants {
             .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.005, 0.001, 0, 0.6, 0.04))
             .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
             .centripetalScaling(0.00005)
-            .mass(5);
+            .mass(15.4221); //34 pounds
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1.0)

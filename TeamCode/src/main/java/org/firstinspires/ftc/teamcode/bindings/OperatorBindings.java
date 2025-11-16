@@ -26,7 +26,7 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
  */
 public class OperatorBindings {
 
-    private final Robot robot;
+    private Robot robot;
 
     private final Button fireShort;
     private final Button fireMid;
@@ -40,9 +40,7 @@ public class OperatorBindings {
     private final Button spinLetGoToShoot;
     private final Button fireAllInSequence;
 
-    public OperatorBindings(GamepadEx operator,
-                            Robot robot) {
-        this.robot = robot;
+    public OperatorBindings(GamepadEx operator) {
 
         // Planned Final Button Assignments
         runIntake = operator.rightBumper();
@@ -67,7 +65,8 @@ public class OperatorBindings {
 
     }
 
-    public void configureTeleopBindings() {
+    public void configureTeleopBindings(Robot robot) {
+        this.robot = robot;
         // Range-based shooting commands
         //Commands
         FireAllAtRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();

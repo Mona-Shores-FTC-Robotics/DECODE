@@ -143,21 +143,21 @@ public class LauncherSubsystem implements Subsystem {
         public static class LeftFlywheelConfig {
             public String motorName = "launcher_left";
             public boolean reversed = true;
-            public double idleRpm = 2000;
+            public double idleRpm = 850;
         }
 
         @Configurable
         public static class CenterFlywheelConfig {
             public String motorName = "launcher_center";
             public boolean reversed = false;
-            public double idleRpm = 2000;
+            public double idleRpm = 850;
         }
 
         @Configurable
         public static class RightFlywheelConfig { //actually left
             public String motorName = "launcher_right";
             public boolean reversed = true;
-            public double idleRpm = 2000;
+            public double idleRpm = 850;
         }
     }
 
@@ -171,8 +171,8 @@ public class LauncherSubsystem implements Subsystem {
         public static class LeftFeederConfig {
             public String servoName = "feeder_left";
             public boolean reversed = false;
-            public double loadPosition = .53;
-            public double firePosition = .1; //toward 1 moves toward fire position
+            public double loadPosition = .85;
+            public double firePosition = .7; //toward 0 moves toward fire position
             public double holdMs = 1000;
         }
 

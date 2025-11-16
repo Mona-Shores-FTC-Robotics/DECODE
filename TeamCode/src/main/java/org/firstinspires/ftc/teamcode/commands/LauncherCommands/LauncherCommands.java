@@ -5,8 +5,12 @@ import com.bylazar.configurables.annotations.Configurable;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Convenience factory for launcher-related commands alongside immediate queue helpers used by
@@ -181,6 +185,63 @@ public class LauncherCommands {
      */
     public FireAllCommand fireAll(boolean spinDownAfterShot) {
         return new FireAllCommand(launcher, intake, spinDownAfterShot, manualSpinController);
+    }
+
+    // ========== Obelisk Pattern Commands ==========
+
+    /**
+     * Fires artifacts in a specific color sequence for Obelisk scoring.
+     * Looks at what's loaded and fires as many matching artifacts as possible (1-3).
+     *
+     * @param pattern The desired color sequence (e.g., [PURPLE, PURPLE, GREEN])
+     * @param spacingMs Milliseconds between shots
+     * @return Command that fires matching artifacts in pattern order
+     */
+    public LaunchObeliskPatternCommand launchObeliskPattern(List<ArtifactColor> pattern, double spacingMs) {
+        return new LaunchObeliskPatternCommand(launcher, launcherCoordinator, pattern, spacingMs);
+    }
+
+    /**
+     * Fires artifacts in a specific color sequence for Obelisk scoring with default spacing.
+     *
+     * @param pattern The desired color sequence
+     * @return Command that fires matching artifacts in pattern order
+     */
+    public LaunchObeliskPatternCommand launchObeliskPattern(List<ArtifactColor> pattern) {
+        return launchObeliskPattern(pattern, DEFAULT_BURST_SPACING_MS);
+    }
+
+    /**
+     * Obelisk PPG pattern: Purple, Purple, Green (Gold).
+     * Fires matching artifacts in this specific order.
+     */
+    public LaunchObeliskPatternCommand launchObeliskPPG() {
+        return launchObeliskPattern(
+            Arrays.asList(ArtifactColor.PURPLE, ArtifactColor.PURPLE, ArtifactColor.GREEN),
+            DEFAULT_BURST_SPACING_MS
+        );
+    }
+
+    /**
+     * Obelisk PGP pattern: Purple, Green (Gold), Purple.
+     * Fires matching artifacts in this specific order.
+     */
+    public LaunchObeliskPatternCommand launchObeliskPGP() {
+        return launchObeliskPattern(
+            Arrays.asList(ArtifactColor.PURPLE, ArtifactColor.GREEN, ArtifactColor.PURPLE),
+            DEFAULT_BURST_SPACING_MS
+        );
+    }
+
+    /**
+     * Obelisk GPP pattern: Green (Gold), Purple, Purple.
+     * Fires matching artifacts in this specific order.
+     */
+    public LaunchObeliskPatternCommand launchObeliskGPP() {
+        return launchObeliskPattern(
+            Arrays.asList(ArtifactColor.GREEN, ArtifactColor.PURPLE, ArtifactColor.PURPLE),
+            DEFAULT_BURST_SPACING_MS
+        );
     }
 
 }

@@ -41,8 +41,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
     GamepadEx driverPad = new GamepadEx(() -> gamepad1);
     GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
 
-    OperatorBindings operatorBindings = new OperatorBindings(operatorPad, robot);
-    DriverBindings driverBindings = new DriverBindings(driverPad, robot);
+    OperatorBindings operatorBindings = new OperatorBindings(operatorPad);
+    DriverBindings driverBindings = new DriverBindings(driverPad);
 
     {
         addComponents(
@@ -94,12 +94,11 @@ public class DecodeTeleOp extends NextFTCOpMode {
     @Override
     public void onStartButtonPressed() {
         BindingManager.reset();
-        driverBindings.configureTeleopBindings();
-        operatorBindings.configureTeleopBindings();
 
         // Enable drive motors and command control now that match is starting
         robot.drive.startTeleopDrive();
-        driverBindings.configureTeleopBindings();
+        driverBindings.configureTeleopBindings(robot);
+        operatorBindings.configureTeleopBindings(robot);
 
         robot.launcherCoordinator.unlockIntake();
         robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
