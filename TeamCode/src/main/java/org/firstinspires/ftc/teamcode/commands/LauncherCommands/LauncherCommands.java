@@ -49,11 +49,11 @@ public class LauncherCommands {
         return launchLane(LauncherLane.RIGHT);
     }
 
-    public LaunchBurstCommand launchAll() {
-        return launchAll(DEFAULT_BURST_SPACING_MS);
+    public LaunchBurstCommand launchAllInSequence() {
+        return launchAllInSequence(DEFAULT_BURST_SPACING_MS);
     }
 
-    public LaunchBurstCommand launchAll(double spacingMs) {
+    public LaunchBurstCommand launchAllInSequence(double spacingMs) {
         return new LaunchBurstCommand(launcher , spacingMs);
     }
 
@@ -170,6 +170,17 @@ public class LauncherCommands {
      */
     public FireAllAtRangeCommand fireAllAtRange(LauncherRange range, boolean spinDownAfterShot) {
         return new FireAllAtRangeCommand(launcher, intake, range, spinDownAfterShot, manualSpinController);
+    }
+
+    /**
+     * Fires all lanes at SHORT range (~2700 RPM).
+     * Spins up, fires all three lanes, then spins down to idle.
+     * Activates prefeed roller in forward direction to help feed.
+     *
+     * @return Command that executes a short-range shot
+     */
+    public FireAllCommand fireAll(boolean spinDownAfterShot) {
+        return new FireAllCommand(launcher, intake, spinDownAfterShot, manualSpinController);
     }
 
 }

@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import dev.nextftc.core.commands.Command;
 
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
@@ -32,11 +33,15 @@ public class FireAllCommand extends Command {
     private Stage stage = Stage.WAITING_FOR_READY;
     private boolean manualSpinActive = false;
     private boolean spinDownApplied = false;
+    private final IntakeSubsystem intake;
+
 
     public FireAllCommand(LauncherSubsystem launcher,
+                          IntakeSubsystem intake,
                           boolean spinDownAfterShot,
                           ManualSpinController manualSpinController) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
+        this.intake = intake; // Nullable - robot may not have prefeed roller
         this.spinDownAfterShot = spinDownAfterShot;
         this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
         requires(launcher);
@@ -52,6 +57,10 @@ public class FireAllCommand extends Command {
         manualSpinController.enterManualSpin();
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
         spinDownApplied = false;
+        // Activate prefeed roller in forward direction to help feed
+        if (intake != null) {
+            intake.setPrefeedForward();
+        }
     }
 
     @Override
@@ -99,6 +108,7 @@ public class FireAllCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
+
         if (manualSpinActive) {
             manualSpinController.exitManualSpin();
             manualSpinActive = false;
@@ -109,6 +119,13 @@ public class FireAllCommand extends Command {
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
             launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
             spinDownApplied = true;
+            // Deactivate prefeed roller (returns to not spinning)
+            //TODO maybe this should be sooner?
+            if (intake != null) {
+                intake.deactivatePrefeed();
+            }
+
+
         }
     }
 }

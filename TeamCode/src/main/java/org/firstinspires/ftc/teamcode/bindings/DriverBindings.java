@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.bindings;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.AimAndDriveCommand;
-import org.firstinspires.ftc.teamcode.commands.CaptureAndAimCommand;
 import org.firstinspires.ftc.teamcode.commands.DefaultDriveCommand;
 
 import dev.nextftc.bindings.Button;
@@ -34,6 +33,9 @@ public class DriverBindings {
     private final Button relocalizeRequest;
     private final Robot robot;
 
+    Command defaultDrive;
+    Command aimAndDrive;
+
     public DriverBindings(GamepadEx driver, Robot robot) {
         this.robot = robot;
 
@@ -48,25 +50,7 @@ public class DriverBindings {
         rampHold = driver.leftBumper();
         relocalizeRequest = driver.a();
 
-        // B button (hold): Continuous aim-and-drive
-        // Tracks target continuously, allows driver translation
-        // Set up immediately so button binding is ready (command won't run until default is set)
-        Command aimAndDrive = new AimAndDriveCommand(
-                fieldX::get,
-                fieldY::get,
-                slowHold::get,
-                robot.drive
-        );
-        aimHold.whenBecomesTrue(aimAndDrive)
-                .whenBecomesFalse(aimAndDrive::cancel);
-    }
-
-    /**
-     * Enables drive control by setting up the default drive command.
-     * Should be called when the match starts (after init) to prevent driving during init.
-     */
-    public void enableDriveControl() {
-        Command defaultDrive = new DefaultDriveCommand(
+        defaultDrive = new DefaultDriveCommand(
                 fieldX::get,
                 fieldY::get,
                 rotationCcw::get,
@@ -74,18 +58,30 @@ public class DriverBindings {
                 rampHold::get,
                 robot.drive
         );
-        robot.drive.setDefaultCommand(defaultDrive);
+
+        aimAndDrive = new AimAndDriveCommand(
+                fieldX::get,
+                fieldY::get,
+                slowHold::get,
+                robot.drive
+        );
+
     }
 
     /**
-     * Registers a callback for vision relocalization requests.
-     * A button triggers instant relocalization with no drive movement.
+     * Enables drive control by setting up the default drive command.
+     * Should be called when the match starts (after init) to prevent driving during init.
      */
-    public void onRelocalizeRequested(Runnable action) {
-        if (action == null) {
-            return;
+    public void configureTeleopBindings() {
+
+        robot.drive.setDefaultCommand(defaultDrive);
+
+        aimHold.whenBecomesTrue(aimAndDrive)
+                .whenBecomesFalse(aimAndDrive::cancel);
+
+        if (robot.vision != null) {
+            relocalizeRequest.whenBecomesTrue(robot.drive::tryRelocalize);
         }
-        relocalizeRequest.whenBecomesTrue(action);
     }
 
     /**

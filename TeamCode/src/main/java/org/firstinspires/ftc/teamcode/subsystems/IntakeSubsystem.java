@@ -356,12 +356,6 @@ public class IntakeSubsystem implements Subsystem {
             rollerServo.setPosition(target);
             lastRollerPosition = target;
         }
-        if (prefeedServo != null) {
-            double target = prefeedEnabled ? prefeedConfig.forwardPosition : prefeedConfig.inactivePosition;
-            prefeedServo.setPosition(target);
-            lastPrefeedPosition = target;
-        }
-        //TODO write code to make this tertiary so we can be more than just enabled, but reversed for forward.
 
         lastServoUpdateMs = (System.nanoTime() - servoStart) / 1_000_000.0;
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;

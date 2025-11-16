@@ -20,7 +20,6 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.concurrent.TimeUnit;
@@ -31,17 +30,19 @@ import java.util.concurrent.TimeUnit;
 public class DecodeTeleOp extends NextFTCOpMode {
 
     private Robot robot;
-    private DriverBindings driverBindings;
-    private OperatorBindings operatorBindings;
+
     private AllianceSelector allianceSelector;
     private Alliance selectedAlliance = Alliance.UNKNOWN;
-
-    private String visionRelocalizeStatus = "Press A to re-localize";
-    private long visionRelocalizeStatusMs = 0L;
 
     // Previous loop timing (for telemetry reporting)
     private double prevMainLoopMs = 0.0;
     private long telemetryStartNs = 0;
+
+    GamepadEx driverPad = new GamepadEx(() -> gamepad1);
+    GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
+
+    OperatorBindings operatorBindings = new OperatorBindings(operatorPad, robot);
+    DriverBindings driverBindings = new DriverBindings(driverPad, robot);
 
     {
         addComponents(
@@ -55,7 +56,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
     @Override
     public void onInit() {
         robot = new Robot(hardwareMap);
-
         robot.attachPedroFollower();
 
         // Apply alliance from previous OpMode (auto) before initializing
@@ -65,19 +65,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
             robot.setAlliance(persistedAlliance);
             selectedAlliance = persistedAlliance;
         }
-
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.launcherCoordinator.lockIntake();
-
         robot.initializeForTeleOp();
-
-        GamepadEx driverPad = new GamepadEx(() -> gamepad1);
-        driverBindings = new DriverBindings(driverPad, robot);
-        driverBindings.onRelocalizeRequested(this::handleVisionRelocalizeRequest);
-
-        GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
-        operatorBindings = new OperatorBindings(operatorPad, robot);
-
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
 
         addComponents(
@@ -99,14 +89,17 @@ public class DecodeTeleOp extends NextFTCOpMode {
         BindingManager.update();
         syncVisionDuringInit();
         pushInitTelemetry();
-
     }
 
     @Override
     public void onStartButtonPressed() {
+        BindingManager.reset();
+        driverBindings.configureTeleopBindings();
+        operatorBindings.configureTeleopBindings();
+
         // Enable drive motors and command control now that match is starting
         robot.drive.startTeleopDrive();
-        driverBindings.enableDriveControl();
+        driverBindings.configureTeleopBindings();
 
         robot.launcherCoordinator.unlockIntake();
         robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
@@ -116,14 +109,14 @@ public class DecodeTeleOp extends NextFTCOpMode {
             selectedAlliance = allianceSelector.getSelectedAlliance();
         }
         robot.intake.activateRoller();
-        robot.intake.setPrefeedForward();
+        robot.intake.deactivatePrefeed();
     }
 
     @Override
     public void onUpdate() {
         long mainLoopStartMs = System.currentTimeMillis();
         BindingManager.update();
-        relocalizeWithVision(mainLoopStartMs);
+        relocalizeTelemetry(mainLoopStartMs);
 
 
 
@@ -168,40 +161,15 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 prevMainLoopMs,
                 telemetryStartNs
         );
-
     }
 
-
-    private void relocalizeWithVision(long nowMs) {
-        if (nowMs - visionRelocalizeStatusMs <= 2000) {
-            telemetry.addData("Vision re-localize", visionRelocalizeStatus);
+    private void relocalizeTelemetry(long nowMs) {
+        if (nowMs - robot.drive.visionRelocalizeStatusMs <= 2000) {
+            telemetry.addData("Vision re-localize", robot.drive.visionRelocalizeStatus);
         } else {
             telemetry.addData("Vision re-localize", "Press A to sync with Limelight");
         }
         telemetry.addLine();
-    }
-
-    private void handleVisionRelocalizeRequest() {
-        if (robot == null || robot.drive == null || robot.vision == null) {
-            return;
-        }
-        boolean tagVisible = robot.vision.hasValidTag();
-
-        if (tagVisible &&
-                (robot.vision.getCurrentTagId() == FieldConstants.BLUE_GOAL_TAG_ID ||
-                        robot.vision.getCurrentTagId() == FieldConstants.RED_GOAL_TAG_ID)) {
-            boolean success = robot.drive.forceRelocalizeFromVision();
-            if (success) {
-                visionRelocalizeStatus = "Pose updated from Limelight";
-            } else {
-                visionRelocalizeStatus = "Failed to update pose from Limelight";
-            }
-        } else if (tagVisible) {
-                visionRelocalizeStatus = "No Goal AprilTag visible";
-        } else {
-                visionRelocalizeStatus = "No AprilTag visible";
-        }
-            visionRelocalizeStatusMs = System.currentTimeMillis();
     }
 
     private void syncVisionDuringInit() {
@@ -217,8 +185,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
             selectedAlliance = allianceSelector.getSelectedAlliance();
         }
         if (robot.vision.shouldUpdateOdometry() && robot.drive.forceRelocalizeFromVision()) {
-            visionRelocalizeStatus = "Pose synced from Limelight";
-            visionRelocalizeStatusMs = System.currentTimeMillis();
+            robot.drive.visionRelocalizeStatus = "Pose synced from Limelight";
+            robot.drive.visionRelocalizeStatusMs = System.currentTimeMillis();
         }
     }
 
