@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
 import com.bylazar.configurables.annotations.Configurable;
 
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
@@ -18,13 +19,16 @@ public class LauncherCommands {
     public static final double DEFAULT_BURST_SPACING_MS = 150.0;
 
     private final LauncherSubsystem launcher;
+    private final IntakeSubsystem intake;
     private final LauncherCoordinator launcherCoordinator;
     private final ManualSpinController manualSpinController;
 
     public LauncherCommands(LauncherSubsystem launcher,
+                           IntakeSubsystem intake,
                            LauncherCoordinator launcherCoordinator,
                            ManualSpinController manualSpinController) {
         this.launcher = launcher;
+        this.intake = intake;
         this.launcherCoordinator = launcherCoordinator;
         this.manualSpinController = manualSpinController;
     }
@@ -126,42 +130,46 @@ public class LauncherCommands {
     /**
      * Fires all lanes at SHORT range (~2700 RPM).
      * Spins up, fires all three lanes, then spins down to idle.
+     * Activates prefeed roller in forward direction to help feed.
      *
      * @return Command that executes a short-range shot
      */
     public FireAllAtRangeCommand fireAllShortRange() {
-        return new FireAllAtRangeCommand(launcher, LauncherRange.SHORT, true, manualSpinController);
+        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.SHORT, true, manualSpinController);
     }
 
     /**
      * Fires all lanes at MID range (~3600 RPM).
      * Spins up, fires all three lanes, then spins down to idle.
+     * Activates prefeed roller in forward direction to help feed.
      *
      * @return Command that executes a mid-range shot
      */
     public FireAllAtRangeCommand fireAllMidRange() {
-        return new FireAllAtRangeCommand(launcher, LauncherRange.MID, true, manualSpinController);
+        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.MID, true, manualSpinController);
     }
 
     /**
      * Fires all lanes at LONG range (~4200 RPM).
      * Spins up, fires all three lanes, then spins down to idle.
+     * Activates prefeed roller in forward direction to help feed.
      *
      * @return Command that executes a long-range shot
      */
     public FireAllAtRangeCommand fireAllLongRange() {
-        return new FireAllAtRangeCommand(launcher, LauncherRange.LONG, true, manualSpinController);
+        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.LONG, true, manualSpinController);
     }
 
     /**
      * Generic range-based firing command.
+     * Activates prefeed roller in forward direction to help feed.
      *
      * @param range The shooting range (SHORT, MID, or LONG)
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @return Command that executes the range-based shot
      */
     public FireAllAtRangeCommand fireAllAtRange(LauncherRange range, boolean spinDownAfterShot) {
-        return new FireAllAtRangeCommand(launcher, range, spinDownAfterShot, manualSpinController);
+        return new FireAllAtRangeCommand(launcher, intake, range, spinDownAfterShot, manualSpinController);
     }
 
 }

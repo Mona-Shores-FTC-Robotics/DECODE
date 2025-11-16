@@ -44,7 +44,7 @@ public class Robot {
         launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
         manualSpinController = launcherCoordinator.createManualSpinController();
 
-        launcherCommands = new LauncherCommands(launcher, launcherCoordinator, manualSpinController);
+        launcherCommands = new LauncherCommands(launcher, intake, launcherCoordinator, manualSpinController);
         intakeCommands = new IntakeCommands(intake);
     }
 

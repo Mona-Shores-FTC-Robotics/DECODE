@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import dev.nextftc.core.commands.Command;
 
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -59,6 +60,7 @@ public class FireAllAtRangeCommand extends Command {
     }
 
     private final LauncherSubsystem launcher;
+    private final IntakeSubsystem intake;
     private final ManualSpinController manualSpinController;
     private final LauncherRange range;
     private final boolean spinDownAfterShot;
@@ -75,15 +77,18 @@ public class FireAllAtRangeCommand extends Command {
      * Creates command that fires all lanes at the specified range.
      *
      * @param launcher The launcher subsystem
+     * @param intake The intake subsystem (for prefeed roller control)
      * @param range The shooting range (SHORT, MID, or LONG)
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @param manualSpinController Controller for manual spin state
      */
     public FireAllAtRangeCommand(LauncherSubsystem launcher,
+                                  IntakeSubsystem intake,
                                   LauncherRange range,
                                   boolean spinDownAfterShot,
                                   ManualSpinController manualSpinController) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
+        this.intake = intake; // Nullable - robot may not have prefeed roller
         this.range = Objects.requireNonNull(range, "range required");
         this.spinDownAfterShot = spinDownAfterShot;
         this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
@@ -102,6 +107,11 @@ public class FireAllAtRangeCommand extends Command {
 
         // Enter manual spin mode to prevent automation from changing RPMs
         manualSpinController.enterManualSpin();
+
+        // Activate prefeed roller in forward direction to help feed
+        if (intake != null) {
+            intake.activatePrefeed();
+        }
 
         // Set RPMs and hood angles for all lanes based on range
         setRpmsForRange();
@@ -158,6 +168,11 @@ public class FireAllAtRangeCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
+        // Deactivate prefeed roller (returns to reverse safety position)
+        if (intake != null) {
+            intake.deactivatePrefeed();
+        }
+
         // Clear RPM overrides to return to default values
         launcher.clearOverrides();
 
