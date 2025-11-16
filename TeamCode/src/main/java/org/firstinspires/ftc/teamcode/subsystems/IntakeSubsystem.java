@@ -160,8 +160,10 @@ public class IntakeSubsystem implements Subsystem {
     @Configurable
     public static class PrefeedConfig {
         public String servoName = "prefeed_roller";
-        public double activePosition = .5;
-        public double inactivePosition = 0.5;
+        /** Reverse position (default) - prevents accidental feeding */
+        public double reversePosition = 0.3;
+        /** Forward position - helps feed artifacts when firing */
+        public double forwardPosition = 0.7;
     }
 
     @Configurable
@@ -299,8 +301,8 @@ public class IntakeSubsystem implements Subsystem {
         rollerEnabled = false;
         prefeedServo = tryGetServo(hardwareMap, prefeedConfig.servoName);
         if (prefeedServo != null) {
-            lastPrefeedPosition = prefeedConfig.inactivePosition;
-            prefeedServo.setPosition(prefeedConfig.inactivePosition);
+            lastPrefeedPosition = prefeedConfig.reversePosition;
+            prefeedServo.setPosition(prefeedConfig.reversePosition);
         }
         prefeedEnabled = false;
 
@@ -327,8 +329,8 @@ public class IntakeSubsystem implements Subsystem {
         }
         rollerEnabled = false;
         if (prefeedServo != null) {
-            prefeedServo.setPosition(prefeedConfig.inactivePosition);
-            lastPrefeedPosition = prefeedConfig.inactivePosition;
+            prefeedServo.setPosition(prefeedConfig.reversePosition);
+            lastPrefeedPosition = prefeedConfig.reversePosition;
         }
         prefeedEnabled = false;
     }
@@ -357,7 +359,7 @@ public class IntakeSubsystem implements Subsystem {
             lastRollerPosition = target;
         }
         if (prefeedServo != null) {
-            double target = prefeedEnabled ? prefeedConfig.activePosition : prefeedConfig.inactivePosition;
+            double target = prefeedEnabled ? prefeedConfig.forwardPosition : prefeedConfig.reversePosition;
             prefeedServo.setPosition(target);
             lastPrefeedPosition = target;
         }
@@ -399,8 +401,8 @@ public class IntakeSubsystem implements Subsystem {
     public void deactivatePrefeed() {
         prefeedEnabled = false;
         if (prefeedServo != null) {
-            prefeedServo.setPosition(prefeedConfig.inactivePosition);
-            lastPrefeedPosition = prefeedConfig.inactivePosition;
+            prefeedServo.setPosition(prefeedConfig.reversePosition);
+            lastPrefeedPosition = prefeedConfig.reversePosition;
         }
     }
 
@@ -462,7 +464,7 @@ public class IntakeSubsystem implements Subsystem {
 
     public boolean isPrefeedActive() {
         return prefeedServo != null
-                && Math.abs(lastPrefeedPosition - prefeedConfig.activePosition) < 1e-3;
+                && Math.abs(lastPrefeedPosition - prefeedConfig.forwardPosition) < 1e-3;
     }
 
     private void pollLaneSensorsIfNeeded() {

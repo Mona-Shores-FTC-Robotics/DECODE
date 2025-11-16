@@ -98,7 +98,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         // Initialize command factories
         intakeCommands = new IntakeCommands(robot.intake);
-        launcherCommands = new LauncherCommands(robot.launcher, robot.launcherCoordinator, robot.manualSpinController);
+        launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.launcherCoordinator, robot.manualSpinController);
 
         // Register init-phase controls
         // Use Alliance.UNKNOWN as default to enable automatic vision detection
