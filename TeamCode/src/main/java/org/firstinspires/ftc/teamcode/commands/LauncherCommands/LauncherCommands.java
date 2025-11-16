@@ -49,12 +49,12 @@ public class LauncherCommands {
         return launchLane(LauncherLane.RIGHT);
     }
 
-    public LaunchBurstCommand launchAllInSequence() {
+    public LaunchSequentialCommand launchAllInSequence() {
         return launchAllInSequence(DEFAULT_BURST_SPACING_MS);
     }
 
-    public LaunchBurstCommand launchAllInSequence(double spacingMs) {
-        return new LaunchBurstCommand(launcher , spacingMs);
+    public LaunchSequentialCommand launchAllInSequence(double spacingMs) {
+        return new LaunchSequentialCommand(launcher , spacingMs);
     }
 
     public LaunchDetectedBurstCommand launchDetectedBurst() {

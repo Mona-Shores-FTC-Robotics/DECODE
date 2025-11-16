@@ -27,19 +27,49 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         BUSY
     }
 
-    /** Hardware names for the lane indicator servos. */
-    public static String leftServoName = "indicator_left";
-    public static String centerServoName = "indicator_center";
-    public static String rightServoName = "indicator_right";
+    @Configurable
+    public static class IndicatorConfig {
+        public LeftIndicatorConfig left = new LeftIndicatorConfig();
+        public CenterIndicatorConfig center = new CenterIndicatorConfig();
+        public RightIndicatorConfig right = new RightIndicatorConfig();
 
-    public static double GREEN_POS = 0.500;
-    public static double PURPLE_POS = 0.722;
-    public static double RED_POS = 0.281;
-    public static double BLUE_POS = 0.611;
-    /** Position that best represents an "off" state for the installed lights. */
-    public static double OFF_POS = 0.000;
-    /** Fallback colour used when marking the robot busy. */
-    public static double BUSY_POS = PURPLE_POS;
+        @Configurable
+        public static class LeftIndicatorConfig {
+            /** Hardware name for the left lane indicator servo */
+            public String servoName = "indicator_left";
+        }
+
+        @Configurable
+        public static class CenterIndicatorConfig {
+            /** Hardware name for the center lane indicator servo */
+            public String servoName = "indicator_center";
+        }
+
+        @Configurable
+        public static class RightIndicatorConfig {
+            /** Hardware name for the right lane indicator servo */
+            public String servoName = "indicator_right";
+        }
+    }
+
+    @Configurable
+    public static class ColorPositionConfig {
+        /** Servo position for green color */
+        public double greenPosition = 0.500;
+        /** Servo position for purple color */
+        public double purplePosition = 0.722;
+        /** Servo position for red color (alliance) */
+        public double redPosition = 0.281;
+        /** Servo position for blue color (alliance) */
+        public double bluePosition = 0.611;
+        /** Position that best represents an "off" state for the installed lights */
+        public double offPosition = 0.000;
+        /** Fallback position used when marking the robot busy */
+        public double busyPosition = 0.722; // PURPLE by default
+    }
+
+    public static IndicatorConfig indicatorConfig = new IndicatorConfig();
+    public static ColorPositionConfig colorPositionConfig = new ColorPositionConfig();
 
     private final EnumMap<LauncherLane, LaneIndicator> laneIndicators = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
@@ -51,15 +81,15 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(
-                tryGetServo(hardwareMap, leftServoName)));
+                tryGetServo(hardwareMap, indicatorConfig.left.servoName)));
         laneIndicators.put(LauncherLane.CENTER, new LaneIndicator(
-                tryGetServo(hardwareMap, centerServoName)));
+                tryGetServo(hardwareMap, indicatorConfig.center.servoName)));
         laneIndicators.put(LauncherLane.RIGHT, new LaneIndicator(
-                tryGetServo(hardwareMap, rightServoName)));
+                tryGetServo(hardwareMap, indicatorConfig.right.servoName)));
 
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
-            laneOutputs.put(lane, OFF_POS);
+            laneOutputs.put(lane, colorPositionConfig.offPosition);
         }
     }
 
@@ -170,9 +200,9 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     protected double resolvePosition(ArtifactColor laneColor) {
         switch (laneColor) {
             case GREEN:
-                return clamp01(GREEN_POS);
+                return clamp01(colorPositionConfig.greenPosition);
             case PURPLE:
-                return clamp01(PURPLE_POS);
+                return clamp01(colorPositionConfig.purplePosition);
             case NONE:
             case UNKNOWN:
             default:
@@ -183,23 +213,23 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     protected double fallbackPosition() {
         switch (state) {
             case BUSY:
-                return clamp01(BUSY_POS);
+                return clamp01(colorPositionConfig.busyPosition);
             case ALLIANCE:
                 return alliancePosition();
             case OFF:
             default:
-                return clamp01(OFF_POS);
+                return clamp01(colorPositionConfig.offPosition);
         }
     }
 
     protected double alliancePosition() {
         if (alliance == Alliance.RED) {
-            return clamp01(RED_POS);
+            return clamp01(colorPositionConfig.redPosition);
         }
         if (alliance == Alliance.BLUE) {
-            return clamp01(BLUE_POS);
+            return clamp01(colorPositionConfig.bluePosition);
         }
-        return clamp01(GREEN_POS);
+        return clamp01(colorPositionConfig.greenPosition);
     }
 
     private static double clamp01(double value) {
@@ -248,7 +278,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     public double getLeftOutput() {
-        return laneOutputs.getOrDefault(LauncherLane.LEFT, OFF_POS);
+        return laneOutputs.getOrDefault(LauncherLane.LEFT, colorPositionConfig.offPosition);
     }
 
     public boolean isLeftIndicatorPresent() {
@@ -262,7 +292,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     public double getCenterOutput() {
-        return laneOutputs.getOrDefault(LauncherLane.CENTER, OFF_POS);
+        return laneOutputs.getOrDefault(LauncherLane.CENTER, colorPositionConfig.offPosition);
     }
 
     public boolean isCenterIndicatorPresent() {
@@ -276,7 +306,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     public double getRightOutput() {
-        return laneOutputs.getOrDefault(LauncherLane.RIGHT, OFF_POS);
+        return laneOutputs.getOrDefault(LauncherLane.RIGHT, colorPositionConfig.offPosition);
     }
 
     public boolean isRightIndicatorPresent() {
