@@ -57,16 +57,6 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     @Configurable
-    public static class FlywheelParameters {
-        /** Encoder ticks per motor revolution (adjust for the selected motor). */
-        public double ticksPerRev = 28;
-        /** Output wheel revolutions per motor revolution. */
-        public double gearRatio = 1.0;
-        /** Acceptable RPM error when considering a lane ready to fire. */
-        public double rpmTolerance = 200;
-    }
-
-    @Configurable
     public static class Timing {
         /** Minimum time the wheel should be commanded at launch speed before trusting fallback readiness. */
         public double minimalSpinUpMs = 500;
@@ -81,29 +71,6 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     @Configurable
-    public static class BangBangConfig {
-        public double highPower = 1.0;
-        public double lowPower = 0.2;
-        public double enterBangThresholdRpm = 800;
-        public double exitBangThresholdRpm = 1200;
-    }
-
-    @Configurable
-    public static class HybridPidConfig {
-        public double kP = .0025;
-        public double kF = .22; // Why was 6 afraid of 7? Because 7 ate 9!
-        public double maxPower = 1.0;
-    }
-
-    @Configurable
-    public static class HoldConfig {
-        public double baseHoldPower = 0.6;
-        public double rpmPowerGain = 0.00012;
-        public double minHoldPower = 0.2;
-        public double maxHoldPower = 1.0;
-    }
-
-    @Configurable
     public static class VoltageCompensationConfig {
         /** Enable battery voltage compensation for consistent motor performance */
         public boolean enabled = true;
@@ -114,20 +81,61 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     @Configurable
-    public static class FlywheelModeConfig {
-        public FlywheelControlMode mode = FlywheelControlMode.HYBRID;
-    }
-
-    @Configurable
-    public static class PhaseSwitchConfig {
-        public int bangToHybridConfirmCycles = 1;
-        public int bangToHoldConfirmCycles = 3;
-        public int hybridToBangConfirmCycles = 3;
-        public int holdToBangConfirmCycles = 3;
-    }
-
-    @Configurable
     public static class FlywheelConfig {
+        @Configurable
+        public static class FlywheelParameters {
+            /** Encoder ticks per motor revolution (adjust for the selected motor). */
+            public double ticksPerRev = 28;
+            /** Output wheel revolutions per motor revolution. */
+            public double gearRatio = 1.0;
+            /** Acceptable RPM error when considering a lane ready to fire. */
+            public double rpmTolerance = 200;
+        }
+
+        @Configurable
+        public static class FlywheelModeConfig {
+            public FlywheelControlMode mode = FlywheelControlMode.HYBRID;
+
+            @Configurable
+            public static class BangBangConfig {
+                public double highPower = 1.0;
+                public double lowPower = 0.2;
+                public double enterBangThresholdRpm = 800;
+                public double exitBangThresholdRpm = 1200;
+            }
+
+            @Configurable
+            public static class HybridPidConfig {
+                public double kP = .0025;
+                public double kF = .22; // Why was 6 afraid of 7? Because 7 ate 9!
+                public double maxPower = 1.0;
+            }
+
+            @Configurable
+            public static class HoldConfig {
+                public double baseHoldPower = 0.6;
+                public double rpmPowerGain = 0.00012;
+                public double minHoldPower = 0.2;
+                public double maxHoldPower = 1.0;
+            }
+
+            @Configurable
+            public static class PhaseSwitchConfig {
+                public int bangToHybridConfirmCycles = 1;
+                public int bangToHoldConfirmCycles = 3;
+                public int hybridToBangConfirmCycles = 3;
+                public int holdToBangConfirmCycles = 3;
+            }
+
+            public static BangBangConfig bangBang = new BangBangConfig();
+            public static HybridPidConfig hybridPid = new HybridPidConfig();
+            public static HoldConfig hold = new HoldConfig();
+            public static PhaseSwitchConfig phaseSwitch = new PhaseSwitchConfig();
+        }
+
+        public static FlywheelParameters parameters = new FlywheelParameters();
+        public static FlywheelModeConfig modeConfig = new FlywheelModeConfig();
+
         public LeftFlywheelConfig left = new LeftFlywheelConfig();
         public CenterFlywheelConfig center = new CenterFlywheelConfig();
         public RightFlywheelConfig right = new RightFlywheelConfig();
@@ -263,14 +271,8 @@ public class LauncherSubsystem implements Subsystem {
         public double reversePower = -0.45;
     }
 
-    public static FlywheelParameters flywheelParameters = new FlywheelParameters();
     public static Timing timing = new Timing();
-    public static BangBangConfig bangBangConfig = new BangBangConfig();
-    public static HybridPidConfig hybridPidConfig = new HybridPidConfig();
-    public static HoldConfig holdConfig = new HoldConfig();
     public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
-    public static FlywheelModeConfig flywheelModeConfig = new FlywheelModeConfig();
-    public static PhaseSwitchConfig phaseSwitchConfig = new PhaseSwitchConfig();
     public static FlywheelConfig flywheelConfig = new FlywheelConfig();
     public static FeederConfig feederConfig = new FeederConfig();
     public static HoodConfig HoodConfig = new HoodConfig();
@@ -327,7 +329,7 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     public static FlywheelControlMode getFlywheelControlMode() {
-        return flywheelModeConfig.mode;
+        return flywheelConfig.modeConfig.mode;
     }
 
      public String getPhaseName(LauncherLane lane) {
@@ -1042,11 +1044,11 @@ public class LauncherSubsystem implements Subsystem {
         if (rpm <= 0.0) {
             return 0.0;
         }
-        return rpm * flywheelParameters.ticksPerRev * flywheelParameters.gearRatio / 60.0;
+        return rpm * flywheelConfig.parameters.ticksPerRev * flywheelConfig.parameters.gearRatio / 60.0;
     }
 
     private static double ticksPerSecondToRpm(double ticksPerSecond) {
-        return ticksPerSecond * 60.0 / (flywheelParameters.ticksPerRev * flywheelParameters.gearRatio);
+        return ticksPerSecond * 60.0 / (flywheelConfig.parameters.ticksPerRev * flywheelConfig.parameters.gearRatio);
     }
 
     private static double clampServo(double position) {
@@ -1160,7 +1162,7 @@ public class LauncherSubsystem implements Subsystem {
                 return false;
             }
             double error = Math.abs(getCurrentRpm() - launchRpm);
-            if (error <= flywheelParameters.rpmTolerance) {
+            if (error <= flywheelConfig.parameters.rpmTolerance) {
                 return true;
             }
             if (!launchCommandActive) {
@@ -1203,9 +1205,9 @@ public class LauncherSubsystem implements Subsystem {
             switch (phase) {
                 case BANG:
                     if (getFlywheelControlMode() == FlywheelControlMode.BANG_BANG_HOLD) {
-                        if (absError <= bangBangConfig.exitBangThresholdRpm) {
+                        if (absError <= flywheelConfig.modeConfig.bangBang.exitBangThresholdRpm) {
                             bangToHoldCounter++;
-                            if (bangToHoldCounter >= Math.max(1, phaseSwitchConfig.bangToHoldConfirmCycles)) {
+                            if (bangToHoldCounter >= Math.max(1, flywheelConfig.modeConfig.phaseSwitch.bangToHoldConfirmCycles)) {
                                 phase = ControlPhase.HOLD;
                                 bangToHoldCounter = 0;
                             }
@@ -1214,9 +1216,9 @@ public class LauncherSubsystem implements Subsystem {
                         }
                         bangToHybridCounter = 0;
                     } else {
-                        if (absError <= bangBangConfig.exitBangThresholdRpm) {
+                        if (absError <= flywheelConfig.modeConfig.bangBang.exitBangThresholdRpm) {
                             bangToHybridCounter++;
-                            if (bangToHybridCounter >= Math.max(1, phaseSwitchConfig.bangToHybridConfirmCycles)) {
+                            if (bangToHybridCounter >= Math.max(1, flywheelConfig.modeConfig.phaseSwitch.bangToHybridConfirmCycles)) {
                                 phase = ControlPhase.HYBRID;
                                 bangToHybridCounter = 0;
                             }
@@ -1229,9 +1231,9 @@ public class LauncherSubsystem implements Subsystem {
                     holdToBangCounter = 0;
                     break;
                 case HYBRID:
-                    if (absError >= bangBangConfig.enterBangThresholdRpm) {
+                    if (absError >= flywheelConfig.modeConfig.bangBang.enterBangThresholdRpm) {
                         hybridToBangCounter++;
-                        if (hybridToBangCounter >= Math.max(1, phaseSwitchConfig.hybridToBangConfirmCycles)) {
+                        if (hybridToBangCounter >= Math.max(1, flywheelConfig.modeConfig.phaseSwitch.hybridToBangConfirmCycles)) {
                             phase = ControlPhase.BANG;
                             hybridToBangCounter = 0;
                             bangToHybridCounter = 0;
@@ -1243,9 +1245,9 @@ public class LauncherSubsystem implements Subsystem {
                     holdToBangCounter = 0;
                     break;
                 case HOLD:
-                    if (absError >= bangBangConfig.enterBangThresholdRpm) {
+                    if (absError >= flywheelConfig.modeConfig.bangBang.enterBangThresholdRpm) {
                         holdToBangCounter++;
-                        if (holdToBangCounter >= Math.max(1, phaseSwitchConfig.holdToBangConfirmCycles)) {
+                        if (holdToBangCounter >= Math.max(1, flywheelConfig.modeConfig.phaseSwitch.holdToBangConfirmCycles)) {
                             phase = ControlPhase.BANG;
                             holdToBangCounter = 0;
                             bangToHoldCounter = 0;
@@ -1282,8 +1284,8 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyBangBangControl(double error) {
-            double high = Range.clip(bangBangConfig.highPower, -1.0, 1.0);
-            double low = Range.clip(bangBangConfig.lowPower, -1.0, 1.0);
+            double high = Range.clip(flywheelConfig.modeConfig.bangBang.highPower, -1.0, 1.0);
+            double low = Range.clip(flywheelConfig.modeConfig.bangBang.lowPower, -1.0, 1.0);
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
@@ -1299,8 +1301,8 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyHybridControl(double error) {
-            double power = hybridPidConfig.kF + hybridPidConfig.kP * error;
-            power = Range.clip(power, 0.0, Math.max(0.0, hybridPidConfig.maxPower));
+            double power = flywheelConfig.modeConfig.hybridPid.kF + flywheelConfig.modeConfig.hybridPid.kP * error;
+            power = Range.clip(power, 0.0, Math.max(0.0, flywheelConfig.modeConfig.hybridPid.maxPower));
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
@@ -1310,13 +1312,13 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyHoldControl(double error) {
-            double holdPower = holdConfig.baseHoldPower + holdConfig.rpmPowerGain * commandedRpm;
-            holdPower = Range.clip(holdPower, holdConfig.minHoldPower, holdConfig.maxHoldPower);
+            double holdPower = flywheelConfig.modeConfig.hold.baseHoldPower + flywheelConfig.modeConfig.hold.rpmPowerGain * commandedRpm;
+            holdPower = Range.clip(holdPower, flywheelConfig.modeConfig.hold.minHoldPower, flywheelConfig.modeConfig.hold.maxHoldPower);
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
             holdPower = Range.clip(holdPower * voltageMultiplier, 0.0, 1.0);
-            double lowPower = Range.clip(bangBangConfig.lowPower * voltageMultiplier, 0.0, 1.0);
+            double lowPower = Range.clip(flywheelConfig.modeConfig.bangBang.lowPower * voltageMultiplier, 0.0, 1.0);
 
             if (error < 0.0) {
                 motor.setPower(lowPower);
