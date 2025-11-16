@@ -104,7 +104,7 @@ public class FireAllAtRangeCommand extends Command {
 
         // Activate prefeed roller in forward direction to help feed
         if (intake != null) {
-            intake.activatePrefeed();
+            intake.setPrefeedForward();
         }
 
         // Set RPMs and hood angles for all lanes based on range

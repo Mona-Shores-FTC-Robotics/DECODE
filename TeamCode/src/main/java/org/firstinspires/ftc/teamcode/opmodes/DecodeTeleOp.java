@@ -23,7 +23,6 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
-import java.lang.reflect.Field;
 import java.util.concurrent.TimeUnit;
 
 
@@ -117,7 +116,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
             selectedAlliance = allianceSelector.getSelectedAlliance();
         }
         robot.intake.activateRoller();
-        robot.intake.activatePrefeed();
+        robot.intake.setPrefeedForward();
     }
 
     @Override

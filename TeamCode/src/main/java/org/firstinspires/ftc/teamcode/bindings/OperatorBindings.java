@@ -84,13 +84,14 @@ public class OperatorBindings {
         runIntake.whenBecomesTrue(intakeForwardCommand);
         runIntake.whenBecomesFalse(intakeReverseCommand);
 
-        //try to make the feed roller go opposite so we can human player feed.
+        // Reverse Flywheel and Prefeed for Human Loading
         humanLoading
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
-//                .whenBecomesTrue(robot.)
+                .whenBecomesTrue(robot.intake::setPrefeedReverse)
                 .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
                 .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
-                .whenBecomesTrue(robot.launcher::setAllHoodsExtended); // move all hoods to LONG
+                .whenBecomesFalse(robot.intake::deactivatePrefeed)
+                .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
 
     }
 
