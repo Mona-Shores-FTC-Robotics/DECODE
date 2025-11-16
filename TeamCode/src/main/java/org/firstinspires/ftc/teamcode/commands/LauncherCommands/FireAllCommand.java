@@ -7,18 +7,14 @@ import dev.nextftc.core.commands.Command;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
-import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.Map;
 import java.util.Objects;
 
 /**
- * Launches every lane once the flywheel speeds have stabilized.
+ * Launches every lane as soon as the flywheel speeds reach target.
  * Designed to be triggered when the operator releases the "launch all" button.
  */
 public class FireAllCommand extends Command {
-
-    private static final double READY_STABLE_MS = 50.0;
 
     private enum Stage {
         WAITING_FOR_READY,
@@ -30,7 +26,6 @@ public class FireAllCommand extends Command {
     private final ManualSpinController manualSpinController;
     private final boolean spinDownAfterShot;
 
-    private final Map<LauncherLane, Double> readySinceMs = new EnumMap<>(LauncherLane.class);
     private final EnumSet<LauncherLane> queuedLanes = EnumSet.noneOf(LauncherLane.class);
     private final ElapsedTime timer = new ElapsedTime();
 
@@ -53,7 +48,6 @@ public class FireAllCommand extends Command {
         timer.reset();
         stage = Stage.WAITING_FOR_READY;
         queuedLanes.clear();
-        readySinceMs.clear();
         manualSpinActive = true;
         manualSpinController.enterManualSpin();
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
@@ -86,21 +80,14 @@ public class FireAllCommand extends Command {
     }
 
     private void checkLaneReadiness() {
-        double now = timer.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
             if (queuedLanes.contains(lane)) {
                 continue;
             }
+            // Queue shot immediately when lane is ready - no stability wait
             if (launcher.isLaneReady(lane)) {
-                double since = readySinceMs.getOrDefault(lane, -1.0);
-                if (since < 0.0) {
-                    readySinceMs.put(lane, now);
-                } else if (now - since >= READY_STABLE_MS) {
-                    launcher.queueShot(lane);
-                    queuedLanes.add(lane);
-                }
-            } else {
-                readySinceMs.put(lane, -1.0);
+                launcher.queueShot(lane);
+                queuedLanes.add(lane);
             }
         }
     }

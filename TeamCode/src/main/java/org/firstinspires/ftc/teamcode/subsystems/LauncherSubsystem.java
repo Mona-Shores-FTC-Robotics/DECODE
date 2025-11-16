@@ -37,7 +37,8 @@ public class LauncherSubsystem implements Subsystem {
 
     public enum FlywheelControlMode {
         HYBRID,
-        BANG_BANG_HOLD
+        BANG_BANG_HOLD,
+        PURE_BANG_BANG
     }
 
     private enum ControlPhase {
@@ -113,7 +114,7 @@ public class LauncherSubsystem implements Subsystem {
 
     @Configurable
     public static class FlywheelModeConfig {
-        public FlywheelControlMode mode = FlywheelControlMode.BANG_BANG_HOLD;
+        public FlywheelControlMode mode = FlywheelControlMode.PURE_BANG_BANG;
     }
 
     @Configurable
@@ -1287,6 +1288,14 @@ public class LauncherSubsystem implements Subsystem {
             double error = commandedRpm - getCurrentRpm();
             double absError = Math.abs(error);
 
+            // Pure bang-bang mode - simple and fast
+            if (getFlywheelControlMode() == FlywheelControlMode.PURE_BANG_BANG) {
+                phase = ControlPhase.BANG;
+                applyBangBangControl(error);
+                return;
+            }
+
+            // Legacy multi-phase control for HYBRID and BANG_BANG_HOLD modes
             switch (phase) {
                 case BANG:
                     if (getFlywheelControlMode() == FlywheelControlMode.BANG_BANG_HOLD) {
@@ -1369,7 +1378,6 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyBangBangControl(double error) {
-            double threshold = Math.max(0.0, bangBangConfig.bangDeadbandRpm);
             double high = Range.clip(bangBangConfig.highPower, -1.0, 1.0);
             double low = Range.clip(bangBangConfig.lowPower, -1.0, 1.0);
 
@@ -1378,10 +1386,9 @@ public class LauncherSubsystem implements Subsystem {
             high = Range.clip(high * voltageMultiplier, -1.0, 1.0);
             low = Range.clip(low * voltageMultiplier, -1.0, 1.0);
 
-            if (error > threshold) {
+            // Simple bang-bang: high power when below target, low power when at/above target
+            if (error > 0.0) {
                 motor.setPower(high);
-            } else if (error < -threshold) {
-                motor.setPower(low);
             } else {
                 motor.setPower(low);
             }
