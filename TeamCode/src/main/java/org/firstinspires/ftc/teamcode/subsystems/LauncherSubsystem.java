@@ -86,7 +86,6 @@ public class LauncherSubsystem implements Subsystem {
         public double lowPower = 0.2;
         public double enterBangThresholdRpm = 800;
         public double exitBangThresholdRpm = 1200;
-//        public double bangDeadbandRpm = 400;
     }
 
     @Configurable
@@ -126,15 +125,6 @@ public class LauncherSubsystem implements Subsystem {
         public int hybridToBangConfirmCycles = 3;
         public int holdToBangConfirmCycles = 3;
     }
-
-    public static FlywheelParameters flywheelParameters = new FlywheelParameters();
-    public static Timing timing = new Timing();
-    public static BangBangConfig bangBangConfig = new BangBangConfig();
-    public static HybridPidConfig hybridPidConfig = new HybridPidConfig();
-    public static HoldConfig holdConfig = new HoldConfig();
-    public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
-    public static FlywheelModeConfig flywheelModeConfig = new FlywheelModeConfig();
-    public static PhaseSwitchConfig phaseSwitchConfig = new PhaseSwitchConfig();
 
     @Configurable
     public static class LeftFlywheelConfig {
@@ -188,40 +178,69 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     @Configurable
-    public static class LeftHoodConfig {
-        public String servoName = "hood_left";
-        public boolean reversed = false;
-        /** Hood position for short range shots */
-        public double shortPosition = .45;
-        /** Hood position for mid range shots */
-        public double midPosition = 0;
-        /** Hood position for long range shots */
-        public double longPosition = 0;
-    }
+    public static class HoodConfig {
+        public double retractedPosition = 1;
+        public double extendedPosition = 0;
 
-    @Configurable
-    public static class CenterHoodConfig {
-        public String servoName = "hood_center";
-        public boolean reversed = false;
-        /** Hood position for short range shots */
-        public double shortPosition = .45;
-        /** Hood position for mid range shots */
-        public double midPosition = 0;
-        /** Hood position for long range shots */
-        public double longPosition = 0;
-    }
+        public LeftHoodConfig left = new LeftHoodConfig();
+        public CenterHoodConfig center = new CenterHoodConfig();
+        public RightHoodConfig right = new RightHoodConfig();
 
-    @Configurable
-    public static class RightHoodConfig {
-        public String servoName = "hood_right";
-        public boolean reversed = false;
-        /** Hood position for short range shots */
-        public double shortPosition = .45; //.9 2100 for shoot with launchers adj. .45
-        //TODO consider idle position and weirdness if idle is above the short shot.
-        /** Hood position for mid range shots */
-        public double midPosition = 0;
-        /** Hood position for long range shots */
-        public double longPosition = 0;
+        @Configurable
+        public static class LeftHoodConfig {
+            public String servoName = "hood_left";
+
+            /**
+             * Hood position for short range shots
+             */
+            public double shortPosition = .45;
+            /**
+             * Hood position for mid range shots
+             */
+            public double midPosition = 0;
+            /**
+             * Hood position for long range shots
+             */
+            public double longPosition = 0;
+            public double launcherGoalPosition = .9; //.9 2100 for shoot with launchers adj
+        }
+
+        @Configurable
+        public static class CenterHoodConfig {
+            public String servoName = "hood_center";
+            /**
+             * Hood position for short range shots
+             */
+            public double shortPosition = .45;
+            /**
+             * Hood position for mid range shots
+             */
+            public double midPosition = 0;
+            /**
+             * Hood position for long range shots
+             */
+            public double longPosition = 0;
+            public double launcherGoalPosition = .9; //.9 2100 for shoot with launchers adj
+        }
+
+        @Configurable
+        public static class RightHoodConfig {
+            public String servoName = "hood_right";
+            /**
+             * Hood position for short range shots
+             */
+            public double shortPosition = .45;
+            //TODO consider idle position and weirdness if idle is above the short shot.
+            /**
+             * Hood position for mid range shots
+             */
+            public double midPosition = 0;
+            /**
+             * Hood position for long range shots
+             */
+            public double longPosition = 0;
+            public double launcherGoalPosition = .9; //.9 2100 for shoot with launchers adj
+        }
     }
 
     @Configurable
@@ -230,15 +249,22 @@ public class LauncherSubsystem implements Subsystem {
         public double reversePower = -0.8;
     }
 
+    public static FlywheelParameters flywheelParameters = new FlywheelParameters();
+    public static Timing timing = new Timing();
+    public static BangBangConfig bangBangConfig = new BangBangConfig();
+    public static HybridPidConfig hybridPidConfig = new HybridPidConfig();
+    public static HoldConfig holdConfig = new HoldConfig();
+    public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
+    public static FlywheelModeConfig flywheelModeConfig = new FlywheelModeConfig();
+    public static PhaseSwitchConfig phaseSwitchConfig = new PhaseSwitchConfig();
     public static LeftFlywheelConfig leftFlywheelConfig = new LeftFlywheelConfig();
     public static CenterFlywheelConfig centerFlywheelConfig = new CenterFlywheelConfig();
     public static RightFlywheelConfig rightFlywheelConfig = new RightFlywheelConfig();
     public static LeftFeederConfig leftFeederConfig = new LeftFeederConfig();
     public static CenterFeederConfig centerFeederConfig = new CenterFeederConfig();
     public static RightFeederConfig rightFeederConfig = new RightFeederConfig();
-    public static LeftHoodConfig leftHoodConfig = new LeftHoodConfig();
-    public static CenterHoodConfig centerHoodConfig = new CenterHoodConfig();
-    public static RightHoodConfig rightHoodConfig = new RightHoodConfig();
+    public static HoodConfig HoodConfig = new HoodConfig();
+
     public static ReverseFlywheelForHumanLoadingConfig reverseFlywheelForHumanLoadingConfig = new ReverseFlywheelForHumanLoadingConfig();
 
     private final HardwareMap hardwareMap;
@@ -490,6 +516,18 @@ public class LauncherSubsystem implements Subsystem {
     public void setAllHoodPositions(double position) {
         for (Hood hood : hoods.values()) {
             hood.setPosition(position);
+        }
+    }
+
+    public void setAllHoodsRetracted() {
+        for (Hood hood : hoods.values()) {
+            hood.setPosition(HoodConfig.retractedPosition);
+        }
+    }
+
+    public void setAllHoodsExtended() {
+        for (Hood hood : hoods.values()) {
+            hood.setPosition(HoodConfig.extendedPosition);
         }
     }
 
@@ -1011,176 +1049,6 @@ public class LauncherSubsystem implements Subsystem {
         return position;
     }
 
-    // ========================================================================
-    // AutoLog Output Methods
-    // These methods are automatically logged by KoalaLog to WPILOG files
-    // and published to FTC Dashboard for AdvantageScope Lite
-    // ========================================================================
-
-    public LauncherState getLogState() {
-        return state;
-    }
-
-    public SpinMode getLogRequestedSpinMode() {
-        return requestedSpinMode;
-    }
-
-    public SpinMode getLogEffectiveSpinMode() {
-        return computeEffectiveSpinMode();
-    }
-
-    public String getLogControlMode() {
-        return getFlywheelControlMode().name();
-    }
-
-    public boolean getLogBusy() {
-        return isBusy();
-    }
-
-    public int getLogQueuedShots() {
-        return getQueuedShots();
-    }
-
-    public double getLogStateElapsedSec() {
-        return getStateElapsedSeconds();
-    }
-
-    public String getLogActiveShotLane() {
-        ShotRequest pendingShot = shotQueue.peekFirst();
-        return pendingShot == null ? "NONE" : pendingShot.lane.name();
-    }
-
-    public double getLogActiveShotAgeMs() {
-        ShotRequest pendingShot = shotQueue.peekFirst();
-        if (pendingShot == null) {
-            return 0.0;
-        }
-        double now = clock.milliseconds();
-        return Math.max(0.0, now - pendingShot.scheduledTimeMs);
-    }
-
-    public double getLogLastShotCompletionMs() {
-        double lastCompletionMs = 0.0;
-        for (LauncherLane lane : LauncherLane.values()) {
-            double deadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
-            if (deadline > 0.0) {
-                lastCompletionMs = Math.max(lastCompletionMs, deadline - timing.recoveryMs);
-            }
-        }
-        return lastCompletionMs;
-    }
-
-    public double getLogAverageTargetRpm() {
-        return getTargetRpm();
-    }
-
-    public double getLogAverageCurrentRpm() {
-        return getCurrentRpm();
-    }
-
-    public double getLogAveragePower() {
-        return getLastPower();
-    }
-
-    public double getLogLeftTargetRpm() {
-        return getTargetRpm(LauncherLane.LEFT);
-    }
-
-    public double getLogLeftCurrentRpm() {
-        return getCurrentRpm(LauncherLane.LEFT);
-    }
-
-    public double getLogLeftPower() {
-        return getLastPower(LauncherLane.LEFT);
-    }
-
-    public boolean getLogLeftReady() {
-        return isLaneReady(LauncherLane.LEFT);
-    }
-
-    public double getLogLeftFeederPosition() {
-        return getFeederPosition(LauncherLane.LEFT);
-    }
-
-    public double getLogLeftRecoveryRemainingMs() {
-        double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.LEFT, 0.0);
-        return Math.max(0.0, recoveryDeadline - clock.milliseconds());
-    }
-
-    public double getLogCenterTargetRpm() {
-        return getTargetRpm(LauncherLane.CENTER);
-    }
-
-    public double getLogCenterCurrentRpm() {
-        return getCurrentRpm(LauncherLane.CENTER);
-    }
-
-    public double getLogCenterPower() {
-        return getLastPower(LauncherLane.CENTER);
-    }
-
-    public boolean getLogCenterReady() {
-        return isLaneReady(LauncherLane.CENTER);
-    }
-
-    public double getLogCenterFeederPosition() {
-        return getFeederPosition(LauncherLane.CENTER);
-    }
-
-    public double getLogCenterRecoveryRemainingMs() {
-        double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.CENTER, 0.0);
-        return Math.max(0.0, recoveryDeadline - clock.milliseconds());
-    }
-
-    public double getLogRightTargetRpm() {
-        return getTargetRpm(LauncherLane.RIGHT);
-    }
-
-    public double getLogRightCurrentRpm() {
-        return getCurrentRpm(LauncherLane.RIGHT);
-    }
-
-    public double getLogRightPower() {
-        return getLastPower(LauncherLane.RIGHT);
-    }
-
-    public boolean getLogRightReady() {
-        return isLaneReady(LauncherLane.RIGHT);
-    }
-
-    public double getLogRightFeederPosition() {
-        return getFeederPosition(LauncherLane.RIGHT);
-    }
-
-    public double getLogRightRecoveryRemainingMs() {
-        double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(LauncherLane.RIGHT, 0.0);
-        return Math.max(0.0, recoveryDeadline - clock.milliseconds());
-    }
-
-    public double getLogLeftHoodPosition() {
-        return getHoodPosition(LauncherLane.LEFT);
-    }
-
-    public double getLogCenterHoodPosition() {
-        return getHoodPosition(LauncherLane.CENTER);
-    }
-
-    public double getLogRightHoodPosition() {
-        return getHoodPosition(LauncherLane.RIGHT);
-    }
-
-    public double getLogBatteryVoltage() {
-        return getBatteryVoltage();
-    }
-
-    public double getLogVoltageCompensationMultiplier() {
-        return getVoltageCompensationMultiplier();
-    }
-
-    public boolean getLogVoltageCompensationEnabled() {
-        return voltageCompensationConfig.enabled;
-    }
-
     private static class ShotRequest {
         final LauncherLane lane;
         final double scheduledTimeMs;
@@ -1551,13 +1419,6 @@ public class LauncherSubsystem implements Subsystem {
         Hood(LauncherLane lane, HardwareMap hardwareMap) {
             this.lane = lane;
             this.servo = tryGetServo(hardwareMap, hoodNameFor(lane));
-            if (this.servo != null) {
-                if (hoodReversedFor(lane)) {
-                    servo.setDirection(Servo.Direction.REVERSE);
-                } else {
-                    servo.setDirection(Servo.Direction.FORWARD);
-                }
-            }
         }
 
         void initialize() {
@@ -1603,60 +1464,48 @@ public class LauncherSubsystem implements Subsystem {
     private static String hoodNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return leftHoodConfig.servoName;
+                return HoodConfig.left.servoName;
             case CENTER:
-                return centerHoodConfig.servoName;
+                return HoodConfig.center.servoName;
             case RIGHT:
             default:
-                return rightHoodConfig.servoName;
-        }
-    }
-
-    private static boolean hoodReversedFor(LauncherLane lane) {
-        switch (lane) {
-            case LEFT:
-                return leftHoodConfig.reversed;
-            case CENTER:
-                return centerHoodConfig.reversed;
-            case RIGHT:
-            default:
-                return rightHoodConfig.reversed;
+                return HoodConfig.right.servoName;
         }
     }
 
     public static double hoodShortPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(leftHoodConfig.shortPosition);
+                return clampServo(HoodConfig.left.shortPosition);
             case CENTER:
-                return clampServo(centerHoodConfig.shortPosition);
+                return clampServo(HoodConfig.center.shortPosition);
             case RIGHT:
             default:
-                return clampServo(rightHoodConfig.shortPosition);
+                return clampServo(HoodConfig.right.shortPosition);
         }
     }
 
     public static double hoodMidPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(leftHoodConfig.midPosition);
+                return clampServo(HoodConfig.left.midPosition);
             case CENTER:
-                return clampServo(centerHoodConfig.midPosition);
+                return clampServo(HoodConfig.center.midPosition);
             case RIGHT:
             default:
-                return clampServo(rightHoodConfig.midPosition);
+                return clampServo(HoodConfig.right.midPosition);
         }
     }
 
     public static double hoodLongPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(leftHoodConfig.longPosition);
+                return clampServo(HoodConfig.left.longPosition);
             case CENTER:
-                return clampServo(centerHoodConfig.longPosition);
+                return clampServo(HoodConfig.center.longPosition);
             case RIGHT:
             default:
-                return clampServo(rightHoodConfig.longPosition);
+                return clampServo(HoodConfig.right.longPosition);
         }
     }
 
