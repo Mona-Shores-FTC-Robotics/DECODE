@@ -58,12 +58,13 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     @Configurable
     public static class AutoMotionConfig {
         public double maxPathPower = .6;
-        public double intakeTimeSeconds = 2.0;
+        public double intakeTimeSeconds = 6.0;
         public double launchDelaySeconds = 0.5;
+        public double intakeDelaySeconds = 0.5; //how long into the path do we turn the intake on?
+
     }
 
     public static DecodeAutonomousFarCommand.AutoMotionConfig config = new DecodeAutonomousFarCommand.AutoMotionConfig();
-
 
     private Robot robot;
     private AllianceSelector allianceSelector;
@@ -71,10 +72,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     private FieldLayout currentLayout;
     private IntakeCommands intakeCommands;
     private LauncherCommands launcherCommands;
+    private GamepadEx driverPad = new GamepadEx(() -> gamepad1);
 
     // AprilTag-based start pose detection
     private Pose lastAppliedStartPosePedro;
-    private Pose lastDetectedStartPosePedro;
     {
         addComponents(
                 BulkReadComponent.INSTANCE,
@@ -83,6 +84,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
                 CommandManager.INSTANCE
         );
     }
+
     @Override
     public void onInit() {
         BindingManager.reset();
@@ -95,22 +97,14 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         robot.launcherCoordinator.lockIntake();
         robot.launcherCoordinator.setIntakeAutomationEnabled(false);
+
         robot.initializeForAuto();
 
         // Initialize command factories
         intakeCommands = new IntakeCommands(robot.intake);
         launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.launcherCoordinator, robot.manualSpinController);
 
-        // Register init-phase controls
-        // Use Alliance.UNKNOWN as default to enable automatic vision detection
-        // Manual overrides (D-pad left/right) still work as expected
-        GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
-        driverPad.y().whenBecomesTrue(() -> applyAlliance(allianceSelector.getSelectedAlliance(), lastAppliedStartPosePedro));
-        driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
-        driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
-        driverPad.a().whenBecomesTrue(this::applyLastDetectedStartPose);
-
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
@@ -123,8 +117,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
                 new SubsystemComponent(robot.vision),
                 new SubsystemComponent(robot.launcherCoordinator)
         );
-
-
     }
 
     @Override
@@ -134,6 +126,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         // Detect alliance and start pose from AprilTag vision
         java.util.Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt =
                 allianceSelector.updateFromVision(robot.vision);
+
         allianceSelector.applySelection(robot, robot.lighting);
 
         // Extract detected start pose from vision
@@ -141,7 +134,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
             java.util.Optional<Pose> detectedPose = snapshot.getRobotPose();
             if (detectedPose.isPresent()) {
-                lastDetectedStartPosePedro = copyPose(detectedPose.get());
+                Pose candidate = detectedPose.get();
+                if (shouldUpdateStartPose(candidate)) {
+                    applyAlliance(activeAlliance, candidate);
+                }
             }
         }
 
@@ -173,8 +169,8 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        robot.telemetry.updateDriverStation(telemetry);
-    }
+
+                    }
 
     @Override
     public void onStop() {
@@ -207,7 +203,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         return new SequentialGroup(
                 // Phase 1: Drive to launch position and score preload
                 new ParallelGroup(
-                    spinUpLauncher(),
+                    spinUpLauncher(), //finishes when we are at launch RPM
                     followPath(startFarPose, launchFarPose)
                 ),
                 scoreSequence(),
@@ -236,8 +232,8 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             new ParallelGroup(
                 followPath(fromPose, pickupPose, controlPoints),
                 new SequentialGroup(
-                    new Delay(0.3),
-                    new IntakeUntilFullCommand(robot.intake, 3)
+                    new Delay(config.intakeDelaySeconds), //should we try to use a callback? or is time fine?
+                    new IntakeUntilFullCommand(robot.intake, config.intakeTimeSeconds) // intake until we are full or hit the timeout
                 )
             ),
 
@@ -281,34 +277,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         }
     }
 
-    /**
-     * Builds all paths for the autonomous routine for visualization.
-     * Returns an array of PathChains in order: [startToLaunch, launchToWall, wallToLaunch,
-     * launchToParking, parkingToLaunch, launchToGate, gateToLaunch]
-     */
-    public static PathChain[] buildAllPathsForVisualization(Follower follower, Alliance alliance) {
-        FieldLayout layout = AutoField.layoutForAlliance(alliance);
-
-        Pose startFarPose = layout.pose(FieldPoint.START_FAR);
-        Pose launchFarPose = layout.pose(FieldPoint.LAUNCH_FAR);
-        Pose allianceWallPose = layout.pose(FieldPoint.ALLIANCE_WALL_ARTIFACTS_PICKUP);
-        Pose parking90DegPose = layout.pose(FieldPoint.PARKING_ARTIFACTS_PICKUP_90_DEG);
-        Pose gateFar90DegPose = layout.pose(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_90_DEG);
-        Pose parkingControlPoint = AutoField.parkingArtifactsControlPoint(alliance);
-        Pose gateFarControlPoint = AutoField.gateFarArtifactsControlPoint(alliance);
-
-        return new PathChain[] {
-            buildPath(follower, startFarPose, launchFarPose),
-            buildPath(follower, launchFarPose, allianceWallPose),
-            buildPath(follower, allianceWallPose, launchFarPose),
-            buildPath(follower, launchFarPose, parking90DegPose, parkingControlPoint),
-            buildPath(follower, parking90DegPose, launchFarPose),
-            buildPath(follower, launchFarPose, gateFar90DegPose, gateFarControlPoint),
-            buildPath(follower, gateFar90DegPose, launchFarPose)
-        };
-    }
-
-
     private void applyAlliance(Alliance alliance, Pose startOverride) {
         activeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
         robot.setAlliance(activeAlliance);
@@ -326,18 +294,12 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         robot.drive.getFollower().setPose(startPose);
     }
 
-    private void drawPreviewForAlliance(Alliance alliance) {
-        FieldLayout layout = AutoField.layoutForAlliance(alliance);
-        // Preview paths would be drawn here using PanelsBridge
-        PanelsBridge.drawPreview(new PathChain[0], layout.pose(FieldPoint.START_FAR), alliance == Alliance.RED);
-    }
-
     /**
      * Spins up the launcher and waits until all launchers reach target RPM.
      * Phase 1: Uses position-specific tunable RPM from LaunchAtPositionCommand.PositionRpmConfig
      */
     private Command spinUpLauncher() {
-        return launcherCommands.spinUpForPosition(FieldPoint.LAUNCH_FAR);
+        return launcherCommands.spinUpUntilReady();
     }
 
     /**
@@ -348,16 +310,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             new Delay(config.launchDelaySeconds),
             launcherCommands.launchDetectedBurst()
         );
-    }
-
-    /**
-     * Applies the last AprilTag-detected start pose (bound to dpad A during init)
-     */
-    private void applyLastDetectedStartPose() {
-        if (!shouldUpdateStartPose(lastDetectedStartPosePedro)) {
-            return;
-        }
-        applyAlliance(activeAlliance, lastDetectedStartPosePedro);
     }
 
     /**

@@ -104,7 +104,7 @@ public class FireAllAtRangeCommand extends Command {
 
         // Activate prefeed roller in forward direction to help feed
         if (intake != null) {
-            intake.activatePrefeed();
+            intake.setPrefeedForward();
         }
 
         // Set RPMs and hood angles for all lanes based on range
@@ -162,10 +162,7 @@ public class FireAllAtRangeCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-        // Deactivate prefeed roller (returns to reverse safety position)
-        if (intake != null) {
-            intake.deactivatePrefeed();
-        }
+
 
         // Clear RPM overrides to return to default values
         launcher.clearOverrides();
@@ -185,6 +182,11 @@ public class FireAllAtRangeCommand extends Command {
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
             launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
             spinDownApplied = true;
+            // Deactivate prefeed roller (returns to not spinning)
+            //TODO maybe this should be sooner?
+            if (intake != null) {
+                intake.deactivatePrefeed();
+            }
         }
     }
 

@@ -22,13 +22,13 @@ public class LaunchAtPositionCommand extends Command {
     @Configurable
     public static class PositionRpmConfig {
         /** RPM for shots from LAUNCH_FAR position */
-        public double farLaunchRpm = 4200.0;
+        public double farLaunchRpm = 2900;
 
         /** RPM for shots from LAUNCH_CLOSE position */
-        public double closeLaunchRpm = 2700.0;
+        public double closeLaunchRpm = 2150;
 
         /** Default RPM if position unknown */
-        public double defaultLaunchRpm = 3600.0;
+        public double defaultLaunchRpm = 2400;
 
         /** Timeout in seconds before giving up */
         public double timeoutSeconds = 3.0;
@@ -69,9 +69,11 @@ public class LaunchAtPositionCommand extends Command {
 
     @Override
     public void start() {
-        // Set RPM for enabled launchers (left and right)
+
         launcher.setLaunchRpm(LauncherLane.LEFT, targetRpm);
+        launcher.setLaunchRpm(LauncherLane.CENTER, targetRpm);
         launcher.setLaunchRpm(LauncherLane.RIGHT, targetRpm);
+        launcher.setAllHoodsExtended();
 
         // Spin up to target
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);

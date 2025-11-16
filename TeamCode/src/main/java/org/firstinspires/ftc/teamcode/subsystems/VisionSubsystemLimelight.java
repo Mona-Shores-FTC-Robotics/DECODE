@@ -28,6 +28,7 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     private static final long ODOMETRY_RESET_TIMEOUT_MS = 3000L;
 
+
     public enum VisionState {
         OFF,
         STREAMING
@@ -528,4 +529,7 @@ public class VisionSubsystemLimelight implements Subsystem {
             return Double.NaN;
         }
     }
+
+
+
 }

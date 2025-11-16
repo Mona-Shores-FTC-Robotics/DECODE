@@ -260,7 +260,7 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class ReverseFlywheelForHumanLoadingConfig {
         /** Power level for reverse intake (negative runs motors backward) */
-        public double reversePower = -0.8;
+        public double reversePower = -0.45;
     }
 
     public static FlywheelParameters flywheelParameters = new FlywheelParameters();

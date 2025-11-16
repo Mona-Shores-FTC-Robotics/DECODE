@@ -3,8 +3,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import androidx.annotation.NonNull;
 
 import com.bylazar.configurables.annotations.Configurable;
-import com.pedropathing.control.PIDFController;
-import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.math.Vector;
@@ -66,6 +64,9 @@ public class DriveSubsystem implements Subsystem {
     public static TeleOpDriveConfig teleOpDriveConfig = new TeleOpDriveConfig();
     public static AimAssistConfig aimAssistConfig = new AimAssistConfig();
     public static RampConfig rampConfig = new RampConfig();
+
+    public String visionRelocalizeStatus = "Press A to re-localize";
+    public long visionRelocalizeStatusMs = 0L;
 
     public enum DriveMode {
         NORMAL,
@@ -180,7 +181,7 @@ public class DriveSubsystem implements Subsystem {
         follower.breakFollowing();
         fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
         visionHeadingCalibrated = false;
-        poseFusion.reset(seed, System.currentTimeMillis());
+        poseFusion.reset(seed , System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
     }
 
@@ -255,17 +256,17 @@ public class DriveSubsystem implements Subsystem {
         return total;
     }
 
-    public void driveTeleOp(double fieldX,
-                            double fieldY,
-                            double rotationInput,
-                            boolean slowMode,
+    public void driveTeleOp(double fieldX ,
+                            double fieldY ,
+                            double rotationInput ,
+                            boolean slowMode ,
                             boolean rampMode
-                            ) {
+    ) {
         if (robotCentric != robotCentricConfig) {
             setRobotCentric(robotCentricConfig);
         }
-        double[] rotated = rotateFieldInput(fieldX, fieldY);
-        driveScaled(rotated[0], rotated[1], rotationInput, slowMode, rampMode);
+        double[] rotated = rotateFieldInput(fieldX , fieldY);
+        driveScaled(rotated[0] , rotated[1] , rotationInput , slowMode , rampMode);
     }
 
     /**
@@ -277,10 +278,10 @@ public class DriveSubsystem implements Subsystem {
      * @param slowMode      when true applies the configured slow multiplier
      */
     public void driveScaled(double fieldX , double fieldY , double rotationInput , boolean slowMode) {
-        driveScaled(fieldX, fieldY, rotationInput, slowMode, false);
+        driveScaled(fieldX , fieldY , rotationInput , slowMode , false);
     }
 
-    public void driveScaled(double fieldX , double fieldY , double rotationInput , boolean slowMode, boolean rampMode) {
+    public void driveScaled(double fieldX , double fieldY , double rotationInput , boolean slowMode , boolean rampMode) {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestRotation = rotationInput;
@@ -299,7 +300,7 @@ public class DriveSubsystem implements Subsystem {
 
         if (rampMode) {
             long now = System.nanoTime();
-            if (!rampModeActive) {
+            if (! rampModeActive) {
                 rampForward = lastCommandForward;
                 rampStrafeLeft = lastCommandStrafeLeft;
                 rampTurn = lastCommandTurn;
@@ -309,17 +310,17 @@ public class DriveSubsystem implements Subsystem {
             double dt = lastRampUpdateNs == 0L ? 0.0 : (now - lastRampUpdateNs) / 1_000_000_000.0;
             lastRampUpdateNs = now;
             if (dt <= 0.0) {
-                dt = Math.max(0.0, rampConfig.fallbackDtSeconds);
+                dt = Math.max(0.0 , rampConfig.fallbackDtSeconds);
             }
-            double forwardRate = Math.max(0.0, rampConfig.forwardRatePerSec);
-            double strafeRate = Math.max(0.0, rampConfig.strafeRatePerSec);
-            double turnRate = Math.max(0.0, rampConfig.turnRatePerSec);
+            double forwardRate = Math.max(0.0 , rampConfig.forwardRatePerSec);
+            double strafeRate = Math.max(0.0 , rampConfig.strafeRatePerSec);
+            double turnRate = Math.max(0.0 , rampConfig.turnRatePerSec);
             double maxForwardDelta = forwardRate * dt;
             double maxStrafeDelta = strafeRate * dt;
             double maxTurnDelta = turnRate * dt;
-            rampForward = moveToward(rampForward, targetForward, maxForwardDelta);
-            rampStrafeLeft = moveToward(rampStrafeLeft, targetStrafeLeft, maxStrafeDelta);
-            rampTurn = moveToward(rampTurn, targetTurnCW, maxTurnDelta);
+            rampForward = moveToward(rampForward , targetForward , maxForwardDelta);
+            rampStrafeLeft = moveToward(rampStrafeLeft , targetStrafeLeft , maxStrafeDelta);
+            rampTurn = moveToward(rampTurn , targetTurnCW , maxTurnDelta);
             appliedForward = rampForward;
             appliedStrafeLeft = rampStrafeLeft;
             appliedTurn = rampTurn;
@@ -339,19 +340,19 @@ public class DriveSubsystem implements Subsystem {
         activeMode = slowMode ? DriveMode.SLOW : DriveMode.NORMAL;
     }
 
-    private static double moveToward(double current, double target, double maxDelta) {
+    private static double moveToward(double current , double target , double maxDelta) {
         double delta = target - current;
         if (Math.abs(delta) <= maxDelta) {
             return target;
         }
-        return current + Math.copySign(maxDelta, delta);
+        return current + Math.copySign(maxDelta , delta);
     }
 
     public void aimAndDrive(double fieldX , double fieldY , boolean slowMode) {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
-        double[] rotated = rotateFieldInput(fieldX, fieldY);
+        double[] rotated = rotateFieldInput(fieldX , fieldY);
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
         double forward = Range.clip(rotated[1] * multiplier , - 1.0 , 1.0);
@@ -381,7 +382,7 @@ public class DriveSubsystem implements Subsystem {
 
         double headingError = normalizeAngle(targetHeading - follower.getHeading());
         lastAimErrorRad = headingError;
-        double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
+        double maxTurn = Math.max(0.0 , aimAssistConfig.kMaxTurn);
         double turn = Range.clip(aimAssistConfig.kP * headingError , - maxTurn , maxTurn);
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
@@ -434,9 +435,9 @@ public class DriveSubsystem implements Subsystem {
         follower.followPath(pathChain , holdPositionAtEnd);
     }
 
-    public void followPath(PathChain pathChain, double maxPower, boolean holdPositionAtEnd) {
-        double clippedPower = Range.clip(maxPower, 0.0, 1.0);
-        follower.followPath(pathChain, clippedPower, holdPositionAtEnd);
+    public void followPath(PathChain pathChain , double maxPower , boolean holdPositionAtEnd) {
+        double clippedPower = Range.clip(maxPower , 0.0 , 1.0);
+        follower.followPath(pathChain , clippedPower , holdPositionAtEnd);
     }
 
     public boolean isFollowerBusy() {
@@ -462,6 +463,7 @@ public class DriveSubsystem implements Subsystem {
     public double getLastCommandDrive() {
         return lastCommandForward;
     }
+
     public double getLastCommandStrafe() {
         return lastCommandStrafeLeft;
     }
@@ -498,17 +500,17 @@ public class DriveSubsystem implements Subsystem {
         return Math.atan2(Math.sin(angle) , Math.cos(angle));
     }
 
-    protected double[] rotateFieldInput(double fieldX, double fieldY) {
-        double cos = Math.cos(-fieldHeadingOffsetRad);
-        double sin = Math.sin(-fieldHeadingOffsetRad);
-        return new double[] {
-                cos * fieldX - sin * fieldY,
+    protected double[] rotateFieldInput(double fieldX , double fieldY) {
+        double cos = Math.cos(- fieldHeadingOffsetRad);
+        double sin = Math.sin(- fieldHeadingOffsetRad);
+        return new double[]{
+                cos * fieldX - sin * fieldY ,
                 sin * fieldX + cos * fieldY
         };
     }
 
     private void maybeRelocalizeFromVision() {
-        if (!visionRelocalizationEnabled) {
+        if (! visionRelocalizationEnabled) {
             return;
         }
         if (! vision.shouldUpdateOdometry()) {
@@ -530,6 +532,26 @@ public class DriveSubsystem implements Subsystem {
      *
      * @return {@code true} when the pose was updated.
      */
+    public void tryRelocalize() {
+        boolean tagVisible = vision.hasValidTag();
+
+        if (tagVisible &&
+                (vision.getCurrentTagId() == FieldConstants.BLUE_GOAL_TAG_ID ||
+                        vision.getCurrentTagId() == FieldConstants.RED_GOAL_TAG_ID)) {
+            boolean success = forceRelocalizeFromVision();
+            if (success) {
+                visionRelocalizeStatus = "Pose updated from Limelight";
+            } else {
+                visionRelocalizeStatus = "Failed to update pose from Limelight";
+            }
+        } else if (tagVisible) {
+            visionRelocalizeStatus = "No Goal AprilTag visible";
+        } else {
+            visionRelocalizeStatus = "No AprilTag visible";
+        }
+        visionRelocalizeStatusMs = System.currentTimeMillis();
+    }
+
     public boolean forceRelocalizeFromVision() {
         vision.findAllianceSnapshot(vision.getAlliance());
         Optional<Pose> tagPoseOpt = vision.getRobotPoseFromTag();
@@ -560,6 +582,7 @@ public class DriveSubsystem implements Subsystem {
                 Math.toDegrees(adjustedPose.getHeading()));
         return true;
     }
+
 
 
     private void updatePoseFusion() {

@@ -1,12 +1,10 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
 import static org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.IntakeMode.STOPPED;
 
 import android.graphics.Color;
 
 import com.bylazar.configurables.annotations.Configurable;
-import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -23,8 +21,6 @@ import dev.nextftc.core.subsystems.Subsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
-
-import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -360,12 +356,6 @@ public class IntakeSubsystem implements Subsystem {
             rollerServo.setPosition(target);
             lastRollerPosition = target;
         }
-        if (prefeedServo != null) {
-            double target = prefeedEnabled ? prefeedConfig.forwardPosition : prefeedConfig.inactivePosition;
-            prefeedServo.setPosition(target);
-            lastPrefeedPosition = target;
-        }
-        //TODO write code to make this tertiary so we can be more than just enabled, but reversed for forward.
 
         lastServoUpdateMs = (System.nanoTime() - servoStart) / 1_000_000.0;
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
@@ -389,9 +379,6 @@ public class IntakeSubsystem implements Subsystem {
         rollerEnabled = true;
     }
 
-    public void activatePrefeed() {
-        prefeedEnabled = true;
-    }
 
     public void deactivateRoller() {
         rollerEnabled = false;
@@ -401,11 +388,28 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
-    public void deactivatePrefeed() {
-        prefeedEnabled = false;
+
+    public void setPrefeedForward() {
+        prefeedEnabled = true;
+        if (prefeedServo != null) {
+            prefeedServo.setPosition(prefeedConfig.forwardPosition);
+            lastPrefeedPosition = prefeedConfig.forwardPosition;
+        }
+    }
+
+    public void setPrefeedReverse() {
+        prefeedEnabled = true;
         if (prefeedServo != null) {
             prefeedServo.setPosition(prefeedConfig.reversePosition);
             lastPrefeedPosition = prefeedConfig.reversePosition;
+        }
+    }
+
+    public void deactivatePrefeed() {
+        prefeedEnabled = false;
+        if (prefeedServo != null) {
+            prefeedServo.setPosition(prefeedConfig.inactivePosition);
+            lastPrefeedPosition = prefeedConfig.inactivePosition;
         }
     }
 
