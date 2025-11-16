@@ -160,10 +160,10 @@ public class IntakeSubsystem implements Subsystem {
     @Configurable
     public static class PrefeedConfig {
         public String servoName = "prefeed_roller";
-        /** Reverse position (default) - prevents accidental feeding */
-        public double reversePosition = 0.3;
-        /** Forward position - helps feed artifacts when firing */
-        public double forwardPosition = 0.7;
+        /** Reverse speed (default) - prevents accidental feeding (continuous servo: 0.0 = full reverse) */
+        public double reversePosition = 0.0;
+        /** Forward speed - helps feed artifacts when firing (continuous servo: 1.0 = full forward) */
+        public double forwardPosition = 1.0;
     }
 
     @Configurable
