@@ -38,9 +38,9 @@ public class FireAllAtRangeCommand extends Command {
         public double midRightRpm = 2450;
 
         /** Long range configuration */
-        public double longLeftRpm = 4200.0;
-        public double longCenterRpm = 4200; // Center disabled by default
-        public double longRightRpm = 4200.0;
+        public double longLeftRpm = 2900;
+        public double longCenterRpm = 2850; // Center disabled by default
+        public double longRightRpm = 3000;
 
         /** Timeout in seconds before giving up on spin-up */
         public double timeoutSeconds = 8.0;

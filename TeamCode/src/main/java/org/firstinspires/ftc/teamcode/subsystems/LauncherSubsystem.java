@@ -75,7 +75,7 @@ public class LauncherSubsystem implements Subsystem {
         /** Time to keep flywheel at launch speed after firing to ensure artifact clears (ms). */
         public double launchHoldAfterFireMs = 500;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-        public double recoveryMs = 500;
+        public double recoveryMs = 3000;
         /** Delay between sequential shots when bursting all three lanes (ms). */
         public double burstSpacingMs = 120.0;
     }
@@ -83,7 +83,7 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class BangBangConfig {
         public double highPower = 1.0;
-        public double lowPower = 0.6;
+        public double lowPower = 0.2;
         public double enterBangThresholdRpm = 800;
         public double exitBangThresholdRpm = 1200;
 //        public double bangDeadbandRpm = 400;
@@ -192,7 +192,7 @@ public class LauncherSubsystem implements Subsystem {
         public String servoName = "hood_left";
         public boolean reversed = false;
         /** Hood position for short range shots */
-        public double shortPosition = .5;
+        public double shortPosition = .45;
         /** Hood position for mid range shots */
         public double midPosition = 0;
         /** Hood position for long range shots */
@@ -204,7 +204,7 @@ public class LauncherSubsystem implements Subsystem {
         public String servoName = "hood_center";
         public boolean reversed = false;
         /** Hood position for short range shots */
-        public double shortPosition = .5;
+        public double shortPosition = .45;
         /** Hood position for mid range shots */
         public double midPosition = 0;
         /** Hood position for long range shots */
@@ -216,7 +216,8 @@ public class LauncherSubsystem implements Subsystem {
         public String servoName = "hood_right";
         public boolean reversed = false;
         /** Hood position for short range shots */
-        public double shortPosition = .5;
+        public double shortPosition = .45; //.9 2100 for shoot with launchers adj. .45
+        //TODO consider idle position and weirdness if idle is above the short shot.
         /** Hood position for mid range shots */
         public double midPosition = 0;
         /** Hood position for long range shots */
@@ -226,7 +227,7 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class ReverseFlywheelForHumanLoadingConfig {
         /** Power level for reverse intake (negative runs motors backward) */
-        public double reversePower = -0.3;
+        public double reversePower = -0.8;
     }
 
     public static LeftFlywheelConfig leftFlywheelConfig = new LeftFlywheelConfig();

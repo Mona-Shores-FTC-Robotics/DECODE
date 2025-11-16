@@ -142,10 +142,13 @@ public class OperatorBindings {
         // Intake control
         intakeForwardHold.whenBecomesTrue(intakeForwardCommand);
         intakeForwardHold.whenBecomesFalse(intakeReverseCommand);
-
+    //try to make the feed roller go opposite so we can human player feed.
         flywheelHumanLoadingButton
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
-                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading);
+                .whenBecomesTrue(()->robot.launcher.setAllHoodPositions(1))
+                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
+                .whenBecomesFalse(()->robot.launcher.setAllHoodPositions(0));
+
     }
 
     private void requestForwardIntake() {
