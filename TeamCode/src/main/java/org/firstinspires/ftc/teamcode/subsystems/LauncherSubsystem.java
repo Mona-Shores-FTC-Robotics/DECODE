@@ -72,6 +72,8 @@ public class LauncherSubsystem implements Subsystem {
         public double minimalSpinUpMs = 500;
         /** If encoders are unavailable, treat the wheel as ready after this many milliseconds at full power. */
         public double fallbackReadyMs = 500;
+        /** Time to keep flywheel at launch speed after firing to ensure artifact clears (ms). */
+        public double launchHoldAfterFireMs = 500;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
         public double recoveryMs = 500;
         /** Delay between sequential shots when bursting all three lanes (ms). */
@@ -243,6 +245,7 @@ public class LauncherSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Hood> hoods = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Double> laneRecoveryDeadlineMs = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, Double> laneLaunchHoldDeadlineMs = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Double> launchRpmOverrides = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Double> idleRpmOverrides = new EnumMap<>(LauncherLane.class);
     private final Deque<ShotRequest> shotQueue = new ArrayDeque<>();
@@ -304,6 +307,7 @@ public class LauncherSubsystem implements Subsystem {
             feeders.put(lane, new Feeder(lane, hardwareMap));
             hoods.put(lane, new Hood(lane, hardwareMap));
             laneRecoveryDeadlineMs.put(lane, 0.0);
+            laneLaunchHoldDeadlineMs.put(lane, 0.0);
         }
     }
 
@@ -318,6 +322,7 @@ public class LauncherSubsystem implements Subsystem {
         for (Map.Entry<LauncherLane, Flywheel> entry : flywheels.entrySet()) {
             entry.getValue().initialize();
             laneRecoveryDeadlineMs.put(entry.getKey(), 0.0);
+            laneLaunchHoldDeadlineMs.put(entry.getKey(), 0.0);
         }
         for (Feeder feeder : feeders.values()) {
             feeder.initialize();
@@ -433,6 +438,7 @@ public class LauncherSubsystem implements Subsystem {
         reverseFlywheelActive = false;
         double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
+            laneLaunchHoldDeadlineMs.put(lane, 0.0);
             laneRecoveryDeadlineMs.put(lane, now + timing.recoveryMs);
             feeders.get(lane).stop();
             flywheels.get(lane).stop();
@@ -731,6 +737,7 @@ public class LauncherSubsystem implements Subsystem {
                 Feeder feeder = feeders.get(next.lane);
                 if (feeder != null && !feeder.isBusy()) {
                     feeder.fire();
+                    laneLaunchHoldDeadlineMs.put(next.lane, now + timing.launchHoldAfterFireMs);
                     laneRecoveryDeadlineMs.put(next.lane, now + timing.recoveryMs);
                     iterator.remove();
                 }
@@ -742,8 +749,15 @@ public class LauncherSubsystem implements Subsystem {
 
     private void updateLaneRecovery(double now) {
         for (LauncherLane lane : LauncherLane.values()) {
-            double deadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
-            if (deadline > 0.0 && now >= deadline) {
+            // Clear launch hold deadline when it expires
+            double launchHoldDeadline = laneLaunchHoldDeadlineMs.getOrDefault(lane, 0.0);
+            if (launchHoldDeadline > 0.0 && now >= launchHoldDeadline) {
+                laneLaunchHoldDeadlineMs.put(lane, 0.0);
+            }
+
+            // Command to idle when recovery period ends
+            double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
+            if (recoveryDeadline > 0.0 && now >= recoveryDeadline) {
                 Flywheel flywheel = flywheels.get(lane);
                 if (flywheel != null) {
                     flywheel.commandIdle();
@@ -795,7 +809,13 @@ public class LauncherSubsystem implements Subsystem {
                 continue;
             }
 
-            // Skip lanes that are currently in recovery
+            // Actively hold at launch speed after firing to ensure artifact clears
+            if (now < laneLaunchHoldDeadlineMs.getOrDefault(lane, 0.0)) {
+                flywheel.commandLaunch();
+                continue;
+            }
+
+            // Skip lanes that are currently in recovery (already fired, cleared hold period)
             if (now < laneRecoveryDeadlineMs.getOrDefault(lane, 0.0)) {
                 continue;
             }
