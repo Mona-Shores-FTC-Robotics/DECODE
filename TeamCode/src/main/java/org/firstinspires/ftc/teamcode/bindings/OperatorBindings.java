@@ -7,7 +7,7 @@ import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchBurstCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchSequentialCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinUpUntilReadyCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 
@@ -77,7 +77,7 @@ public class OperatorBindings {
         //Commands
         SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
         FireAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
-        LaunchBurstCommand fireAllInSequenceCommand = robot.launcherCommands.launchAllInSequence();
+        LaunchSequentialCommand fireAllInSequenceCommand = robot.launcherCommands.launchAllInSequence();
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
