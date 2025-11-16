@@ -127,54 +127,68 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     @Configurable
-    public static class LeftFlywheelConfig {
-        public String motorName = "launcher_left";
-        public boolean reversed = true;
-        public double launchRpm = 0;
-        public double idleRpm = 2000;
+    public static class FlywheelConfig {
+        public LeftFlywheelConfig left = new LeftFlywheelConfig();
+        public CenterFlywheelConfig center = new CenterFlywheelConfig();
+        public RightFlywheelConfig right = new RightFlywheelConfig();
+
+        @Configurable
+        public static class LeftFlywheelConfig {
+            public String motorName = "launcher_left";
+            public boolean reversed = true;
+            public double launchRpm = 0;
+            public double idleRpm = 2000;
+        }
+
+        @Configurable
+        public static class CenterFlywheelConfig {
+            public String motorName = "launcher_center";
+            public boolean reversed = false;
+            public double launchRpm = 0;
+            public double idleRpm = 2000;
+        }
+
+        @Configurable
+        public static class RightFlywheelConfig { //actually left
+            public String motorName = "launcher_right";
+            public boolean reversed = true;
+            public double launchRpm = 0;
+            public double idleRpm = 2000;
+        }
     }
 
     @Configurable
-    public static class CenterFlywheelConfig {
-        public String motorName = "launcher_center";
-        public boolean reversed = false;
-        public double launchRpm = 0;
-        public double idleRpm = 2000;
-    }
+    public static class FeederConfig {
+        public LeftFeederConfig left = new LeftFeederConfig();
+        public CenterFeederConfig center = new CenterFeederConfig();
+        public RightFeederConfig right = new RightFeederConfig();
 
-    @Configurable
-    public static class RightFlywheelConfig { //actually left
-        public String motorName = "launcher_right";
-        public boolean reversed = true;
-        public double launchRpm = 0;
-        public double idleRpm = 2000;
-    }
+        @Configurable
+        public static class LeftFeederConfig {
+            public String servoName = "feeder_left";
+            public boolean reversed = false;
+            public double loadPosition = .53;
+            public double firePosition = .1; //toward 1 moves toward fire position
+            public double holdMs = 1000;
+        }
 
-    @Configurable
-    public static class LeftFeederConfig {
-        public String servoName = "feeder_left";
-        public boolean reversed = false;
-        public double loadPosition = .53;
-        public double firePosition = .1; //toward 1 moves toward fire position
-        public double holdMs = 1000;
-    }
+        @Configurable
+        public static class CenterFeederConfig {
+            public String servoName = "feeder_center";
+            public boolean reversed = false;
+            public double loadPosition = .7;
+            public double firePosition = .4; //toward 0 moves toward fire position
+            public double holdMs = 1000;
+        }
 
-    @Configurable
-    public static class CenterFeederConfig {
-        public String servoName = "feeder_center";
-        public boolean reversed = false;
-        public double loadPosition = .7;
-        public double firePosition = .4; //toward 0 moves toward fire position
-        public double holdMs = 1000;
-    }
-
-    @Configurable
-    public static class RightFeederConfig {
-        public String servoName = "feeder_right";
-        public boolean reversed = false;
-        public double loadPosition = .73;
-        public double firePosition = .1; //toward 0 moves toward fire position
-        public double holdMs = 1000;
+        @Configurable
+        public static class RightFeederConfig {
+            public String servoName = "feeder_right";
+            public boolean reversed = false;
+            public double loadPosition = .73;
+            public double firePosition = .1; //toward 0 moves toward fire position
+            public double holdMs = 1000;
+        }
     }
 
     @Configurable
@@ -257,12 +271,8 @@ public class LauncherSubsystem implements Subsystem {
     public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
     public static FlywheelModeConfig flywheelModeConfig = new FlywheelModeConfig();
     public static PhaseSwitchConfig phaseSwitchConfig = new PhaseSwitchConfig();
-    public static LeftFlywheelConfig leftFlywheelConfig = new LeftFlywheelConfig();
-    public static CenterFlywheelConfig centerFlywheelConfig = new CenterFlywheelConfig();
-    public static RightFlywheelConfig rightFlywheelConfig = new RightFlywheelConfig();
-    public static LeftFeederConfig leftFeederConfig = new LeftFeederConfig();
-    public static CenterFeederConfig centerFeederConfig = new CenterFeederConfig();
-    public static RightFeederConfig rightFeederConfig = new RightFeederConfig();
+    public static FlywheelConfig flywheelConfig = new FlywheelConfig();
+    public static FeederConfig feederConfig = new FeederConfig();
     public static HoodConfig HoodConfig = new HoodConfig();
 
     public static ReverseFlywheelForHumanLoadingConfig reverseFlywheelForHumanLoadingConfig = new ReverseFlywheelForHumanLoadingConfig();
@@ -919,12 +929,12 @@ public class LauncherSubsystem implements Subsystem {
         }
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, leftFlywheelConfig.launchRpm);
+                return Math.max(0.0, flywheelConfig.left.launchRpm);
             case CENTER:
-                return Math.max(0.0, centerFlywheelConfig.launchRpm);
+                return Math.max(0.0, flywheelConfig.center.launchRpm);
             case RIGHT:
             default:
-                return Math.max(0.0, rightFlywheelConfig.launchRpm);
+                return Math.max(0.0, flywheelConfig.right.launchRpm);
         }
     }
 
@@ -935,96 +945,96 @@ public class LauncherSubsystem implements Subsystem {
         }
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, leftFlywheelConfig.idleRpm);
+                return Math.max(0.0, flywheelConfig.left.idleRpm);
             case CENTER:
-                return Math.max(0.0, centerFlywheelConfig.idleRpm);
+                return Math.max(0.0, flywheelConfig.center.idleRpm);
             case RIGHT:
             default:
-                return Math.max(0.0, rightFlywheelConfig.idleRpm);
+                return Math.max(0.0, flywheelConfig.right.idleRpm);
         }
     }
 
     private static double feederHoldMsFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, leftFeederConfig.holdMs);
+                return Math.max(0.0, feederConfig.left.holdMs);
             case CENTER:
-                return Math.max(0.0, centerFeederConfig.holdMs);
+                return Math.max(0.0, feederConfig.center.holdMs);
             case RIGHT:
             default:
-                return Math.max(0.0, rightFeederConfig.holdMs);
+                return Math.max(0.0, feederConfig.right.holdMs);
         }
     }
 
     private static double feederLoadPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(leftFeederConfig.loadPosition);
+                return clampServo(feederConfig.left.loadPosition);
             case CENTER:
-                return clampServo(centerFeederConfig.loadPosition);
+                return clampServo(feederConfig.center.loadPosition);
             case RIGHT:
             default:
-                return clampServo(rightFeederConfig.loadPosition);
+                return clampServo(feederConfig.right.loadPosition);
         }
     }
 
     private static double feederFirePositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(leftFeederConfig.firePosition);
+                return clampServo(feederConfig.left.firePosition);
             case CENTER:
-                return clampServo(centerFeederConfig.firePosition);
+                return clampServo(feederConfig.center.firePosition);
             case RIGHT:
             default:
-                return clampServo(rightFeederConfig.firePosition);
+                return clampServo(feederConfig.right.firePosition);
         }
     }
 
     private static boolean feederReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return leftFeederConfig.reversed;
+                return feederConfig.left.reversed;
             case CENTER:
-                return centerFeederConfig.reversed;
+                return feederConfig.center.reversed;
             case RIGHT:
             default:
-                return rightFeederConfig.reversed;
+                return feederConfig.right.reversed;
         }
     }
 
     private static String motorNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return leftFlywheelConfig.motorName;
+                return flywheelConfig.left.motorName;
             case CENTER:
-                return centerFlywheelConfig.motorName;
+                return flywheelConfig.center.motorName;
             case RIGHT:
             default:
-                return rightFlywheelConfig.motorName;
+                return flywheelConfig.right.motorName;
         }
     }
 
     private static boolean motorReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return leftFlywheelConfig.reversed;
+                return flywheelConfig.left.reversed;
             case CENTER:
-                return centerFlywheelConfig.reversed;
+                return flywheelConfig.center.reversed;
             case RIGHT:
             default:
-                return rightFlywheelConfig.reversed;
+                return flywheelConfig.right.reversed;
         }
     }
 
     private static String feederNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return leftFeederConfig.servoName;
+                return feederConfig.left.servoName;
             case CENTER:
-                return centerFeederConfig.servoName;
+                return feederConfig.center.servoName;
             case RIGHT:
             default:
-                return rightFeederConfig.servoName;
+                return feederConfig.right.servoName;
         }
     }
 
