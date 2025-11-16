@@ -21,6 +21,7 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.Command;
@@ -182,6 +183,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         robot.launcher.abort();
         robot.drive.stop();
         robot.vision.stop();
+
+        // Save final pose for TeleOp transition
+        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
     }
 
     /**
