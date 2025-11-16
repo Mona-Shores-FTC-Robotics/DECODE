@@ -82,6 +82,9 @@ public class LauncherSubsystem implements Subsystem {
 
     @Configurable
     public static class FlywheelConfig {
+        public FlywheelParameters parameters = new FlywheelParameters();
+        public FlywheelModeConfig modeConfig = new FlywheelModeConfig();
+
         @Configurable
         public static class FlywheelParameters {
             /** Encoder ticks per motor revolution (adjust for the selected motor). */
@@ -95,7 +98,10 @@ public class LauncherSubsystem implements Subsystem {
         @Configurable
         public static class FlywheelModeConfig {
             public FlywheelControlMode mode = FlywheelControlMode.HYBRID;
-
+            public BangBangConfig bangBang = new BangBangConfig();
+            public HybridPidConfig hybridPid = new HybridPidConfig();
+            public HoldConfig hold = new HoldConfig();
+            public PhaseSwitchConfig phaseSwitch = new PhaseSwitchConfig();
             @Configurable
             public static class BangBangConfig {
                 public double highPower = 1.0;
@@ -127,18 +133,11 @@ public class LauncherSubsystem implements Subsystem {
                 public int holdToBangConfirmCycles = 3;
             }
 
-            public static BangBangConfig bangBang = new BangBangConfig();
-            public static HybridPidConfig hybridPid = new HybridPidConfig();
-            public static HoldConfig hold = new HoldConfig();
-            public static PhaseSwitchConfig phaseSwitch = new PhaseSwitchConfig();
         }
 
-        public static FlywheelParameters parameters = new FlywheelParameters();
-        public static FlywheelModeConfig modeConfig = new FlywheelModeConfig();
-
-        public LeftFlywheelConfig left = new LeftFlywheelConfig();
-        public CenterFlywheelConfig center = new CenterFlywheelConfig();
-        public RightFlywheelConfig right = new RightFlywheelConfig();
+        public LeftFlywheelConfig flywheelLeft = new LeftFlywheelConfig();
+        public CenterFlywheelConfig flywheelCenter = new CenterFlywheelConfig();
+        public RightFlywheelConfig flywheelRight = new RightFlywheelConfig();
 
         @Configurable
         public static class LeftFlywheelConfig {
@@ -204,9 +203,9 @@ public class LauncherSubsystem implements Subsystem {
         public double retractedPosition = 1;
         public double extendedPosition = 0;
 
-        public LeftHoodConfig left = new LeftHoodConfig();
-        public CenterHoodConfig center = new CenterHoodConfig();
-        public RightHoodConfig right = new RightHoodConfig();
+        public LeftHoodConfig hoodLeft = new LeftHoodConfig();
+        public CenterHoodConfig hoodCenter = new CenterHoodConfig();
+        public RightHoodConfig hoodRight = new RightHoodConfig();
 
         @Configurable
         public static class LeftHoodConfig {
@@ -931,12 +930,12 @@ public class LauncherSubsystem implements Subsystem {
         }
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, flywheelConfig.left.launchRpm);
+                return Math.max(0.0, flywheelConfig.flywheelLeft.launchRpm);
             case CENTER:
-                return Math.max(0.0, flywheelConfig.center.launchRpm);
+                return Math.max(0.0, flywheelConfig.flywheelCenter.launchRpm);
             case RIGHT:
             default:
-                return Math.max(0.0, flywheelConfig.right.launchRpm);
+                return Math.max(0.0, flywheelConfig.flywheelRight.launchRpm);
         }
     }
 
@@ -947,12 +946,12 @@ public class LauncherSubsystem implements Subsystem {
         }
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, flywheelConfig.left.idleRpm);
+                return Math.max(0.0, flywheelConfig.flywheelLeft.idleRpm);
             case CENTER:
-                return Math.max(0.0, flywheelConfig.center.idleRpm);
+                return Math.max(0.0, flywheelConfig.flywheelCenter.idleRpm);
             case RIGHT:
             default:
-                return Math.max(0.0, flywheelConfig.right.idleRpm);
+                return Math.max(0.0, flywheelConfig.flywheelRight.idleRpm);
         }
     }
 
@@ -1007,24 +1006,24 @@ public class LauncherSubsystem implements Subsystem {
     private static String motorNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig.left.motorName;
+                return flywheelConfig.flywheelLeft.motorName;
             case CENTER:
-                return flywheelConfig.center.motorName;
+                return flywheelConfig.flywheelCenter.motorName;
             case RIGHT:
             default:
-                return flywheelConfig.right.motorName;
+                return flywheelConfig.flywheelRight.motorName;
         }
     }
 
     private static boolean motorReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig.left.reversed;
+                return flywheelConfig.flywheelLeft.reversed;
             case CENTER:
-                return flywheelConfig.center.reversed;
+                return flywheelConfig.flywheelCenter.reversed;
             case RIGHT:
             default:
-                return flywheelConfig.right.reversed;
+                return flywheelConfig.flywheelRight.reversed;
         }
     }
 
@@ -1476,48 +1475,48 @@ public class LauncherSubsystem implements Subsystem {
     private static String hoodNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return HoodConfig.left.servoName;
+                return HoodConfig.hoodLeft.servoName;
             case CENTER:
-                return HoodConfig.center.servoName;
+                return HoodConfig.hoodCenter.servoName;
             case RIGHT:
             default:
-                return HoodConfig.right.servoName;
+                return HoodConfig.hoodRight.servoName;
         }
     }
 
     public static double hoodShortPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(HoodConfig.left.shortPosition);
+                return clampServo(HoodConfig.hoodLeft.shortPosition);
             case CENTER:
-                return clampServo(HoodConfig.center.shortPosition);
+                return clampServo(HoodConfig.hoodCenter.shortPosition);
             case RIGHT:
             default:
-                return clampServo(HoodConfig.right.shortPosition);
+                return clampServo(HoodConfig.hoodRight.shortPosition);
         }
     }
 
     public static double hoodMidPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(HoodConfig.left.midPosition);
+                return clampServo(HoodConfig.hoodLeft.midPosition);
             case CENTER:
-                return clampServo(HoodConfig.center.midPosition);
+                return clampServo(HoodConfig.hoodCenter.midPosition);
             case RIGHT:
             default:
-                return clampServo(HoodConfig.right.midPosition);
+                return clampServo(HoodConfig.hoodRight.midPosition);
         }
     }
 
     public static double hoodLongPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(HoodConfig.left.longPosition);
+                return clampServo(HoodConfig.hoodLeft.longPosition);
             case CENTER:
-                return clampServo(HoodConfig.center.longPosition);
+                return clampServo(HoodConfig.hoodCenter.longPosition);
             case RIGHT:
             default:
-                return clampServo(HoodConfig.right.longPosition);
+                return clampServo(HoodConfig.hoodRight.longPosition);
         }
     }
 
