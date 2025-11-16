@@ -13,6 +13,13 @@ import java.util.Objects;
 
 /**
  * Launches every lane as soon as the flywheel speeds reach target.
+ *
+ * IMPORTANT: This command assumes launch RPMs have already been set via setLaunchRpm().
+ * If no RPMs are set, lanes will be treated as disabled (RPM = 0) and won't fire.
+ *
+ * For range-based or vision-based shooting, use FireAllAtRangeCommand or a custom command
+ * that sets RPMs explicitly.
+ *
  * Designed to be triggered when the operator releases the "launch all" button.
  */
 public class FireAllCommand extends Command {
