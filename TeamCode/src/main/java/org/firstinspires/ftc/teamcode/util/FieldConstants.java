@@ -54,14 +54,20 @@ public final class FieldConstants {
     /**
      * Configurable offset for basket aiming (tunable via FTC Dashboard).
      * Allows fine-tuning the aim point based on projectile arc without changing code.
-     * Positive deltaY moves aim point further from driver station.
+     *
+     * Blue basket is in upper-LEFT corner, Red basket is in upper-RIGHT corner.
+     * Adjust these to compensate for projectile arc landing short or long.
      */
     @Configurable
     public static class BasketTargets {
-        /** Y offset from incenter (inches) - adjust based on projectile arc */
-        public static double deltaY = 0.0;
-        /** X offset from incenter (inches) - typically leave at 0 */
-        public static double deltaX = 0.0;
+        /** Blue basket X offset from incenter (inches). Negative = left toward corner */
+        public static double blueDeltaX = 0.0;
+        /** Blue basket Y offset from incenter (inches). Positive = up toward corner */
+        public static double blueDeltaY = 0.0;
+        /** Red basket X offset from incenter (inches). Positive = right toward corner */
+        public static double redDeltaX = 0.0;
+        /** Red basket Y offset from incenter (inches). Positive = up toward corner */
+        public static double redDeltaY = 0.0;
     }
 
     public static final int DECODE_PATTERN_GREEN_PURPLE_PURPLE_ID = 21;
@@ -73,8 +79,8 @@ public final class FieldConstants {
      */
     public static Pose getBlueBasketTarget() {
         return new Pose(
-            BLUE_GOAL_CENTER.getX() + BasketTargets.deltaX,
-            BLUE_GOAL_CENTER.getY() + BasketTargets.deltaY,
+            BLUE_GOAL_CENTER.getX() + BasketTargets.blueDeltaX,
+            BLUE_GOAL_CENTER.getY() + BasketTargets.blueDeltaY,
             0.0
         );
     }
@@ -84,8 +90,8 @@ public final class FieldConstants {
      */
     public static Pose getRedBasketTarget() {
         return new Pose(
-            RED_GOAL_CENTER.getX() + BasketTargets.deltaX,
-            RED_GOAL_CENTER.getY() + BasketTargets.deltaY,
+            RED_GOAL_CENTER.getX() + BasketTargets.redDeltaX,
+            RED_GOAL_CENTER.getY() + BasketTargets.redDeltaY,
             0.0
         );
     }

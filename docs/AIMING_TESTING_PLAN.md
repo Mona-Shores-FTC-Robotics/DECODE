@@ -36,10 +36,20 @@ You have **FOUR** aiming approaches available for testing. This document explain
 - `kMaxTurn`: 0.7 (max turn speed)
 
 **Fine-tuning for projectile arc (FTC Dashboard → FieldConstants → BasketTargets):**
-- `deltaY`: 0.0 (offset from incenter)
-  - If shots land short: Increase deltaY (try +2 to +5)
-  - If shots overshoot: Decrease deltaY (try -2 to -5)
-- `deltaX`: 0.0 (typically leave at 0)
+
+Baskets are in CORNERS: Blue = upper-left, Red = upper-right
+
+**Blue basket adjustments:**
+- `blueDeltaX`: 0.0 (negative = more left toward corner, positive = right toward mid-field)
+- `blueDeltaY`: 0.0 (positive = up toward corner, negative = down toward mid-field)
+- **If shots land short:** Aim closer to you (toward mid-field): blueDeltaX +2 to +5, blueDeltaY -2 to -5
+- **If shots overshoot:** Aim deeper into corner: blueDeltaX -2 to -5, blueDeltaY +2 to +5
+
+**Red basket adjustments:**
+- `redDeltaX`: 0.0 (positive = more right toward corner, negative = left toward mid-field)
+- `redDeltaY`: 0.0 (positive = up toward corner, negative = down toward mid-field)
+- **If shots land short:** Aim closer to you (toward mid-field): redDeltaX -2 to -5, redDeltaY -2 to -5
+- **If shots overshoot:** Aim deeper into corner: redDeltaX +2 to +5, redDeltaY +2 to +5
 
 ---
 
@@ -340,18 +350,21 @@ Your VisionRedo correctly identified that **inscribed circle (incenter)** is bet
 
 ### Projectile Arc Adjustment
 
-If your projectile has an arc, you may need to aim slightly different than the incenter:
+Since baskets are in CORNERS (not along a wall), you need to adjust BOTH X and Y based on your alliance.
 
-**High arc (ball goes up then down):**
-- Aim further back: `BasketTargets.deltaY = +2` to `+5`
+**If ball lands SHORT (doesn't make it to basket):**
+- You're aiming too deep into the corner
+- Move aim point CLOSER to mid-field (toward you):
+  - **Blue:** Increase blueDeltaX (+), decrease blueDeltaY (-)
+  - **Red:** Decrease redDeltaX (-), decrease redDeltaY (-)
 
-**Low/flat arc:**
-- Aim more forward: `BasketTargets.deltaY = -2` to `-5`
+**If ball OVERSHOOTS (goes past basket):**
+- You're not aiming deep enough into the corner
+- Move aim point DEEPER into corner (away from mid-field):
+  - **Blue:** Decrease blueDeltaX (-), increase blueDeltaY (+)
+  - **Red:** Increase redDeltaX (+), increase redDeltaY (+)
 
-**To find the right deltaY:**
-1. Use fixed-angle method to find angle that scores
-2. Calculate what Y coordinate produces that angle from launch line
-3. Set `deltaY` to match that coordinate
+**Start with small adjustments:** ±2 inches, then test and iterate.
 
 ---
 
