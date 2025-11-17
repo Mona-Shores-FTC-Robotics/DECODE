@@ -403,28 +403,14 @@ public class DriveSubsystem implements Subsystem {
         double multiplier = slowMode ? slowMultiplier : normalMultiplier;
         double forward = Range.clip(rotated[1] * multiplier , - 1.0 , 1.0);
         double strafeLeft = Range.clip(- rotated[0] * multiplier , - 1.0 , 1.0);
-        double nowMs = clock.milliseconds();
-        Optional<Double> visionAngle = vision.getAimAngle();
 
-        double targetHeading;
-        if (visionAngle.isPresent()) {
-            targetHeading = visionAngle.get();
-            lastGoodVisionAngle = targetHeading;
-            lastVisionTimestamp = nowMs;
-            if (visionRelocalizationEnabled) {
-                maybeRelocalizeFromVision();
-            }
-        } else if (! Double.isNaN(lastGoodVisionAngle) && nowMs - lastVisionTimestamp <= VISION_TIMEOUT_MS) {
-            targetHeading = lastGoodVisionAngle;
-        } else {
-            // Use tunable basket target coordinates
-            Pose pose = follower.getPose();
-            Alliance alliance = vision.getAlliance();
-            Pose targetPose = (alliance == Alliance.RED)
-                ? FieldConstants.getRedBasketTarget()
-                : FieldConstants.getBlueBasketTarget();
-            targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
-        }
+        // Calculate target heading using pinpoint odometry + basket target coordinates
+        Pose pose = follower.getPose();
+        Alliance alliance = vision.getAlliance();
+        Pose targetPose = (alliance == Alliance.RED)
+            ? FieldConstants.getRedBasketTarget()
+            : FieldConstants.getBlueBasketTarget();
+        double targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
 
         double headingError = normalizeAngle(targetHeading - follower.getHeading());
         lastAimErrorRad = headingError;
