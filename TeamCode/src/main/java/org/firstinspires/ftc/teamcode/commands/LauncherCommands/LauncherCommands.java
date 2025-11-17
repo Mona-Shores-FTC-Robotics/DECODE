@@ -22,7 +22,7 @@ import java.util.List;
 @Configurable
 public class LauncherCommands {
 
-    public static final double DEFAULT_BURST_SPACING_MS = 150.0;
+    public static final double DEFAULT_BURST_SPACING_MS = 300;
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
@@ -247,6 +247,37 @@ public class LauncherCommands {
     }
 
     // ========== Distance-Based Commands ==========
+
+    /**
+     * Smart auto-range fire command - ONE BUTTON SOLUTION!
+     * Automatically selects SHORT/MID/LONG range based on distance to goal.
+     * Uses AprilTag vision for distance, falls back to odometry.
+     *
+     * Replaces the need for separate short/mid/long range buttons.
+     *
+     * @param vision The vision subsystem (for distance measurement)
+     * @param drive The drive subsystem (for odometry fallback)
+     * @param spinDownAfterShot Whether to spin down to idle after firing
+     * @return Command that auto-selects range and fires
+     */
+    public FireAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
+                                                       DriveSubsystem drive,
+                                                       boolean spinDownAfterShot) {
+        return new FireAllAtAutoRangeCommand(launcher, intake, vision, drive, manualSpinController, spinDownAfterShot);
+    }
+
+    /**
+     * Smart auto-range fire command with spin-down.
+     * Automatically selects SHORT/MID/LONG range based on distance.
+     *
+     * @param vision The vision subsystem
+     * @param drive The drive subsystem
+     * @return Command that auto-selects range and fires
+     */
+    public FireAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
+                                                       DriveSubsystem drive) {
+        return fireAllAutoRange(vision, drive, true);
+    }
 
     /**
      * Fires all lanes with RPM and hood position calculated from distance to goal.

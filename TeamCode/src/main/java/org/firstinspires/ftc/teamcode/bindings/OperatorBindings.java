@@ -99,7 +99,7 @@ public class OperatorBindings {
                 .whenBecomesTrue(robot.intake::setPrefeedReverse)
                 .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
                 .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
-                .whenBecomesFalse(robot.intake::deactivatePrefeed)
+                .whenBecomesFalse(robot.intake::setPrefeedForward)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
 
         spinLetGoToShoot

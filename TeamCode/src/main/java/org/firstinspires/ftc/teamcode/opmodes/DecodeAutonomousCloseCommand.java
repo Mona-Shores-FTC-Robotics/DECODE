@@ -131,6 +131,11 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     public void onWaitForStart() {
         BindingManager.update();
 
+        // Update subsystems to poll sensors (especially intake color sensors)
+        robot.intake.periodic();
+        robot.launcherCoordinator.periodic();
+        robot.vision.periodic();
+
         // Detect alliance and start pose from AprilTag vision
         java.util.Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt =
                 allianceSelector.updateFromVision(robot.vision);
@@ -153,6 +158,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
+        telemetry.addData("Artifacts", "%d detected", robot.launcherCoordinator.getArtifactCount());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");
         telemetry.update();
@@ -309,7 +315,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     private Command scoreSequence() {
         return new SequentialGroup(
             new Delay(config.launchDelaySeconds),
-            launcherCommands.launchDetectedBurst()
+            launcherCommands.launchAllInSequence()  // Fires all lanes regardless of color detection
         );
     }
 

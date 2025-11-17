@@ -42,15 +42,32 @@ public class DriveSubsystem implements Subsystem {
 
     @Configurable
     public static class TeleOpDriveConfig {
+        /** Max power multiplier for normal (non-slow) teleop driving (0.0-1.0) */
+        public double normalMultiplier = .8;
+        /** Max power multiplier for slow mode teleop driving (0.0-1.0) */
         public double slowMultiplier = 0.2;
-        public double slowTurnMultiplier = 0.7;
+        /** Turn multiplier for normal mode */
+        public double normalTurnMultiplier = .7;
+        /** Turn multiplier for slow mode */
+        public double slowTurnMultiplier = 0.4;
+        /** Rotation override threshold for aim assist */
         public double rotationOverrideThreshold = 0.05;
     }
 
     @Configurable
     public static class AimAssistConfig {
-        public double kP = .38;
-        public double kMaxTurn = .6;
+        /** Proportional gain - higher = faster response to error */
+        public double kP = 0.5;
+        /** Derivative gain - higher = more damping, less overshoot */
+        public double kD = 0.05;
+        /** Integral gain - eliminates steady-state error (use sparingly) */
+        public double kI = 0.0;
+        /** Max turn speed when aiming (0.0-1.0) */
+        public double kMaxTurn = 0.7;
+        /** Deadband - stop turning when error is below this (radians) */
+        public double deadbandRad = 0.02;  // ~1 degree
+        /** Maximum integral accumulation (prevents windup) */
+        public double maxIntegral = 0.1;
     }
 
     @Configurable
@@ -73,7 +90,7 @@ public class DriveSubsystem implements Subsystem {
         SLOW
     }
 
-    private static final double NORMAL_MULTIPLIER = 1.0;
+    // Removed NORMAL_MULTIPLIER constant - now uses teleOpDriveConfig.normalMultiplier
 
     private Follower follower;
     private final Constants.Motors driveMotors;
@@ -107,6 +124,8 @@ public class DriveSubsystem implements Subsystem {
     private double lastCommandStrafeLeft = 0.0;
     private double lastCommandTurn = 0.0;
     private double lastAimErrorRad = Double.NaN;
+    private double lastAimErrorTime = 0.0;
+    private double aimIntegral = 0.0;
     private boolean rampModeActive = false;
     private double rampForward = 0.0;
     private double rampStrafeLeft = 0.0;
@@ -288,8 +307,10 @@ public class DriveSubsystem implements Subsystem {
         lastRequestSlowMode = slowMode;
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double slowTurnMultiplier = Range.clip(teleOpDriveConfig.slowTurnMultiplier , 0.0 , 1.0);
-        double driveMultiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
-        double turnMultiplier = slowMode ? slowMultiplier : slowTurnMultiplier;
+        double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
+        double normalTurnMultiplier = Range.clip(teleOpDriveConfig.normalTurnMultiplier , 0.0 , 1.0);
+        double driveMultiplier = slowMode ? slowMultiplier : normalMultiplier;
+        double turnMultiplier = slowMode ? slowTurnMultiplier : normalTurnMultiplier;
         double targetForward = Range.clip(fieldY * driveMultiplier , - 1.0 , 1.0);
         double targetStrafeLeft = Range.clip(- fieldX * driveMultiplier , - 1.0 , 1.0);
         double targetTurnCW = Range.clip(- rotationInput * turnMultiplier , - 1.0 , 1.0);
@@ -354,7 +375,8 @@ public class DriveSubsystem implements Subsystem {
         lastRequestSlowMode = slowMode;
         double[] rotated = rotateFieldInput(fieldX , fieldY);
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
-        double multiplier = slowMode ? slowMultiplier : NORMAL_MULTIPLIER;
+        double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
+        double multiplier = slowMode ? slowMultiplier : normalMultiplier;
         double forward = Range.clip(rotated[1] * multiplier , - 1.0 , 1.0);
         double strafeLeft = Range.clip(- rotated[0] * multiplier , - 1.0 , 1.0);
         double nowMs = clock.milliseconds();
@@ -381,15 +403,45 @@ public class DriveSubsystem implements Subsystem {
         }
 
         double headingError = normalizeAngle(targetHeading - follower.getHeading());
+
+        // PID controller for aim assist
+        double currentTime = clock.milliseconds();
+        double dt = (currentTime - lastAimErrorTime) / 1000.0;  // Convert to seconds
+        if (dt <= 0 || dt > 1.0) dt = 0.02;  // Fallback if bad timing
+
+        // Deadband - stop turning if error is small enough
+        if (Math.abs(headingError) < aimAssistConfig.deadbandRad) {
+            headingError = 0.0;
+            aimIntegral = 0.0;  // Reset integral when in deadband
+        }
+
+        // Integral with anti-windup
+        aimIntegral += headingError * dt;
+        aimIntegral = Range.clip(aimIntegral, -aimAssistConfig.maxIntegral, aimAssistConfig.maxIntegral);
+
+        // Derivative (rate of change of error)
+        double derivative = 0.0;
+        if (!Double.isNaN(lastAimErrorRad)) {
+            derivative = (headingError - lastAimErrorRad) / dt;
+        }
+
+        // PID output
+        double pTerm = aimAssistConfig.kP * headingError;
+        double iTerm = aimAssistConfig.kI * aimIntegral;
+        double dTerm = aimAssistConfig.kD * derivative;
+        double pidOutput = pTerm + iTerm + dTerm;
+
+        double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
+        double turn = Range.clip(pidOutput, -maxTurn, maxTurn);
+
         lastAimErrorRad = headingError;
-        double maxTurn = Math.max(0.0 , aimAssistConfig.kMaxTurn);
-        double turn = Range.clip(aimAssistConfig.kP * headingError , - maxTurn , maxTurn);
+        lastAimErrorTime = currentTime;
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
         lastCommandTurn = turn;
         lastRequestRotation = turn;
 
-        follower.setTeleOpDrive(forward , strafeLeft , turn , robotCentric);
+        follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
     }
 
     public double getLastAimErrorRadians() {

@@ -115,7 +115,11 @@ public class FireAllCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-
+        // Deactivate prefeed roller (returns to not spinning)
+        //TODO maybe this should be sooner?
+        if (intake != null) {
+            intake.setPrefeedReverse();
+        }
         if (manualSpinActive) {
             manualSpinController.exitManualSpin();
             manualSpinActive = false;
@@ -126,11 +130,7 @@ public class FireAllCommand extends Command {
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
             launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
             spinDownApplied = true;
-            // Deactivate prefeed roller (returns to not spinning)
-            //TODO maybe this should be sooner?
-            if (intake != null) {
-                intake.deactivatePrefeed();
-            }
+
 
 
         }

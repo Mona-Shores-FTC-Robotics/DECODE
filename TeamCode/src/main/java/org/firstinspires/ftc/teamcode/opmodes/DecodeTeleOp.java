@@ -108,7 +108,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
             selectedAlliance = allianceSelector.getSelectedAlliance();
         }
         robot.intake.activateRoller();
-        robot.intake.deactivatePrefeed();
+        robot.intake.setPrefeedReverse();
     }
 
     @Override

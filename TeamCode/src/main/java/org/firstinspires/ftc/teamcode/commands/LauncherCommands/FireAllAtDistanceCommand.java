@@ -250,6 +250,11 @@ public class FireAllAtDistanceCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
+        // Deactivate prefeed roller (returns to not spinning)
+        if (intake != null) {
+            intake.setPrefeedReverse();
+        }
+
         // Clear RPM overrides to return to default values
         launcher.clearOverrides();
 
@@ -269,10 +274,7 @@ public class FireAllAtDistanceCommand extends Command {
             launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
             spinDownApplied = true;
 
-            // Deactivate prefeed roller (returns to not spinning)
-            if (intake != null) {
-                intake.deactivatePrefeed();
-            }
+
         }
     }
 
