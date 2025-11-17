@@ -64,12 +64,6 @@ public final class FieldConstants {
         public static double deltaX = 0.0;
     }
 
-    // Deprecated - use getBlueBasketTarget() or getRedBasketTarget() instead
-    @Deprecated
-    public static final Pose BLUE_GOAL_TAG = BLUE_GOAL_CENTER;
-    @Deprecated
-    public static final Pose RED_GOAL_TAG = RED_GOAL_CENTER;
-
     public static final int DECODE_PATTERN_GREEN_PURPLE_PURPLE_ID = 21;
     public static final int DECODE_PATTERN_PURPLE_GREEN_PURPLE_ID = 22;
     public static final int DECODE_PATTERN_PURPLE_PURPLE_GREEN_ID = 23;
