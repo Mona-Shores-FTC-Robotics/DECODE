@@ -152,9 +152,9 @@ public class VisionSubsystemLimelight implements Subsystem {
         }
         switch (alliance) {
             case BLUE:
-                return Optional.of(FieldConstants.BLUE_GOAL_TAG);
+                return Optional.of(FieldConstants.getBlueBasketTarget());
             case RED:
-                return Optional.of(FieldConstants.RED_GOAL_TAG);
+                return Optional.of(FieldConstants.getRedBasketTarget());
             default:
                 return Optional.empty();
         }

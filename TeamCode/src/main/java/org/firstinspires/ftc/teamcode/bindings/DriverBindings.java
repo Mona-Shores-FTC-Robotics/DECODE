@@ -49,10 +49,7 @@ public class DriverBindings {
         aimHold = driver.b();
 
         //Test Buttons
-        rampHold = driver.leftBumper();
         relocalizeRequest = driver.a();
-
-
 
     }
 
@@ -71,11 +68,12 @@ public class DriverBindings {
                 robot.drive
         );
 
-        slowHold.whenBecomesTrue(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                .whenBecomesFalse(new SequentialGroup(
-                        new Delay(1),
-                        new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE)
-                        )));
+
+//        slowHold.whenBecomesTrue(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
+//                .whenBecomesFalse(new SequentialGroup(
+//                        new Delay(1),
+//                        new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE)
+//                        )));
 
         aimAndDrive = new AimAndDriveCommand(
                 fieldX::get,

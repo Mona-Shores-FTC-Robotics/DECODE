@@ -191,7 +191,7 @@ public class CaptureAndAimCommand extends Command {
         // Get alliance-specific goal pose with alliance-aware fallback
         Pose targetPose = vision.getTargetGoalPose().orElseGet(() -> {
             Alliance alliance = vision.getAlliance();
-            return alliance == Alliance.RED ? FieldConstants.RED_GOAL_TAG : FieldConstants.BLUE_GOAL_TAG;
+            return alliance == Alliance.RED ? FieldConstants.getRedBasketTarget() : FieldConstants.getBlueBasketTarget();
         });
         return FieldConstants.getAimAngleTo(currentPose, targetPose);
     }
