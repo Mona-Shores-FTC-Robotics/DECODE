@@ -64,8 +64,8 @@ public class DriveSubsystem implements Subsystem {
 
     @Configurable
     public static class VisionCenteredAimConfig {
-        /** Proportional gain for vision-centered aiming (turn per degree of tx offset) */
-        public double kP = 0.03;
+        /** Proportional gain for vision-centered aiming (motor power per radian) */
+        public double kP = 1.7;  // Equivalent to 0.03 per degree
         /** Max turn speed when aiming (0.0-1.0) */
         public double kMaxTurn = 0.7;
         /** Deadband - stop turning when tx error is below this (degrees) */
@@ -447,7 +447,8 @@ public class DriveSubsystem implements Subsystem {
      * Similar to the original FTC RobotAutoDriveToAprilTagOmni example.
      *
      * When tx = 0, the target is centered in the camera view.
-     * tx > 0 means target is to the right, tx < 0 means target is to the left.
+     * Positive error means robot needs to turn counter-clockwise (left),
+     * negative error means turn clockwise (right).
      *
      * @param fieldX Driver's X input (strafe)
      * @param fieldY Driver's Y input (forward)
@@ -464,11 +465,11 @@ public class DriveSubsystem implements Subsystem {
         double forward = Range.clip(rotated[1] * multiplier , - 1.0 , 1.0);
         double strafeLeft = Range.clip(- rotated[0] * multiplier , - 1.0 , 1.0);
 
-        // Get horizontal offset from Limelight (tx)
-        double txDegrees = vision.getLastTxDegrees();
+        // Get vision aiming error (robot-relative, in radians)
+        Optional<Double> visionErrorOpt = vision.getVisionAimErrorRad();
 
         // If no valid tag, hold current heading (zero turn)
-        if (Double.isNaN(txDegrees)) {
+        if (!visionErrorOpt.isPresent()) {
             lastCommandForward = forward;
             lastCommandStrafeLeft = strafeLeft;
             lastCommandTurn = 0.0;
@@ -478,18 +479,20 @@ public class DriveSubsystem implements Subsystem {
             return;
         }
 
+        double headingError = visionErrorOpt.get();
+
         // Deadband - stop turning if error is small enough
-        if (Math.abs(txDegrees) < visionCenteredAimConfig.deadbandDeg) {
-            txDegrees = 0.0;
+        double deadbandRad = Math.toRadians(visionCenteredAimConfig.deadbandDeg);
+        if (Math.abs(headingError) < deadbandRad) {
+            headingError = 0.0;
         }
 
-        // Convert to turn command
-        // tx > 0 (target right) -> turn clockwise (negative in Pedro convention)
-        // tx < 0 (target left) -> turn counter-clockwise (positive)
+        // Convert to turn command using P controller
         double maxTurn = Math.max(0.0, visionCenteredAimConfig.kMaxTurn);
-        double turn = Range.clip(-txDegrees * visionCenteredAimConfig.kP, -maxTurn, maxTurn);
+        // kP units: (motor power / radian) - multiply error by gain
+        double turn = Range.clip(visionCenteredAimConfig.kP * headingError, -maxTurn, maxTurn);
 
-        lastAimErrorRad = Math.toRadians(txDegrees); // Store for telemetry
+        lastAimErrorRad = headingError; // Store for telemetry
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
         lastCommandTurn = turn;

@@ -169,6 +169,26 @@ public class VisionSubsystemLimelight implements Subsystem {
         return Optional.of(FieldConstants.getAimAngleTo(poseOpt.get(), target.get()));
     }
 
+    /**
+     * Gets the vision-based aiming error in radians (robot-relative).
+     * This is the horizontal offset (tx) from the Limelight, converted to radians.
+     * Positive tx means target is to the right, negative means left.
+     *
+     * @return The aiming error in radians, or empty if no valid tag
+     */
+    public Optional<Double> getVisionAimErrorRad() {
+        refreshSnapshotIfStale();
+        if (lastSnapshot == null) {
+            return Optional.empty();
+        }
+        double tx = lastSnapshot.getTxDegrees();
+        if (Double.isNaN(tx)) {
+            return Optional.empty();
+        }
+        // Negate tx because positive tx (target right) requires negative turn (clockwise)
+        return Optional.of(-Math.toRadians(tx));
+    }
+
     public Optional<TagSnapshot> findAllianceSnapshot(Alliance preferredAlliance) {
         TagSnapshot snapshot = selectSnapshot(preferredAlliance);
         if (snapshot == null) {
