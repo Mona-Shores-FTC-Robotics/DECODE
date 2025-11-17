@@ -14,8 +14,11 @@ public final class FieldConstants {
 
     public static final int BLUE_GOAL_TAG_ID = 20;
     public static final int RED_GOAL_TAG_ID = 24;
-    public static final Pose BLUE_GOAL_TAG = new Pose(13.679, 126.647, 0.0);
-    public static final Pose RED_GOAL_TAG = new Pose(130.321, 126.647, 0.0);
+//    public static final Pose BLUE_GOAL_TAG = new Pose(13.679, 126.647, 0.0);
+//    public static final Pose RED_GOAL_TAG = new Pose(130.321, 126.647, 0.0);
+
+    public static final Pose BLUE_GOAL_TAG = new Pose(7, 140, 0.0);
+    public static final Pose RED_GOAL_TAG = new Pose(137, 140, 0.0);
 
     public static final int DECODE_PATTERN_GREEN_PURPLE_PURPLE_ID = 21;
     public static final int DECODE_PATTERN_PURPLE_GREEN_PURPLE_ID = 22;

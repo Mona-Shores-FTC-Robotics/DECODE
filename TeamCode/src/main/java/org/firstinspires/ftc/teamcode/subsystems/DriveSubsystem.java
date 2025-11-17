@@ -305,6 +305,7 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldY = fieldY;
         lastRequestRotation = rotationInput;
         lastRequestSlowMode = slowMode;
+
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double slowTurnMultiplier = Range.clip(teleOpDriveConfig.slowTurnMultiplier , 0.0 , 1.0);
         double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);

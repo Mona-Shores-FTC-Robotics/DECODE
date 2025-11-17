@@ -5,7 +5,7 @@ import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtDistanceCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtAutoRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchSequentialCommand;
@@ -19,16 +19,13 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
  *
  * Button assignments:
  * - X: Fire all lanes at SHORT range (~2700 RPM)
- * - Y: Fire all lanes at MID range (~3600 RPM)
+ * - A: Fire all lanes at MID range (~3600 RPM)
  * - B: Fire all lanes at LONG range (~4200 RPM)
- * - A: Manual spin hold (for pre-spinning before shots)
- * - Left Bumper: (previously manual spin, now available for other use)
+ * - D-Pad Up: Auto-range fire (selects short/mid/long based on distance)
+ * - Left Bumper: Manual spin hold (for pre-spinning before shots)
  * - Right Bumper: Intake forward
  */
 public class OperatorBindings {
-
-    private Robot robot;
-
     private final Button fireShort;
     private final Button fireMid;
     private final Button fireLong;
@@ -67,7 +64,6 @@ public class OperatorBindings {
     }
 
     public void configureTeleopBindings(Robot robot) {
-        this.robot = robot;
         // Range-based shooting commands
         //Commands
         FireAllAtRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
@@ -78,7 +74,7 @@ public class OperatorBindings {
         SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
         FireAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
         LaunchSequentialCommand fireAllInSequenceCommand = robot.launcherCommands.launchAllInSequence();
-        FireAllAtDistanceCommand fireAllAtDistanceCommand = robot.launcherCommands.fireAllAtDistance(robot.vision, robot.drive, true);
+        FireAllAtAutoRangeCommand fireAllAutoRangeCommand = robot.launcherCommands.fireAllAutoRange(robot.vision, robot.drive);
 
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
@@ -90,8 +86,8 @@ public class OperatorBindings {
         fireLong.whenBecomesTrue(fireLongRangeCommand);
 
         // Intake control
-        runIntake.whenBecomesTrue(intakeForwardCommand);
-        runIntake.whenBecomesFalse(intakeReverseCommand);
+//        runIntake.whenBecomesTrue(intakeForwardCommand);
+//        runIntake.whenBecomesFalse(intakeReverseCommand);
 
         // Reverse Flywheel and Prefeed for Human Loading
         humanLoading
@@ -112,7 +108,7 @@ public class OperatorBindings {
 
 
         fireRange
-                .whenBecomesTrue(fireAllAtDistanceCommand);
+                .whenBecomesTrue(fireAllAutoRangeCommand);
     }
 
 }

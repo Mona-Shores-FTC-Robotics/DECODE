@@ -180,8 +180,8 @@ public class LauncherSubsystem implements Subsystem {
         public static class CenterFeederConfig {
             public String servoName = "feeder_center";
             public boolean reversed = false;
-            public double loadPosition = .7;
-            public double firePosition = .4; //toward 0 moves toward fire position
+            public double loadPosition = .86;
+            public double firePosition = .76; //toward 0 moves toward fire position
             public double holdMs = 1000;
         }
 

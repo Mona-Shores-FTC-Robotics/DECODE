@@ -3,10 +3,14 @@ package org.firstinspires.ftc.teamcode.bindings;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.AimAndDriveCommand;
 import org.firstinspires.ftc.teamcode.commands.DefaultDriveCommand;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.bindings.Range;
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.ftc.GamepadEx;
 
 
@@ -31,7 +35,6 @@ public class DriverBindings {
     private final Button rampHold;
     private final Button aimHold;
     private final Button relocalizeRequest;
-    private Robot robot;
 
     Command defaultDrive;
     Command aimAndDrive;
@@ -58,7 +61,7 @@ public class DriverBindings {
      * Should be called when the match starts (after init) to prevent driving during init.
      */
     public void configureTeleopBindings(Robot robot) {
-        this.robot = robot;
+
         defaultDrive = new DefaultDriveCommand(
                 fieldX::get,
                 fieldY::get,
@@ -67,6 +70,12 @@ public class DriverBindings {
                 rampHold::get,
                 robot.drive
         );
+
+        slowHold.whenBecomesTrue(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
+                .whenBecomesFalse(new SequentialGroup(
+                        new Delay(1),
+                        new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE)
+                        )));
 
         aimAndDrive = new AimAndDriveCommand(
                 fieldX::get,
