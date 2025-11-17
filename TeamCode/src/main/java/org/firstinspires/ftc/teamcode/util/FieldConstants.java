@@ -45,8 +45,8 @@ public final class FieldConstants {
      * This produces a better aiming point than the centroid because it sits deeper inside
      * the opening and is more centered with respect to all three faces.
      *
-     * For Blue: incenter ≈ (5.95, 131.82)
-     * For Red: incenter ≈ (138.05, 131.82)
+     * For Blue: incenter ≈ (7.86, 136.17)
+     * For Red: incenter ≈ (136.14, 136.17)
      */
     public static final Pose BLUE_GOAL_CENTER = incenter(BLUE_GOAL_LOWER, BLUE_GOAL_CORNER, BLUE_GOAL_FAR);
     public static final Pose RED_GOAL_CENTER = incenter(RED_GOAL_LOWER, RED_GOAL_CORNER, RED_GOAL_FAR);

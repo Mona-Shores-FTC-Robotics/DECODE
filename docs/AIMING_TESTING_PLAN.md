@@ -17,7 +17,7 @@ You have **FOUR** aiming approaches available for testing. This document explain
 **How it works:**
 - Calculates angle from robot pose to **basket incenter** using `atan2(dy, dx)`
 - Uses odometry pose and inscribed circle center as target
-- **Incenter ≈ (5.95, 131.82) for Blue, (138.05, 131.82) for Red**
+- **Incenter ≈ (7.86, 136.17) for Blue, (136.14, 136.17) for Red**
 - Continuously tracks target every loop while you drive
 
 **Pros:**
@@ -334,17 +334,13 @@ For **matches**, I recommend:
 
 Your VisionRedo correctly identified that **inscribed circle (incenter)** is better than centroid:
 
-- **Centroid:** Simple average of triangle vertices
-  - Blue: (8.33, 134.33)
-  - Red: (135.67, 134.33)
-
-- **Incenter:** Center of inscribed circle (touches all three sides)
-  - Blue: (5.95, 131.82)
-  - Red: (138.05, 131.82)
+**Incenter vs Centroid:**
+- **Centroid:** Blue (8.33, 134.33), Red (135.67, 134.33)
+- **Incenter:** Blue (7.86, 136.17), Red (136.14, 136.17)
 
 **Why incenter is better:**
-- More centered relative to all basket edges
-- Sits deeper in the basket opening
+- More centered relative to all basket edges (equidistant from all three sides)
+- Sits deeper in the basket opening (higher Y, closer to back corner)
 - Better clearance from all sides
 - Less likely to clip basket rim
 
