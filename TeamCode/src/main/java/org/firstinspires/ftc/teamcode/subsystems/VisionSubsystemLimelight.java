@@ -252,7 +252,15 @@ public class VisionSubsystemLimelight implements Subsystem {
         TagSnapshot bestSnapshot = null;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (LLResultTypes.FiducialResult fiducial : fiducials) {
-            Alliance detectionAlliance = mapTagToAlliance(fiducial.getFiducialId());
+            int tagId = fiducial.getFiducialId();
+
+            // MegaTag2: Only use basket AprilTags (ID 20 for blue, 24 for red)
+            // Ignore all other tags to eliminate false positives and improve accuracy
+            if (tagId != FieldConstants.BLUE_GOAL_TAG_ID && tagId != FieldConstants.RED_GOAL_TAG_ID) {
+                continue;
+            }
+
+            Alliance detectionAlliance = mapTagToAlliance(tagId);
             if (preferredAlliance != null && preferredAlliance != Alliance.UNKNOWN
                     && detectionAlliance != preferredAlliance) {
                 continue;
