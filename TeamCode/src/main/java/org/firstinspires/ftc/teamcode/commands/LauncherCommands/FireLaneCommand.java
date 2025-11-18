@@ -29,24 +29,20 @@ public class FireLaneCommand extends Command {
     private final LauncherSubsystem launcher;
     private final LauncherLane lane;
     private final boolean spinDownAfterShot;
-    private final ManualSpinController manualSpinController;
 
     private final ElapsedTime timer = new ElapsedTime();
 
     private Stage stage = Stage.WAITING_FOR_READY;
     private double readySinceMs = -1.0;
-    private boolean manualSpinActive = false;
     private boolean shotQueued = false;
     private boolean spinDownApplied = false;
 
     public FireLaneCommand(LauncherSubsystem launcher,
                           LauncherLane lane,
-                          boolean spinDownAfterShot,
-                          ManualSpinController manualSpinController) {
+                          boolean spinDownAfterShot) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.lane = Objects.requireNonNull(lane, "lane required");
         this.spinDownAfterShot = spinDownAfterShot;
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
         requires(launcher);
         setInterruptible(true);
     }
@@ -57,8 +53,6 @@ public class FireLaneCommand extends Command {
         stage = Stage.WAITING_FOR_READY;
         readySinceMs = -1.0;
         shotQueued = false;
-        manualSpinActive = true;
-        manualSpinController.enterManualSpin();
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
         spinDownApplied = false;
     }
@@ -102,10 +96,6 @@ public class FireLaneCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-        if (manualSpinActive) {
-            manualSpinController.exitManualSpin();
-            manualSpinActive = false;
-        }
         if (interrupted && shotQueued) {
             launcher.clearQueue();
         }

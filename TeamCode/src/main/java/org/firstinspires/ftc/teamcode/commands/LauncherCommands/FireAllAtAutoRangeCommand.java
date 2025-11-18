@@ -43,7 +43,6 @@ public class FireAllAtAutoRangeCommand extends Command {
     private final IntakeSubsystem intake;
     private final VisionSubsystemLimelight vision;
     private final DriveSubsystem drive;
-    private final ManualSpinController manualSpinController;
     private final boolean spinDownAfterShot;
 
     private Command delegateCommand;
@@ -57,20 +56,17 @@ public class FireAllAtAutoRangeCommand extends Command {
      * @param intake The intake subsystem (nullable)
      * @param vision The vision subsystem (for distance measurement)
      * @param drive The drive subsystem (for odometry fallback)
-     * @param manualSpinController Controller for manual spin state
      * @param spinDownAfterShot Whether to spin down after firing
      */
     public FireAllAtAutoRangeCommand(LauncherSubsystem launcher,
                                       IntakeSubsystem intake,
                                       VisionSubsystemLimelight vision,
                                       DriveSubsystem drive,
-                                      ManualSpinController manualSpinController,
                                       boolean spinDownAfterShot) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = intake;
         this.vision = Objects.requireNonNull(vision, "vision required");
         this.drive = Objects.requireNonNull(drive, "drive required");
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
         this.spinDownAfterShot = spinDownAfterShot;
         requires(launcher);
         setInterruptible(true);
@@ -87,8 +83,7 @@ public class FireAllAtAutoRangeCommand extends Command {
             launcher,
             intake,
             selectedRange,
-            spinDownAfterShot,
-            manualSpinController
+            spinDownAfterShot
         );
 
         // Start the delegate

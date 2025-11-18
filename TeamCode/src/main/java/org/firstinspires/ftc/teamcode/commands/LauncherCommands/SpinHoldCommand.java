@@ -12,12 +12,9 @@ import java.util.Objects;
 public class SpinHoldCommand extends Command {
 
     private final LauncherSubsystem launcher;
-    private final ManualSpinController manualSpinController;
-    private boolean manualSpinActive = false;
 
-    public SpinHoldCommand(LauncherSubsystem launcher, ManualSpinController manualSpinController) {
+    public SpinHoldCommand(LauncherSubsystem launcher) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
         requires(launcher);
         setInterruptible(true);
     }
@@ -25,8 +22,6 @@ public class SpinHoldCommand extends Command {
     @Override
     public void start() {
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
-        manualSpinController.enterManualSpin();
-        manualSpinActive = true;
     }
 
     @Override
@@ -41,10 +36,6 @@ public class SpinHoldCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-        if (manualSpinActive) {
-            manualSpinController.exitManualSpin();
-            manualSpinActive = false;
-        }
         launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
     }
 }

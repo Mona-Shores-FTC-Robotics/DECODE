@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.telemetry.data;
 
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
@@ -27,7 +26,6 @@ public class LoopTimingTelemetryData {
     public final double intakeMs;
     public final double launcherMs;
     public final double lightingMs;
-    public final double launcherCoordMs;
     public final double visionMs;
 
     // Telemetry and logging overhead
@@ -39,7 +37,6 @@ public class LoopTimingTelemetryData {
             double intakeMs,
             double launcherMs,
             double lightingMs,
-            double launcherCoordMs,
             double visionMs,
             long telemetryStartNs
     ) {
@@ -48,7 +45,6 @@ public class LoopTimingTelemetryData {
         this.intakeMs = intakeMs;
         this.launcherMs = launcherMs;
         this.lightingMs = lightingMs;
-        this.launcherCoordMs = launcherCoordMs;
         this.visionMs = visionMs;
         this.telemetryStartNs = telemetryStartNs;
     }
@@ -57,7 +53,7 @@ public class LoopTimingTelemetryData {
      * Calculate total subsystem periodic time.
      */
     public double totalSubsystemMs() {
-        return driveMs + intakeMs + launcherMs + lightingMs + launcherCoordMs + visionMs;
+        return driveMs + intakeMs + launcherMs + lightingMs + visionMs;
     }
 
     /**
@@ -76,7 +72,6 @@ public class LoopTimingTelemetryData {
      * @param intake Intake subsystem
      * @param launcher Launcher subsystem
      * @param lighting Lighting subsystem
-     * @param coordinator Launcher coordinator
      * @param vision Vision subsystem
      */
     public static LoopTimingTelemetryData capture(
@@ -86,14 +81,12 @@ public class LoopTimingTelemetryData {
             IntakeSubsystem intake,
             LauncherSubsystem launcher,
             LightingSubsystem lighting,
-            LauncherCoordinator coordinator,
             VisionSubsystemLimelight vision
     ) {
         double driveMs = drive != null ? drive.getLastPeriodicMs() : 0.0;
         double intakeMs = intake != null ? intake.getLastPeriodicMs() : 0.0;
         double launcherMs = launcher != null ? launcher.getLastPeriodicMs() : 0.0;
         double lightingMs = lighting != null ? lighting.getLastPeriodicMs() : 0.0;
-        double launcherCoordMs = coordinator != null ? coordinator.getLastPeriodicMs() : 0.0;
         double visionMs = vision != null ? vision.getLastPeriodicMs() : 0.0;
 
         return new LoopTimingTelemetryData(
@@ -102,7 +95,6 @@ public class LoopTimingTelemetryData {
                 intakeMs,
                 launcherMs,
                 lightingMs,
-                launcherCoordMs,
                 visionMs,
                 telemetryStartNs
         );
@@ -112,6 +104,6 @@ public class LoopTimingTelemetryData {
      * Create empty timing data (for first loop iteration or when timing not available).
      */
     public static LoopTimingTelemetryData empty() {
-        return new LoopTimingTelemetryData(0, 0, 0, 0, 0, 0, 0, 0);
+        return new LoopTimingTelemetryData(0, 0, 0, 0, 0, 0, 0);
     }
 }
