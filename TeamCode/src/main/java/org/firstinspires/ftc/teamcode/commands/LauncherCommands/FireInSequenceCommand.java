@@ -14,35 +14,43 @@ import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.MotifPattern;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Fires artifacts in the detected obelisk pattern sequence with motif tail offset.
+ * Fires artifacts in the detected obelisk pattern sequence with optimized simultaneous firing.
  *
  * This command:
  * 1. Gets the current motif pattern from RobotState (detected from AprilTag during init)
  * 2. Gets the manually-set motif tail from RobotState (operator visually counts field ramp)
  * 3. Rotates the pattern to complete the existing motif on the field
- * 4. Spins up to MID range
- * 5. Fires lanes in the rotated pattern sequence with configurable spacing
- * 6. Spins down to idle
+ * 4. Groups consecutive same-color positions for simultaneous firing
+ * 5. Spins up to MID range
+ * 6. Fires groups with spacing BETWEEN groups only (not within groups)
+ * 7. Spins down to idle
  *
- * If no pattern has been detected, defaults to PPG pattern.
+ * KEY OPTIMIZATION: Consecutive same-color artifacts fire SIMULTANEOUSLY!
+ * - PPG → Groups: [[P,P], [G]] → Fire both P at t=0, G at t=500ms (50% faster!)
+ * - PGP → Groups: [[P], [G], [P]] → Fire P, wait, G, wait, P (1000ms total)
+ * - GPP → Groups: [[G], [P,P]] → Fire G at t=0, both P at t=500ms (50% faster!)
+ *
+ * Lane selection prioritizes ready lanes first for additional speed optimization.
  *
  * IMPORTANT: The motif tail is MANUALLY set by the operator (not automatically calculated).
  * The operator visually counts artifacts in the field ramp and updates the tail using
- * increment/decrement buttons:
- * - Tail = 0 when field ramp has 0, 3, 6, ... artifacts
- * - Tail = 1 when field ramp has 1, 4, 7, ... artifacts
- * - Tail = 2 when field ramp has 2, 5, 8, ... artifacts
+ * dpad buttons:
+ * - Dpad Left (tail=0): 0, 3, 6, ... artifacts in field ramp
+ * - Dpad Up (tail=1): 1, 4, 7, ... artifacts in field ramp
+ * - Dpad Right (tail=2): 2, 5, 8, ... artifacts in field ramp
  *
  * Example: If detected pattern is PPG and operator set tail=1:
  * - Motif tail = 1 (manually set by operator)
  * - Rotated pattern = PGP (shifted left by 1 from PPG)
- * - Fires Purple, Green, Purple to complete the existing motif
+ * - Groups: [[P], [G], [P]]
+ * - Fires Purple, wait 500ms, Green, wait 500ms, Purple (no simultaneous optimization for PGP)
  */
 @Configurable
 public class FireInSequenceCommand extends Command {
@@ -227,9 +235,18 @@ public class FireInSequenceCommand extends Command {
     }
 
     /**
-     * Queues shots in the obelisk pattern sequence with motif tail offset.
-     * First attempts to match the pattern, then fires any remaining unmatched artifacts.
-     * This ensures all loaded artifacts are fired even if they don't perfectly match the pattern.
+     * Queues shots with optimized simultaneous firing for consecutive same-color artifacts.
+     *
+     * Key optimizations:
+     * - Groups consecutive same-color positions (e.g., PPG → [[P,P], [G]])
+     * - Fires all artifacts in each group SIMULTANEOUSLY (no delay within group)
+     * - Only adds delay BETWEEN groups
+     * - Prioritizes ready lanes when multiple lanes have the same color
+     * - Example: PPG fires both purples at t=0, green at t=500ms (50% faster!)
+     *
+     * Handles imperfect matches gracefully:
+     * - If pattern needs 2 purples but only 1 available, fires that 1
+     * - Fires all remaining unmatched artifacts simultaneously at the end
      */
     private void queueSequenceShots() {
         // Get current motif pattern from RobotState
@@ -240,86 +257,151 @@ public class FireInSequenceCommand extends Command {
         }
 
         // Get manually-set motif tail from RobotState
-        // (Operator visually counts artifacts in field ramp and updates this value)
         int motifTail = RobotState.getMotifTail();
 
         // Get rotated pattern based on motif tail
         ArtifactColor[] rotatedPattern = motif.getRotatedPattern(motifTail);
-        List<ArtifactColor> desiredPattern = Arrays.asList(rotatedPattern);
 
-        // Queue shots in pattern sequence (same logic as LaunchObeliskPatternCommand)
+        // Group consecutive same-color positions
+        List<List<ArtifactColor>> groups = groupConsecutiveColors(rotatedPattern);
+
         double currentDelay = 0.0;
 
-        // Phase 1: Try to match pattern colors in order
-        for (ArtifactColor neededColor : desiredPattern) {
-            // Skip NONE, UNKNOWN, and BACKGROUND - they're not real artifacts
+        // Phase 1: Match and fire each group simultaneously
+        for (List<ArtifactColor> group : groups) {
+            if (group.isEmpty()) {
+                continue;
+            }
+
+            ArtifactColor neededColor = group.get(0); // All same color in group
+            int neededCount = group.size();
+
+            // Skip non-artifacts
             if (neededColor == null || !neededColor.isArtifact()) {
                 continue;
             }
 
-            // Find a lane that has this color and hasn't been used yet
-            LauncherLane matchingLane = findUnusedLaneWithColor(neededColor);
+            // Find unused lanes with this color (prioritize ready lanes, up to neededCount)
+            List<LauncherLane> matchingLanes = findUnusedLanesWithColor(neededColor, neededCount);
 
-            if (matchingLane == null) {
-                // Can't continue perfect pattern - will fire remaining artifacts after
-                break;
-            }
-
-            // Queue this shot with the appropriate delay
-            if (currentDelay > 0.0) {
-                launcher.queueShot(matchingLane, currentDelay);
-            } else {
-                launcher.queueShot(matchingLane);
-            }
-
-            // Mark this lane as used and increment delay for next shot
-            usedLanes.add(matchingLane);
-            currentDelay += sequenceConfig.shotSpacingMs;
-        }
-
-        // Phase 2: Fire any remaining unused lanes (ensures all artifacts are fired)
-        for (LauncherLane lane : LauncherLane.values()) {
-            // Skip already-used lanes
-            if (usedLanes.contains(lane)) {
+            if (matchingLanes.isEmpty()) {
+                // Can't match this group - continue to try remaining groups
                 continue;
             }
 
-            // Check if this lane has an artifact to fire
-            ArtifactColor laneColor = coordinator.getLaneColor(lane);
-            if (laneColor != null && laneColor.isArtifact()) {
-                // Queue this remaining artifact
+            // Fire ALL lanes in this group SIMULTANEOUSLY at currentDelay
+            for (LauncherLane lane : matchingLanes) {
                 if (currentDelay > 0.0) {
                     launcher.queueShot(lane, currentDelay);
                 } else {
                     launcher.queueShot(lane);
                 }
-
-                // Mark as used and increment delay
                 usedLanes.add(lane);
-                currentDelay += sequenceConfig.shotSpacingMs;
+            }
+
+            // Only increment delay AFTER the entire group (not between individual shots)
+            currentDelay += sequenceConfig.shotSpacingMs;
+        }
+
+        // Phase 2: Fire all remaining unused lanes SIMULTANEOUSLY
+        List<LauncherLane> remainingLanes = new ArrayList<>();
+        for (LauncherLane lane : LauncherLane.values()) {
+            if (!usedLanes.contains(lane)) {
+                ArtifactColor laneColor = coordinator.getLaneColor(lane);
+                if (laneColor != null && laneColor.isArtifact()) {
+                    remainingLanes.add(lane);
+                }
+            }
+        }
+
+        // Fire all remaining lanes simultaneously (if any)
+        if (!remainingLanes.isEmpty()) {
+            for (LauncherLane lane : remainingLanes) {
+                if (currentDelay > 0.0) {
+                    launcher.queueShot(lane, currentDelay);
+                } else {
+                    launcher.queueShot(lane);
+                }
+                usedLanes.add(lane);
             }
         }
     }
 
     /**
-     * Finds a lane that contains the specified color and hasn't been used yet.
+     * Groups consecutive same-color positions in the pattern.
+     *
+     * Example: [P, P, G] → [[P, P], [G]]
+     * Example: [P, G, P] → [[P], [G], [P]]
+     * Example: [G, P, P] → [[G], [P, P]]
+     *
+     * @param pattern The obelisk pattern
+     * @return List of groups, where each group contains consecutive same-color positions
+     */
+    private List<List<ArtifactColor>> groupConsecutiveColors(ArtifactColor[] pattern) {
+        List<List<ArtifactColor>> groups = new ArrayList<>();
+        if (pattern == null || pattern.length == 0) {
+            return groups;
+        }
+
+        List<ArtifactColor> currentGroup = new ArrayList<>();
+        currentGroup.add(pattern[0]);
+
+        for (int i = 1; i < pattern.length; i++) {
+            if (pattern[i] == pattern[i - 1]) {
+                // Same color - add to current group
+                currentGroup.add(pattern[i]);
+            } else {
+                // Different color - save current group and start new one
+                groups.add(currentGroup);
+                currentGroup = new ArrayList<>();
+                currentGroup.add(pattern[i]);
+            }
+        }
+
+        // Add final group
+        groups.add(currentGroup);
+        return groups;
+    }
+
+    /**
+     * Finds unused lanes with the specified color, prioritizing ready lanes first.
+     *
+     * This optimization ensures that when we have multiple lanes with the same color,
+     * we fire the lanes that are already spun up first, reducing wait time.
      *
      * @param color The artifact color to search for
-     * @return The matching lane, or null if none found
+     * @param maxCount Maximum number of lanes to return
+     * @return List of matching lanes (up to maxCount), sorted by readiness
      */
-    private LauncherLane findUnusedLaneWithColor(ArtifactColor color) {
+    private List<LauncherLane> findUnusedLanesWithColor(ArtifactColor color, int maxCount) {
+        List<LauncherLane> matching = new ArrayList<>();
+
+        // Find all unused lanes with this color
         for (LauncherLane lane : LauncherLane.values()) {
-            // Skip lanes we've already used
             if (usedLanes.contains(lane)) {
                 continue;
             }
 
-            // Check if this lane has the color we need
             ArtifactColor laneColor = coordinator.getLaneColor(lane);
             if (laneColor == color) {
-                return lane;
+                matching.add(lane);
             }
         }
-        return null;
+
+        // Sort by readiness (ready lanes first)
+        matching.sort((lane1, lane2) -> {
+            boolean ready1 = launcher.isLaneReady(lane1);
+            boolean ready2 = launcher.isLaneReady(lane2);
+            if (ready1 && !ready2) {
+                return -1; // ready1 comes first
+            }
+            if (!ready1 && ready2) {
+                return 1; // ready2 comes first
+            }
+            return 0; // same readiness
+        });
+
+        // Return up to maxCount lanes
+        return matching.subList(0, Math.min(maxCount, matching.size()));
     }
 }
