@@ -80,7 +80,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
             selectedAlliance = persistedAlliance;
         }
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
-        robot.launcherCoordinator.lockIntake();
         robot.initializeForTeleOp();
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
 
@@ -93,8 +92,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 new SubsystemComponent(robot.launcher),
                 new SubsystemComponent(robot.intake),
                 new SubsystemComponent(robot.lighting),
-                new SubsystemComponent(robot.vision),
-                new SubsystemComponent(robot.launcherCoordinator)
+                new SubsystemComponent(robot.vision)
         );
     }
 
@@ -127,7 +125,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
         driverBindings.configureTeleopBindings(robot);
         operatorBindings.configureTeleopBindings(robot);
 
-        robot.launcherCoordinator.unlockIntake();
         robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
         if (allianceSelector != null) {
             allianceSelector.lockSelection();
@@ -208,7 +205,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 robot.intake,
                 robot.vision,
                 robot.lighting,
-                robot.launcherCoordinator,
                 driverBindings.sampleDriveRequest(),
                 gamepad1,
                 gamepad2,
@@ -311,7 +307,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 robot.intake,
                 robot.vision,
                 robot.lighting,
-                robot.launcherCoordinator,
                 null,  // driveRequest (not needed in init)
                 null,  // gamepad1 (not needed in init)
                 null,  // gamepad2 (not needed in init)

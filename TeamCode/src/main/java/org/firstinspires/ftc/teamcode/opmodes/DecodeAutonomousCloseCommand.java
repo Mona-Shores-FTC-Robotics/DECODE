@@ -103,13 +103,11 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
 
-        robot.launcherCoordinator.lockIntake();
-        robot.launcherCoordinator.setIntakeAutomationEnabled(false);
         robot.initializeForAuto();
 
         // Initialize command factories
         intakeCommands = new IntakeCommands(robot.intake);
-        launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.launcherCoordinator, robot.manualSpinController);
+        launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
 
         // Register init-phase controls
         // Use Alliance.UNKNOWN as default to enable automatic vision detection
@@ -132,8 +130,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 new SubsystemComponent(robot.launcher),
                 new SubsystemComponent(robot.intake),
                 new SubsystemComponent(robot.lighting),
-                new SubsystemComponent(robot.vision),
-                new SubsystemComponent(robot.launcherCoordinator)
+                new SubsystemComponent(robot.vision)
         );
 
 
@@ -148,7 +145,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
         // Update subsystems to poll sensors (especially intake color sensors)
         robot.intake.periodic();
-        robot.launcherCoordinator.periodic();
         robot.vision.periodic();
 
         // Detect alliance and start pose from AprilTag vision
@@ -173,7 +169,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
-        telemetry.addData("Artifacts", "%d detected", robot.launcherCoordinator.getArtifactCount());
+        telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");
         telemetry.update();
@@ -191,9 +187,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         RobotState.setLauncherMode(config.startingLauncherMode);
         RobotState.resetMotifTail(); // Start with fresh motif tail (0)
 
-        robot.launcherCoordinator.setIntakeAutomationEnabled(true);
-        robot.launcherCoordinator.unlockIntake();
-        robot.launcher.requestSpinUp();
+        robot.launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
 
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();
