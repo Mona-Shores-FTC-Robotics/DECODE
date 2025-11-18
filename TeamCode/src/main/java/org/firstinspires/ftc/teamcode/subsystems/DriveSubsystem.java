@@ -235,6 +235,14 @@ public class DriveSubsystem implements Subsystem {
         long start = System.nanoTime();
         follower.update();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+
+        // MegaTag2: Update vision subsystem with current heading for IMU-fused localization
+        // This must happen before vision.periodic() processes AprilTag detections
+        if (vision != null) {
+            double headingRad = follower.getHeading();
+            vision.setRobotHeading(headingRad);
+        }
+
         updatePoseFusion();
 
         // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)

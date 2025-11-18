@@ -58,6 +58,10 @@ public class VisionSubsystemLimelight implements Subsystem {
     private boolean snapshotStaleCache = false;
     private long lastStaleCacheUpdateMs = 0L;
 
+    // MegaTag2: Store current robot heading for IMU-fused localization
+    private double currentHeadingRad = 0.0;
+    private boolean hasValidHeading = false;
+
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
         this(hardwareMap, null);
     }
@@ -78,6 +82,13 @@ public class VisionSubsystemLimelight implements Subsystem {
     public void periodic() {
         long start = System.nanoTime();
         long nowMs = System.currentTimeMillis();
+
+        // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
+        // This must be called every loop before requesting pose estimates
+        if (hasValidHeading) {
+            double headingDeg = Math.toDegrees(currentHeadingRad);
+            limelight.updateRobotOrientation(headingDeg);
+        }
 
         // Throttle Limelight polling to 20Hz (50ms) to reduce loop time
         if (nowMs - lastVisionPollTimeMs >= VISION_POLL_INTERVAL_MS) {
@@ -211,6 +222,17 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     public Alliance getAlliance() {
         return activeAlliance;
+    }
+
+    /**
+     * Updates the robot's current heading for MegaTag2 IMU-fused localization.
+     * Should be called every loop with the latest odometry heading.
+     *
+     * @param headingRad Robot heading in radians (Pedro coordinate system)
+     */
+    public void setRobotHeading(double headingRad) {
+        currentHeadingRad = headingRad;
+        hasValidHeading = true;
     }
 
     public double getLastPeriodicMs() {
