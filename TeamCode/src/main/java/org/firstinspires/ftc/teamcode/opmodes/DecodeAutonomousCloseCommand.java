@@ -112,7 +112,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
         driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
         driverPad.a().whenBecomesTrue(this::applyLastDetectedStartPose);
-        lightingInitController = robot.lighting.new InitController(robot, allianceSelector);
+        lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector, robot.lighting);
         lightingInitController.initialize();
 
         activeAlliance = allianceSelector.getSelectedAlliance();

@@ -111,7 +111,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
-        lightingInitController = robot.lighting.new InitController(robot, allianceSelector);
+        lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector, robot.lighting);
         lightingInitController.initialize();
 
         addComponents(
