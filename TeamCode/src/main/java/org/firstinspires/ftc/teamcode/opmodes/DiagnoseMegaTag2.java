@@ -103,6 +103,17 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         double headingToSendRad = Math.toRadians(headingToSendDeg);
         robot.vision.limelight.updateRobotOrientation(headingToSendDeg);
 
+        // Log heading data to AdvantageScope
+        RobotState.packet.put("Diagnostic/pedroHeadingDeg", pedroHeadingDeg);
+        RobotState.packet.put("Diagnostic/ftcHeadingDeg", AngleUnit.normalizeDegrees(pedroHeadingDeg + 90));
+        RobotState.packet.put("Diagnostic/currentOffsetDeg", headingOffsetDeg);
+        RobotState.packet.put("Diagnostic/sentToLimelightDeg", headingToSendDeg);
+
+        // Log odometry pose to AdvantageScope
+        RobotState.packet.put("Diagnostic/Odom/pedroX", odomPose.getX());
+        RobotState.packet.put("Diagnostic/Odom/pedroY", odomPose.getY());
+        RobotState.packet.put("Diagnostic/Odom/pedroHeading", pedroHeadingDeg);
+
         // Get MT2 result
         LLResult result = robot.vision.limelight.getLatestResult();
 
@@ -142,6 +153,11 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                 telemetry.addData("Raw MT2 (FTC)", "(%.1f, %.1f, %.1f°)",
                     mt2XIn, mt2YIn, mt2YawDeg);
 
+                // Log MT2 raw (FTC) data to AdvantageScope
+                RobotState.packet.put("Diagnostic/MT2/ftcX", mt2XIn);
+                RobotState.packet.put("Diagnostic/MT2/ftcY", mt2YIn);
+                RobotState.packet.put("Diagnostic/MT2/ftcHeading", mt2YawDeg);
+
                 // Convert MT2 FTC pose to Pedro
                 double mt2PedroX = mt2YIn + 72; // ftcY + halfField
                 double mt2PedroY = 72 - mt2XIn; // halfField - ftcX
@@ -151,11 +167,22 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                     mt2PedroX, mt2PedroY, mt2PedroHeading);
                 telemetry.addLine();
 
+                // Log MT2 Pedro data to AdvantageScope
+                RobotState.packet.put("Diagnostic/MT2/pedroX", mt2PedroX);
+                RobotState.packet.put("Diagnostic/MT2/pedroY", mt2PedroY);
+                RobotState.packet.put("Diagnostic/MT2/pedroHeading", mt2PedroHeading);
+
                 // Calculate errors
                 double errorX = mt2PedroX - odomPose.getX();
                 double errorY = mt2PedroY - odomPose.getY();
                 double errorHeading = AngleUnit.normalizeDegrees(mt2PedroHeading - pedroHeadingDeg);
                 double errorDistance = Math.hypot(errorX, errorY);
+
+                // Log errors to AdvantageScope
+                RobotState.packet.put("Diagnostic/Error/positionInches", errorDistance);
+                RobotState.packet.put("Diagnostic/Error/xInches", errorX);
+                RobotState.packet.put("Diagnostic/Error/yInches", errorY);
+                RobotState.packet.put("Diagnostic/Error/headingDeg", errorHeading);
 
                 telemetry.addLine("--- ERROR (MT2 - Odometry) ---");
                 telemetry.addData("Position Error", "%.1f in (X: %.1f, Y: %.1f)",
@@ -164,7 +191,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
 
                 // Provide guidance
                 telemetry.addLine();
-                if (errorDistance < 3.0 && Math.abs(errorHeading) < 5.0) {
+                boolean offsetIsGood = errorDistance < 3.0 && Math.abs(errorHeading) < 5.0;
+                RobotState.packet.put("Diagnostic/offsetIsGood", offsetIsGood);
+
+                if (offsetIsGood) {
                     telemetry.addLine("✓✓✓ GOOD! Offset looks correct! ✓✓✓");
                     telemetry.addLine();
                     telemetry.addData("** RECORD THIS VALUE **", "%.1f°", headingOffsetDeg);
@@ -185,9 +215,17 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                 telemetry.addLine();
                 if (!result.getFiducialResults().isEmpty()) {
                     int tagId = result.getFiducialResults().get(0).getFiducialId();
+                    int tagsVisible = result.getFiducialResults().size();
+                    double tx = result.getTx();
+
                     telemetry.addData("Tag ID", tagId);
-                    telemetry.addData("Tags Visible", result.getFiducialResults().size());
-                    telemetry.addData("tx", "%.2f°", result.getTx());
+                    telemetry.addData("Tags Visible", tagsVisible);
+                    telemetry.addData("tx", "%.2f°", tx);
+
+                    // Log AprilTag info to AdvantageScope
+                    RobotState.packet.put("Diagnostic/AprilTag/tagId", tagId);
+                    RobotState.packet.put("Diagnostic/AprilTag/tagsVisible", tagsVisible);
+                    RobotState.packet.put("Diagnostic/AprilTag/txDeg", tx);
                 }
 
             } else {
