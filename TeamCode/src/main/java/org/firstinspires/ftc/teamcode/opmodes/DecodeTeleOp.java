@@ -18,9 +18,9 @@ import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
-import org.firstinspires.ftc.teamcode.util.LightingInitController;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.concurrent.TimeUnit;
@@ -34,7 +34,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     private AllianceSelector allianceSelector;
     private Alliance selectedAlliance = Alliance.UNKNOWN;
-    private LightingInitController lightingInitController;
+    private LightingSubsystem.InitController lightingInitController;
 
     // Previous loop timing (for telemetry reporting)
     private double prevMainLoopMs = 0.0;
@@ -71,7 +71,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         robot.launcherCoordinator.lockIntake();
         robot.initializeForTeleOp();
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
-        lightingInitController = new LightingInitController(robot, allianceSelector);
+        lightingInitController = robot.lighting.new InitController(robot, allianceSelector);
         lightingInitController.initialize();
 
         addComponents(

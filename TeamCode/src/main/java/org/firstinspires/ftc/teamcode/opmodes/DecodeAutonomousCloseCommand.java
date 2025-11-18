@@ -14,13 +14,13 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
-import org.firstinspires.ftc.teamcode.util.LightingInitController;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
@@ -71,7 +71,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     private FieldLayout currentLayout;
     private IntakeCommands intakeCommands;
     private LauncherCommands launcherCommands;
-    private LightingInitController lightingInitController;
+    private LightingSubsystem.InitController lightingInitController;
 
     // AprilTag-based start pose detection
     private Pose lastAppliedStartPosePedro;
@@ -112,7 +112,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
         driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
         driverPad.a().whenBecomesTrue(this::applyLastDetectedStartPose);
-        lightingInitController = new LightingInitController(robot, allianceSelector);
+        lightingInitController = robot.lighting.new InitController(robot, allianceSelector);
         lightingInitController.initialize();
 
         activeAlliance = allianceSelector.getSelectedAlliance();

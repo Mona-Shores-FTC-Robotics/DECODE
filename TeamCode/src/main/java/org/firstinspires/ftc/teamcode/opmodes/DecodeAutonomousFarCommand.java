@@ -16,13 +16,13 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
-import org.firstinspires.ftc.teamcode.util.LightingInitController;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -74,7 +74,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     private FieldLayout currentLayout;
     private IntakeCommands intakeCommands;
     private LauncherCommands launcherCommands;
-    private LightingInitController lightingInitController;
+    private LightingSubsystem.InitController lightingInitController;
     private GamepadEx driverPad = new GamepadEx(() -> gamepad1);
 
     // AprilTag-based start pose detection
@@ -111,7 +111,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
-        lightingInitController = new LightingInitController(robot, allianceSelector);
+        lightingInitController = robot.lighting.new InitController(robot, allianceSelector);
         lightingInitController.initialize();
 
         addComponents(
