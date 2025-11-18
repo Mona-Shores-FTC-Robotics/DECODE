@@ -5,6 +5,7 @@ import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtAutoRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchSequentialCommand;
@@ -18,27 +19,23 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
  *
  * Button assignments:
  * - X: Fire all lanes at SHORT range (~2700 RPM)
- * - Y: Fire all lanes at MID range (~3600 RPM)
+ * - A: Fire all lanes at MID range (~3600 RPM)
  * - B: Fire all lanes at LONG range (~4200 RPM)
- * - A: Manual spin hold (for pre-spinning before shots)
- * - Left Bumper: (previously manual spin, now available for other use)
+ * - D-Pad Up: Auto-range fire (selects short/mid/long based on distance)
+ * - Left Bumper: Manual spin hold (for pre-spinning before shots)
  * - Right Bumper: Intake forward
  */
 public class OperatorBindings {
-
-    private Robot robot;
-
     private final Button fireShort;
     private final Button fireMid;
     private final Button fireLong;
-//    private final Button fireRange;
-//    private final Button fireSequence;
+    private final Button fireRange;
+    private final Button fireSequence;
 //    private final Button fireRangeSequence;
 
     private final Button runIntake;
     private final Button humanLoading;
     private final Button spinLetGoToShoot;
-    private final Button fireAllInSequence;
 
     public OperatorBindings(GamepadEx operator) {
 
@@ -49,7 +46,8 @@ public class OperatorBindings {
         fireLong = operator.b();
         humanLoading = operator.y();
         spinLetGoToShoot = operator.leftBumper();
-        fireAllInSequence = operator.dpadDown();
+        fireSequence = operator.dpadDown();
+        fireRange = operator.dpadUp();
 
 
 
@@ -66,7 +64,6 @@ public class OperatorBindings {
     }
 
     public void configureTeleopBindings(Robot robot) {
-        this.robot = robot;
         // Range-based shooting commands
         //Commands
         FireAllAtRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
@@ -77,6 +74,8 @@ public class OperatorBindings {
         SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
         FireAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
         LaunchSequentialCommand fireAllInSequenceCommand = robot.launcherCommands.launchAllInSequence();
+        FireAllAtAutoRangeCommand fireAllAutoRangeCommand = robot.launcherCommands.fireAllAutoRange(robot.vision, robot.drive);
+
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
@@ -87,8 +86,8 @@ public class OperatorBindings {
         fireLong.whenBecomesTrue(fireLongRangeCommand);
 
         // Intake control
-        runIntake.whenBecomesTrue(intakeForwardCommand);
-        runIntake.whenBecomesFalse(intakeReverseCommand);
+//        runIntake.whenBecomesTrue(intakeForwardCommand);
+//        runIntake.whenBecomesFalse(intakeReverseCommand);
 
         // Reverse Flywheel and Prefeed for Human Loading
         humanLoading
@@ -96,18 +95,20 @@ public class OperatorBindings {
                 .whenBecomesTrue(robot.intake::setPrefeedReverse)
                 .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
                 .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
-                .whenBecomesFalse(robot.intake::deactivatePrefeed)
+                .whenBecomesFalse(robot.intake::setPrefeedForward)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
 
         spinLetGoToShoot
                 .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
                 .whenBecomesFalse(fireAllCommand); //prefeeder started and stopped in the fireAll command
 
-        fireAllInSequence
+        fireSequence
                 .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
                 .whenBecomesFalse(fireAllInSequenceCommand);
 
 
+        fireRange
+                .whenBecomesTrue(fireAllAutoRangeCommand);
     }
 
 }

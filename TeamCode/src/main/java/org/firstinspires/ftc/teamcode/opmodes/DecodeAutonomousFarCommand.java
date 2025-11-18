@@ -15,12 +15,14 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
+import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
@@ -29,6 +31,7 @@ import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.FollowPath;
@@ -57,10 +60,8 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public double maxPathPower = .6;
-        public double intakeTimeSeconds = 6.0;
-        public double launchDelaySeconds = 0.5;
-        public double intakeDelaySeconds = 0.5; //how long into the path do we turn the intake on?
+        public double maxPathPower = .8;
+        public double intakeDelaySeconds = .1; //how long into the path do we turn the intake on?
 
     }
 
@@ -117,11 +118,19 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
                 new SubsystemComponent(robot.vision),
                 new SubsystemComponent(robot.launcherCoordinator)
         );
+        publishTelemetry();
     }
 
     @Override
     public void onWaitForStart() {
         BindingManager.update();
+
+        // Update subsystems to poll sensors (especially intake color sensors)
+        robot.intake.periodic();
+        robot.launcherCoordinator.periodic();
+        robot.vision.periodic();
+
+        publishTelemetry();
 
         // Detect alliance and start pose from AprilTag vision
         java.util.Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt =
@@ -130,16 +139,16 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         allianceSelector.applySelection(robot, robot.lighting);
 
         // Extract detected start pose from vision
-        if (snapshotOpt.isPresent()) {
-            VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-            java.util.Optional<Pose> detectedPose = snapshot.getRobotPose();
-            if (detectedPose.isPresent()) {
-                Pose candidate = detectedPose.get();
-                if (shouldUpdateStartPose(candidate)) {
-                    applyAlliance(activeAlliance, candidate);
-                }
-            }
-        }
+//        if (snapshotOpt.isPresent()) {
+//            VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
+//            java.util.Optional<Pose> detectedPose = snapshot.getRobotPose();
+//            if (detectedPose.isPresent()) {
+//                Pose candidate = detectedPose.get();
+//                if (shouldUpdateStartPose(candidate)) {
+//                    applyAlliance(activeAlliance, candidate);
+//                }
+//            }
+//        }
 
         Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
         if (selectedAlliance != activeAlliance) {
@@ -149,6 +158,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
+        telemetry.addData("Artifacts", "%d detected", robot.launcherCoordinator.getArtifactCount());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");
         telemetry.update();    }
@@ -164,12 +174,15 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();
+        robot.intake.activateRoller();
+        robot.intake.setPrefeedForward();
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
+
     }
 
     @Override
     public void onUpdate() {
-
+        publishTelemetry();
                     }
 
     @Override
@@ -230,11 +243,12 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         return new SequentialGroup(
             // Drive to pickup while preparing intake
             new ParallelGroup(
-                followPath(fromPose, pickupPose, controlPoints),
-                new SequentialGroup(
-                    new Delay(config.intakeDelaySeconds), //should we try to use a callback? or is time fine?
-                    new IntakeUntilFullCommand(robot.intake, config.intakeTimeSeconds) // intake until we are full or hit the timeout
-                )
+                    followPath(fromPose, pickupPose, controlPoints),
+                    new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
+                ),
+            new SequentialGroup(
+                    new Delay(config.intakeDelaySeconds)
+//                    new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
             ),
 
             // Drive to score while spinning up launcher
@@ -299,7 +313,8 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
      * Phase 1: Uses position-specific tunable RPM from LaunchAtPositionCommand.PositionRpmConfig
      */
     private Command spinUpLauncher() {
-        return launcherCommands.spinUpUntilReady();
+        // LaunchAtPositionCommand sets RPM based on field position AND spins up
+        return launcherCommands.spinUpForPosition(FieldPoint.LAUNCH_FAR);
     }
 
     /**
@@ -307,8 +322,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
      */
     private Command scoreSequence() {
         return new SequentialGroup(
-            new Delay(config.launchDelaySeconds),
-            launcherCommands.launchDetectedBurst()
+//            new Delay(config.launchDelaySeconds),
+//            launcherCommands.launchAllInSequence()  // Fires all lanes regardless of color detection
+                launcherCommands.fireAllAtRange(LauncherRange.LONG,false)
         );
     }
 
@@ -349,6 +365,30 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             return null;
         }
         return new Pose(pose.getX(), pose.getY(), pose.getHeading());
+    }
+
+
+    private void publishTelemetry() {
+        robot.telemetry.publishLoopTelemetry(
+                robot.drive,
+                robot.launcher,
+                robot.intake,
+                robot.vision,
+                robot.lighting,
+                robot.launcherCoordinator,
+                null,
+                gamepad1,
+                gamepad2,
+                RobotState.getAlliance(),
+                getRuntime(),
+                Math.max(0.0, 150.0 - getRuntime()),
+                telemetry,
+                "Auto",
+                true,
+                null,
+                0,
+                0
+        );
     }
 
 }

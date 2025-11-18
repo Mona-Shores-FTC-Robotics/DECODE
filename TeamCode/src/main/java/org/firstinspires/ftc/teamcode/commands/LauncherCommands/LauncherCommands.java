@@ -2,9 +2,11 @@ package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
 import com.bylazar.configurables.annotations.Configurable;
 
+import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -20,7 +22,7 @@ import java.util.List;
 @Configurable
 public class LauncherCommands {
 
-    public static final double DEFAULT_BURST_SPACING_MS = 150.0;
+    public static final double DEFAULT_BURST_SPACING_MS = 300;
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
@@ -242,6 +244,69 @@ public class LauncherCommands {
             Arrays.asList(ArtifactColor.GREEN, ArtifactColor.PURPLE, ArtifactColor.PURPLE),
             DEFAULT_BURST_SPACING_MS
         );
+    }
+
+    // ========== Distance-Based Commands ==========
+
+    /**
+     * Smart auto-range fire command - ONE BUTTON SOLUTION!
+     * Automatically selects SHORT/MID/LONG range based on distance to goal.
+     * Uses AprilTag vision for distance, falls back to odometry.
+     *
+     * Replaces the need for separate short/mid/long range buttons.
+     *
+     * @param vision The vision subsystem (for distance measurement)
+     * @param drive The drive subsystem (for odometry fallback)
+     * @param spinDownAfterShot Whether to spin down to idle after firing
+     * @return Command that auto-selects range and fires
+     */
+    public FireAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
+                                                       DriveSubsystem drive,
+                                                       boolean spinDownAfterShot) {
+        return new FireAllAtAutoRangeCommand(launcher, intake, vision, drive, manualSpinController, spinDownAfterShot);
+    }
+
+    /**
+     * Smart auto-range fire command with spin-down.
+     * Automatically selects SHORT/MID/LONG range based on distance.
+     *
+     * @param vision The vision subsystem
+     * @param drive The drive subsystem
+     * @return Command that auto-selects range and fires
+     */
+    public FireAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
+                                                       DriveSubsystem drive) {
+        return fireAllAutoRange(vision, drive, true);
+    }
+
+    /**
+     * Fires all lanes with RPM and hood position calculated from distance to goal.
+     * Uses AprilTag vision to determine distance, falls back to odometry if unavailable.
+     * Interpolates RPM based on configurable distance/RPM calibration points.
+     *
+     * @param vision The vision subsystem (for AprilTag distance measurement)
+     * @param drive The drive subsystem (for odometry fallback)
+     * @param spinDownAfterShot Whether to spin down to idle after firing
+     * @return Command that fires all lanes at distance-calculated RPM
+     */
+    public FireAllAtDistanceCommand fireAllAtDistance(VisionSubsystemLimelight vision,
+                                                       DriveSubsystem drive,
+                                                       boolean spinDownAfterShot) {
+        return new FireAllAtDistanceCommand(launcher, intake, vision, drive, spinDownAfterShot, manualSpinController);
+    }
+
+    /**
+     * Fires all lanes with RPM and hood position calculated from distance to goal.
+     * Uses AprilTag vision to determine distance, falls back to odometry if unavailable.
+     * Spins down to idle after firing.
+     *
+     * @param vision The vision subsystem (for AprilTag distance measurement)
+     * @param drive The drive subsystem (for odometry fallback)
+     * @return Command that fires all lanes at distance-calculated RPM
+     */
+    public FireAllAtDistanceCommand fireAllAtDistance(VisionSubsystemLimelight vision,
+                                                       DriveSubsystem drive) {
+        return fireAllAtDistance(vision, drive, true);
     }
 
 }

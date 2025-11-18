@@ -33,14 +33,14 @@ public class FireAllAtRangeCommand extends Command {
         public double shortRightRpm = 1000;
 
         /** Mid range configuration (default/current values) */
-        public double midLeftRpm = 2450;
-        public double midCenterRpm = 2450; // Center disabled by default
-        public double midRightRpm = 2450;
+        public double midLeftRpm = 2550;
+        public double midCenterRpm = 2550; // Center disabled by default
+        public double midRightRpm = 2550;
 
         /** Long range configuration */
         public double longLeftRpm = 2900;
         public double longCenterRpm = 2850; // Center disabled by default
-        public double longRightRpm = 3000;
+        public double longRightRpm = 2925;
 
         /** Timeout in seconds before giving up on spin-up */
         public double timeoutSeconds = 8.0;
@@ -162,7 +162,9 @@ public class FireAllAtRangeCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-
+        if (intake != null) {
+            intake.setPrefeedReverse();
+        }
 
         // Clear RPM overrides to return to default values
         launcher.clearOverrides();
@@ -184,9 +186,7 @@ public class FireAllAtRangeCommand extends Command {
             spinDownApplied = true;
             // Deactivate prefeed roller (returns to not spinning)
             //TODO maybe this should be sooner?
-            if (intake != null) {
-                intake.deactivatePrefeed();
-            }
+
         }
     }
 

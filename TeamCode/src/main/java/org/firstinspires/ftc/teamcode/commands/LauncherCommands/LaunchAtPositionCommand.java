@@ -101,7 +101,7 @@ public class LaunchAtPositionCommand extends Command {
     public void stop(boolean interrupted) {
         // Keep launchers spinning unless interrupted
         if (interrupted) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+            launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
             launcher.clearOverrides(); // Reset to default RPMs
         }
     }

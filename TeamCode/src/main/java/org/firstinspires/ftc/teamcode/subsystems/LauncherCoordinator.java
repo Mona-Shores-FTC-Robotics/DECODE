@@ -265,7 +265,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         if (artifactState == ArtifactState.THREE) {
             return IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
         }
-        return IntakeSubsystem.IntakeMode.PASSIVE_REVERSE;
+        return IntakeSubsystem.IntakeMode.ACTIVE_FORWARD;
     }
 
     private void applyIntakeMode() {

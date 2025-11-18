@@ -65,7 +65,7 @@ public class LauncherSubsystem implements Subsystem {
         /** Time to keep flywheel at launch speed after firing to ensure artifact clears (ms). */
         public double launchHoldAfterFireMs = 500;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-        public double recoveryMs = 3000;
+        public double recoveryMs = 150;
         /** Delay between sequential shots when bursting all three lanes (ms). */
         public double burstSpacingMs = 120.0;
     }
@@ -171,8 +171,8 @@ public class LauncherSubsystem implements Subsystem {
         public static class LeftFeederConfig {
             public String servoName = "feeder_left";
             public boolean reversed = false;
-            public double loadPosition = .85;
-            public double firePosition = .7; //toward 0 moves toward fire position
+            public double loadPosition = .83;
+            public double firePosition = .73; //toward 0 moves toward fire position
             public double holdMs = 1000;
         }
 
@@ -180,8 +180,8 @@ public class LauncherSubsystem implements Subsystem {
         public static class CenterFeederConfig {
             public String servoName = "feeder_center";
             public boolean reversed = false;
-            public double loadPosition = .7;
-            public double firePosition = .4; //toward 0 moves toward fire position
+            public double loadPosition = .86;
+            public double firePosition = .76; //toward 0 moves toward fire position
             public double holdMs = 1000;
         }
 
@@ -189,8 +189,8 @@ public class LauncherSubsystem implements Subsystem {
         public static class RightFeederConfig {
             public String servoName = "feeder_right";
             public boolean reversed = false;
-            public double loadPosition = .73;
-            public double firePosition = .1; //toward 0 moves toward fire position
+            public double loadPosition = .6;
+            public double firePosition = .5; //toward 0 moves toward fire position
             public double holdMs = 1000;
         }
     }
@@ -264,7 +264,7 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class ReverseFlywheelForHumanLoadingConfig {
         /** Power level for reverse intake (negative runs motors backward) */
-        public double reversePower = -0.45;
+        public double reversePower = -0.7;
     }
 
     public static Timing timing = new Timing();
@@ -1158,16 +1158,37 @@ public class LauncherSubsystem implements Subsystem {
             if (launchRpm <= 0.0) {
                 return false;
             }
-            double error = Math.abs(getCurrentRpm() - launchRpm);
+            double currentRpm = getCurrentRpm();
+            double error = Math.abs(currentRpm - launchRpm);
+
+            // Primary check: within tolerance of target RPM
             if (error <= flywheelConfig.parameters.rpmTolerance) {
                 return true;
             }
+
             if (!launchCommandActive) {
                 return false;
             }
+
             double elapsed = launchTimer.milliseconds();
-            return elapsed >= timing.fallbackReadyMs
-                    || (elapsed >= timing.minimalSpinUpMs && commandedRpm >= launchRpm);
+
+            // Fallback for spinning UP: allow if minimal time elapsed and we've commanded the right RPM
+            // This handles encoder issues but still requires the command to be sent
+            if (elapsed >= timing.fallbackReadyMs) {
+                return true;  // Timeout - assume ready
+            }
+
+            // For early ready (before fallback timeout), check both:
+            // 1. Minimal spin-up time elapsed
+            // 2. Current RPM is appropriate for target (works for both spin-up and spin-down)
+            if (elapsed >= timing.minimalSpinUpMs) {
+                // Check if we're close enough OR if spinning down, at least below a reasonable threshold
+                // Allow some headroom when spinning down (within 10% above target is acceptable)
+                double upperThreshold = launchRpm * 1.1;  // 10% overspeed tolerance
+                return currentRpm <= upperThreshold;
+            }
+
+            return false;
         }
 
         void updateControl() {
