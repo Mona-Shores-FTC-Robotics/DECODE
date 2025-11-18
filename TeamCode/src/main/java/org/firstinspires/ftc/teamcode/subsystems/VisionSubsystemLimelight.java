@@ -88,12 +88,9 @@ public class VisionSubsystemLimelight implements Subsystem {
         // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
         // This must be called every loop before requesting pose estimates
         if (hasValidHeading) {
-            // Convert Pedro heading to FTC/Limelight coordinate frame
-            // Pedro: 0° = facing +X (away from driver wall)
-            // FTC:   0° = facing +X (right from driver's perspective)
-            // Conversion: FTC heading = Pedro heading + 90°
-            double ftcHeadingRad = currentHeadingRad + Math.PI / 2.0;
-            double yawDegForLimelight = Math.toDegrees(ftcHeadingRad);
+            // TEST: Send raw Pedro heading without conversion
+            // If this fixes the orbiting issue, it means Limelight expects Pedro-frame heading
+            double yawDegForLimelight = Math.toDegrees(currentHeadingRad);
 
             limelight.updateRobotOrientation(yawDegForLimelight);
         }
