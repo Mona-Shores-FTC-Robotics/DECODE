@@ -1,0 +1,376 @@
+# Creates a branch, writes the two updated files, commits, pushes, and opens a PR.
+# Trigger manually from the Actions tab (workflow_dispatch).
+name: create-fix-guard-empty-launch-seq-pr
+on:
+  workflow_dispatch:
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true  # allows pushing using GITHUB_TOKEN
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create branch
+        env:
+          BRANCH: fix/guard-empty-launch-seq
+        run: |
+          git fetch origin
+          git checkout -b "$BRANCH"
+
+      - name: Write OperatorBindings.java
+        run: |
+          mkdir -p TeamCode/src/main/java/org/firstinspires/ftc/teamcode/bindings
+          cat > TeamCode/src/main/java/org/firstinspires/ftc/teamcode/bindings/OperatorBindings.java <<'EOF'
+package org.firstinspires.ftc.teamcode.bindings;
+
+import dev.nextftc.bindings.Button;
+import dev.nextftc.ftc.GamepadEx;
+
+import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtAutoRangeCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtRangeCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchSequentialCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinUpUntilReadyCommand;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+
+import dev.nextftc.core.commands.CommandManager;
+
+/**
+ * Match-oriented operator bindings. Keeps the intake running in reverse by default,
+ * forwards when the operator pulls the trigger, and maps launcher commands to the
+ * standard match buttons.
+ *
+ * Button assignments:
+ */
+public class OperatorBindings {
+
+    private final Button fireShort;
+    private final Button fireMid;
+    private final Button fireLong;
+    private final Button fireRange;
+    private final Button fireSequence;
+
+    private final Button runIntake;
+    private final Button humanLoading;
+    private final Button spinLetGoToShoot;
+
+    public OperatorBindings(GamepadEx operator) {
+
+        // Planned Final Button Assignments
+        runIntake = operator.rightBumper();
+        fireShort = operator.x();
+        fireMid = operator.a();
+        fireLong = operator.b();
+        humanLoading = operator.y();
+        spinLetGoToShoot = operator.leftBumper();
+        fireSequence = operator.dpadDown();
+        fireRange = operator.dpadUp();
+    }
+
+    public void configureTeleopBindings(Robot robot) {
+        // Range-based shooting commands (pre-created)
+        FireAllAtRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
+        FireAllAtRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
+        FireAllAtRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
+
+        // Commands
+        SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
+        FireAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
+        // NOTE: Do not pre-create LaunchSequentialCommand here for reuse. Construct at trigger time.
+        FireAllAtAutoRangeCommand fireAllAutoRangeCommand = robot.launcherCommands.fireAllAutoRange(robot.vision, robot.drive);
+
+        // Intake control commands
+        SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
+        SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+
+        // Range-based shooting: press button to fire all lanes at that range
+        fireShort.whenBecomesTrue(fireShortRangeCommand);
+        fireMid.whenBecomesTrue(fireMidRangeCommand);
+        fireLong.whenBecomesTrue(fireLongRangeCommand);
+
+        // Intake control (disabled here)
+        // runIntake.whenBecomesTrue(intakeForwardCommand);
+        // runIntake.whenBecomesFalse(intakeReverseCommand);
+
+        // Reverse Flywheel and Prefeed for Human Loading
+        humanLoading
+                .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
+                .whenBecomesTrue(robot.intake::setPrefeedReverse)
+                .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
+                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
+                .whenBecomesFalse(robot.intake::setPrefeedForward)
+                .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
+
+        spinLetGoToShoot
+                .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
+                .whenBecomesFalse(fireAllCommand); //prefeeder started and stopped in the fireAll command
+
+        // Safer binding for D-pad Down (fire sequence):
+        // Construct and schedule the LaunchSequentialCommand at release time only if there's actual work.
+        fireSequence
+                .whenBecomesTrue(spinUpCommand)
+                .whenBecomesFalse(() -> {
+                    if (robot.launcherCommands.hasSequenceWork()) {
+                        LaunchSequentialCommand cmd = robot.launcherCommands.launchAllInSequence();
+                        CommandManager.INSTANCE.schedule(cmd);
+                    } else {
+                        // Debug message to make it easy to validate from logs
+                        System.out.println("[OperatorBindings] Skipped LaunchSequentialCommand schedule: no sequence work");
+                    }
+                });
+
+        fireRange
+                .whenBecomesTrue(fireAllAutoRangeCommand);
+    }
+}
+EOF
+
+      - name: Write LauncherCommands.java
+        run: |
+          mkdir -p TeamCode/src/main/java/org/firstinspires/ftc/teamcode/commands/LauncherCommands
+          cat > TeamCode/src/main/java/org/firstinspires/ftc/teamcode/commands/LauncherCommands/LauncherCommands.java <<'EOF'
+package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
+
+import com.bylazar.configurables.annotations.Configurable;
+
+import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
+import org.firstinspires.ftc.teamcode.util.ArtifactColor;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.LauncherRange;
+
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * Convenience factory for launcher-related commands alongside immediate queue helpers used by
+ * legacy binding paths.
+ */
+@SuppressWarnings("UnusedReturnValue")
+@Configurable
+public class LauncherCommands {
+
+    public static final double DEFAULT_BURST_SPACING_MS = 300;
+
+    private final LauncherSubsystem launcher;
+    private final IntakeSubsystem intake;
+    private final LauncherCoordinator launcherCoordinator;
+    private final ManualSpinController manualSpinController;
+
+    public LauncherCommands(LauncherSubsystem launcher,
+                           IntakeSubsystem intake,
+                           LauncherCoordinator launcherCoordinator,
+                           ManualSpinController manualSpinController) {
+        this.launcher = launcher;
+        this.intake = intake;
+        this.launcherCoordinator = launcherCoordinator;
+        this.manualSpinController = manualSpinController;
+    }
+
+    public LaunchLaneCommand launchLane(LauncherLane lane) {
+        return new LaunchLaneCommand(launcher , lane);
+    }
+
+    public LaunchLaneCommand launchLeft() {
+        return launchLane(LauncherLane.LEFT);
+    }
+
+    public LaunchLaneCommand launchCenter() {
+        return launchLane(LauncherLane.CENTER);
+    }
+
+    public LaunchLaneCommand launchRight() {
+        return launchLane(LauncherLane.RIGHT);
+    }
+
+    public LaunchSequentialCommand launchAllInSequence() {
+        return launchAllInSequence(DEFAULT_BURST_SPACING_MS);
+    }
+
+    public LaunchSequentialCommand launchAllInSequence(double spacingMs) {
+        return new LaunchSequentialCommand(launcher , spacingMs);
+    }
+
+    public LaunchDetectedBurstCommand launchDetectedBurst() {
+        return launchDetectedBurst(DEFAULT_BURST_SPACING_MS);
+    }
+
+    public LaunchDetectedBurstCommand launchDetectedBurst(double spacingMs) {
+        return new LaunchDetectedBurstCommand(launcher , launcherCoordinator, spacingMs);
+    }
+
+    /**
+     * Quick check used by bindings to determine whether launching a full sequence would actually
+     * enqueue any shots. This avoids scheduling an empty composite command into the command manager.
+     */
+    public boolean hasSequenceWork() {
+        if (LauncherLane.DEFAULT_BURST_ORDER == null || LauncherLane.DEFAULT_BURST_ORDER.length == 0) {
+            return false;
+        }
+        for (LauncherLane lane : LauncherLane.DEFAULT_BURST_ORDER) {
+            if (lane == null) continue;
+            // Query the subsystem for whether this lane currently has a launch RPM set (non-zero)
+            if (launcher.getLaunchRpm(lane) > 0.0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Immediate helper used by bindings that still trigger launcher actions imperatively.
+     */
+    public void queueLane(LauncherLane lane) {
+        if (lane == null) {
+            return;
+        }
+        launcher.queueShot(lane);
+    }
+
+    public void queueDetectedBurst(double spacingMs) {
+        if (launcherCoordinator != null) {
+            launcherCoordinator.requestBurst(spacingMs);
+        } else {
+            launcher.queueBurstAll();
+        }
+    }
+
+    public void cancelAll() {
+        launcher.clearQueue();
+    }
+
+    public void setSpinModeToFull() {
+        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+    }
+
+    public void setSpinModeToIdle() {
+        launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+    }
+
+    public void setSpinModeToOff() {
+        launcher.setSpinMode(LauncherSubsystem.SpinMode.OFF);
+    }
+
+    public SetFeederPositionCommand setLeftFeederToLoad() {
+        return new SetFeederPositionCommand(launcher, LauncherLane.LEFT, true);
+    }
+
+    public SetFeederPositionCommand setLeftFeederToFire() {
+        return new SetFeederPositionCommand(launcher, LauncherLane.LEFT, false);
+    }
+
+    public SpinUpUntilReadyCommand spinUpUntilReady() {
+        return new SpinUpUntilReadyCommand(launcher);
+    }
+
+    /**
+     * Phase 1: Spin up to position-specific RPM (tunable in Dashboard)
+     * @param position Field position we're launching from
+     */
+    public LaunchAtPositionCommand spinUpForPosition(org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint position) {
+        return new LaunchAtPositionCommand(launcher, position);
+    }
+
+    /**
+     * Phase 1: Spin up to explicit RPM (for testing)
+     * @param targetRpm Desired RPM for both enabled launchers
+     */
+    public LaunchAtPositionCommand spinUpToRpm(double targetRpm) {
+        return new LaunchAtPositionCommand(launcher, targetRpm);
+    }
+
+    /**
+     * Fires all lanes at SHORT range (~2700 RPM).
+     * Spins up, fires all three lanes, then spins down to idle.
+     * Activates prefeed roller in forward direction to help feed.
+     *
+     * @return Command that executes a short-range shot
+     */
+    public FireAllAtRangeCommand fireAllShortRange() {
+        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.SHORT, true, manualSpinController);
+    }
+
+    /**
+     * Fires all lanes at MID range (~3600 RPM).
+     * Spins up, fires all three lanes, then spins down to idle.
+     * Activates prefeed roller in forward direction to help feed.
+     *
+     * @return Command that executes a mid-range shot
+     */
+    public FireAllAtRangeCommand fireAllMidRange() {
+        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.MID, true, manualSpinController);
+    }
+
+    /**
+     * Fires all lanes at LONG range (~4200 RPM).
+     * Spins up, fires all three lanes, then spins down to idle.
+     * Activates prefeed roller in forward direction to help feed.
+     *
+     * @return Command that executes a long-range shot
+     */
+    public FireAllAtRangeCommand fireAllLongRange() {
+        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.LONG, true, manualSpinController);
+    }
+
+    /**
+     * Generic range-based firing command.
+     * Activates prefeed roller in forward direction to help feed.
+     *
+     * @param range The shooting range (SHORT, MID, or LONG)
+     * @param spinDownAfterShot Whether to spin down to idle after firing
+     * @return Command that executes the range-based shot
+     */
+    public FireAllAtRangeCommand fireAllAtRange(LauncherRange range, boolean spinDownAfterShot) {
+        return new FireAllAtRangeCommand(launcher, intake, range, spinDownAfterShot, manualSpinController);
+    }
+
+    /**
+     * Fires all lanes at SHORT range (~2700 RPM).
+     * Spins up, fires all three lanes, then spins down to idle.
+     * Activates prefeed roller in forward direction to help feed.
+     *
+     * @return Command that executes a short-range shot
+     */
+    public FireAllCommand fireAll(boolean spinDownAfterShot) {
+        return new FireAllCommand(launcher, intake, spinDownAfterShot, manualSpinController);
+    }
+
+    // ========== Obelisk Pattern Commands ==========
+    // ... rest of file unchanged ...
+EOF
+
+      - name: Commit changes
+        run: |
+          git add TeamCode/src/main/java/org/firstinspires/ftc/teamcode/bindings/OperatorBindings.java
+          git add TeamCode/src/main/java/org/firstinspires/ftc/teamcode/commands/LauncherCommands/LauncherCommands.java
+          git commit -m "Guard D-pad Down launcher sequence: avoid scheduling empty LaunchSequentialCommand" || echo "Nothing to commit"
+
+      - name: Push branch
+        env:
+          BRANCH: fix/guard-empty-launch-seq
+        run: |
+          git push --set-upstream origin "$BRANCH"
+
+      - name: Create Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_TITLE="Guard D-pad Down launcher sequence: avoid scheduling empty LaunchSequentialCommand"
+          PR_BODY="Fixes a Control Hub crash (java.lang.RuntimeException: ArrayDeque is empty) caused when the operator D-pad Down binding scheduled a sequential launcher command that contained zero child actions.\n\nThis change:\n- Adds LauncherCommands.hasSequenceWork() — a cheap runtime check used by bindings.\n- Modifies OperatorBindings to construct and schedule a fresh LaunchSequentialCommand on release only when hasSequenceWork() is true.\n- Prints a debug message when scheduling is skipped: \"[OperatorBindings] Skipped LaunchSequentialCommand schedule: no sequence work\".\n\nThis is an app-level defensive fix preventing empty composite commands from being handed to the NextFTC scheduler."
+          # Create PR via REST API
+          API_URL="https://api.github.com/repos/${{ github.repository }}/pulls"
+          PAYLOAD=$(jq -n --arg title "$PR_TITLE" --arg head "${{ github.actor }}:fix/guard-empty-launch-seq" --arg base "main" --arg body "$PR_BODY" '{title:$title, head:$head, base:$base, body:$body}')
+          curl -s -H "Authorization: token $GITHUB_TOKEN" -X POST -d "$PAYLOAD" "$API_URL" | jq -r '.html_url'

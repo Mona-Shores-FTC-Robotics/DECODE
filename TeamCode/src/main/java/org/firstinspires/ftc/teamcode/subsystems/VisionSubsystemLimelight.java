@@ -88,9 +88,15 @@ public class VisionSubsystemLimelight implements Subsystem {
         // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
         // This must be called every loop before requesting pose estimates
         if (hasValidHeading) {
-            double ftcHeadingRad = AngleUnit.normalizeRadians(currentHeadingRad);
-            double yawDegForLimelight = Math.toDegrees(ftcHeadingRad);
-            RobotState.packet.put("Test/yawDegForLimelight", yawDegForLimelight);
+            // TEST: Try Pedro heading directly (no conversion)
+            // Camera orientation=180° might mean Limelight expects heading in its own frame
+            double yawDegForLimelight = Math.toDegrees(currentHeadingRad);
+
+            // Log all variations for debugging
+            RobotState.packet.put("Test/pedroHeadingDeg", Math.toDegrees(currentHeadingRad));
+            RobotState.packet.put("Test/ftcHeadingDeg", Math.toDegrees(currentHeadingRad + Math.PI / 2.0));
+            RobotState.packet.put("Test/sentToLimelight", yawDegForLimelight);
+
             limelight.updateRobotOrientation(yawDegForLimelight);
         }
 
@@ -516,12 +522,12 @@ public class VisionSubsystemLimelight implements Subsystem {
                     this.pedroPose = null;
                     this.ftcPose = null;
                 } else {
-                    this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg)+Math.PI);
+                    // MT2 pose is already in FTC coordinates since we send correct heading via updateRobotOrientation()
+                    this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg));
                     RobotState.packet.put("Test/visionFTCPose", this.ftcPose);
                     Pose pedro = convertFtcToPedroPose(xIn, yIn, headingDeg);
                     this.pedroPose = pedro;
                     RobotState.packet.put("Test/visionPedroPose", this.pedroPose);
-
                 }
                 this.ftcX = xIn;
                 this.ftcY = yIn;
@@ -615,25 +621,6 @@ public class VisionSubsystemLimelight implements Subsystem {
             return targetAreaPercent;
         }
     }
-    // Field is 12ft x 12ft = 144in x 144in
-    private static final double FIELD_SIZE_IN = 144.0;
-    private static final double FIELD_HALF_IN = FIELD_SIZE_IN / 2.0;
-
-//    private static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
-//        // 1) Apply the 180 degree rotation that you discovered empirically
-//        double rotX = -ftcX;
-//        double rotY = -ftcY;
-//        double rotHeadingDeg = headingDeg - 180.0;
-//
-//        // 2) Shift from center origin to bottom left origin (Pedro)
-//        double pedroX = rotX + FIELD_HALF_IN;
-//        double pedroY = rotY + FIELD_HALF_IN;
-//
-//        // 3) Convert heading to radians for Pedro
-//        double pedroHeadingRad = Math.toRadians(rotHeadingDeg);
-//
-//        return new Pose(pedroX, pedroY, pedroHeadingRad);
-//    }
 
     public static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
         double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
