@@ -28,7 +28,7 @@ public class IntakeUntilFullCommand extends IntakeCommand {
     }
 
     @Override
-    public void execute() {
+    public void update() {
         // Auto-manage intake mode based on artifact count
         int count = getIntake().getArtifactCount();
         if (count >= 3) {

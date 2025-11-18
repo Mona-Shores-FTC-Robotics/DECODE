@@ -147,7 +147,7 @@ public class LauncherCommands {
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @return Command that executes the range-based shot
      */
-    public LaunchAllAtPresetRangeCommand fireAllAtRange(LauncherRange range, boolean spinDownAfterShot) {
+    public LaunchAllAtPresetRangeCommand launchAllAtRangePreset(LauncherRange range, boolean spinDownAfterShot) {
         return new LaunchAllAtPresetRangeCommand(launcher, intake, range, spinDownAfterShot);
     }
 

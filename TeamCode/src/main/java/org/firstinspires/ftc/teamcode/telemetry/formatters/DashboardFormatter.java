@@ -285,7 +285,6 @@ public class DashboardFormatter {
         packet.put("timing/subsystems/intake_ms", data.timing.intakeMs);
         packet.put("timing/subsystems/launcher_ms", data.timing.launcherMs);
         packet.put("timing/subsystems/lighting_ms", data.timing.lightingMs);
-        packet.put("timing/subsystems/launcher_coord_ms", data.timing.launcherCoordMs);
         packet.put("timing/subsystems/vision_ms", data.timing.visionMs);
 
         // Telemetry and logging overhead

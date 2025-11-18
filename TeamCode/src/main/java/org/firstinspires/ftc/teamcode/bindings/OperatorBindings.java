@@ -5,11 +5,9 @@ import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtAutoRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireModeAwareCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchSequentialCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinUpUntilReadyCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
