@@ -23,7 +23,7 @@ import java.util.Optional;
  *
  * Uses AprilTag vision to determine robot pose and calculate distance to the goal tag.
  * Falls back to odometry pose if vision is unavailable. RPM is interpolated based on
- * configurable distance/RPM calibration points from FireAllAtRangeCommand.
+ * configurable distance/RPM calibration points from LaunchAllAtPresetRangeCommand.
  *
  * The command:
  * 1. Calculates distance to goal using vision (or odometry fallback)
@@ -34,7 +34,7 @@ import java.util.Optional;
  * 6. Optionally spins down after firing
  */
 @Configurable
-public class FireAllAtDistanceCommand extends Command {
+public class LaunchAllAtDistanceBasedRPMCommand extends Command {
 
     @Configurable
     public static class DiagnosticData {
@@ -138,11 +138,11 @@ public class FireAllAtDistanceCommand extends Command {
      * @param drive The drive subsystem (for odometry fallback)
      * @param spinDownAfterShot Whether to spin down to idle after firing
      */
-    public FireAllAtDistanceCommand(LauncherSubsystem launcher,
-                                     IntakeSubsystem intake,
-                                     VisionSubsystemLimelight vision,
-                                     DriveSubsystem drive,
-                                     boolean spinDownAfterShot) {
+    public LaunchAllAtDistanceBasedRPMCommand(LauncherSubsystem launcher,
+                                               IntakeSubsystem intake,
+                                               VisionSubsystemLimelight vision,
+                                               DriveSubsystem drive,
+                                               boolean spinDownAfterShot) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = intake; // Nullable - robot may not have prefeed roller
         this.vision = Objects.requireNonNull(vision, "vision required");
@@ -316,7 +316,7 @@ public class FireAllAtDistanceCommand extends Command {
 
     /**
      * Sets RPM targets for all lanes based on distance using linear interpolation.
-     * Uses calibration points from FireAllAtRangeCommand.
+     * Uses calibration points from LaunchAllAtPresetRangeCommand.
      */
     private void setRpmsForDistance(double distanceIn) {
         double leftRpm = interpolateRpm(distanceIn,

@@ -113,8 +113,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a short-range shot
      */
-    public FireAllAtRangeCommand fireAllShortRange() {
-        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.SHORT, true);
+    public LaunchAllAtPresetRangeCommand fireAllShortRange() {
+        return new LaunchAllAtPresetRangeCommand(launcher, intake, LauncherRange.SHORT, true);
     }
 
     /**
@@ -124,8 +124,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a mid-range shot
      */
-    public FireAllAtRangeCommand fireAllMidRange() {
-        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.MID, true);
+    public LaunchAllAtPresetRangeCommand fireAllMidRange() {
+        return new LaunchAllAtPresetRangeCommand(launcher, intake, LauncherRange.MID, true);
     }
 
     /**
@@ -135,8 +135,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a long-range shot
      */
-    public FireAllAtRangeCommand fireAllLongRange() {
-        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.LONG, true);
+    public LaunchAllAtPresetRangeCommand fireAllLongRange() {
+        return new LaunchAllAtPresetRangeCommand(launcher, intake, LauncherRange.LONG, true);
     }
 
     /**
@@ -147,8 +147,8 @@ public class LauncherCommands {
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @return Command that executes the range-based shot
      */
-    public FireAllAtRangeCommand fireAllAtRange(LauncherRange range, boolean spinDownAfterShot) {
-        return new FireAllAtRangeCommand(launcher, intake, range, spinDownAfterShot);
+    public LaunchAllAtPresetRangeCommand fireAllAtRange(LauncherRange range, boolean spinDownAfterShot) {
+        return new LaunchAllAtPresetRangeCommand(launcher, intake, range, spinDownAfterShot);
     }
 
     /**
@@ -233,7 +233,7 @@ public class LauncherCommands {
      * @return Command that fires in motif-aware sequence
      */
     public FireInSequenceCommand fireInSequence() {
-        return new FireInSequenceCommand(launcher, intake, launcherCoordinator, manualSpinController);
+        return new FireInSequenceCommand(launcher, intake);
     }
 
     /**
@@ -248,7 +248,7 @@ public class LauncherCommands {
      * @return Command that fires using current launcher mode strategy
      */
     public FireModeAwareCommand fireModeAware() {
-        return new FireModeAwareCommand(launcher, intake, launcherCoordinator, manualSpinController);
+        return new FireModeAwareCommand(launcher, intake);
     }
 
     // ========== Distance-Based Commands ==========
@@ -294,10 +294,10 @@ public class LauncherCommands {
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @return Command that fires all lanes at distance-calculated RPM
      */
-    public FireAllAtDistanceCommand fireAllAtDistance(VisionSubsystemLimelight vision,
-                                                       DriveSubsystem drive,
-                                                       boolean spinDownAfterShot) {
-        return new FireAllAtDistanceCommand(launcher, intake, vision, drive, spinDownAfterShot);
+    public LaunchAllAtDistanceBasedRPMCommand fireAllAtDistance(VisionSubsystemLimelight vision,
+                                                                 DriveSubsystem drive,
+                                                                 boolean spinDownAfterShot) {
+        return new LaunchAllAtDistanceBasedRPMCommand(launcher, intake, vision, drive, spinDownAfterShot);
     }
 
     /**
@@ -309,8 +309,8 @@ public class LauncherCommands {
      * @param drive The drive subsystem (for odometry fallback)
      * @return Command that fires all lanes at distance-calculated RPM
      */
-    public FireAllAtDistanceCommand fireAllAtDistance(VisionSubsystemLimelight vision,
-                                                       DriveSubsystem drive) {
+    public LaunchAllAtDistanceBasedRPMCommand fireAllAtDistance(VisionSubsystemLimelight vision,
+                                                                 DriveSubsystem drive) {
         return fireAllAtDistance(vision, drive, true);
     }
 

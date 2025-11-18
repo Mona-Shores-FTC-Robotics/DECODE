@@ -63,7 +63,7 @@ public class FireModeAwareCommand extends Command {
             case THROUGHPUT:
             default:
                 // THROUGHPUT mode: Fire all lanes rapidly at MID range
-                delegateCommand = new FireAllAtRangeCommand(
+                delegateCommand = new LaunchAllAtPresetRangeCommand(
                     launcher,
                     intake,
                     LauncherRange.MID,

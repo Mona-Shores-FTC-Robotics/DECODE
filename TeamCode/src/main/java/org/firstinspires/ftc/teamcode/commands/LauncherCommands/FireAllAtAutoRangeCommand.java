@@ -79,7 +79,7 @@ public class FireAllAtAutoRangeCommand extends Command {
         selectedRange = selectRangeForDistance(calculatedDistance);
 
         // Create delegate command for the selected range
-        delegateCommand = new FireAllAtRangeCommand(
+        delegateCommand = new LaunchAllAtPresetRangeCommand(
             launcher,
             intake,
             selectedRange,

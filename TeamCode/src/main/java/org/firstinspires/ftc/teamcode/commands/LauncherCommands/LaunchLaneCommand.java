@@ -9,7 +9,7 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
  * IMPORTANT: This command assumes launch RPMs have already been set via setLaunchRpm().
  * If no RPMs are set, the lane will be treated as disabled (RPM = 0) and won't fire.
  *
- * Typically used after FireAllAtRangeCommand or other commands that set RPMs explicitly.
+ * Typically used after LaunchAllAtPresetRangeCommand or other commands that set RPMs explicitly.
  */
 public class LaunchLaneCommand extends LauncherCommand {
 

@@ -52,7 +52,7 @@ public class ObeliskPatternExample {
      * </pre>
      *
      * IMPORTANT: This command assumes RPMs have already been set via setLaunchRpm().
-     * Typically you'll want to precede this with a FireAllAtRangeCommand or similar
+     * Typically you'll want to precede this with a LaunchAllAtPresetRangeCommand or similar
      * to set the appropriate RPMs for all lanes.
      *
      * Partial sequences are fine:

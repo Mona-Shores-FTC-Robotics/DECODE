@@ -6,7 +6,7 @@ import dev.nextftc.ftc.GamepadEx;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtAutoRangeCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtRangeCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireModeAwareCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchSequentialCommand;
@@ -65,7 +65,7 @@ public class OperatorBindings {
 
         //TODO analyze the launcher commands to make a command that sets RPM based on distance to goal
                 // use AprilTag range for RPM calculation (maybe pose geometry as fallback)
-                // make a formula to calculate RPM based on distance using FireAllAtRangeCommand constants as guideposts
+                // make a formula to calculate RPM based on distance using LaunchAllAtPresetRangeCommand constants as guideposts
                 // consider setting hood position based on range too
 
         //TODO analyze the launcher commands to make a command that sequences shots based on current Obelisk pattern (PPG, PGP, GPP)
@@ -77,9 +77,9 @@ public class OperatorBindings {
 
     public void configureTeleopBindings(Robot robot) {
         // Range-based shooting commands
-        FireAllAtRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
-        FireAllAtRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
-        FireAllAtRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
+        LaunchAllAtPresetRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
+        LaunchAllAtPresetRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
+        LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
         // Mode-aware commands
         SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
