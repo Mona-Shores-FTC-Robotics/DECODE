@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.follower;
+
 import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import com.qualcomm.hardware.limelightvision.LLResult;
@@ -85,14 +87,11 @@ public class VisionSubsystemLimelight implements Subsystem {
 
         // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
         // This must be called every loop before requesting pose estimates
-        if (hasValidHeading) {
-            double headingDeg = Math.toDegrees(currentHeadingRad);
-
-            // Rotate into Limelight FTCSpace by +180°
-            double llYawDeg = headingDeg + 180.0;
-            if (llYawDeg < 0) llYawDeg += 360.0;
-            if (llYawDeg >= 360.0) llYawDeg -= 360.0;
-            limelight.updateRobotOrientation(llYawDeg);
+        if (robot.follower!=null && hasValidHeading) {
+            double pedroHeadingRad = robot.follower.getHeading();
+            double ftcHeadingRad = AngleUnit.normalizeRadians(pedroHeadingRad + Math.PI / 2.0);
+            double yawDegForLimelight = Math.toDegrees(ftcHeadingRad);
+            limelight.updateRobotOrientation(yawDegForLimelight);
         }
 
         // Throttle Limelight polling to 20Hz (50ms) to reduce loop time
@@ -576,20 +575,28 @@ public class VisionSubsystemLimelight implements Subsystem {
     private static final double FIELD_SIZE_IN = 144.0;
     private static final double FIELD_HALF_IN = FIELD_SIZE_IN / 2.0;
 
-    private static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
-        // 1) Apply the 180 degree rotation that you discovered empirically
-        double rotX = -ftcX;
-        double rotY = -ftcY;
-        double rotHeadingDeg = headingDeg - 180.0;
+//    private static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
+//        // 1) Apply the 180 degree rotation that you discovered empirically
+//        double rotX = -ftcX;
+//        double rotY = -ftcY;
+//        double rotHeadingDeg = headingDeg - 180.0;
+//
+//        // 2) Shift from center origin to bottom left origin (Pedro)
+//        double pedroX = rotX + FIELD_HALF_IN;
+//        double pedroY = rotY + FIELD_HALF_IN;
+//
+//        // 3) Convert heading to radians for Pedro
+//        double pedroHeadingRad = Math.toRadians(rotHeadingDeg);
+//
+//        return new Pose(pedroX, pedroY, pedroHeadingRad);
+//    }
 
-        // 2) Shift from center origin to bottom left origin (Pedro)
-        double pedroX = rotX + FIELD_HALF_IN;
-        double pedroY = rotY + FIELD_HALF_IN;
-
-        // 3) Convert heading to radians for Pedro
-        double pedroHeadingRad = Math.toRadians(rotHeadingDeg);
-
-        return new Pose(pedroX, pedroY, pedroHeadingRad);
+    public static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
+        double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
+        double pedroX = ftcY + halfField;
+        double pedroY = halfField - ftcX;
+        double pedroHeading = AngleUnit.normalizeRadians(Math.toRadians(headingDeg) - Math.PI / 2.0);
+        return new Pose(pedroX, pedroY, pedroHeading);
     }
 
     private static Pose convertPedroToFtcPose(Pose pedroPose) {

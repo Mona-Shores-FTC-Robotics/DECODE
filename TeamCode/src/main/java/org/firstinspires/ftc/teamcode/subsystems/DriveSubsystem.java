@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight.convertFtcToPedroPose;
+
 import androidx.annotation.NonNull;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -16,7 +18,6 @@ import com.qualcomm.robotcore.util.RobotLog;
 
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.subsystems.Subsystem;
-import dev.nextftc.extensions.pedro.PedroComponent;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
@@ -29,7 +30,6 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFusion;
-import org.firstinspires.ftc.teamcode.util.PoseTransforms;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
@@ -206,24 +206,18 @@ public class DriveSubsystem implements Subsystem {
 
         Pose seed = RobotState.takeHandoffPose();
         if (seed == null) {
-
-            // Try to get a MegaTag1 pose at TeleOp start
             LLResult result = vision.limelight.getLatestResult();
-            Pose3D mt1Pose = result != null ? result.getBotpose(): null;
+            Pose3D mt1Pose = result != null ? result.getBotpose() : null; // MegaTag1 FTCSpace pose
 
-            if (mt1Pose != null) {
-                // Convert MT1 pose into Pedro coordinates
-                Pose pedroInitPose = convertMt1ToPedro(mt1Pose);
+            if (mt1Pose != null && mt1Pose.getPosition() != null && mt1Pose.getOrientation() != null) {
+                double xIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().x);
+                double yIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().y);
+                double headingDeg = mt1Pose.getOrientation().getYaw();
 
-                seed = pedroInitPose;
-            }
-            else {
-                // No tag visible: fall back to default assumed start
-                seed = new Pose(
-                        AutoField.waypoints.startX,
-                        AutoField.waypoints.startY,
-                        Math.toRadians(90)
-                );
+                seed = convertFtcToPedroPose(xIn, yIn, headingDeg);
+            } else {
+                // fallback if no tag visible at start
+                seed = new Pose(72, 72, Math.toRadians(90));
             }
         }
 
