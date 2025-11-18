@@ -129,6 +129,8 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         packet.put("Diagnostic/OdomPedro Pose y", odomPose.getY());
         packet.put("Diagnostic/OdomPedro Pose heading", pedroHeadingRad);
 
+
+
         // Get MT2 result
         LLResult result = robot.vision.limelight.getLatestResult();
 
@@ -153,6 +155,12 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         double ftcHeading = AngleUnit.normalizeDegrees(pedroHeadingDeg + 90);
         telemetry.addData("FTC Pose", "(%.1f, %.1f, %.1f°)", ftcX, ftcY, ftcHeading);
         telemetry.addLine();
+
+        // Log odometry pose to AdvantageScope (match existing Pose/ format for field dragging)
+        packet.put("Diagnostic/OdomFTC Pose x", ftcX);
+        packet.put("Diagnostic/OdomFTC Pose y", ftcY);
+        packet.put("Diagnostic/OdomFTC Pose heading", ftcHeading);
+
 
         // Show MT2 result
         if (result != null && result.isValid()) {
