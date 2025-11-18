@@ -241,14 +241,16 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     private TagSnapshot selectSnapshot(Alliance preferredAlliance) {
         LLResult result = limelight.getLatestResult();
-        if (result == null) {
+        if (result == null || !result.isValid()) {
             return null;
         }
+
         List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
         if (fiducials == null || fiducials.isEmpty()) {
             return null;
         }
 
+        // MegaTag2: Find best valid basket tag and use MT2 fused pose
         TagSnapshot bestSnapshot = null;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (LLResultTypes.FiducialResult fiducial : fiducials) {
@@ -268,10 +270,13 @@ public class VisionSubsystemLimelight implements Subsystem {
             if (detectionAlliance == Alliance.UNKNOWN && preferredAlliance != Alliance.UNKNOWN) {
                 continue;
             }
-            TagSnapshot candidate = new TagSnapshot(detectionAlliance, fiducial, result.getTx(), result.getTy(), result.getTa());
-            if (candidate.getDecisionMargin() > bestScore) {
-                bestScore = candidate.getDecisionMargin();
-                bestSnapshot = candidate;
+
+            // Check if this is the best tag candidate
+            double score = getTagScore(fiducial);
+            if (score > bestScore) {
+                bestScore = score;
+                // Use MegaTag2 fused pose instead of individual tag pose
+                bestSnapshot = new TagSnapshot(detectionAlliance, tagId, result, result.getTx(), result.getTy(), result.getTa());
             }
         }
 
@@ -280,6 +285,15 @@ public class VisionSubsystemLimelight implements Subsystem {
             return selectSnapshot(Alliance.UNKNOWN);
         }
         return bestSnapshot;
+    }
+
+    private double getTagScore(LLResultTypes.FiducialResult fiducial) {
+        double area = getTargetAreaSafe(fiducial);
+        if (!Double.isNaN(area) && area > 0.0) {
+            return area;
+        }
+        double ambiguity = getPoseAmbiguitySafe(fiducial);
+        return Double.isNaN(ambiguity) ? 0.0 : (1.0 - ambiguity);
     }
 
     private void onSnapshotUpdated(TagSnapshot snapshot) {
@@ -433,16 +447,22 @@ public class VisionSubsystemLimelight implements Subsystem {
         private final double tyDegrees;
         private final double targetAreaPercent;
 
+        /**
+         * Constructor for MegaTag2 using fused pose from result.getBotpose_MT2()
+         */
         TagSnapshot(Alliance alliance,
-                    LLResultTypes.FiducialResult fiducial,
+                    int tagId,
+                    LLResult result,
                     double tx,
                     double ty,
                     double ta) {
             this.alliance = alliance == null ? Alliance.UNKNOWN : alliance;
-            this.tagId = fiducial.getFiducialId();
-            this.decisionMargin = sanitizeDecisionMetric(fiducial);
+            this.tagId = tagId;
+            // For MT2, use target area as decision margin (ambiguity not applicable to fused pose)
+            this.decisionMargin = Double.isNaN(ta) ? 0.0 : ta;
 
-            Pose3D pose = fiducial.getRobotPoseFieldSpace();
+            // MegaTag2: Use IMU-fused pose instead of individual tag pose
+            Pose3D pose = result.getBotpose_MT2();
             if (pose != null && pose.getPosition() != null) {
                 double xIn = DistanceUnit.METER.toInches(pose.getPosition().x);
                 double yIn = DistanceUnit.METER.toInches(pose.getPosition().y);
