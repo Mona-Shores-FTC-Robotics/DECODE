@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import dev.nextftc.core.commands.Command;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
@@ -84,14 +83,11 @@ public class FireInSequenceCommand extends Command {
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
-    private final LauncherCoordinator coordinator;
-    private final ManualSpinController manualSpinController;
 
     private final ElapsedTime timer = new ElapsedTime();
     private final EnumSet<LauncherLane> usedLanes = EnumSet.noneOf(LauncherLane.class);
 
     private Stage stage = Stage.SPINNING_UP;
-    private boolean manualSpinActive = false;
     private boolean spinDownApplied = false;
     private boolean shotsQueued = false;
 
@@ -99,18 +95,12 @@ public class FireInSequenceCommand extends Command {
      * Creates command that fires in obelisk pattern sequence with motif tail offset.
      *
      * @param launcher The launcher subsystem
-     * @param intake The intake subsystem (for prefeed roller control)
-     * @param coordinator The launcher coordinator (tracks lane colors and artifact count)
-     * @param manualSpinController Controller for manual spin state
+     * @param intake The intake subsystem (for prefeed roller control and artifact tracking)
      */
     public FireInSequenceCommand(LauncherSubsystem launcher,
-                                  IntakeSubsystem intake,
-                                  LauncherCoordinator coordinator,
-                                  ManualSpinController manualSpinController) {
+                                  IntakeSubsystem intake) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
-        this.intake = intake; // Nullable - robot may not have prefeed roller
-        this.coordinator = Objects.requireNonNull(coordinator, "coordinator required");
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
+        this.intake = Objects.requireNonNull(intake, "intake required");
         requires(launcher);
         setInterruptible(true);
     }
@@ -120,12 +110,8 @@ public class FireInSequenceCommand extends Command {
         timer.reset();
         stage = Stage.SPINNING_UP;
         usedLanes.clear();
-        manualSpinActive = true;
         spinDownApplied = false;
         shotsQueued = false;
-
-        // Enter manual spin mode to prevent automation from changing RPMs
-        manualSpinController.enterManualSpin();
 
         // Activate prefeed roller in forward direction to help feed
         if (intake != null) {
@@ -202,12 +188,6 @@ public class FireInSequenceCommand extends Command {
 
         // Clear RPM overrides to return to default values
         launcher.clearOverrides();
-
-        // Exit manual spin mode
-        if (manualSpinActive) {
-            manualSpinController.exitManualSpin();
-            manualSpinActive = false;
-        }
 
         // Clear queue if interrupted
         if (interrupted && shotsQueued) {
@@ -307,7 +287,7 @@ public class FireInSequenceCommand extends Command {
         List<LauncherLane> remainingLanes = new ArrayList<>();
         for (LauncherLane lane : LauncherLane.values()) {
             if (!usedLanes.contains(lane)) {
-                ArtifactColor laneColor = coordinator.getLaneColor(lane);
+                ArtifactColor laneColor = intake.getLaneColor(lane);
                 if (laneColor != null && laneColor.isArtifact()) {
                     remainingLanes.add(lane);
                 }
@@ -382,7 +362,7 @@ public class FireInSequenceCommand extends Command {
                 continue;
             }
 
-            ArtifactColor laneColor = coordinator.getLaneColor(lane);
+            ArtifactColor laneColor = intake.getLaneColor(lane);
             if (laneColor == color) {
                 matching.add(lane);
             }

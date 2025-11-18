@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 import dev.nextftc.core.commands.Command;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -26,8 +25,6 @@ public class FireModeAwareCommand extends Command {
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
-    private final LauncherCoordinator coordinator;
-    private final ManualSpinController manualSpinController;
 
     private Command delegateCommand;
 
@@ -35,18 +32,12 @@ public class FireModeAwareCommand extends Command {
      * Creates a mode-aware fire command that delegates to the appropriate firing strategy.
      *
      * @param launcher The launcher subsystem
-     * @param intake The intake subsystem (for prefeed roller control)
-     * @param coordinator The launcher coordinator (tracks lane colors and artifact count)
-     * @param manualSpinController Controller for manual spin state
+     * @param intake The intake subsystem (for prefeed roller control and artifact tracking)
      */
     public FireModeAwareCommand(LauncherSubsystem launcher,
-                                 IntakeSubsystem intake,
-                                 LauncherCoordinator coordinator,
-                                 ManualSpinController manualSpinController) {
+                                 IntakeSubsystem intake) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
-        this.intake = intake; // Nullable
-        this.coordinator = Objects.requireNonNull(coordinator, "coordinator required");
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
+        this.intake = Objects.requireNonNull(intake, "intake required");
         requires(launcher);
         setInterruptible(true);
     }
@@ -65,9 +56,7 @@ public class FireModeAwareCommand extends Command {
                 // DECODE mode: Fire in obelisk pattern sequence with motif tail offset
                 delegateCommand = new FireInSequenceCommand(
                     launcher,
-                    intake,
-                    coordinator,
-                    manualSpinController
+                    intake
                 );
                 break;
 
@@ -78,8 +67,7 @@ public class FireModeAwareCommand extends Command {
                     launcher,
                     intake,
                     LauncherRange.MID,
-                    true, // spin down after shot
-                    manualSpinController
+                    true // spin down after shot
                 );
                 break;
         }

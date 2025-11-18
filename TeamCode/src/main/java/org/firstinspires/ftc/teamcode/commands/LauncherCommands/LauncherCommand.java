@@ -11,7 +11,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
  *
  * IMPORTANT: Commands extending this class assume launch RPMs have already been set externally
  * (via setLaunchRpm()). They do NOT set RPMs themselves. For commands that manage their own
- * shot lifecycle (range-based, vision-based), extend Command directly and use ManualSpinController.
+ * shot lifecycle (range-based, vision-based), extend Command directly and manage spin modes explicitly.
  */
 abstract class LauncherCommand extends Command {
 
