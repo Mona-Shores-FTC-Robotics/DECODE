@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.bindings;
 
 import dev.nextftc.bindings.Button;
+import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -73,7 +74,6 @@ public class OperatorBindings {
         //Commands
         SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
         FireAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
-        LaunchSequentialCommand fireAllInSequenceCommand = robot.launcherCommands.launchAllInSequence();
         FireAllAtAutoRangeCommand fireAllAutoRangeCommand = robot.launcherCommands.fireAllAutoRange(robot.vision, robot.drive);
 
         // Intake control commands
@@ -104,7 +104,14 @@ public class OperatorBindings {
 
         fireSequence
                 .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
-                .whenBecomesFalse(fireAllInSequenceCommand);
+                .whenBecomesFalse(() -> {
+                    if (robot.launcherCommands.hasSequenceWork()) {
+                        LaunchSequentialCommand cmd = robot.launcherCommands.launchAllInSequence();
+                        CommandManager.INSTANCE.schedule(cmd);
+                    } else {
+                        System.out.println("[OperatorBindings] Skipped LaunchSequentialCommand schedule: no sequence work");
+                    }
+                });
 
 
         fireRange

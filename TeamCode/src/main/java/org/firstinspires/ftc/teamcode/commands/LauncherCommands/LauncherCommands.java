@@ -63,6 +63,23 @@ public class LauncherCommands {
         return new LaunchSequentialCommand(launcher , spacingMs);
     }
 
+    /**
+     * Checks whether a sequential launch would enqueue any shots right now.
+     * Returns false if DEFAULT_BURST_ORDER is null/empty or if all lanes have RPM = 0.
+     * @return true if at least one lane has launch RPM > 0, false otherwise
+     */
+    public boolean hasSequenceWork() {
+        if (LauncherLane.DEFAULT_BURST_ORDER == null || LauncherLane.DEFAULT_BURST_ORDER.length == 0) {
+            return false;
+        }
+        for (LauncherLane lane : LauncherLane.DEFAULT_BURST_ORDER) {
+            if (lane != null && launcher.getLaunchRpm(lane) > 0.0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public LaunchDetectedBurstCommand launchDetectedBurst() {
         return launchDetectedBurst(DEFAULT_BURST_SPACING_MS);
     }
