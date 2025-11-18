@@ -80,6 +80,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                 new SubsystemComponent(robot.vision)
         );
 
+        // Enable diagnostic mode to prevent VisionSubsystem from updating heading
+        // This allows us to control heading updates directly for testing different offsets
+        robot.vision.setDiagnosticMode(true);
+
         telemetry.addLine("=== MegaTag2 Diagnostic OpMode ===");
         telemetry.addLine();
         telemetry.addLine("1. Position robot at known location");
@@ -277,6 +281,7 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     @Override
     public void onStop() {
         if (robot != null) {
+            robot.vision.setDiagnosticMode(false);
             robot.drive.stop();
         }
     }

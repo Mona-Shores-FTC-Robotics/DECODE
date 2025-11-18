@@ -64,6 +64,9 @@ public class VisionSubsystemLimelight implements Subsystem {
     private double currentHeadingRad = 0.0;
     private boolean hasValidHeading = false;
 
+    // Diagnostic mode: When true, external code controls heading updates (for testing different offsets)
+    private boolean diagnosticMode = false;
+
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
         this(hardwareMap, null);
     }
@@ -87,7 +90,8 @@ public class VisionSubsystemLimelight implements Subsystem {
 
         // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
         // This must be called every loop before requesting pose estimates
-        if (hasValidHeading) {
+        // Skip in diagnostic mode to allow external control for testing different offsets
+        if (hasValidHeading && !diagnosticMode) {
             // TEST: Send raw Pedro heading without conversion
             // If this fixes the orbiting issue, it means Limelight expects Pedro-frame heading
             double yawDegForLimelight = Math.toDegrees(currentHeadingRad);
@@ -117,6 +121,18 @@ public class VisionSubsystemLimelight implements Subsystem {
         limelight.stop();
         state = VisionState.OFF;
         clearSnapshot();
+    }
+
+    /**
+     * Enable diagnostic mode to allow external code to control heading updates.
+     * Used by diagnostic OpModes to test different heading offsets without interference.
+     */
+    public void setDiagnosticMode(boolean enabled) {
+        diagnosticMode = enabled;
+    }
+
+    public boolean isDiagnosticMode() {
+        return diagnosticMode;
     }
 
     public VisionState getState() {
