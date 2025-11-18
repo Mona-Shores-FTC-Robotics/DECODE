@@ -8,7 +8,6 @@ import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeComma
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtAutoRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchSequentialCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinUpUntilReadyCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 
@@ -71,7 +70,6 @@ public class OperatorBindings {
         //Commands
         SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
         FireAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
-        LaunchSequentialCommand fireAllInSequenceCommand = robot.launcherCommands.launchAllInSequence();
         FireAllAtAutoRangeCommand fireAllAutoRangeCommand = robot.launcherCommands.fireAllAutoRange(robot.vision, robot.drive);
 
         // Intake control commands
@@ -100,10 +98,8 @@ public class OperatorBindings {
                 .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
                 .whenBecomesFalse(fireAllCommand); //prefeeder started and stopped in the fireAll command
 
-        fireSequence
-                .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
-                .whenBecomesFalse(fireAllInSequenceCommand);
-
+        // TODO: Replace with Obelisk pattern command after audit
+        // fireSequence.whenBecomesTrue(...);
 
         fireRange
                 .whenBecomesTrue(fireAllAutoRangeCommand);

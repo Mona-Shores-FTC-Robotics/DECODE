@@ -328,7 +328,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     private Command scoreSequence() {
         return new SequentialGroup(
             new Delay(config.launchDelaySeconds),
-            launcherCommands.launchAllInSequence()  // Fires all lanes regardless of color detection
+            launcherCommands.fireAllAtRange(LauncherRange.LONG, false)  // Fires all enabled lanes at long range
         );
     }
 

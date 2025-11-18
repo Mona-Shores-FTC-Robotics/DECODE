@@ -55,22 +55,6 @@ public class LauncherCommands {
         return launchLane(LauncherLane.RIGHT);
     }
 
-    public LaunchSequentialCommand launchAllInSequence() {
-        return launchAllInSequence(DEFAULT_BURST_SPACING_MS);
-    }
-
-    public LaunchSequentialCommand launchAllInSequence(double spacingMs) {
-        return new LaunchSequentialCommand(launcher , spacingMs);
-    }
-
-    public LaunchDetectedBurstCommand launchDetectedBurst() {
-        return launchDetectedBurst(DEFAULT_BURST_SPACING_MS);
-    }
-
-    public LaunchDetectedBurstCommand launchDetectedBurst(double spacingMs) {
-        return new LaunchDetectedBurstCommand(launcher , launcherCoordinator, spacingMs);
-    }
-
     /**
      * Immediate helper used by bindings that still trigger launcher actions imperatively.
      */
