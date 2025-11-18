@@ -21,6 +21,7 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
+import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
@@ -60,6 +61,13 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         public double maxPathPower = .6;
         public double intakeTimeSeconds = 2.0;
         public double launchDelaySeconds = 0.5;
+
+        /**
+         * Starting launcher mode for autonomous.
+         * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
+         * THROUGHPUT: Rapid fire all lanes (recommended for early match throughput)
+         */
+        public LauncherMode startingLauncherMode = LauncherMode.DECODE;
     }
 
     // Public static instance for FTC Dashboard Config tab
@@ -178,6 +186,10 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         if (lightingInitController != null) {
             lightingInitController.onStart();
         }
+
+        // Initialize launcher mode from config (defaults to DECODE, can be changed via Dashboard)
+        RobotState.setLauncherMode(config.startingLauncherMode);
+        RobotState.resetMotifTail(); // Start with fresh motif tail (0)
 
         robot.launcherCoordinator.setIntakeAutomationEnabled(true);
         robot.launcherCoordinator.unlockIntake();

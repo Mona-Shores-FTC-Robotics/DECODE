@@ -21,6 +21,7 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
+import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.concurrent.TimeUnit;
@@ -29,6 +30,14 @@ import java.util.concurrent.TimeUnit;
 @TeleOp(name = "Decode TeleOp", group = "TeleOp")
 @Configurable
 public class DecodeTeleOp extends NextFTCOpMode {
+
+    @Configurable
+    public static class EndgameConfig {
+        /** Seconds remaining when auto-switch to DECODE mode triggers */
+        public double decodeModeSwitchSecondsRemaining = 30.0;
+    }
+
+    public static EndgameConfig endgameConfig = new EndgameConfig();
 
     private Robot robot;
 
@@ -39,6 +48,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
     // Previous loop timing (for telemetry reporting)
     private double prevMainLoopMs = 0.0;
     private long telemetryStartNs = 0;
+
+    // Endgame mode switch tracking
+    private boolean autoSwitchedToDecodeMode = false;
 
     GamepadEx driverPad = new GamepadEx(() -> gamepad1);
     GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
@@ -103,6 +115,11 @@ public class DecodeTeleOp extends NextFTCOpMode {
     public void onStartButtonPressed() {
         BindingManager.reset();
 
+        // Initialize launcher mode to THROUGHPUT for TeleOp start
+        RobotState.setLauncherMode(LauncherMode.THROUGHPUT);
+        RobotState.resetMotifTail(); // Start with fresh motif tail
+        autoSwitchedToDecodeMode = false;
+
         // Enable drive motors and command control now that match is starting
         robot.drive.startTeleopDrive();
         driverBindings.configureTeleopBindings(robot);
@@ -126,6 +143,10 @@ public class DecodeTeleOp extends NextFTCOpMode {
     public void onUpdate() {
         long mainLoopStartMs = System.currentTimeMillis();
         BindingManager.update();
+
+        // Auto-switch to DECODE mode when endgame threshold is reached
+        checkEndgameModeSwitch();
+
         relocalizeTelemetry(mainLoopStartMs);
         if (lightingInitController != null) {
             lightingInitController.updateDuringMatch();
@@ -137,6 +158,31 @@ public class DecodeTeleOp extends NextFTCOpMode {
         telemetryStartNs = System.nanoTime();
         prevMainLoopMs =  TimeUnit.NANOSECONDS.toMillis(mainLoopStartMs - telemetryStartNs);
         publishTelemetry();
+    }
+
+    /**
+     * Automatically switches to DECODE mode when configured time threshold is reached.
+     * Default: 30 seconds remaining in match (120 seconds elapsed).
+     */
+    private void checkEndgameModeSwitch() {
+        if (autoSwitchedToDecodeMode) {
+            return; // Already switched, don't check again
+        }
+
+        double timeRemaining = Math.max(0.0, 150.0 - getRuntime());
+        if (timeRemaining <= endgameConfig.decodeModeSwitchSecondsRemaining) {
+            RobotState.setLauncherMode(LauncherMode.DECODE);
+            autoSwitchedToDecodeMode = true;
+
+            // Show visual notification on lights (rainbow flash for 2 seconds)
+            if (robot != null && robot.lighting != null) {
+                robot.lighting.showDecodeModeSwitchNotification();
+            }
+
+            // Add telemetry notification
+            telemetry.addData("MODE SWITCH", "Endgame - DECODE mode active");
+            telemetry.update();
+        }
     }
 
     @Override

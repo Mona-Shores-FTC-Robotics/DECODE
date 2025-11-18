@@ -36,4 +36,35 @@ public enum MotifPattern {
         }
         return UNKNOWN;
     }
+
+    /**
+     * Rotates the pattern left by the specified offset to account for motif tail.
+     *
+     * The motif tail is calculated as (artifactsInRamp % 3), which represents how many
+     * artifacts are already in the field ramp as part of an incomplete decode motif.
+     *
+     * Examples for PPG pattern:
+     * - Tail = 0 (0, 3, 6, ... artifacts in ramp): PPG (no rotation)
+     * - Tail = 1 (1, 4, 7, ... artifacts in ramp): PGP (rotate left by 1)
+     * - Tail = 2 (2, 5, 8, ... artifacts in ramp): GPP (rotate left by 2)
+     *
+     * @param motifTailOffset The offset (0-2) calculated from artifactsInRamp % 3
+     * @return A new array with the pattern rotated left by the offset
+     */
+    public ArtifactColor[] getRotatedPattern(int motifTailOffset) {
+        if (this == UNKNOWN) {
+            return laneColors.clone();
+        }
+
+        int offset = motifTailOffset % 3;
+        if (offset < 0) {
+            offset += 3;
+        }
+
+        ArtifactColor[] rotated = new ArtifactColor[3];
+        for (int i = 0; i < 3; i++) {
+            rotated[i] = laneColors[(i + offset) % 3];
+        }
+        return rotated;
+    }
 }
