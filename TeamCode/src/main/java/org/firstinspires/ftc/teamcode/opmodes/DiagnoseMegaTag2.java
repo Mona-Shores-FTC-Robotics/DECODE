@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import static org.firstinspires.ftc.teamcode.util.RobotState.packet;
+
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
@@ -15,7 +18,10 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.AutoField;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 /**
@@ -49,6 +55,7 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
      * - -90° = Pedro - 90 (inverse FTC conversion)
      */
     public static double headingOffsetDeg = 0.0;
+    FtcDashboard dashboard;
 
     private Robot robot;
 
@@ -61,6 +68,8 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        this.dashboard = FtcDashboard.getInstance();
+
         robot = new Robot(hardwareMap);
         robot.attachPedroFollower();
         robot.setAlliance(Alliance.BLUE); // Default for testing
@@ -85,12 +94,18 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
 
     @Override
     public void onStartButtonPressed() {
+//        AutoField.FieldLayout currentLayout = AutoField.layoutForAlliance(Alliance.BLUE);
+//        Pose startFarPose = currentLayout.pose(AutoField.FieldPoint.START_FAR);
+//        robot.drive.getFollower().setStartingPose(startFarPose);
+//        robot.drive.getFollower().setPose(startFarPose);
+
         // Nothing special needed on start
     }
 
     @Override
     public void onUpdate() {
         // Get current odometry pose (ground truth)
+
         Pose odomPose = robot.drive.getFollower().getPose();
         double pedroHeadingRad = odomPose.getHeading();
         double pedroHeadingDeg = Math.toDegrees(pedroHeadingRad);
@@ -104,15 +119,15 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         robot.vision.limelight.updateRobotOrientation(headingToSendDeg);
 
         // Log heading data to AdvantageScope
-        RobotState.packet.put("Diagnostic/pedroHeadingDeg", pedroHeadingDeg);
-        RobotState.packet.put("Diagnostic/ftcHeadingDeg", AngleUnit.normalizeDegrees(pedroHeadingDeg + 90));
-        RobotState.packet.put("Diagnostic/currentOffsetDeg", headingOffsetDeg);
-        RobotState.packet.put("Diagnostic/sentToLimelightDeg", headingToSendDeg);
+        packet.put("Diagnostic/pedroHeadingDeg", pedroHeadingDeg);
+        packet.put("Diagnostic/ftcHeadingDeg", AngleUnit.normalizeDegrees(pedroHeadingDeg + 90));
+        packet.put("Diagnostic/currentOffsetDeg", headingOffsetDeg);
+        packet.put("Diagnostic/sentToLimelightDeg", headingToSendDeg);
 
         // Log odometry pose to AdvantageScope (match existing Pose/ format for field dragging)
-        RobotState.packet.put("Diagnostic/Odom Pedro Pose/x", odomPose.getX());
-        RobotState.packet.put("Diagnostic/Odom Pedro Pose/y", odomPose.getY());
-        RobotState.packet.put("Diagnostic/Odom Pedro Pose/heading", pedroHeadingRad);
+        packet.put("Diagnostic/OdomPedro Pose x", odomPose.getX());
+        packet.put("Diagnostic/OdomPedro Pose y", odomPose.getY());
+        packet.put("Diagnostic/OdomPedro Pose heading", pedroHeadingRad);
 
         // Get MT2 result
         LLResult result = robot.vision.limelight.getLatestResult();
@@ -154,9 +169,9 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                     mt2XIn, mt2YIn, mt2YawDeg);
 
                 // Log MT2 raw (FTC) data to AdvantageScope (match existing Pose/ format)
-                RobotState.packet.put("Diagnostic/MT2 FTC Pose/x", mt2XIn);
-                RobotState.packet.put("Diagnostic/MT2 FTC Pose/y", mt2YIn);
-                RobotState.packet.put("Diagnostic/MT2 FTC Pose/heading", Math.toRadians(mt2YawDeg));
+                packet.put("Diagnostic/MT2FTC Pose x", mt2XIn);
+                packet.put("Diagnostic/MT2FTC Pose y", mt2YIn);
+                packet.put("Diagnostic/MT2FTC Pose heading", Math.toRadians(mt2YawDeg));
 
                 // Convert MT2 FTC pose to Pedro
                 double mt2PedroX = mt2YIn + 72; // ftcY + halfField
@@ -168,9 +183,9 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                 telemetry.addLine();
 
                 // Log MT2 Pedro data to AdvantageScope (match existing Pose/ format)
-                RobotState.packet.put("Diagnostic/MT2 Pedro Pose/x", mt2PedroX);
-                RobotState.packet.put("Diagnostic/MT2 Pedro Pose/y", mt2PedroY);
-                RobotState.packet.put("Diagnostic/MT2 Pedro Pose/heading", Math.toRadians(mt2PedroHeading));
+                packet.put("Diagnostic/MT2Pedro Pose x", mt2PedroX);
+                packet.put("Diagnostic/MT2Pedro Pose y", mt2PedroY);
+                packet.put("Diagnostic/MT2Pedro Pose heading", Math.toRadians(mt2PedroHeading));
 
                 // Calculate errors
                 double errorX = mt2PedroX - odomPose.getX();
@@ -179,10 +194,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                 double errorDistance = Math.hypot(errorX, errorY);
 
                 // Log errors to AdvantageScope
-                RobotState.packet.put("Diagnostic/Error/positionInches", errorDistance);
-                RobotState.packet.put("Diagnostic/Error/xInches", errorX);
-                RobotState.packet.put("Diagnostic/Error/yInches", errorY);
-                RobotState.packet.put("Diagnostic/Error/headingDeg", errorHeading);
+                packet.put("Diagnostic/Error/positionInches", errorDistance);
+                packet.put("Diagnostic/Error/xInches", errorX);
+                packet.put("Diagnostic/Error/yInches", errorY);
+                packet.put("Diagnostic/Error/headingDeg", errorHeading);
 
                 telemetry.addLine("--- ERROR (MT2 - Odometry) ---");
                 telemetry.addData("Position Error", "%.1f in (X: %.1f, Y: %.1f)",
@@ -192,7 +207,7 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                 // Provide guidance
                 telemetry.addLine();
                 boolean offsetIsGood = errorDistance < 3.0 && Math.abs(errorHeading) < 5.0;
-                RobotState.packet.put("Diagnostic/offsetIsGood", offsetIsGood);
+                packet.put("Diagnostic/offsetIsGood", offsetIsGood);
 
                 if (offsetIsGood) {
                     telemetry.addLine("✓✓✓ GOOD! Offset looks correct! ✓✓✓");
@@ -223,9 +238,9 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                     telemetry.addData("tx", "%.2f°", tx);
 
                     // Log AprilTag info to AdvantageScope
-                    RobotState.packet.put("Diagnostic/AprilTag/tagId", tagId);
-                    RobotState.packet.put("Diagnostic/AprilTag/tagsVisible", tagsVisible);
-                    RobotState.packet.put("Diagnostic/AprilTag/txDeg", tx);
+                    packet.put("Diagnostic/AprilTag/tagId", tagId);
+                    packet.put("Diagnostic/AprilTag/tagsVisible", tagsVisible);
+                    packet.put("Diagnostic/AprilTag/txDeg", tx);
                 }
 
             } else {
@@ -248,6 +263,7 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         telemetry.addLine("http://192.168.49.1:8080/dash → Config");
 
         telemetry.update();
+        dashboard.sendTelemetryPacket(packet);
     }
 
     @Override
@@ -256,4 +272,5 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
             robot.drive.stop();
         }
     }
+
 }
