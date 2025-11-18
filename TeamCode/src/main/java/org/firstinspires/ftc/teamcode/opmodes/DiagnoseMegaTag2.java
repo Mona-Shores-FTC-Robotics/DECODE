@@ -109,10 +109,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         RobotState.packet.put("Diagnostic/currentOffsetDeg", headingOffsetDeg);
         RobotState.packet.put("Diagnostic/sentToLimelightDeg", headingToSendDeg);
 
-        // Log odometry pose to AdvantageScope
-        RobotState.packet.put("Diagnostic/Odom/pedroX", odomPose.getX());
-        RobotState.packet.put("Diagnostic/Odom/pedroY", odomPose.getY());
-        RobotState.packet.put("Diagnostic/Odom/pedroHeading", pedroHeadingDeg);
+        // Log odometry pose to AdvantageScope (format for field dragging)
+        RobotState.packet.put("Diagnostic/Odom Pedro Pose/translation/x", odomPose.getX());
+        RobotState.packet.put("Diagnostic/Odom Pedro Pose/translation/y", odomPose.getY());
+        RobotState.packet.put("Diagnostic/Odom Pedro Pose/rotation/value", pedroHeadingRad);
 
         // Get MT2 result
         LLResult result = robot.vision.limelight.getLatestResult();
@@ -153,10 +153,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                 telemetry.addData("Raw MT2 (FTC)", "(%.1f, %.1f, %.1f°)",
                     mt2XIn, mt2YIn, mt2YawDeg);
 
-                // Log MT2 raw (FTC) data to AdvantageScope
-                RobotState.packet.put("Diagnostic/MT2/ftcX", mt2XIn);
-                RobotState.packet.put("Diagnostic/MT2/ftcY", mt2YIn);
-                RobotState.packet.put("Diagnostic/MT2/ftcHeading", mt2YawDeg);
+                // Log MT2 raw (FTC) data to AdvantageScope (format for field dragging)
+                RobotState.packet.put("Diagnostic/MT2 FTC Pose/translation/x", mt2XIn);
+                RobotState.packet.put("Diagnostic/MT2 FTC Pose/translation/y", mt2YIn);
+                RobotState.packet.put("Diagnostic/MT2 FTC Pose/rotation/value", Math.toRadians(mt2YawDeg));
 
                 // Convert MT2 FTC pose to Pedro
                 double mt2PedroX = mt2YIn + 72; // ftcY + halfField
@@ -167,10 +167,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                     mt2PedroX, mt2PedroY, mt2PedroHeading);
                 telemetry.addLine();
 
-                // Log MT2 Pedro data to AdvantageScope
-                RobotState.packet.put("Diagnostic/MT2/pedroX", mt2PedroX);
-                RobotState.packet.put("Diagnostic/MT2/pedroY", mt2PedroY);
-                RobotState.packet.put("Diagnostic/MT2/pedroHeading", mt2PedroHeading);
+                // Log MT2 Pedro data to AdvantageScope (format for field dragging)
+                RobotState.packet.put("Diagnostic/MT2 Pedro Pose/translation/x", mt2PedroX);
+                RobotState.packet.put("Diagnostic/MT2 Pedro Pose/translation/y", mt2PedroY);
+                RobotState.packet.put("Diagnostic/MT2 Pedro Pose/rotation/value", Math.toRadians(mt2PedroHeading));
 
                 // Calculate errors
                 double errorX = mt2PedroX - odomPose.getX();
