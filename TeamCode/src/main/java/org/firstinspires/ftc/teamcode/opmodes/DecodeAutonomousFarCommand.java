@@ -16,6 +16,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
@@ -73,6 +74,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     private FieldLayout currentLayout;
     private IntakeCommands intakeCommands;
     private LauncherCommands launcherCommands;
+    private LightingSubsystem.InitController lightingInitController;
     private GamepadEx driverPad = new GamepadEx(() -> gamepad1);
 
     // AprilTag-based start pose detection
@@ -109,6 +111,8 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
+        lightingInitController = robot.lighting.new InitController(robot, allianceSelector);
+        lightingInitController.initialize();
 
         addComponents(
                 new SubsystemComponent(robot.drive),
@@ -124,6 +128,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     @Override
     public void onWaitForStart() {
         BindingManager.update();
+        if (lightingInitController != null) {
+            lightingInitController.updateDuringInit(gamepad1.dpad_up);
+        }
 
         // Update subsystems to poll sensors (especially intake color sensors)
         robot.intake.periodic();
@@ -167,6 +174,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     public void onStartButtonPressed() {
         BindingManager.reset();
         allianceSelector.lockSelection();
+        if (lightingInitController != null) {
+            lightingInitController.onStart();
+        }
 
         robot.launcherCoordinator.setIntakeAutomationEnabled(true);
         robot.launcherCoordinator.unlockIntake();
@@ -182,8 +192,11 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
+        if (lightingInitController != null) {
+            lightingInitController.updateDuringMatch();
+        }
         publishTelemetry();
-                    }
+    }
 
     @Override
     public void onStop() {

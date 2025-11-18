@@ -18,6 +18,7 @@ import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -33,6 +34,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     private AllianceSelector allianceSelector;
     private Alliance selectedAlliance = Alliance.UNKNOWN;
+    private LightingSubsystem.InitController lightingInitController;
 
     // Previous loop timing (for telemetry reporting)
     private double prevMainLoopMs = 0.0;
@@ -69,6 +71,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
         robot.launcherCoordinator.lockIntake();
         robot.initializeForTeleOp();
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
+        lightingInitController = robot.lighting.new InitController(robot, allianceSelector);
+        lightingInitController.initialize();
 
         addComponents(
                 new SubsystemComponent(robot.drive),
@@ -87,6 +91,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
         telemetry.addLine("Press START when ready");
         telemetry.addLine();
         BindingManager.update();
+        if (lightingInitController != null) {
+            lightingInitController.updateDuringInit(gamepad1.dpad_up);
+        }
         syncVisionDuringInit();
         pushInitTelemetry();
 
@@ -108,6 +115,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
             allianceSelector.applySelection(robot, robot.lighting);
             selectedAlliance = allianceSelector.getSelectedAlliance();
         }
+        if (lightingInitController != null) {
+            lightingInitController.onStart();
+        }
         robot.intake.activateRoller();
         robot.intake.setPrefeedReverse();
     }
@@ -117,6 +127,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
         long mainLoopStartMs = System.currentTimeMillis();
         BindingManager.update();
         relocalizeTelemetry(mainLoopStartMs);
+        if (lightingInitController != null) {
+            lightingInitController.updateDuringMatch();
+        }
 
 
 

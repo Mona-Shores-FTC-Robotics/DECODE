@@ -6,12 +6,19 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
+import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.MotifPattern;
+import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
 
 /**
  * goBILDA RGB Indicator Light wrapper. Manages three lane-linked indicator servos so
@@ -64,6 +71,10 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         public double bluePosition = 0.611;
         /** Position that best represents an "off" state for the installed lights */
         public double offPosition = 0.000;
+        /** Position used when colour is unknown but presence is detected */
+        public double whitePosition = 0.944;
+        /** Position used when flashing to indicate aiming alignment */
+        public double yellowPosition = 0.167;
         /** Fallback position used when marking the robot busy */
         public double busyPosition = 0.722; // PURPLE by default
     }
@@ -73,11 +84,15 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     private final EnumMap<LauncherLane, LaneIndicator> laneIndicators = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, ArtifactColor> sensorLaneColors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Double> laneOutputs = new EnumMap<>(LauncherLane.class);
 
     private LightingState state = LightingState.OFF;
     private Alliance alliance = Alliance.UNKNOWN;
     private double lastPeriodicMs = 0.0;
+    private boolean followSensorColors = true;
+    private long aimFlashUntilMs = 0L;
+    private boolean aimFlashRestoreSensorFollow = true;
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(
@@ -89,6 +104,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
+            sensorLaneColors.put(lane, ArtifactColor.NONE);
             laneOutputs.put(lane, colorPositionConfig.offPosition);
         }
     }
@@ -101,7 +117,13 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     @Override
     public void periodic() {
         long start = System.nanoTime();
-        // No periodic work required – kept for interface completeness.
+        long nowMs = System.currentTimeMillis();
+        if (aimFlashUntilMs > 0 && nowMs >= aimFlashUntilMs) {
+            aimFlashUntilMs = 0L;
+            if (aimFlashRestoreSensorFollow) {
+                setFollowSensorColors(true);
+            }
+        }
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
@@ -146,12 +168,39 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     @Override
     public void onLaneColorChanged(LauncherLane lane, ArtifactColor color) {
-        setLaneColor(lane, color);
+        updateSensorLaneColor(lane, color);
     }
 
     public void clearLaneColors() {
         if (resetLaneColors()) {
             updateLaneOutputs();
+        }
+    }
+
+    public void updateSensorLaneColor(LauncherLane lane, ArtifactColor color) {
+        if (lane == null) {
+            return;
+        }
+        ArtifactColor normalized = color == null ? ArtifactColor.NONE : color;
+        sensorLaneColors.put(lane, normalized);
+        if (followSensorColors) {
+            setLaneColor(lane, normalized);
+        }
+    }
+
+    public EnumMap<LauncherLane, ArtifactColor> getSensorLaneColorSnapshot() {
+        return new EnumMap<>(sensorLaneColors);
+    }
+
+    public void setFollowSensorColors(boolean enabled) {
+        if (followSensorColors == enabled) {
+            return;
+        }
+        followSensorColors = enabled;
+        if (enabled) {
+            for (Map.Entry<LauncherLane, ArtifactColor> entry : sensorLaneColors.entrySet()) {
+                setLaneColor(entry.getKey(), entry.getValue());
+            }
         }
     }
 
@@ -180,6 +229,68 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         updateLaneOutputs();
     }
 
+    public void showMotifPattern(ArtifactColor[] pattern) {
+        setFollowSensorColors(false);
+        showDecodePattern(pattern);
+    }
+
+    public void showRainbowAlert(long nowMs) {
+        setFollowSensorColors(false);
+        int phase = (int) ((nowMs / 300L) % 3);
+        switch (phase) {
+            case 0:
+                applyPattern(ArtifactColor.PURPLE, ArtifactColor.GREEN, ArtifactColor.UNKNOWN);
+                break;
+            case 1:
+                applyPattern(ArtifactColor.GREEN, ArtifactColor.UNKNOWN, ArtifactColor.PURPLE);
+                break;
+            default:
+                applyPattern(ArtifactColor.UNKNOWN, ArtifactColor.PURPLE, ArtifactColor.GREEN);
+                break;
+        }
+    }
+
+    public void showAlliancePulse(Alliance alliance, boolean brightPhase) {
+        setAlliance(alliance);
+        setFollowSensorColors(false);
+        if (brightPhase) {
+            state = LightingState.ALLIANCE;
+            resetLaneColors();
+            updateLaneOutputs();
+        } else {
+            state = LightingState.OFF;
+            updateLaneOutputs();
+        }
+    }
+
+    public void showWhiteBlink(boolean on) {
+        setFollowSensorColors(false);
+        double position = on ? clamp01(colorPositionConfig.whitePosition) : clamp01(colorPositionConfig.offPosition);
+        applySolidPosition(position);
+    }
+
+    public void showSolidAlliance(Alliance alliance) {
+        setAlliance(alliance);
+        state = LightingState.ALLIANCE;
+        resetLaneColors();
+        updateLaneOutputs();
+    }
+
+    public void showAllianceReminder(Alliance alliance) {
+        showSolidAlliance(alliance);
+    }
+
+    public void resumeLaneTracking() {
+        setFollowSensorColors(true);
+    }
+
+    public void flashAimAligned() {
+        aimFlashRestoreSensorFollow = followSensorColors;
+        setFollowSensorColors(false);
+        applySolidPosition(clamp01(colorPositionConfig.yellowPosition));
+        aimFlashUntilMs = System.currentTimeMillis() + 2000L;
+    }
+
     private void updateLaneOutputs() {
         for (LauncherLane lane : LauncherLane.values()) {
             applyLaneOutput(lane);
@@ -203,8 +314,10 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
                 return clamp01(colorPositionConfig.greenPosition);
             case PURPLE:
                 return clamp01(colorPositionConfig.purplePosition);
-            case NONE:
             case UNKNOWN:
+                return clamp01(colorPositionConfig.whitePosition);
+            case NONE:
+            case BACKGROUND:
             default:
                 return fallbackPosition();
         }
@@ -234,6 +347,23 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     private static double clamp01(double value) {
         return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private void applyPattern(ArtifactColor left, ArtifactColor center, ArtifactColor right) {
+        laneColors.put(LauncherLane.LEFT, left);
+        laneColors.put(LauncherLane.CENTER, center);
+        laneColors.put(LauncherLane.RIGHT, right);
+        updateLaneOutputs();
+    }
+
+    private void applySolidPosition(double position) {
+        for (LauncherLane lane : LauncherLane.values()) {
+            laneOutputs.put(lane, clamp01(position));
+            LaneIndicator indicator = laneIndicators.get(lane);
+            if (indicator != null) {
+                indicator.apply(position);
+            }
+        }
     }
 
     protected boolean resetLaneColors() {
@@ -312,6 +442,181 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     public boolean isRightIndicatorPresent() {
         LaneIndicator indicator = laneIndicators.get(LauncherLane.RIGHT);
         return indicator != null && indicator.isPresent();
+    }
+
+    /**
+     * Integrated controller that orchestrates staged lighting during init and match play.
+     */
+    public class InitController {
+
+        public enum Stage {
+            PRELOAD_CHECK,
+            ALLIANCE_SELECTION,
+            MOTIF_TRACKING,
+            MATCH
+        }
+
+        private static final long WHITE_BLINK_INTERVAL_MS = 450L;
+        private static final long ALLIANCE_PULSE_INTERVAL_MS = 650L;
+        private static final long ALLIANCE_REMINDER_PERIOD_MS = 10_000L;
+        private static final long ALLIANCE_REMINDER_DURATION_MS = 1_000L;
+
+        private final Robot robot;
+        private final AllianceSelector allianceSelector;
+        private final Random random = new Random();
+
+        private Stage stage = Stage.PRELOAD_CHECK;
+        private MotifPattern observedMotif = MotifPattern.UNKNOWN;
+        private boolean motifPersisted = false;
+        private long lastWhiteBlinkMs = 0L;
+        private boolean whiteBlinkState = false;
+        private long lastAlliancePulseMs = 0L;
+        private boolean alliancePulsePhase = false;
+        private long nextAllianceReminderMs = 0L;
+        private long allianceReminderUntilMs = 0L;
+
+        public InitController(Robot robot, AllianceSelector allianceSelector) {
+            this.robot = robot;
+            this.allianceSelector = allianceSelector;
+        }
+
+        public void initialize() {
+            stage = Stage.PRELOAD_CHECK;
+            observedMotif = RobotState.getMotif();
+            motifPersisted = observedMotif != null && observedMotif != MotifPattern.UNKNOWN;
+            setFollowSensorColors(false);
+            showRainbowAlert(System.currentTimeMillis());
+            nextAllianceReminderMs = System.currentTimeMillis() + ALLIANCE_REMINDER_PERIOD_MS;
+        }
+
+        public void updateDuringInit(boolean confirmAlliance) {
+            long now = System.currentTimeMillis();
+            if (stage == Stage.PRELOAD_CHECK) {
+                handlePreloadCheck(now);
+            } else if (stage == Stage.ALLIANCE_SELECTION) {
+                handleAllianceSelection(now, confirmAlliance);
+            } else if (stage == Stage.MOTIF_TRACKING) {
+                handleMotifTracking(now);
+            }
+        }
+
+        public void onStart() {
+            if (observedMotif == null) {
+                observedMotif = MotifPattern.UNKNOWN;
+            }
+            RobotState.setMotif(observedMotif);
+            motifPersisted = observedMotif != MotifPattern.UNKNOWN;
+            stage = Stage.MATCH;
+            resumeLaneTracking();
+        }
+
+        public void updateDuringMatch() {
+            if (stage != Stage.MATCH || motifPersisted) {
+                return;
+            }
+            Optional<Integer> motifTag = findMotifTagId();
+            if (motifTag.isPresent()) {
+                observedMotif = MotifPattern.fromTagId(motifTag.get());
+                RobotState.setMotif(observedMotif);
+                motifPersisted = true;
+            }
+        }
+
+        private void handlePreloadCheck(long now) {
+            if (!hasRequiredPreloads()) {
+                showRainbowAlert(now);
+                return;
+            }
+            stage = Stage.ALLIANCE_SELECTION;
+            lastAlliancePulseMs = now;
+        }
+
+        private void handleAllianceSelection(long now, boolean confirmAlliance) {
+            Alliance selectedAlliance = allianceSelector == null ? Alliance.UNKNOWN : allianceSelector.getSelectedAlliance();
+            Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = Optional.empty();
+            if (allianceSelector != null && robot != null) {
+                snapshotOpt = allianceSelector.updateFromVision(robot.vision);
+                allianceSelector.applySelection(robot, LightingSubsystem.this);
+                selectedAlliance = allianceSelector.getSelectedAlliance();
+            }
+
+            if (confirmAlliance && allianceSelector != null) {
+                allianceSelector.lockSelection();
+            }
+
+            if (allianceSelector != null && snapshotOpt.isPresent() && !allianceSelector.isSelectionLocked()) {
+                allianceSelector.lockSelection();
+            }
+
+            if (selectedAlliance != Alliance.UNKNOWN && allianceSelector != null && allianceSelector.isSelectionLocked()) {
+                showSolidAlliance(selectedAlliance);
+                stage = Stage.MOTIF_TRACKING;
+                nextAllianceReminderMs = now + ALLIANCE_REMINDER_PERIOD_MS;
+                return;
+            }
+
+            Alliance pulseAlliance = random.nextBoolean() ? Alliance.BLUE : Alliance.RED;
+            if (now - lastAlliancePulseMs >= ALLIANCE_PULSE_INTERVAL_MS) {
+                alliancePulsePhase = !alliancePulsePhase;
+                lastAlliancePulseMs = now;
+            }
+            showAlliancePulse(pulseAlliance, alliancePulsePhase);
+        }
+
+        private void handleMotifTracking(long now) {
+            Optional<Integer> motifTag = findMotifTagId();
+            if (motifTag.isPresent()) {
+                observedMotif = MotifPattern.fromTagId(motifTag.get());
+            }
+
+            boolean showingAlliance = allianceReminderUntilMs > now;
+            if (observedMotif == MotifPattern.UNKNOWN && !showingAlliance) {
+                if (now - lastWhiteBlinkMs >= WHITE_BLINK_INTERVAL_MS) {
+                    lastWhiteBlinkMs = now;
+                    whiteBlinkState = !whiteBlinkState;
+                }
+                showWhiteBlink(whiteBlinkState);
+            } else if (!showingAlliance) {
+                showMotifPattern(observedMotif.getLaneColors());
+            }
+
+            Alliance selectedAlliance = allianceSelector == null ? RobotState.getAlliance() : allianceSelector.getSelectedAlliance();
+            if (selectedAlliance == null) {
+                selectedAlliance = Alliance.UNKNOWN;
+            }
+            if (selectedAlliance != Alliance.UNKNOWN && now >= nextAllianceReminderMs) {
+                allianceReminderUntilMs = now + ALLIANCE_REMINDER_DURATION_MS;
+                nextAllianceReminderMs = now + ALLIANCE_REMINDER_PERIOD_MS;
+            }
+
+            if (selectedAlliance != Alliance.UNKNOWN && allianceReminderUntilMs > now) {
+                showAllianceReminder(selectedAlliance);
+            }
+        }
+
+        private Optional<Integer> findMotifTagId() {
+            if (robot == null || robot.vision == null) {
+                return Optional.empty();
+            }
+            return robot.vision.findMotifTagId();
+        }
+
+        private boolean hasRequiredPreloads() {
+            EnumMap<LauncherLane, ArtifactColor> snapshot = getSensorLaneColorSnapshot();
+            int greens = 0;
+            int purples = 0;
+            int detected = 0;
+            for (ArtifactColor color : snapshot.values()) {
+                if (color == ArtifactColor.GREEN) {
+                    greens++;
+                    detected++;
+                } else if (color == ArtifactColor.PURPLE) {
+                    purples++;
+                    detected++;
+                }
+            }
+            return detected == 3 && greens == 1 && purples == 2;
+        }
     }
 
     private static final class LaneIndicator {
