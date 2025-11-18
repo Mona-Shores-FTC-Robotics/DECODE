@@ -88,14 +88,12 @@ public class VisionSubsystemLimelight implements Subsystem {
         // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
         // This must be called every loop before requesting pose estimates
         if (hasValidHeading) {
-            // TEST: Try Pedro heading directly (no conversion)
-            // Camera orientation=180° might mean Limelight expects heading in its own frame
-            double yawDegForLimelight = Math.toDegrees(currentHeadingRad);
-
-            // Log all variations for debugging
-            RobotState.packet.put("Test/pedroHeadingDeg", Math.toDegrees(currentHeadingRad));
-            RobotState.packet.put("Test/ftcHeadingDeg", Math.toDegrees(currentHeadingRad + Math.PI / 2.0));
-            RobotState.packet.put("Test/sentToLimelight", yawDegForLimelight);
+            // Convert Pedro heading to FTC/Limelight coordinate frame
+            // Pedro: 0° = facing +X (away from driver wall)
+            // FTC:   0° = facing +X (right from driver's perspective)
+            // Conversion: FTC heading = Pedro heading + 90°
+            double ftcHeadingRad = currentHeadingRad + Math.PI / 2.0;
+            double yawDegForLimelight = Math.toDegrees(ftcHeadingRad);
 
             limelight.updateRobotOrientation(yawDegForLimelight);
         }
@@ -473,7 +471,6 @@ public class VisionSubsystemLimelight implements Subsystem {
 
             // MegaTag2: Use IMU-fused pose instead of individual tag pose
             Pose3D pose = result.getBotpose_MT2();
-            RobotState.packet.put("Test/MT2Pose", pose);
             if (pose != null && pose.getPosition() != null) {
                 double xIn = DistanceUnit.METER.toInches(pose.getPosition().x);
                 double yIn = DistanceUnit.METER.toInches(pose.getPosition().y);
@@ -484,10 +481,8 @@ public class VisionSubsystemLimelight implements Subsystem {
                 } else {
                     // MT2 pose is already in FTC coordinates since we send correct heading via updateRobotOrientation()
                     this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg));
-                    RobotState.packet.put("Test/visionFTCPose", this.ftcPose);
                     Pose pedro = convertFtcToPedroPose(xIn, yIn, headingDeg);
                     this.pedroPose = pedro;
-                    RobotState.packet.put("Test/visionPedroPose", this.pedroPose);
                 }
                 this.ftcX = xIn;
                 this.ftcY = yIn;

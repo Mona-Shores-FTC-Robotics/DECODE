@@ -205,35 +205,25 @@ public class DriveSubsystem implements Subsystem {
         }
 
         Pose seed = RobotState.takeHandoffPose();
-//        if (seed == null) {
-//            LLResult result = vision.limelight.getLatestResult();
-//            Pose3D mt1Pose = result != null ? result.getBotpose() : null; // MegaTag1 FTCSpace pose
-//
-//
-//            if (mt1Pose != null && mt1Pose.getPosition() != null && mt1Pose.getOrientation() != null) {
-//                RobotState.packet.put("Test/mt1PoseSeedFtc", mt1Pose);
-//                double xIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().x);
-//                double yIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().y);
-//                double headingDeg = mt1Pose.getOrientation().getYaw();
-////                double headingRad = Math.toRadians(headingDeg);
-////
-////                    // Apply the 180° flip cleanly in radians
-//////                double flippedHeadingRad = headingRad + Math.PI;
-//
-//                // Call the Pedro conversion with radians instead
-//                seed = convertFtcToPedroPose(xIn, yIn, headingDeg);
-//                RobotState.packet.put("Test/mt1PoseSeedPedroPlus180", seed);
-//                seed = new Pose(72, 72, Math.toRadians(90));
-//
-//            } else {
-//                // fallback if no tag visible at start
-//                seed = new Pose(72, 72, Math.toRadians(90));
-//            }
-//        }
-        Pose startPose = new Pose(56, 8, Math.toRadians(90));
+        if (seed == null) {
+            LLResult result = vision.limelight.getLatestResult();
+            Pose3D mt1Pose = result != null ? result.getBotpose() : null; // MegaTag1 FTCSpace pose
 
-        follower.setStartingPose(startPose);
-        follower.setPose(startPose);
+            if (mt1Pose != null && mt1Pose.getPosition() != null && mt1Pose.getOrientation() != null) {
+                double xIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().x);
+                double yIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().y);
+                double headingDeg = mt1Pose.getOrientation().getYaw();
+
+                // Convert FTC pose to Pedro coordinate system
+                seed = convertFtcToPedroPose(xIn, yIn, headingDeg);
+            } else {
+                // Fallback if no tag visible at start (center of field, facing forward)
+                seed = new Pose(72, 72, Math.toRadians(90));
+            }
+        }
+
+        follower.setStartingPose(seed);
+        follower.setPose(seed);
         follower.update();
         // Always break following during init to prevent driving before match starts
         // Call startTeleopDrive() explicitly when ready to enable motors
@@ -740,8 +730,6 @@ public class DriveSubsystem implements Subsystem {
         double currentHeading = follower.getHeading();
         double visionHeading = tagPose.getHeading();
         Pose adjustedPose = new Pose(tagPose.getX(), tagPose.getY(), visionHeading);
-        RobotState.packet.put("Test/followerBeforeADjusted", follower.getPose());
-        RobotState.packet.put("Test/adjustedPose", adjustedPose);
         follower.setPose(adjustedPose);
         vision.markOdometryUpdated();
         vision.overrideRobotPose(adjustedPose);
