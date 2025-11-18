@@ -22,6 +22,7 @@ import org.firstinspires.ftc.teamcode.telemetry.formatters.DashboardFormatter;
 import org.firstinspires.ftc.teamcode.telemetry.formatters.DriverStationFormatter;
 import org.firstinspires.ftc.teamcode.telemetry.formatters.FullPanelsFormatter;
 import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 /**
  * Centralized telemetry service for DECODE robot.
@@ -202,8 +203,9 @@ public class TelemetryService {
         // Throttle based on configured interval
         if (dashboardInterval > 0 && (nowMs - lastDashboardPacketMs >= dashboardInterval)) {
             TelemetryPacket packet = dashboardFormatter.createPacket(data, level);
-            if (packet != null) {
+            if (packet  != null) {
                 dashboard.sendTelemetryPacket(packet);
+                RobotState.packet = new TelemetryPacket();
                 lastDashboardPacketMs = nowMs;
             }
         }

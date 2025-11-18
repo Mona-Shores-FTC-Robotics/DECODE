@@ -9,6 +9,7 @@ import org.firstinspires.ftc.teamcode.telemetry.data.IntakeTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.data.LauncherTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
@@ -46,7 +47,7 @@ public class DashboardFormatter {
      * Target: 10 Hz / 100ms interval, ~20 fields
      */
     private TelemetryPacket createPracticePacket(RobotTelemetryData data) {
-        TelemetryPacket packet = new TelemetryPacket();
+        TelemetryPacket packet = RobotState.packet;
 
         // Context
         packet.put("context/alliance", data.context.alliance.name());
@@ -86,7 +87,7 @@ public class DashboardFormatter {
      * Target: 20 Hz / 50ms interval, ~80 fields
      */
     private TelemetryPacket createDebugPacket(RobotTelemetryData data) {
-        TelemetryPacket packet = new TelemetryPacket();
+        TelemetryPacket packet = RobotState.packet;
 
         // Context
         packet.put("context/alliance", data.context.alliance.name());

@@ -170,29 +170,22 @@ public class CaptureAndAimCommand extends Command {
     }
 
     /**
-     * Computes the target heading from vision or odometry fallback.
+     * Computes the target heading using pinpoint odometry.
      * Respects alliance color to aim at the correct goal (Red or Blue).
      */
     private double computeTargetHeading() {
-        // First, try to get aim angle from vision
-        // Vision system already handles alliance-specific goal selection
-        Optional<Double> visionAngle = vision.getAimAngle();
-        if (visionAngle.isPresent()) {
-            return visionAngle.get();
-        }
-
-        // Fallback: calculate from odometry + alliance-specific goal position
+        // Calculate from odometry + alliance-specific goal position
         Pose currentPose = drive.getFollowerPose();
         if (currentPose == null) {
             // No pose available, default to current heading
             return drive.getFollower().getHeading();
         }
 
-        // Get alliance-specific goal pose with alliance-aware fallback
-        Pose targetPose = vision.getTargetGoalPose().orElseGet(() -> {
-            Alliance alliance = vision.getAlliance();
-            return alliance == Alliance.RED ? FieldConstants.RED_GOAL_TAG : FieldConstants.BLUE_GOAL_TAG;
-        });
+        // Get alliance-specific goal pose
+        Alliance alliance = vision.getAlliance();
+        Pose targetPose = (alliance == Alliance.RED)
+            ? FieldConstants.getRedBasketTarget()
+            : FieldConstants.getBlueBasketTarget();
         return FieldConstants.getAimAngleTo(currentPose, targetPose);
     }
 

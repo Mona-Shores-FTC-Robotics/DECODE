@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.follower;
+
 import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import com.qualcomm.hardware.limelightvision.LLResult;
@@ -34,7 +36,7 @@ public class VisionSubsystemLimelight implements Subsystem {
         STREAMING
     }
 
-    private final Limelight3A limelight;
+    public final Limelight3A limelight;
     private final Telemetry telemetry;
 
     private VisionState state = VisionState.OFF;
@@ -58,6 +60,10 @@ public class VisionSubsystemLimelight implements Subsystem {
     private boolean snapshotStaleCache = false;
     private long lastStaleCacheUpdateMs = 0L;
 
+    // MegaTag2: Store current robot heading for IMU-fused localization
+    private double currentHeadingRad = 0.0;
+    private boolean hasValidHeading = false;
+
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
         this(hardwareMap, null);
     }
@@ -78,6 +84,18 @@ public class VisionSubsystemLimelight implements Subsystem {
     public void periodic() {
         long start = System.nanoTime();
         long nowMs = System.currentTimeMillis();
+
+        // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
+        // This must be called every loop before requesting pose estimates
+        if (hasValidHeading) {
+            // Convert Pedro heading to FTC heading: Pedro uses bottom-left origin with 0° = right,
+            // FTC uses center origin with 0° = audience wall. Conversion: FTC = Pedro + 90°
+            double ftcHeadingRad = AngleUnit.normalizeRadians(currentHeadingRad + Math.PI / 2.0);
+            double yawDegForLimelight = Math.toDegrees(ftcHeadingRad);
+            RobotState.packet.put("Test/pedroHeadingDeg", Math.toDegrees(currentHeadingRad));
+            RobotState.packet.put("Test/ftcHeadingDeg", yawDegForLimelight);
+            limelight.updateRobotOrientation(yawDegForLimelight);
+        }
 
         // Throttle Limelight polling to 20Hz (50ms) to reduce loop time
         if (nowMs - lastVisionPollTimeMs >= VISION_POLL_INTERVAL_MS) {
@@ -152,9 +170,9 @@ public class VisionSubsystemLimelight implements Subsystem {
         }
         switch (alliance) {
             case BLUE:
-                return Optional.of(FieldConstants.BLUE_GOAL_TAG);
+                return Optional.of(FieldConstants.getBlueBasketTarget());
             case RED:
-                return Optional.of(FieldConstants.RED_GOAL_TAG);
+                return Optional.of(FieldConstants.getRedBasketTarget());
             default:
                 return Optional.empty();
         }
@@ -167,6 +185,26 @@ public class VisionSubsystemLimelight implements Subsystem {
             return Optional.empty();
         }
         return Optional.of(FieldConstants.getAimAngleTo(poseOpt.get(), target.get()));
+    }
+
+    /**
+     * Gets the vision-based aiming error in radians (robot-relative).
+     * This is the horizontal offset (tx) from the Limelight, converted to radians.
+     * Positive tx means target is to the right, negative means left.
+     *
+     * @return The aiming error in radians, or empty if no valid tag
+     */
+    public Optional<Double> getVisionAimErrorRad() {
+        refreshSnapshotIfStale();
+        if (lastSnapshot == null) {
+            return Optional.empty();
+        }
+        double tx = lastSnapshot.getTxDegrees();
+        if (Double.isNaN(tx)) {
+            return Optional.empty();
+        }
+        // Negate tx because positive tx (target right) requires negative turn (clockwise)
+        return Optional.of(-Math.toRadians(tx));
     }
 
     public Optional<TagSnapshot> findAllianceSnapshot(Alliance preferredAlliance) {
@@ -193,24 +231,45 @@ public class VisionSubsystemLimelight implements Subsystem {
         return activeAlliance;
     }
 
+    /**
+     * Updates the robot's current heading for MegaTag2 IMU-fused localization.
+     * Should be called every loop with the latest odometry heading.
+     *
+     * @param headingRad Robot heading in radians (Pedro coordinate system)
+     */
+    public void setRobotHeading(double headingRad) {
+        currentHeadingRad = headingRad;
+        hasValidHeading = true;
+    }
+
     public double getLastPeriodicMs() {
         return lastPeriodicMs;
     }
 
     private TagSnapshot selectSnapshot(Alliance preferredAlliance) {
         LLResult result = limelight.getLatestResult();
-        if (result == null) {
+        if (result == null || !result.isValid()) {
             return null;
         }
+
         List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
         if (fiducials == null || fiducials.isEmpty()) {
             return null;
         }
 
+        // MegaTag2: Find best valid basket tag and use MT2 fused pose
         TagSnapshot bestSnapshot = null;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (LLResultTypes.FiducialResult fiducial : fiducials) {
-            Alliance detectionAlliance = mapTagToAlliance(fiducial.getFiducialId());
+            int tagId = fiducial.getFiducialId();
+
+            // MegaTag2: Only use basket AprilTags (ID 20 for blue, 24 for red)
+            // Ignore all other tags to eliminate false positives and improve accuracy
+            if (tagId != FieldConstants.BLUE_GOAL_TAG_ID && tagId != FieldConstants.RED_GOAL_TAG_ID) {
+                continue;
+            }
+
+            Alliance detectionAlliance = mapTagToAlliance(tagId);
             if (preferredAlliance != null && preferredAlliance != Alliance.UNKNOWN
                     && detectionAlliance != preferredAlliance) {
                 continue;
@@ -218,10 +277,13 @@ public class VisionSubsystemLimelight implements Subsystem {
             if (detectionAlliance == Alliance.UNKNOWN && preferredAlliance != Alliance.UNKNOWN) {
                 continue;
             }
-            TagSnapshot candidate = new TagSnapshot(detectionAlliance, fiducial, result.getTx(), result.getTy(), result.getTa());
-            if (candidate.getDecisionMargin() > bestScore) {
-                bestScore = candidate.getDecisionMargin();
-                bestSnapshot = candidate;
+
+            // Check if this is the best tag candidate
+            double score = getTagScore(fiducial);
+            if (score > bestScore) {
+                bestScore = score;
+                // Use MegaTag2 fused pose instead of individual tag pose
+                bestSnapshot = new TagSnapshot(detectionAlliance, tagId, result, result.getTx(), result.getTy(), result.getTa());
             }
         }
 
@@ -230,6 +292,15 @@ public class VisionSubsystemLimelight implements Subsystem {
             return selectSnapshot(Alliance.UNKNOWN);
         }
         return bestSnapshot;
+    }
+
+    private double getTagScore(LLResultTypes.FiducialResult fiducial) {
+        double area = getTargetAreaSafe(fiducial);
+        if (!Double.isNaN(area) && area > 0.0) {
+            return area;
+        }
+        double ambiguity = getPoseAmbiguitySafe(fiducial);
+        return Double.isNaN(ambiguity) ? 0.0 : (1.0 - ambiguity);
     }
 
     private void onSnapshotUpdated(TagSnapshot snapshot) {
@@ -383,16 +454,23 @@ public class VisionSubsystemLimelight implements Subsystem {
         private final double tyDegrees;
         private final double targetAreaPercent;
 
+        /**
+         * Constructor for MegaTag2 using fused pose from result.getBotpose_MT2()
+         */
         TagSnapshot(Alliance alliance,
-                    LLResultTypes.FiducialResult fiducial,
+                    int tagId,
+                    LLResult result,
                     double tx,
                     double ty,
                     double ta) {
             this.alliance = alliance == null ? Alliance.UNKNOWN : alliance;
-            this.tagId = fiducial.getFiducialId();
-            this.decisionMargin = sanitizeDecisionMetric(fiducial);
+            this.tagId = tagId;
+            // For MT2, use target area as decision margin (ambiguity not applicable to fused pose)
+            this.decisionMargin = Double.isNaN(ta) ? 0.0 : ta;
 
-            Pose3D pose = fiducial.getRobotPoseFieldSpace();
+            // MegaTag2: Use IMU-fused pose instead of individual tag pose
+            Pose3D pose = result.getBotpose_MT2();
+            RobotState.packet.put("Test/MT2Pose", pose);
             if (pose != null && pose.getPosition() != null) {
                 double xIn = DistanceUnit.METER.toInches(pose.getPosition().x);
                 double yIn = DistanceUnit.METER.toInches(pose.getPosition().y);
@@ -401,9 +479,12 @@ public class VisionSubsystemLimelight implements Subsystem {
                     this.pedroPose = null;
                     this.ftcPose = null;
                 } else {
+                    // MT2 pose is already in FTC coordinates since we send correct heading via updateRobotOrientation()
                     this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg));
+                    RobotState.packet.put("Test/visionFTCPose", this.ftcPose);
                     Pose pedro = convertFtcToPedroPose(xIn, yIn, headingDeg);
                     this.pedroPose = pedro;
+                    RobotState.packet.put("Test/visionPedroPose", this.pedroPose);
                 }
                 this.ftcX = xIn;
                 this.ftcY = yIn;
@@ -498,7 +579,7 @@ public class VisionSubsystemLimelight implements Subsystem {
         }
     }
 
-    private static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
+    public static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
         double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
         double pedroX = ftcY + halfField;
         double pedroY = halfField - ftcX;

@@ -49,8 +49,6 @@ public class OperatorBindings {
         fireSequence = operator.dpadDown();
         fireRange = operator.dpadUp();
 
-
-
         //TODO analyze the launcher commands to make a command that sets RPM based on distance to goal
                 // use AprilTag range for RPM calculation (maybe pose geometry as fallback)
                 // make a formula to calculate RPM based on distance using FireAllAtRangeCommand constants as guideposts
@@ -86,8 +84,8 @@ public class OperatorBindings {
         fireLong.whenBecomesTrue(fireLongRangeCommand);
 
         // Intake control
-//        runIntake.whenBecomesTrue(intakeForwardCommand);
-//        runIntake.whenBecomesFalse(intakeReverseCommand);
+        runIntake.whenBecomesTrue(intakeForwardCommand);
+        runIntake.whenBecomesFalse(intakeReverseCommand);
 
         // Reverse Flywheel and Prefeed for Human Loading
         humanLoading

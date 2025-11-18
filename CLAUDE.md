@@ -114,6 +114,29 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 - `VisionSubsystem.shouldUpdateOdometry()` returns true once per tag lock
 - `VisionSubsystem.getAimAngle()` returns aim angle for targeting
 
+**MegaTag2 (IMU-Fused Localization):**
+The robot uses Limelight's MegaTag2 algorithm for improved AprilTag-based localization:
+- **Eliminates pose ambiguity** from single AprilTag detections
+- **Requires robot heading**: `DriveSubsystem` automatically provides Pinpoint odometry heading to `VisionSubsystem` every loop
+- **More robust** to tag placement errors and image noise
+- **Better single-tag performance** at all distances compared to MegaTag1
+
+**Limelight Configuration (Web UI at `http://192.168.49.1:5801`):**
+1. **Pipeline Setup:**
+   - Select AprilTag pipeline (typically pipeline 0)
+   - Enable **MegaTag2** localization mode (not MegaTag1)
+   - Upload FTC field map (.fmap file) for 2024-2025 season
+2. **Robot-to-Camera Configuration:**
+   - Set camera forward/backward offset from robot center (inches)
+   - Set camera left/right offset from robot center (inches)
+   - Set camera height above ground (inches)
+   - Set camera pitch angle (degrees)
+   - **Critical:** These offsets must match your Pinpoint odometry robot center definition
+3. **Verify Setup:**
+   - Check that robot pose shown in Limelight web UI matches expected field position
+   - Ensure heading updates are being received (check Limelight logs)
+   - Validate that single-tag detections produce stable poses
+
 **Pose Fusion:**
 - `PoseFusion` blends Pinpoint odometry with AprilTag measurements
 - Configurable trust weights based on range and decision margin
@@ -375,6 +398,13 @@ DECODE uses a tiered telemetry system to balance performance and visibility:
 - Verify Limelight IP configuration in `VisionSubsystemLimelight`
 - Check AprilTag locations in `FieldConstants.java`
 - Enable vision logging in `TelemetrySettings`
+- **MegaTag2 Issues:**
+  - Verify MegaTag2 is enabled in Limelight web UI (not MegaTag1)
+  - Check that heading updates are being sent (look for `updateRobotOrientation()` calls in logs)
+  - Ensure robot-to-camera offsets match your physical camera mount position
+  - Verify FTC field map (.fmap) is loaded in Limelight
+  - Check that camera offsets match Pinpoint odometry robot center definition
+  - If poses are offset consistently, adjust camera position in Limelight web UI
 
 **Odometry Drift:**
 - Tune Pinpoint encoder offsets in `Constants.localizerConstants`

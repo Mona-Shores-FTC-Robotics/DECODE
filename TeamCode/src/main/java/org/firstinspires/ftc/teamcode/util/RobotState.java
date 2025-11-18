@@ -1,6 +1,7 @@
 // org.firstinspires.ftc.teamcode.util.RobotState
 package org.firstinspires.ftc.teamcode.util;
 
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -16,4 +17,6 @@ public class RobotState {
 
     public static void setAlliance(Alliance value) { alliance.set(value == null ? Alliance.UNKNOWN : value); }
     public static Alliance getAlliance() { return alliance.get(); }
+    public static TelemetryPacket packet = new TelemetryPacket();
+
 }
