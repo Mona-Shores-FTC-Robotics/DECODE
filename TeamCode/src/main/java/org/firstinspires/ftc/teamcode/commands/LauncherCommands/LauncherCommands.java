@@ -4,7 +4,6 @@ import com.bylazar.configurables.annotations.Configurable;
 
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
@@ -26,17 +25,11 @@ public class LauncherCommands {
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
-    private final LauncherCoordinator launcherCoordinator;
-    private final ManualSpinController manualSpinController;
 
     public LauncherCommands(LauncherSubsystem launcher,
-                           IntakeSubsystem intake,
-                           LauncherCoordinator launcherCoordinator,
-                           ManualSpinController manualSpinController) {
+                           IntakeSubsystem intake) {
         this.launcher = launcher;
         this.intake = intake;
-        this.launcherCoordinator = launcherCoordinator;
-        this.manualSpinController = manualSpinController;
     }
 
     public LaunchLaneCommand launchLane(LauncherLane lane) {
@@ -66,11 +59,7 @@ public class LauncherCommands {
     }
 
     public void queueDetectedBurst(double spacingMs) {
-        if (launcherCoordinator != null) {
-            launcherCoordinator.requestBurst(spacingMs);
-        } else {
-            launcher.queueBurstAll();
-        }
+        launcher.queueBurstAll();
     }
 
     public void cancelAll() {
@@ -125,7 +114,7 @@ public class LauncherCommands {
      * @return Command that executes a short-range shot
      */
     public FireAllAtRangeCommand fireAllShortRange() {
-        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.SHORT, true, manualSpinController);
+        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.SHORT, true);
     }
 
     /**
@@ -136,7 +125,7 @@ public class LauncherCommands {
      * @return Command that executes a mid-range shot
      */
     public FireAllAtRangeCommand fireAllMidRange() {
-        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.MID, true, manualSpinController);
+        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.MID, true);
     }
 
     /**
@@ -147,7 +136,7 @@ public class LauncherCommands {
      * @return Command that executes a long-range shot
      */
     public FireAllAtRangeCommand fireAllLongRange() {
-        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.LONG, true, manualSpinController);
+        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.LONG, true);
     }
 
     /**
@@ -159,7 +148,7 @@ public class LauncherCommands {
      * @return Command that executes the range-based shot
      */
     public FireAllAtRangeCommand fireAllAtRange(LauncherRange range, boolean spinDownAfterShot) {
-        return new FireAllAtRangeCommand(launcher, intake, range, spinDownAfterShot, manualSpinController);
+        return new FireAllAtRangeCommand(launcher, intake, range, spinDownAfterShot);
     }
 
     /**
@@ -170,7 +159,7 @@ public class LauncherCommands {
      * @return Command that executes a short-range shot
      */
     public FireAllCommand fireAll(boolean spinDownAfterShot) {
-        return new FireAllCommand(launcher, intake, spinDownAfterShot, manualSpinController);
+        return new FireAllCommand(launcher, intake, spinDownAfterShot);
     }
 
     // ========== Obelisk Pattern Commands ==========
@@ -184,7 +173,7 @@ public class LauncherCommands {
      * @return Command that fires matching artifacts in pattern order
      */
     public LaunchObeliskPatternCommand launchObeliskPattern(List<ArtifactColor> pattern, double spacingMs) {
-        return new LaunchObeliskPatternCommand(launcher, launcherCoordinator, pattern, spacingMs);
+        return new LaunchObeliskPatternCommand(launcher, intake, pattern, spacingMs);
     }
 
     /**
@@ -247,7 +236,7 @@ public class LauncherCommands {
     public FireAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
                                                        DriveSubsystem drive,
                                                        boolean spinDownAfterShot) {
-        return new FireAllAtAutoRangeCommand(launcher, intake, vision, drive, manualSpinController, spinDownAfterShot);
+        return new FireAllAtAutoRangeCommand(launcher, intake, vision, drive, spinDownAfterShot);
     }
 
     /**
@@ -276,7 +265,7 @@ public class LauncherCommands {
     public FireAllAtDistanceCommand fireAllAtDistance(VisionSubsystemLimelight vision,
                                                        DriveSubsystem drive,
                                                        boolean spinDownAfterShot) {
-        return new FireAllAtDistanceCommand(launcher, intake, vision, drive, spinDownAfterShot, manualSpinController);
+        return new FireAllAtDistanceCommand(launcher, intake, vision, drive, spinDownAfterShot);
     }
 
     /**

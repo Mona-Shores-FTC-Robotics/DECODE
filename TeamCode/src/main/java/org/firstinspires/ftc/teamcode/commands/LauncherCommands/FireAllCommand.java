@@ -31,26 +31,22 @@ public class FireAllCommand extends Command {
     }
 
     private final LauncherSubsystem launcher;
-    private final ManualSpinController manualSpinController;
     private final boolean spinDownAfterShot;
 
     private final EnumSet<LauncherLane> queuedLanes = EnumSet.noneOf(LauncherLane.class);
     private final ElapsedTime timer = new ElapsedTime();
 
     private Stage stage = Stage.WAITING_FOR_READY;
-    private boolean manualSpinActive = false;
     private boolean spinDownApplied = false;
     private final IntakeSubsystem intake;
 
 
     public FireAllCommand(LauncherSubsystem launcher,
                           IntakeSubsystem intake,
-                          boolean spinDownAfterShot,
-                          ManualSpinController manualSpinController) {
+                          boolean spinDownAfterShot) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = intake; // Nullable - robot may not have prefeed roller
         this.spinDownAfterShot = spinDownAfterShot;
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
         requires(launcher);
         setInterruptible(true);
     }
@@ -60,8 +56,6 @@ public class FireAllCommand extends Command {
         timer.reset();
         stage = Stage.WAITING_FOR_READY;
         queuedLanes.clear();
-        manualSpinActive = true;
-        manualSpinController.enterManualSpin();
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
         spinDownApplied = false;
         // Activate prefeed roller in forward direction to help feed
@@ -116,13 +110,8 @@ public class FireAllCommand extends Command {
     @Override
     public void stop(boolean interrupted) {
         // Deactivate prefeed roller (returns to not spinning)
-        //TODO maybe this should be sooner?
         if (intake != null) {
             intake.setPrefeedReverse();
-        }
-        if (manualSpinActive) {
-            manualSpinController.exitManualSpin();
-            manualSpinActive = false;
         }
         if (interrupted && !queuedLanes.isEmpty()) {
             launcher.clearQueue();
@@ -130,9 +119,6 @@ public class FireAllCommand extends Command {
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
             launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
             spinDownApplied = true;
-
-
-
         }
     }
 }

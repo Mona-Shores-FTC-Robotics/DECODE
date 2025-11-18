@@ -57,7 +57,6 @@ public class FireAllAtRangeCommand extends Command {
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
-    private final ManualSpinController manualSpinController;
     private final LauncherRange range;
     private final boolean spinDownAfterShot;
 
@@ -65,7 +64,6 @@ public class FireAllAtRangeCommand extends Command {
     private final ElapsedTime timer = new ElapsedTime();
 
     private Stage stage = Stage.SPINNING_UP;
-    private boolean manualSpinActive = false;
     private boolean spinDownApplied = false;
 
     /**
@@ -75,18 +73,15 @@ public class FireAllAtRangeCommand extends Command {
      * @param intake The intake subsystem (for prefeed roller control)
      * @param range The shooting range (SHORT, MID, or LONG)
      * @param spinDownAfterShot Whether to spin down to idle after firing
-     * @param manualSpinController Controller for manual spin state
      */
     public FireAllAtRangeCommand(LauncherSubsystem launcher,
                                   IntakeSubsystem intake,
                                   LauncherRange range,
-                                  boolean spinDownAfterShot,
-                                  ManualSpinController manualSpinController) {
+                                  boolean spinDownAfterShot) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = intake; // Nullable - robot may not have prefeed roller
         this.range = Objects.requireNonNull(range, "range required");
         this.spinDownAfterShot = spinDownAfterShot;
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
         requires(launcher);
         setInterruptible(true);
     }
@@ -96,11 +91,7 @@ public class FireAllAtRangeCommand extends Command {
         timer.reset();
         stage = Stage.SPINNING_UP;
         queuedLanes.clear();
-        manualSpinActive = true;
         spinDownApplied = false;
-
-        // Enter manual spin mode to prevent automation from changing RPMs
-        manualSpinController.enterManualSpin();
 
         // Activate prefeed roller in forward direction to help feed
         if (intake != null) {
@@ -169,12 +160,6 @@ public class FireAllAtRangeCommand extends Command {
         // Clear RPM overrides to return to default values
         launcher.clearOverrides();
 
-        // Exit manual spin mode
-        if (manualSpinActive) {
-            manualSpinController.exitManualSpin();
-            manualSpinActive = false;
-        }
-
         // Clear queue if interrupted
         if (interrupted && !queuedLanes.isEmpty()) {
             launcher.clearQueue();
@@ -184,9 +169,6 @@ public class FireAllAtRangeCommand extends Command {
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
             launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
             spinDownApplied = true;
-            // Deactivate prefeed roller (returns to not spinning)
-            //TODO maybe this should be sooner?
-
         }
     }
 

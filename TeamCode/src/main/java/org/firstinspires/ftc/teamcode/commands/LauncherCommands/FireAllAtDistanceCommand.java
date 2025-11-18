@@ -120,14 +120,12 @@ public class FireAllAtDistanceCommand extends Command {
     private final IntakeSubsystem intake;
     private final VisionSubsystemLimelight vision;
     private final DriveSubsystem drive;
-    private final ManualSpinController manualSpinController;
     private final boolean spinDownAfterShot;
 
     private final EnumSet<LauncherLane> queuedLanes = EnumSet.noneOf(LauncherLane.class);
     private final ElapsedTime timer = new ElapsedTime();
 
     private Stage stage = Stage.CALCULATING_DISTANCE;
-    private boolean manualSpinActive = false;
     private boolean spinDownApplied = false;
     private double calculatedDistance = 0.0;
 
@@ -139,20 +137,17 @@ public class FireAllAtDistanceCommand extends Command {
      * @param vision The vision subsystem (for AprilTag distance)
      * @param drive The drive subsystem (for odometry fallback)
      * @param spinDownAfterShot Whether to spin down to idle after firing
-     * @param manualSpinController Controller for manual spin state
      */
     public FireAllAtDistanceCommand(LauncherSubsystem launcher,
                                      IntakeSubsystem intake,
                                      VisionSubsystemLimelight vision,
                                      DriveSubsystem drive,
-                                     boolean spinDownAfterShot,
-                                     ManualSpinController manualSpinController) {
+                                     boolean spinDownAfterShot) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = intake; // Nullable - robot may not have prefeed roller
         this.vision = Objects.requireNonNull(vision, "vision required");
         this.drive = Objects.requireNonNull(drive, "drive required");
         this.spinDownAfterShot = spinDownAfterShot;
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
         requires(launcher);
         setInterruptible(true);
     }
@@ -162,7 +157,6 @@ public class FireAllAtDistanceCommand extends Command {
         timer.reset();
         stage = Stage.CALCULATING_DISTANCE;
         queuedLanes.clear();
-        manualSpinActive = false;
         spinDownApplied = false;
         calculatedDistance = 0.0;
 
@@ -181,10 +175,6 @@ public class FireAllAtDistanceCommand extends Command {
                 // Calculate distance to goal and set RPMs
                 calculatedDistance = calculateDistanceToGoal();
                 if (calculatedDistance > 0.0) {
-                    // Enter manual spin mode to prevent automation from changing RPMs
-                    manualSpinController.enterManualSpin();
-                    manualSpinActive = true;
-
                     // Activate prefeed roller in forward direction to help feed
                     if (intake != null) {
                         intake.setPrefeedForward();
@@ -258,12 +248,6 @@ public class FireAllAtDistanceCommand extends Command {
         // Clear RPM overrides to return to default values
         launcher.clearOverrides();
 
-        // Exit manual spin mode
-        if (manualSpinActive) {
-            manualSpinController.exitManualSpin();
-            manualSpinActive = false;
-        }
-
         // Clear queue if interrupted
         if (interrupted && !queuedLanes.isEmpty()) {
             launcher.clearQueue();
@@ -273,8 +257,6 @@ public class FireAllAtDistanceCommand extends Command {
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
             launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
             spinDownApplied = true;
-
-
         }
     }
 

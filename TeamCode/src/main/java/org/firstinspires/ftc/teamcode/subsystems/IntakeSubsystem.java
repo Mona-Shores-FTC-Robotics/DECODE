@@ -988,6 +988,23 @@ public class IntakeSubsystem implements Subsystem {
     public EnumMap<LauncherLane, ArtifactColor> getLaneColorSnapshot() {
         return new EnumMap<>(laneColors);
     }
+
+    /**
+     * Get count of artifacts currently detected in lanes.
+     * Counts lanes with valid artifact colors (not NONE, not UNKNOWN).
+     *
+     * @return Number of artifacts detected (0-3)
+     */
+    public int getArtifactCount() {
+        int count = 0;
+        for (LauncherLane lane : LauncherLane.values()) {
+            ArtifactColor color = laneColors.getOrDefault(lane, ArtifactColor.NONE);
+            if (color != ArtifactColor.NONE && color != ArtifactColor.UNKNOWN) {
+                count++;
+            }
+        }
+        return count;
+    }
     public LauncherLane[] planSequence(ArtifactColor... desiredPattern) {
         if (desiredPattern == null || desiredPattern.length == 0) {
             return new LauncherLane[0];

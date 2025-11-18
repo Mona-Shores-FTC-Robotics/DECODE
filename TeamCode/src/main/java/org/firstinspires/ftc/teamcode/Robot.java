@@ -5,13 +5,11 @@ import com.qualcomm.robotcore.hardware.Light;
 
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ManualSpinController;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
@@ -22,13 +20,10 @@ public class Robot {
     public final IntakeSubsystem intake;
     public final LightingSubsystem lighting;
     public final VisionSubsystemLimelight vision;
-    public final LauncherCoordinator launcherCoordinator;
     public final TelemetryService telemetry;
 
     public final LauncherCommands launcherCommands;
     public final IntakeCommands intakeCommands;
-
-    public ManualSpinController manualSpinController;
 
     public Robot(HardwareMap hardwareMap) {
         this(hardwareMap, new TelemetryService());
@@ -41,10 +36,8 @@ public class Robot {
         launcher = new LauncherSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
-        launcherCoordinator = new LauncherCoordinator(launcher, intake, lighting);
-        manualSpinController = launcherCoordinator.createManualSpinController();
 
-        launcherCommands = new LauncherCommands(launcher, intake, launcherCoordinator, manualSpinController);
+        launcherCommands = new LauncherCommands(launcher, intake);
         intakeCommands = new IntakeCommands(intake);
     }
 
@@ -75,7 +68,8 @@ public class Robot {
         intake.initialize();
         drive.initialize();
 
-        launcherCoordinator.initialize();
+        // Wire lighting to receive lane color updates from intake
+        intake.addLaneColorListener(lighting);
     }
 
     public void attachPedroFollower() {
