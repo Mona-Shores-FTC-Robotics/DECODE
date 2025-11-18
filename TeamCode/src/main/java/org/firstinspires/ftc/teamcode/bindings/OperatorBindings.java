@@ -8,9 +8,12 @@ import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeComma
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtAutoRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllAtRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireModeAwareCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchSequentialCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinUpUntilReadyCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.util.LauncherMode;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 /**
  * Match-oriented operator bindings. Keeps the intake running in reverse by default,
@@ -21,7 +24,12 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
  * - X: Fire all lanes at SHORT range (~2700 RPM)
  * - A: Fire all lanes at MID range (~3600 RPM)
  * - B: Fire all lanes at LONG range (~4200 RPM)
+ * - Y: Human loading (reverse flywheel and prefeed)
  * - D-Pad Up: Auto-range fire (selects short/mid/long based on distance)
+ * - D-Pad Down: Mode-aware fire (THROUGHPUT or DECODE sequence based on current mode)
+ * - D-Pad Left: Decrement motif tail (2 → 1 → 0 → 2)
+ * - D-Pad Right: Increment motif tail (0 → 1 → 2 → 0)
+ * - Back: Toggle launcher mode (THROUGHPUT ↔ DECODE)
  * - Left Bumper: Manual spin hold (for pre-spinning before shots)
  * - Right Bumper: Intake forward
  */
@@ -30,12 +38,15 @@ public class OperatorBindings {
     private final Button fireMid;
     private final Button fireLong;
     private final Button fireRange;
-    private final Button fireSequence;
-//    private final Button fireRangeSequence;
+    private final Button fireModeAware;
 
     private final Button runIntake;
     private final Button humanLoading;
     private final Button spinLetGoToShoot;
+
+    private final Button motifTailIncrement;
+    private final Button motifTailDecrement;
+    private final Button toggleLauncherMode;
 
     public OperatorBindings(GamepadEx operator) {
 
@@ -46,8 +57,11 @@ public class OperatorBindings {
         fireLong = operator.b();
         humanLoading = operator.y();
         spinLetGoToShoot = operator.leftBumper();
-        fireSequence = operator.dpadDown();
+        fireModeAware = operator.dpadDown();
         fireRange = operator.dpadUp();
+        motifTailDecrement = operator.dpadLeft();
+        motifTailIncrement = operator.dpadRight();
+        toggleLauncherMode = operator.back();
 
         //TODO analyze the launcher commands to make a command that sets RPM based on distance to goal
                 // use AprilTag range for RPM calculation (maybe pose geometry as fallback)
@@ -63,15 +77,14 @@ public class OperatorBindings {
 
     public void configureTeleopBindings(Robot robot) {
         // Range-based shooting commands
-        //Commands
         FireAllAtRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
         FireAllAtRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
         FireAllAtRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
-        //Commands
+        // Mode-aware and auto-range commands
         SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
         FireAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
-        LaunchSequentialCommand fireAllInSequenceCommand = robot.launcherCommands.launchAllInSequence();
+        FireModeAwareCommand fireModeAwareCommand = robot.launcherCommands.fireModeAware();
         FireAllAtAutoRangeCommand fireAllAutoRangeCommand = robot.launcherCommands.fireAllAutoRange(robot.vision, robot.drive);
 
         // Intake control commands
@@ -100,13 +113,32 @@ public class OperatorBindings {
                 .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
                 .whenBecomesFalse(fireAllCommand); //prefeeder started and stopped in the fireAll command
 
-        fireSequence
-                .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
-                .whenBecomesFalse(fireAllInSequenceCommand);
+        // Mode-aware firing: adapts between THROUGHPUT and DECODE modes
+        fireModeAware
+                .whenBecomesTrue(spinUpCommand) //spin up until ready
+                .whenBecomesFalse(fireModeAwareCommand); //fire based on current mode
 
-
+        // Auto-range firing: selects range based on distance
         fireRange
                 .whenBecomesTrue(fireAllAutoRangeCommand);
+
+        // Motif tail controls: manually track field ramp artifact count
+        motifTailIncrement.whenBecomesTrue(RobotState::incrementMotifTail);
+        motifTailDecrement.whenBecomesTrue(RobotState::decrementMotifTail);
+
+        // Mode toggle: manually switch between THROUGHPUT and DECODE
+        toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
+    }
+
+    /**
+     * Toggles launcher mode between THROUGHPUT and DECODE.
+     */
+    private void toggleLauncherMode() {
+        LauncherMode current = RobotState.getLauncherMode();
+        LauncherMode newMode = (current == LauncherMode.THROUGHPUT)
+                ? LauncherMode.DECODE
+                : LauncherMode.THROUGHPUT;
+        RobotState.setLauncherMode(newMode);
     }
 
 }

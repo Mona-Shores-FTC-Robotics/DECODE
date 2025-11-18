@@ -246,6 +246,38 @@ public class LauncherCommands {
         );
     }
 
+    // ========== Sequence Mode Commands ==========
+
+    /**
+     * Fires in obelisk pattern sequence with motif tail offset.
+     *
+     * Gets the detected motif pattern from RobotState, calculates the motif tail
+     * offset based on artifacts in ramp, rotates the pattern accordingly, and
+     * fires lanes in sequence with configurable spacing.
+     *
+     * Used for precise obelisk scoring in DECODE mode.
+     *
+     * @return Command that fires in motif-aware sequence
+     */
+    public FireInSequenceCommand fireInSequence() {
+        return new FireInSequenceCommand(launcher, intake, launcherCoordinator, manualSpinController);
+    }
+
+    /**
+     * Mode-aware fire command that adapts based on RobotState launcher mode.
+     *
+     * THROUGHPUT mode: Fires all lanes rapidly at MID range
+     * DECODE mode: Fires in obelisk pattern sequence with motif tail offset
+     *
+     * This is the recommended fire button command for TeleOp as it automatically
+     * adapts when the mode switches (e.g., at 30 seconds remaining).
+     *
+     * @return Command that fires using current launcher mode strategy
+     */
+    public FireModeAwareCommand fireModeAware() {
+        return new FireModeAwareCommand(launcher, intake, launcherCoordinator, manualSpinController);
+    }
+
     // ========== Distance-Based Commands ==========
 
     /**

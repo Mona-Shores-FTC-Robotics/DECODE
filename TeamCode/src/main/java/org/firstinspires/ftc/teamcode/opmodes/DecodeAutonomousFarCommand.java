@@ -23,6 +23,7 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
+import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -177,6 +178,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         if (lightingInitController != null) {
             lightingInitController.onStart();
         }
+
+        // Initialize launcher mode to DECODE for autonomous
+        RobotState.setLauncherMode(LauncherMode.DECODE);
+        RobotState.resetMotifTail(); // Start with fresh motif tail (0)
 
         robot.launcherCoordinator.setIntakeAutomationEnabled(true);
         robot.launcherCoordinator.unlockIntake();
