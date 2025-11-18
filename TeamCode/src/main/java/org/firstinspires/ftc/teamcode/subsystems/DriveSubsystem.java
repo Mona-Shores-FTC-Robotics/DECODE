@@ -209,12 +209,22 @@ public class DriveSubsystem implements Subsystem {
             LLResult result = vision.limelight.getLatestResult();
             Pose3D mt1Pose = result != null ? result.getBotpose() : null; // MegaTag1 FTCSpace pose
 
+
             if (mt1Pose != null && mt1Pose.getPosition() != null && mt1Pose.getOrientation() != null) {
+                RobotState.packet.put("Test/mt1PoseSeedFtc", mt1Pose);
                 double xIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().x);
                 double yIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().y);
                 double headingDeg = mt1Pose.getOrientation().getYaw();
+//                double headingRad = Math.toRadians(headingDeg);
+//
+//                    // Apply the 180° flip cleanly in radians
+////                double flippedHeadingRad = headingRad + Math.PI;
 
+                // Call the Pedro conversion with radians instead
                 seed = convertFtcToPedroPose(xIn, yIn, headingDeg);
+                RobotState.packet.put("Test/mt1PoseSeedPedroPlus180", seed);
+                seed = new Pose(72, 72, Math.toRadians(90));
+
             } else {
                 // fallback if no tag visible at start
                 seed = new Pose(72, 72, Math.toRadians(90));
@@ -729,6 +739,8 @@ public class DriveSubsystem implements Subsystem {
         double currentHeading = follower.getHeading();
         double visionHeading = tagPose.getHeading();
         Pose adjustedPose = new Pose(tagPose.getX(), tagPose.getY(), visionHeading);
+        RobotState.packet.put("Test/followerBeforeADjusted", follower.getPose());
+        RobotState.packet.put("Test/adjustedPose", adjustedPose);
         follower.setPose(adjustedPose);
         vision.markOdometryUpdated();
         vision.overrideRobotPose(adjustedPose);

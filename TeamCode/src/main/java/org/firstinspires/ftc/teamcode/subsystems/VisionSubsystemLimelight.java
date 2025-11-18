@@ -87,10 +87,10 @@ public class VisionSubsystemLimelight implements Subsystem {
 
         // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
         // This must be called every loop before requesting pose estimates
-        if (robot.follower!=null && hasValidHeading) {
-            double pedroHeadingRad = robot.follower.getHeading();
-            double ftcHeadingRad = AngleUnit.normalizeRadians(pedroHeadingRad + Math.PI / 2.0);
+        if (hasValidHeading) {
+            double ftcHeadingRad = AngleUnit.normalizeRadians(currentHeadingRad);
             double yawDegForLimelight = Math.toDegrees(ftcHeadingRad);
+            RobotState.packet.put("Test/yawDegForLimelight", yawDegForLimelight);
             limelight.updateRobotOrientation(yawDegForLimelight);
         }
 
@@ -467,6 +467,7 @@ public class VisionSubsystemLimelight implements Subsystem {
 
             // MegaTag2: Use IMU-fused pose instead of individual tag pose
             Pose3D pose = result.getBotpose_MT2();
+            RobotState.packet.put("Test/MT2Pose", pose);
             if (pose != null && pose.getPosition() != null) {
                 double xIn = DistanceUnit.METER.toInches(pose.getPosition().x);
                 double yIn = DistanceUnit.METER.toInches(pose.getPosition().y);
@@ -475,9 +476,12 @@ public class VisionSubsystemLimelight implements Subsystem {
                     this.pedroPose = null;
                     this.ftcPose = null;
                 } else {
-                    this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg));
+                    this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg)+Math.PI);
+                    RobotState.packet.put("Test/visionFTCPose", this.ftcPose);
                     Pose pedro = convertFtcToPedroPose(xIn, yIn, headingDeg);
                     this.pedroPose = pedro;
+                    RobotState.packet.put("Test/visionPedroPose", this.pedroPose);
+
                 }
                 this.ftcX = xIn;
                 this.ftcY = yIn;
