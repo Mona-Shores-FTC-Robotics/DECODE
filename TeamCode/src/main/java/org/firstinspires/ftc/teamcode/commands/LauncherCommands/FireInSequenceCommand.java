@@ -228,7 +228,8 @@ public class FireInSequenceCommand extends Command {
 
     /**
      * Queues shots in the obelisk pattern sequence with motif tail offset.
-     * Uses the same logic as LaunchObeliskPatternCommand but integrated with spin-up.
+     * First attempts to match the pattern, then fires any remaining unmatched artifacts.
+     * This ensures all loaded artifacts are fired even if they don't perfectly match the pattern.
      */
     private void queueSequenceShots() {
         // Get current motif pattern from RobotState
@@ -249,6 +250,7 @@ public class FireInSequenceCommand extends Command {
         // Queue shots in pattern sequence (same logic as LaunchObeliskPatternCommand)
         double currentDelay = 0.0;
 
+        // Phase 1: Try to match pattern colors in order
         for (ArtifactColor neededColor : desiredPattern) {
             // Skip NONE, UNKNOWN, and BACKGROUND - they're not real artifacts
             if (neededColor == null || !neededColor.isArtifact()) {
@@ -259,7 +261,7 @@ public class FireInSequenceCommand extends Command {
             LauncherLane matchingLane = findUnusedLaneWithColor(neededColor);
 
             if (matchingLane == null) {
-                // Can't continue the pattern - stop here
+                // Can't continue perfect pattern - will fire remaining artifacts after
                 break;
             }
 
@@ -273,6 +275,29 @@ public class FireInSequenceCommand extends Command {
             // Mark this lane as used and increment delay for next shot
             usedLanes.add(matchingLane);
             currentDelay += sequenceConfig.shotSpacingMs;
+        }
+
+        // Phase 2: Fire any remaining unused lanes (ensures all artifacts are fired)
+        for (LauncherLane lane : LauncherLane.values()) {
+            // Skip already-used lanes
+            if (usedLanes.contains(lane)) {
+                continue;
+            }
+
+            // Check if this lane has an artifact to fire
+            ArtifactColor laneColor = coordinator.getLaneColor(lane);
+            if (laneColor != null && laneColor.isArtifact()) {
+                // Queue this remaining artifact
+                if (currentDelay > 0.0) {
+                    launcher.queueShot(lane, currentDelay);
+                } else {
+                    launcher.queueShot(lane);
+                }
+
+                // Mark as used and increment delay
+                usedLanes.add(lane);
+                currentDelay += sequenceConfig.shotSpacingMs;
+            }
         }
     }
 

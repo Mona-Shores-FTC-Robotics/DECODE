@@ -173,7 +173,13 @@ public class DecodeTeleOp extends NextFTCOpMode {
         if (timeRemaining <= endgameConfig.decodeModeSwitchSecondsRemaining) {
             RobotState.setLauncherMode(LauncherMode.DECODE);
             autoSwitchedToDecodeMode = true;
-            // Optional: Add telemetry notification
+
+            // Show visual notification on lights (rainbow flash for 2 seconds)
+            if (robot != null && robot.lighting != null) {
+                robot.lighting.showDecodeModeSwitchNotification();
+            }
+
+            // Add telemetry notification
             telemetry.addData("MODE SWITCH", "Endgame - DECODE mode active");
             telemetry.update();
         }

@@ -93,6 +93,9 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private boolean followSensorColors = true;
     private long aimFlashUntilMs = 0L;
     private boolean aimFlashRestoreSensorFollow = true;
+    private long motifTailFlashUntilMs = 0L;
+    private boolean motifTailRestoreSensorFollow = true;
+    private long decodeModeSwitchFlashUntilMs = 0L;
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(
@@ -118,12 +121,34 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     public void periodic() {
         long start = System.nanoTime();
         long nowMs = System.currentTimeMillis();
+
+        // Show rainbow pattern during DECODE mode switch notification
+        if (decodeModeSwitchFlashUntilMs > 0) {
+            if (nowMs >= decodeModeSwitchFlashUntilMs) {
+                decodeModeSwitchFlashUntilMs = 0L;
+                setFollowSensorColors(true); // Restore normal tracking
+            } else {
+                // Continue showing rainbow pattern
+                showRainbowAlert(nowMs);
+            }
+        }
+
+        // Handle aim flash timeout
         if (aimFlashUntilMs > 0 && nowMs >= aimFlashUntilMs) {
             aimFlashUntilMs = 0L;
             if (aimFlashRestoreSensorFollow) {
                 setFollowSensorColors(true);
             }
         }
+
+        // Handle motif tail feedback timeout
+        if (motifTailFlashUntilMs > 0 && nowMs >= motifTailFlashUntilMs) {
+            motifTailFlashUntilMs = 0L;
+            if (motifTailRestoreSensorFollow) {
+                setFollowSensorColors(true);
+            }
+        }
+
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
@@ -289,6 +314,78 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         setFollowSensorColors(false);
         applySolidPosition(clamp01(colorPositionConfig.yellowPosition));
         aimFlashUntilMs = System.currentTimeMillis() + 2000L;
+    }
+
+    /**
+     * Shows visual feedback for motif tail selection using orange/yellow blink pattern.
+     *
+     * Motif tail 0: All 3 lanes blink orange
+     * Motif tail 1: Left lane blinks orange (center/right off)
+     * Motif tail 2: Left and center blink orange (right off)
+     *
+     * Pattern displays for 2 seconds, then resumes normal lane tracking.
+     *
+     * @param value The motif tail value (0, 1, or 2)
+     */
+    public void showMotifTailFeedback(int value) {
+        motifTailRestoreSensorFollow = followSensorColors;
+        setFollowSensorColors(false);
+
+        // Use yellow/orange position for visual feedback
+        double orangePosition = clamp01(colorPositionConfig.yellowPosition);
+        double offPosition = clamp01(colorPositionConfig.offPosition);
+
+        // Clear all lanes first
+        resetLaneColors();
+
+        // Set pattern based on motif tail value
+        switch (value) {
+            case 0:
+                // All 3 lanes blink orange
+                laneOutputs.put(LauncherLane.LEFT, orangePosition);
+                laneOutputs.put(LauncherLane.CENTER, orangePosition);
+                laneOutputs.put(LauncherLane.RIGHT, orangePosition);
+                break;
+            case 1:
+                // Left lane only
+                laneOutputs.put(LauncherLane.LEFT, orangePosition);
+                laneOutputs.put(LauncherLane.CENTER, offPosition);
+                laneOutputs.put(LauncherLane.RIGHT, offPosition);
+                break;
+            case 2:
+                // Left and center
+                laneOutputs.put(LauncherLane.LEFT, orangePosition);
+                laneOutputs.put(LauncherLane.CENTER, orangePosition);
+                laneOutputs.put(LauncherLane.RIGHT, offPosition);
+                break;
+            default:
+                // Invalid value - show all off
+                laneOutputs.put(LauncherLane.LEFT, offPosition);
+                laneOutputs.put(LauncherLane.CENTER, offPosition);
+                laneOutputs.put(LauncherLane.RIGHT, offPosition);
+                break;
+        }
+
+        // Apply the pattern to servos
+        for (LauncherLane lane : LauncherLane.values()) {
+            LaneIndicator indicator = laneIndicators.get(lane);
+            if (indicator != null && indicator.isPresent()) {
+                indicator.apply(laneOutputs.get(lane));
+            }
+        }
+
+        // Set timeout to restore normal tracking after 2 seconds
+        motifTailFlashUntilMs = System.currentTimeMillis() + 2000L;
+    }
+
+    /**
+     * Shows visual notification that robot has switched to DECODE mode.
+     * Displays rainbow pattern for 2 seconds.
+     */
+    public void showDecodeModeSwitchNotification() {
+        setFollowSensorColors(false);
+        // Start rainbow alert that will cycle during periodic()
+        decodeModeSwitchFlashUntilMs = System.currentTimeMillis() + 2000L;
     }
 
     private void updateLaneOutputs() {

@@ -65,6 +65,12 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         public double maxPathPower = .8;
         public double intakeDelaySeconds = .1; //how long into the path do we turn the intake on?
 
+        /**
+         * Starting launcher mode for autonomous.
+         * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
+         * THROUGHPUT: Rapid fire all lanes (recommended for early match throughput)
+         */
+        public LauncherMode startingLauncherMode = LauncherMode.DECODE;
     }
 
     public static DecodeAutonomousFarCommand.AutoMotionConfig config = new DecodeAutonomousFarCommand.AutoMotionConfig();
@@ -179,8 +185,8 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             lightingInitController.onStart();
         }
 
-        // Initialize launcher mode to DECODE for autonomous
-        RobotState.setLauncherMode(LauncherMode.DECODE);
+        // Initialize launcher mode from config (defaults to DECODE, can be changed via Dashboard)
+        RobotState.setLauncherMode(config.startingLauncherMode);
         RobotState.resetMotifTail(); // Start with fresh motif tail (0)
 
         robot.launcherCoordinator.setIntakeAutomationEnabled(true);
