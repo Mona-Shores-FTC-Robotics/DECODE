@@ -109,7 +109,7 @@ public class LauncherCoordinator implements Subsystem, IntakeSubsystem.LaneColor
         ArtifactColor normalized = color == null ? ArtifactColor.NONE : color;
         laneColors.put(lane, normalized);
         if (lighting != null) {
-            lighting.setLaneColor(lane, normalized);
+            lighting.updateSensorLaneColor(lane, normalized);
         }
         updateArtifactState();
         applyIntakeMode();

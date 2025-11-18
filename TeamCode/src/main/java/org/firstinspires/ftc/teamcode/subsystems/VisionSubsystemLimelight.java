@@ -214,6 +214,40 @@ public class VisionSubsystemLimelight implements Subsystem {
         return Optional.of(snapshot);
     }
 
+    public Optional<Integer> findMotifTagId() {
+        LLResult result = limelight.getLatestResult();
+        if (result == null || !result.isValid()) {
+            return Optional.empty();
+        }
+
+        List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
+        if (fiducials == null || fiducials.isEmpty()) {
+            return Optional.empty();
+        }
+
+        double bestScore = Double.NEGATIVE_INFINITY;
+        int bestTag = -1;
+        for (LLResultTypes.FiducialResult fiducial : fiducials) {
+            int tagId = fiducial.getFiducialId();
+            if (!isMotifTag(tagId)) {
+                continue;
+            }
+            double score = getTargetAreaSafe(fiducial);
+            if (Double.isNaN(score)) {
+                score = 0.0;
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                bestTag = tagId;
+            }
+        }
+
+        if (bestTag < 0) {
+            return Optional.empty();
+        }
+        return Optional.of(bestTag);
+    }
+
     public Optional<TagSnapshot> getLastSnapshot() {
         refreshSnapshotIfStale();
         return Optional.ofNullable(lastSnapshot);
@@ -289,6 +323,12 @@ public class VisionSubsystemLimelight implements Subsystem {
             return selectSnapshot(Alliance.UNKNOWN);
         }
         return bestSnapshot;
+    }
+
+    private static boolean isMotifTag(int tagId) {
+        return tagId == FieldConstants.DECODE_PATTERN_GREEN_PURPLE_PURPLE_ID
+                || tagId == FieldConstants.DECODE_PATTERN_PURPLE_GREEN_PURPLE_ID
+                || tagId == FieldConstants.DECODE_PATTERN_PURPLE_PURPLE_GREEN_ID;
     }
 
     private double getTagScore(LLResultTypes.FiducialResult fiducial) {
