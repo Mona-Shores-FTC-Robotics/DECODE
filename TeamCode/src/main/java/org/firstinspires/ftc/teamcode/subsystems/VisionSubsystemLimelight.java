@@ -34,7 +34,7 @@ public class VisionSubsystemLimelight implements Subsystem {
         STREAMING
     }
 
-    private final Limelight3A limelight;
+    public final Limelight3A limelight;
     private final Telemetry telemetry;
 
     private VisionState state = VisionState.OFF;
@@ -87,7 +87,12 @@ public class VisionSubsystemLimelight implements Subsystem {
         // This must be called every loop before requesting pose estimates
         if (hasValidHeading) {
             double headingDeg = Math.toDegrees(currentHeadingRad);
-            limelight.updateRobotOrientation(headingDeg);
+
+            // Rotate into Limelight FTCSpace by +180°
+            double llYawDeg = headingDeg + 180.0;
+            if (llYawDeg < 0) llYawDeg += 360.0;
+            if (llYawDeg >= 360.0) llYawDeg -= 360.0;
+            limelight.updateRobotOrientation(llYawDeg);
         }
 
         // Throttle Limelight polling to 20Hz (50ms) to reduce loop time
@@ -567,13 +572,24 @@ public class VisionSubsystemLimelight implements Subsystem {
             return targetAreaPercent;
         }
     }
+    // Field is 12ft x 12ft = 144in x 144in
+    private static final double FIELD_SIZE_IN = 144.0;
+    private static final double FIELD_HALF_IN = FIELD_SIZE_IN / 2.0;
 
     private static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
-        double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
-        double pedroX = ftcY + halfField;
-        double pedroY = halfField - ftcX;
-        double pedroHeading = AngleUnit.normalizeRadians(Math.toRadians(headingDeg) - Math.PI / 2.0);
-        return new Pose(pedroX, pedroY, pedroHeading);
+        // 1) Apply the 180 degree rotation that you discovered empirically
+        double rotX = -ftcX;
+        double rotY = -ftcY;
+        double rotHeadingDeg = headingDeg - 180.0;
+
+        // 2) Shift from center origin to bottom left origin (Pedro)
+        double pedroX = rotX + FIELD_HALF_IN;
+        double pedroY = rotY + FIELD_HALF_IN;
+
+        // 3) Convert heading to radians for Pedro
+        double pedroHeadingRad = Math.toRadians(rotHeadingDeg);
+
+        return new Pose(pedroX, pedroY, pedroHeadingRad);
     }
 
     private static Pose convertPedroToFtcPose(Pose pedroPose) {

@@ -7,6 +7,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.math.Vector;
 import com.pedropathing.paths.PathChain;
+import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -21,9 +22,11 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFusion;
 import org.firstinspires.ftc.teamcode.util.PoseTransforms;
@@ -203,7 +206,25 @@ public class DriveSubsystem implements Subsystem {
 
         Pose seed = RobotState.takeHandoffPose();
         if (seed == null) {
-            seed = new Pose();
+
+            // Try to get a MegaTag1 pose at TeleOp start
+            LLResult result = vision.limelight.getLatestResult();
+            Pose3D mt1Pose = result != null ? result.getBotpose(): null;
+
+            if (mt1Pose != null) {
+                // Convert MT1 pose into Pedro coordinates
+                Pose pedroInitPose = convertMt1ToPedro(mt1Pose);
+
+                seed = pedroInitPose;
+            }
+            else {
+                // No tag visible: fall back to default assumed start
+                seed = new Pose(
+                        AutoField.waypoints.startX,
+                        AutoField.waypoints.startY,
+                        Math.toRadians(90)
+                );
+            }
         }
 
         follower.setStartingPose(seed);
