@@ -23,7 +23,7 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  *
  * Button assignments:
  * - X: Hold to continuously calculate distance and spin up at calculated RPM, release to fire all lanes
- * - A: Fire all lanes at MID range (~3600 RPM)
+ * - A: Fire all lanes at SHORT range (~2700 RPM) - close shots safety net
  * - B: Fire all lanes at LONG range (~4200 RPM)
  * - Y: Human loading (reverse flywheel and prefeed)
  * - D-Pad Down: Mode-aware fire (THROUGHPUT or DECODE sequence based on current mode)
@@ -34,10 +34,13 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * Removed bindings (simplified controls):
  * - Left Bumper: Removed (was redundant with X button hold-to-spin)
  * - D-Pad Left/Up: Removed (consolidated into D-Pad Right cycle)
+ *
+ * Future plan: If X button's distance-based firing proves reliable at all ranges,
+ * A and B preset buttons may be removed entirely for maximum simplification.
  */
 public class OperatorBindings {
     private final Button fireDistanceBased;
-    private final Button fireMid;
+    private final Button fireShort;
     private final Button fireLong;
     private final Button fireModeAware;
 
@@ -54,7 +57,7 @@ public class OperatorBindings {
         // Consolidated Button Assignments
         runIntake = operator.rightBumper();
         fireDistanceBased = operator.x();
-        fireMid = operator.a();
+        fireShort = operator.a();  // SHORT range for close shots
         fireLong = operator.b();
         humanLoading = operator.y();
         fireModeAware = operator.dpadDown();
@@ -77,7 +80,7 @@ public class OperatorBindings {
         this.rawGamepad = operatorGamepad;
 
         // Range-based shooting commands
-        LaunchAllAtPresetRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
+        LaunchAllAtPresetRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
         LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
         // Distance-based shooting commands
@@ -98,8 +101,8 @@ public class OperatorBindings {
         fireDistanceBased.whenBecomesFalse(fireAllCommand);
 
         // Range-based shooting: press button to fire all lanes at that range
-        fireMid.whenBecomesTrue(fireMidRangeCommand);
-        fireLong.whenBecomesTrue(fireLongRangeCommand);
+        fireShort.whenBecomesTrue(fireShortRangeCommand);  // A: Close shots
+        fireLong.whenBecomesTrue(fireLongRangeCommand);    // B: Long shots
 
         // Intake control
         runIntake.whenBecomesTrue(intakeForwardCommand);

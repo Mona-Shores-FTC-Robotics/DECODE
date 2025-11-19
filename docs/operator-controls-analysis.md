@@ -419,9 +419,9 @@ robot.launcherCommands.fireUniversalSmart(vision, drive, lighting, gamepad)
 
 | Button | Function | Notes |
 |--------|----------|-------|
-| **X** | Distance-based shot | Hold to spin, release to fire (current) |
-| **A** | Mid-range preset | ~3600 RPM (kept as safety net) |
-| **B** | Long-range preset | ~4200 RPM (kept as safety net) |
+| **X** | Distance-based shot | Hold to spin, release to fire (primary) |
+| **A** | Short-range preset | ~2700 RPM (close shots safety net) |
+| **B** | Long-range preset | ~4200 RPM (safety net) |
 | **Y** | Human loading | Reverse flywheel + prefeed |
 | **D-Pad Down** | Mode-aware fire | THROUGHPUT or DECODE |
 | **D-Pad Right** | Cycle motif tail | 0→1→2→0 with visual feedback |
@@ -430,6 +430,8 @@ robot.launcherCommands.fireUniversalSmart(vision, drive, lighting, gamepad)
 | ~~**Left Bumper**~~ | ~~Pre-spin~~ | **REMOVED** |
 | ~~**D-Pad Left**~~ | ~~Motif tail 0~~ | **REMOVED** |
 | ~~**D-Pad Up**~~ | ~~Motif tail 1~~ | **REMOVED** |
+
+**Note:** A and B are safety nets - if X button's distance-based firing works reliably at all ranges, these preset buttons can be removed for further simplification.
 
 **Buttons Now Available:**
 - Left Bumper (could bind UniversalSmartShot here)
