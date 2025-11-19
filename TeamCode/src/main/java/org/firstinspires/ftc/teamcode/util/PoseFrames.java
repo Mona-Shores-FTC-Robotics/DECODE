@@ -102,9 +102,9 @@ public final class PoseFrames {
 
         double half = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
 
-        double xFTC = pedroPose.getX() - half;
+        double xFTC = pedroPose.getX() + half;
         double yFTC = pedroPose.getY() - half;
-        double headingFTC = AngleUnit.normalizeRadians(pedroPose.getHeading());
+        double headingFTC = AngleUnit.normalizeRadians(pedroPose.getHeading()+Math.PI/2);
 
         return new Pose(xFTC, yFTC, headingFTC);
     }

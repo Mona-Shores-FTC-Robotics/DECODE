@@ -204,14 +204,14 @@ public class DriveSubsystem implements Subsystem {
         Pose pedroFollowerSeed = RobotState.takeHandoffPose();
 
         if (pedroFollowerSeed == null) {
-            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
+            pedroFollowerSeed = new Pose(0, 0, Math.toRadians(90.0));
 
-            pedroFollowerSeed = poseFromVision.orElseGet(() -> new Pose(0, 0, Math.toRadians(90.0)));
+//            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
+//            pedroFollowerSeed = poseFromVision.orElseGet(() -> new Pose(0, 0, Math.toRadians(90.0)));
         }
-
-        RobotState.putPose("Pedro Follower Seed Pose", pedroFollowerSeed);
-
-
+        Pose ftcSeed = PoseFrames.pedroToFtc(pedroFollowerSeed);
+        RobotState.putPose("FTC Coord Seed Pose",ftcSeed );
+        RobotState.putPose("Pedro Coord Seed Pose", PoseFrames.ftcToPedro(ftcSeed));
 
         // Follower initialization
         follower.setStartingPose(pedroFollowerSeed);
