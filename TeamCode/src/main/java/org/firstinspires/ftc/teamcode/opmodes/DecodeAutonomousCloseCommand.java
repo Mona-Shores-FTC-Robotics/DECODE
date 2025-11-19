@@ -22,6 +22,7 @@ import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
+import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
@@ -334,7 +335,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     private Command scoreSequence() {
         return new SequentialGroup(
             new Delay(config.launchDelaySeconds),
-            launcherCommands.fireAllAtRange(LauncherRange.LONG, false)  // Fires all enabled lanes at long range
+            launcherCommands.launchAllAtRangePreset(LauncherRange.LONG, false)  // Fires all enabled lanes at long range
         );
     }
 

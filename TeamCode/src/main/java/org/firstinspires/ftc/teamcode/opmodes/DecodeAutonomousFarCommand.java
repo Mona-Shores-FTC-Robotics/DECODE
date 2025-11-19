@@ -16,6 +16,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -341,7 +342,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         return new SequentialGroup(
 //            new Delay(config.launchDelaySeconds),
 //            launcherCommands.launchAllInSequence()  // Fires all lanes regardless of color detection
-                launcherCommands.fireAllAtRange(LauncherRange.LONG,false)
+                launcherCommands.launchAllAtRangePreset(LauncherRange.LONG,false)
         );
     }
 
