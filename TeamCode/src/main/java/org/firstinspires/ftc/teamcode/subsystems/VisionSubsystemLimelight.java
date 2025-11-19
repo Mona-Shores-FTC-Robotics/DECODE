@@ -38,6 +38,7 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     public final Limelight3A limelight;
     private final Telemetry telemetry;
+    private final boolean limelightAvailable;
 
     private VisionState state = VisionState.OFF;
     private Alliance activeAlliance = Alliance.UNKNOWN;
@@ -73,11 +74,42 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     public VisionSubsystemLimelight(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
-        this.limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        Limelight3A tempLimelight = null;
+        boolean available = true;
+
+        try {
+            tempLimelight = hardwareMap.get(Limelight3A.class, "limelight");
+        } catch (IllegalArgumentException e) {
+            // Limelight not found in hardware map - vision disabled
+            available = false;
+            if (telemetry != null) {
+                telemetry.addData("WARNING", "Limelight not found - vision disabled");
+                telemetry.addData("Error", e.getMessage());
+            }
+            // Log to system for debugging
+            System.err.println("WARNING: Limelight hardware not found - vision subsystem disabled");
+            System.err.println("Error: " + e.getMessage());
+        } catch (Exception e) {
+            // Catch any other hardware initialization errors
+            available = false;
+            if (telemetry != null) {
+                telemetry.addData("ERROR", "Limelight initialization failed - vision disabled");
+                telemetry.addData("Error", e.getMessage());
+            }
+            System.err.println("ERROR: Limelight initialization failed - vision subsystem disabled");
+            System.err.println("Error: " + e.getMessage());
+        }
+
+        this.limelight = tempLimelight;
+        this.limelightAvailable = available;
     }
 
     @Override
     public void initialize() {
+        if (!limelightAvailable || limelight == null) {
+            state = VisionState.OFF;
+            return;
+        }
         limelight.pipelineSwitch(0);
         limelight.start();
         state = VisionState.STREAMING;
@@ -87,6 +119,12 @@ public class VisionSubsystemLimelight implements Subsystem {
     public void periodic() {
         long start = System.nanoTime();
         long nowMs = System.currentTimeMillis();
+
+        // Skip vision updates if limelight is not available
+        if (!limelightAvailable || limelight == null) {
+            lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+            return;
+        }
 
         // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
         // This must be called every loop before requesting pose estimates
@@ -120,7 +158,9 @@ public class VisionSubsystemLimelight implements Subsystem {
     }
 
     public void stop() {
-        limelight.stop();
+        if (limelightAvailable && limelight != null) {
+            limelight.stop();
+        }
         state = VisionState.OFF;
         clearSnapshot();
     }
@@ -234,6 +274,10 @@ public class VisionSubsystemLimelight implements Subsystem {
     }
 
     public Optional<Integer> findMotifTagId() {
+        if (!limelightAvailable || limelight == null) {
+            return Optional.empty();
+        }
+
         LLResult result = limelight.getLatestResult();
         if (result == null || !result.isValid()) {
             return Optional.empty();
@@ -297,6 +341,10 @@ public class VisionSubsystemLimelight implements Subsystem {
     }
 
     private TagSnapshot selectSnapshot(Alliance preferredAlliance) {
+        if (!limelightAvailable || limelight == null) {
+            return null;
+        }
+
         LLResult result = limelight.getLatestResult();
         if (result == null || !result.isValid()) {
             return null;

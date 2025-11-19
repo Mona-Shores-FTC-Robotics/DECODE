@@ -201,13 +201,21 @@ public class DriveSubsystem implements Subsystem {
 
     @Override
     public void initialize() {
+        // Defensive check: ensure follower is attached before initialization
+        if (follower == null) {
+            throw new IllegalStateException(
+                "DriveSubsystem: Follower not attached! Call attachFollower() before initialize(). " +
+                "This typically happens in Robot.attachPedroFollower() during OpMode init.");
+        }
+
         if (follower.isBusy()) {
             follower.breakFollowing();
         }
 
         Pose seed = RobotState.takeHandoffPose();
         if (seed == null) {
-            LLResult result = vision.limelight.getLatestResult();
+            // Handle case where limelight might be unavailable
+            LLResult result = (vision.limelight != null) ? vision.limelight.getLatestResult() : null;
             Pose3D mt1Pose = result != null ? result.getBotpose() : null; // MegaTag1 FTCSpace pose
 
             if (mt1Pose != null && mt1Pose.getPosition() != null && mt1Pose.getOrientation() != null) {
