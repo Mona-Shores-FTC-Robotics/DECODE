@@ -45,12 +45,11 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     /**
      * Heading offset to add to Pedro heading before sending to Limelight.
      *
-     * VERIFIED: 90° is correct (Pedro → FTC conversion)
-     * This produces 2-3" accuracy for MegaTag2 pose estimates.
-     *
+     * Testing -90° offset (inverted from previous +90°) to fix 180° heading error.
+     * Position is correct, so X/Y coordinate conversion is working.
      * Can adjust via FTC Dashboard to test other scenarios if needed.
      */
-    public static double headingOffsetDeg = 90.0;
+    public static double headingOffsetDeg = -90.0;
     FtcDashboard dashboard;
 
     private Robot robot;
@@ -184,7 +183,8 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                 // Convert MT2 FTC pose to Pedro
                 double mt2PedroX = mt2YIn + 72; // ftcY + halfField
                 double mt2PedroY = 72 - mt2XIn; // halfField - ftcX
-                double mt2PedroHeading = AngleUnit.normalizeDegrees(mt2YawDeg - 90);
+                // Fixed 180° heading error: changed from -90° to +90° (matches VisionSubsystemLimelight)
+                double mt2PedroHeading = AngleUnit.normalizeDegrees(mt2YawDeg + 90);
 
                 telemetry.addData("MT2 Pedro Pose", "(%.1f, %.1f, %.1f°)",
                     mt2PedroX, mt2PedroY, mt2PedroHeading);
