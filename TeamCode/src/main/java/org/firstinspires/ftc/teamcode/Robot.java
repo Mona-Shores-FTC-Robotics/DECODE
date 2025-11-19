@@ -62,11 +62,12 @@ public class Robot {
     private void configureInitialization(boolean enableTeleOpControl, boolean enableVisionRelocalization) {
         drive.setTeleOpControlEnabled(enableTeleOpControl);
         drive.setVisionRelocalizationEnabled(enableVisionRelocalization);
+        drive.initialize();
         vision.initialize();
         launcher.initialize();
         lighting.initialize();
         intake.initialize();
-        drive.initialize();
+
 
         // Wire lighting to receive lane color updates from intake
         intake.addLaneColorListener(lighting);
