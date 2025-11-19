@@ -15,27 +15,7 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 
-@Configurable
 public class Robot {
-
-    @Configurable
-    public static class RelocalizationConfig {
-        /**
-         * Enable automatic vision relocalization during aiming in TeleOp.
-         *
-         * IMPORTANT: Currently using MegaTag1 (MT1) which is less reliable than MT2.
-         * MT1 provides single-tag poses with 4-8" accuracy and can be noisy/jumpy.
-         *
-         * Recommendation: Keep DISABLED until MegaTag2 (MT2) is fixed.
-         * - MT1 relocalization can introduce more error than odometry drift
-         * - Manual relocalization (A button) is still available when needed
-         * - Once MT2 is working (2-3" accuracy, multi-tag fusion), re-enable this
-         */
-        public boolean enableRelocalizationDuringAiming = false;
-    }
-
-    public static RelocalizationConfig relocalizationConfig = new RelocalizationConfig();
-
     public final DriveSubsystem drive;
     public final LauncherSubsystem launcher;
     public final IntakeSubsystem intake;
@@ -78,7 +58,7 @@ public class Robot {
 
     public void initializeForTeleOp() {
         // Use configurable flag for vision relocalization (disabled by default with MT1)
-        configureInitialization(true, relocalizationConfig.enableRelocalizationDuringAiming);
+        configureInitialization(true, DriveSubsystem.visionRelocalizationConfig.enableDuringAiming);
     }
 
     private void configureInitialization(boolean enableTeleOpControl, boolean enableVisionRelocalization) {
