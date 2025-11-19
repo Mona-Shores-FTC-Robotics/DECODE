@@ -48,10 +48,6 @@ public class Robot {
         lighting.setAlliance(alliance);
     }
 
-    public void initialize() {
-        initializeForTeleOp();
-    }
-
     public void initializeForAuto() {
         configureInitialization(false, false);
     }
