@@ -309,4 +309,17 @@ public class LauncherCommands {
         return fireAllAtDistance(vision, drive, true);
     }
 
+    /**
+     * Continuously calculates distance to goal and updates launcher RPM while held.
+     * Hold X button to spin up at calculated RPM, release to fire all lanes.
+     *
+     * @param vision The vision subsystem (for AprilTag distance measurement)
+     * @param drive The drive subsystem (for odometry fallback)
+     * @return Command that continuously adjusts RPM based on distance
+     */
+    public ContinuousDistanceBasedSpinCommand spinUpAtDistance(VisionSubsystemLimelight vision,
+                                                                DriveSubsystem drive) {
+        return new ContinuousDistanceBasedSpinCommand(launcher, vision, drive);
+    }
+
 }

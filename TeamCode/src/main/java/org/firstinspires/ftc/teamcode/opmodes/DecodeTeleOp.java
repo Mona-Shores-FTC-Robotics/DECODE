@@ -99,7 +99,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         // Enable drive motors and command control now that match is starting
         robot.drive.startTeleopDrive();
         driverBindings.configureTeleopBindings(robot);
-        operatorBindings.configureTeleopBindings(robot);
+        operatorBindings.configureTeleopBindings(robot, gamepad2);
 
         robot.launcherCoordinator.unlockIntake();
         robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
