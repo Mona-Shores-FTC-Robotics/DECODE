@@ -92,11 +92,13 @@ public class VisionSubsystemLimelight implements Subsystem {
         // This must be called every loop before requesting pose estimates
         // Skip in diagnostic mode to allow external control for testing different offsets
         if (hasValidHeading && !diagnosticMode) {
-            // TEST: Send raw Pedro heading without conversion
-            // If this fixes the orbiting issue, it means Limelight expects Pedro-frame heading
-            double yawDegForLimelight = Math.toDegrees(currentHeadingRad);
+            // Convert Pedro heading to FTC heading (Pedro + 90°)
+            // Limelight with orientation=180° expects FTC coordinate frame heading
+            // Verified via diagnostic testing: offset=90° gives 2-3" accuracy
+            double pedroHeadingDeg = Math.toDegrees(currentHeadingRad);
+            double ftcHeadingDeg = AngleUnit.normalizeDegrees(pedroHeadingDeg + 90.0);
 
-            limelight.updateRobotOrientation(yawDegForLimelight);
+            limelight.updateRobotOrientation(ftcHeadingDeg);
         }
 
         // Throttle Limelight polling to 20Hz (50ms) to reduce loop time
