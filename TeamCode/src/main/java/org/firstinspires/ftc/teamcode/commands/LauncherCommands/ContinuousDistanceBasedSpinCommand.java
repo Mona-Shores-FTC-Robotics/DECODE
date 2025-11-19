@@ -107,6 +107,9 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
     private final VisionSubsystemLimelight vision;
     private final DriveSubsystem drive;
 
+    private double lastSmoothedDistanceIn = 0.0;
+    private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;  // 0-1: higher = more filtering
+
     /**
      * Creates command that continuously updates launcher RPM based on distance to goal.
      *
@@ -129,6 +132,7 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         // Initialize diagnostics
         diagnostics.lastSource = "none";
         diagnostics.updateCount = 0;
+        lastSmoothedDistanceIn = 0.0;
 
         // Set spin mode to FULL to start spinning up
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
@@ -138,19 +142,35 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
     public void update() {
         diagnostics.updateCount++;
 
-        // Calculate distance to goal
-        double distance = calculateDistanceToGoal();
+        // Calculate raw distance to goal
+        double rawDistance = calculateDistanceToGoal();
 
-        if (distance > 0.0) {
-            // Set RPMs based on calculated distance
-            setRpmsForDistance(distance);
+        // Apply exponential smoothing to reduce jitter from noisy pose estimates
+        double smoothedDistance;
+        if (rawDistance > 0.0) {
+            if (lastSmoothedDistanceIn > 0.0) {
+                // Exponential moving average: smooth_new = factor * raw + (1 - factor) * smooth_old
+                smoothedDistance = DISTANCE_SMOOTHING_FACTOR * rawDistance + (1.0 - DISTANCE_SMOOTHING_FACTOR) * lastSmoothedDistanceIn;
+            } else {
+                // First measurement - use raw value
+                smoothedDistance = rawDistance;
+            }
+            lastSmoothedDistanceIn = smoothedDistance;
+        } else {
+            smoothedDistance = 0.0;
+            lastSmoothedDistanceIn = 0.0;
+        }
 
-            // Set hood positions based on distance
-            setHoodForDistance(distance);
+        if (smoothedDistance > 0.0) {
+            // Set RPMs based on smoothed distance
+            setRpmsForDistance(smoothedDistance);
+
+            // Set hood positions based on smoothed distance
+            setHoodForDistance(smoothedDistance);
         }
 
         // Update diagnostics
-        diagnostics.lastCalculatedDistanceIn = distance;
+        diagnostics.lastCalculatedDistanceIn = smoothedDistance;
 
         // Push diagnostics to telemetry packet
         RobotState.packet.put("X Button Distance-Based/Update Count", diagnostics.updateCount);
