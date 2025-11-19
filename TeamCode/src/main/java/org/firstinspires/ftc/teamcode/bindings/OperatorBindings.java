@@ -11,8 +11,6 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ContinuousDistan
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.HumanLoadingCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchModeAwareCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinUpUntilReadyCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.UniversalSmartShotCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
@@ -28,7 +26,6 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * - A: Fire all lanes at SHORT range (~2700 RPM) - close shots safety net
  * - B: Fire all lanes at LONG range (~4200 RPM)
  * - Y: Toggle human loading (press once to start, press again to stop)
- * - D-Pad Down: Mode-aware fire (THROUGHPUT or DECODE sequence based on current mode)
  * - D-Pad Left: Universal smart shot (distance-based RPM + mode-aware firing) - THE ULTIMATE BUTTON!
  * - D-Pad Right: Cycle motif tail (0 → 1 → 2 → 0, visual feedback blinks corresponding lanes orange)
  * - Back: Toggle launcher mode (THROUGHPUT ↔ DECODE)
@@ -36,16 +33,16 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  *
  * Removed bindings (simplified controls):
  * - Left Bumper: Removed (was redundant with X button hold-to-spin)
+ * - D-Pad Down: Removed (redundant with D-Pad Left UniversalSmartShot)
  * - D-Pad Up: Available for future use
  *
  * Testing: D-Pad Left has UniversalSmartShotCommand for evaluation. If it proves reliable,
- * it could replace X and D-Pad Down entirely, becoming the single primary fire button.
+ * it could replace X entirely, becoming the single primary fire button.
  */
 public class OperatorBindings {
     private final Button fireDistanceBased;
     private final Button fireShort;
     private final Button fireLong;
-    private final Button fireModeAware;
     private final Button fireUniversalSmart;
 
     private final Button runIntake;
@@ -64,7 +61,6 @@ public class OperatorBindings {
         fireShort = operator.a();  // SHORT range for close shots
         fireLong = operator.b();
         humanLoading = operator.y();
-        fireModeAware = operator.dpadDown();
         fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
         motifTailCycle = operator.dpadRight();  // Cycle through 0 → 1 → 2 → 0
         toggleLauncherMode = operator.back();
@@ -93,10 +89,6 @@ public class OperatorBindings {
             robot.vision, robot.drive, robot.lighting, rawGamepad);
         LaunchAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
 
-        // Mode-aware commands
-        SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
-        LaunchModeAwareCommand fireModeAwareCommand = robot.launcherCommands.fireModeAware();
-
         // Universal smart shot command (distance-based + mode-aware)
         UniversalSmartShotCommand universalSmartShotCommand = robot.launcherCommands.fireUniversalSmart(
             robot.vision, robot.drive, robot.lighting, rawGamepad);
@@ -122,11 +114,6 @@ public class OperatorBindings {
 
         // Human loading toggle: press once to start, press again to stop
         humanLoading.whenBecomesTrue(humanLoadingToggle);
-
-        // Mode-aware firing: adapts between THROUGHPUT and DECODE modes
-        fireModeAware
-                .whenBecomesTrue(spinUpCommand) //spin up until ready
-                .whenBecomesFalse(fireModeAwareCommand); //fire based on current mode
 
         // Universal smart shot: distance-based RPM + mode-aware firing (TESTING)
         fireUniversalSmart.whenBecomesTrue(universalSmartShotCommand);
