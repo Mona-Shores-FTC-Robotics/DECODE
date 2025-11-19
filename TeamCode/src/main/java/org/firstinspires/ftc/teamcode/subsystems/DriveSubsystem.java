@@ -79,9 +79,9 @@ public class DriveSubsystem implements Subsystem {
     @Configurable
     public static class FixedAngleAimConfig {
         /** Fixed target heading for blue alliance (degrees, 0=forward, 90=left) */
-        public double blueHeadingDeg = 60.0;
+        public double blueHeadingDeg = 134;
         /** Fixed target heading for red alliance (degrees, 0=forward, 90=left) */
-        public double redHeadingDeg = 120.0;
+        public double redHeadingDeg = 46;
         /** Proportional gain for fixed-angle aiming */
         public double kP = 0.5;
         /** Max turn speed when aiming (0.0-1.0) */
