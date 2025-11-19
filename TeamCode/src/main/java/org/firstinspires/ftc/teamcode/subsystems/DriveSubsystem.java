@@ -697,6 +697,7 @@ public class DriveSubsystem implements Subsystem {
         }
 
         double speed = getRobotSpeedInchesPerSecond();
+        packet.put("Diagnostic/Robot Speed", speed);
         if (speed > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
             return;
         }
