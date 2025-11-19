@@ -27,12 +27,13 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * - B: Fire all lanes at LONG range (~4200 RPM)
  * - Y: Human loading (reverse flywheel and prefeed)
  * - D-Pad Down: Mode-aware fire (THROUGHPUT or DECODE sequence based on current mode)
- * - D-Pad Left: Set motif tail to 0 (all 3 lanes blink orange)
- * - D-Pad Up: Set motif tail to 1 (left lane blinks orange)
- * - D-Pad Right: Set motif tail to 2 (left+center blink orange)
+ * - D-Pad Right: Cycle motif tail (0 → 1 → 2 → 0, visual feedback blinks corresponding lanes orange)
  * - Back: Toggle launcher mode (THROUGHPUT ↔ DECODE)
- * - Left Bumper: Manual spin hold (for pre-spinning before shots)
  * - Right Bumper: Intake forward
+ *
+ * Removed bindings (simplified controls):
+ * - Left Bumper: Removed (was redundant with X button hold-to-spin)
+ * - D-Pad Left/Up: Removed (consolidated into D-Pad Right cycle)
  */
 public class OperatorBindings {
     private final Button fireDistanceBased;
@@ -42,28 +43,22 @@ public class OperatorBindings {
 
     private final Button runIntake;
     private final Button humanLoading;
-    private final Button spinLetGoToShoot;
 
-    private final Button motifTailSet0;
-    private final Button motifTailSet1;
-    private final Button motifTailSet2;
+    private final Button motifTailCycle;
     private final Button toggleLauncherMode;
 
     private Gamepad rawGamepad;  // Raw gamepad for haptic feedback
 
     public OperatorBindings(GamepadEx operator) {
 
-        // Planned Final Button Assignments
+        // Consolidated Button Assignments
         runIntake = operator.rightBumper();
         fireDistanceBased = operator.x();
         fireMid = operator.a();
         fireLong = operator.b();
         humanLoading = operator.y();
-        spinLetGoToShoot = operator.leftBumper();
         fireModeAware = operator.dpadDown();
-        motifTailSet0 = operator.dpadLeft();
-        motifTailSet1 = operator.dpadUp();
-        motifTailSet2 = operator.dpadRight();
+        motifTailCycle = operator.dpadRight();  // Cycle through 0 → 1 → 2 → 0
         toggleLauncherMode = operator.back();
 
         //TODO analyze the launcher commands to make a command that sets RPM based on distance to goal
@@ -119,34 +114,34 @@ public class OperatorBindings {
                 .whenBecomesFalse(robot.intake::setPrefeedForward)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
 
-        spinLetGoToShoot
-                .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
-                .whenBecomesFalse(fireAllCommand); //prefeeder started and stopped in the fireAll command
-
         // Mode-aware firing: adapts between THROUGHPUT and DECODE modes
         fireModeAware
                 .whenBecomesTrue(spinUpCommand) //spin up until ready
                 .whenBecomesFalse(fireModeAwareCommand); //fire based on current mode
 
-        // Motif tail controls: direct set with visual feedback
-        motifTailSet0.whenBecomesTrue(() -> setMotifTailWithFeedback(robot, 0));
-        motifTailSet1.whenBecomesTrue(() -> setMotifTailWithFeedback(robot, 1));
-        motifTailSet2.whenBecomesTrue(() -> setMotifTailWithFeedback(robot, 2));
+        // Motif tail cycle: single button cycles through 0 → 1 → 2 → 0 with visual feedback
+        motifTailCycle.whenBecomesTrue(() -> cycleMotifTailWithFeedback(robot));
 
         // Mode toggle: manually switch between THROUGHPUT and DECODE
         toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
     }
 
     /**
-     * Sets motif tail value and shows visual feedback on lights.
+     * Cycles motif tail value through 0 → 1 → 2 → 0 and shows visual feedback on lights.
+     *
+     * Motif tail values:
+     * - 0: All 3 lanes blink orange (0, 3, 6, ... artifacts in field ramp)
+     * - 1: Left lane blinks orange (1, 4, 7, ... artifacts in field ramp)
+     * - 2: Left+center blink orange (2, 5, 8, ... artifacts in field ramp)
      *
      * @param robot The robot instance (for lighting subsystem access)
-     * @param value The motif tail value (0, 1, or 2)
      */
-    private void setMotifTailWithFeedback(Robot robot, int value) {
-        RobotState.setMotifTail(value);
+    private void cycleMotifTailWithFeedback(Robot robot) {
+        int current = RobotState.getMotifTail();
+        int next = (current + 1) % 3;  // Cycle: 0 → 1 → 2 → 0
+        RobotState.setMotifTail(next);
         if (robot != null && robot.lighting != null) {
-            robot.lighting.showMotifTailFeedback(value);
+            robot.lighting.showMotifTailFeedback(next);
         }
     }
 

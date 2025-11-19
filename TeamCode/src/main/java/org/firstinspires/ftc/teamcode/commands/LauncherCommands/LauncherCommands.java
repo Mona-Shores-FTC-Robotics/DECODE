@@ -341,4 +341,32 @@ public class LauncherCommands {
         return new ContinuousDistanceBasedSpinCommand(launcher, vision, drive, lighting, gamepad);
     }
 
+    /**
+     * Universal smart shot - the ONE BUTTON SOLUTION!
+     * Combines distance-based RPM calculation with mode-aware firing strategy.
+     *
+     * This command automatically:
+     * - Calculates distance to goal (AprilTag vision with odometry fallback)
+     * - Interpolates RPM and hood position based on distance
+     * - Spins up with haptic/light feedback when ready
+     * - Fires using current launcher mode:
+     *   - THROUGHPUT: All lanes fire rapidly for maximum scoring rate
+     *   - DECODE: Fires in obelisk pattern sequence with motif tail offset
+     *
+     * This is the ultimate fire button - operator just presses when ready to shoot,
+     * and the robot handles distance, RPM, mode, and firing strategy automatically.
+     *
+     * @param vision The vision subsystem (for AprilTag distance measurement)
+     * @param drive The drive subsystem (for odometry fallback)
+     * @param lighting The lighting subsystem (for ready feedback)
+     * @param gamepad The operator gamepad (for haptic feedback)
+     * @return Command that does everything automatically
+     */
+    public UniversalSmartShotCommand fireUniversalSmart(VisionSubsystemLimelight vision,
+                                                         DriveSubsystem drive,
+                                                         LightingSubsystem lighting,
+                                                         Gamepad gamepad) {
+        return new UniversalSmartShotCommand(launcher, intake, vision, drive, lighting, gamepad);
+    }
+
 }
