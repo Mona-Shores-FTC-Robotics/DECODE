@@ -44,6 +44,14 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         public String lastSource = "none";
         /** Number of update cycles performed */
         public int updateCount = 0;
+        /** Robot pose available from vision or odometry */
+        public boolean robotPoseAvailable = false;
+        /** Goal pose available from vision */
+        public boolean goalPoseAvailable = false;
+        /** Vision pose available */
+        public boolean visionPoseAvailable = false;
+        /** Odometry pose available */
+        public boolean odometryPoseAvailable = false;
     }
 
     public static DiagnosticData diagnostics = new DiagnosticData();
@@ -152,6 +160,10 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         RobotState.packet.put("X Button Distance-Based/Right RPM", diagnostics.lastRightRpm);
         RobotState.packet.put("X Button Distance-Based/Hood Position", diagnostics.lastHoodPosition);
         RobotState.packet.put("X Button Distance-Based/Data Source", diagnostics.lastSource);
+        RobotState.packet.put("X Button Distance-Based/Robot Pose Available", diagnostics.robotPoseAvailable);
+        RobotState.packet.put("X Button Distance-Based/Goal Pose Available", diagnostics.goalPoseAvailable);
+        RobotState.packet.put("X Button Distance-Based/Vision Pose Available", diagnostics.visionPoseAvailable);
+        RobotState.packet.put("X Button Distance-Based/Odometry Pose Available", diagnostics.odometryPoseAvailable);
     }
 
     @Override
@@ -174,25 +186,36 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
      * @return Distance to goal in inches, or 0.0 if unable to determine
      */
     private double calculateDistanceToGoal() {
+        // Reset diagnostic flags
+        diagnostics.robotPoseAvailable = false;
+        diagnostics.goalPoseAvailable = false;
+        diagnostics.visionPoseAvailable = false;
+        diagnostics.odometryPoseAvailable = false;
+
         // Try to get robot pose from vision first
         Optional<Pose> poseOpt = vision.getRobotPoseFromTag();
+        diagnostics.visionPoseAvailable = poseOpt.isPresent();
 
         // Fall back to odometry if vision unavailable
         if (!poseOpt.isPresent()) {
             Pose odometryPose = drive.getFollower().getPose();
+            diagnostics.odometryPoseAvailable = (odometryPose != null);
             if (odometryPose != null) {
                 poseOpt = Optional.of(odometryPose);
                 diagnostics.lastSource = "odometry";
+                diagnostics.robotPoseAvailable = true;
             } else {
                 diagnostics.lastSource = "none";
                 return 0.0;
             }
         } else {
             diagnostics.lastSource = "vision";
+            diagnostics.robotPoseAvailable = true;
         }
 
         // Get goal pose based on alliance
         Optional<Pose> goalOpt = vision.getTargetGoalPose();
+        diagnostics.goalPoseAvailable = goalOpt.isPresent();
 
         if (!poseOpt.isPresent() || !goalOpt.isPresent()) {
             diagnostics.lastSource = "none";
