@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
+package org.firstinspires.ftc.teamcode.commands.LauncherCommands.testing;
 
 import dev.nextftc.core.commands.Command;
 
@@ -14,13 +14,9 @@ import java.util.Objects;
 public class SpinLaneCommand extends Command {
 
     private final LauncherSubsystem launcher;
-    private final ManualSpinController manualSpinController;
 
-    private boolean manualSpinActive = false;
-
-    public SpinLaneCommand(LauncherSubsystem launcher, ManualSpinController manualSpinController) {
+    public SpinLaneCommand(LauncherSubsystem launcher) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
         requires(launcher);
         setInterruptible(true);
     }
@@ -28,8 +24,6 @@ public class SpinLaneCommand extends Command {
     @Override
     public void start() {
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
-        manualSpinController.enterManualSpin();
-        manualSpinActive = true;
     }
 
     @Override
@@ -44,9 +38,6 @@ public class SpinLaneCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-        if (manualSpinActive) {
-            manualSpinController.exitManualSpin();
-            manualSpinActive = false;
-        }
+        // Spin mode will be managed by next command or default to idle
     }
 }
