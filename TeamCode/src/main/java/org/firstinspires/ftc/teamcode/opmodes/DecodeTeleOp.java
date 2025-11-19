@@ -98,15 +98,17 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onWaitForStart() {
+        BindingManager.update();
+        if (allianceSelector != null) {
+            selectedAlliance = allianceSelector.updateDuringInit(robot.vision, robot, robot.lighting);
+        }
         telemetry.addData("Alliance", selectedAlliance.displayName());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");
         telemetry.addLine();
-        BindingManager.update();
         if (lightingInitController != null) {
             lightingInitController.updateDuringInit(gamepad1.dpad_up);
         }
-        syncVisionDuringInit();
         pushInitTelemetry();
 
     }
@@ -227,26 +229,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
             telemetry.addData("Vision re-localize", "Press A to sync with Limelight");
         }
         telemetry.addLine();
-    }
-
-    private void syncVisionDuringInit() {
-        if (robot == null || robot.drive == null || robot.vision == null) {
-            selectedAlliance = RobotState.getAlliance();
-            return;
-        }
-        selectedAlliance = RobotState.getAlliance();
-
-        if (selectedAlliance==null && allianceSelector != null) {
-            allianceSelector.updateFromVision(robot.vision);
-            allianceSelector.applySelection(robot, robot.lighting);
-            selectedAlliance = allianceSelector.getSelectedAlliance();
-        }
-        // DISABLED: Skip initial relocalization to allow Limelight MT2 to stabilize with new heading
-        // User can manually relocalize by pressing A after START if needed
-        // if (robot.vision.shouldUpdateOdometry() && robot.drive.forceRelocalizeFromVision()) {
-        //     robot.drive.visionRelocalizeStatus = "Pose synced from Limelight";
-        //     robot.drive.visionRelocalizeStatusMs = System.currentTimeMillis();
-        // }
     }
 
     private static final class LoopTiming {
