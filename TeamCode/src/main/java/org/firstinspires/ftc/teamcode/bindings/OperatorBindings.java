@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.bindings;
 
+import com.qualcomm.robotcore.hardware.Gamepad;
+
 import dev.nextftc.bindings.Button;
 import dev.nextftc.ftc.GamepadEx;
 
@@ -47,6 +49,8 @@ public class OperatorBindings {
     private final Button motifTailSet2;
     private final Button toggleLauncherMode;
 
+    private Gamepad rawGamepad;  // Raw gamepad for haptic feedback
+
     public OperatorBindings(GamepadEx operator) {
 
         // Planned Final Button Assignments
@@ -74,13 +78,16 @@ public class OperatorBindings {
 
     }
 
-    public void configureTeleopBindings(Robot robot) {
+    public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
+        this.rawGamepad = operatorGamepad;
+
         // Range-based shooting commands
         LaunchAllAtPresetRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
         LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
         // Distance-based shooting commands
-        ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand = robot.launcherCommands.spinUpAtDistance(robot.vision, robot.drive);
+        ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand = robot.launcherCommands.spinUpAtDistance(
+            robot.vision, robot.drive, robot.lighting, rawGamepad);
         LaunchAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
 
         // Mode-aware commands

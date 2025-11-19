@@ -4,12 +4,16 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.util.Range;
 
+import com.qualcomm.robotcore.hardware.Gamepad;
+
 import dev.nextftc.core.commands.Command;
 
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -43,6 +47,14 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         public String lastSource = "none";
         /** Number of update cycles performed */
         public int updateCount = 0;
+        /** Robot pose available from vision or odometry */
+        public boolean robotPoseAvailable = false;
+        /** Goal pose available from vision */
+        public boolean goalPoseAvailable = false;
+        /** Vision pose available */
+        public boolean visionPoseAvailable = false;
+        /** Odometry pose available */
+        public boolean odometryPoseAvailable = false;
     }
 
     public static DiagnosticData diagnostics = new DiagnosticData();
@@ -97,6 +109,13 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
     private final LauncherSubsystem launcher;
     private final VisionSubsystemLimelight vision;
     private final DriveSubsystem drive;
+    private final LightingSubsystem lighting;
+    private final Gamepad gamepad;
+
+    private double lastSmoothedDistanceIn = 0.0;
+    private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;  // 0-1: higher = more filtering
+    private static final double RPM_READY_THRESHOLD_PERCENT = 0.95;  // Trigger feedback at 95% of target
+    private boolean feedbackTriggered = false;
 
     /**
      * Creates command that continuously updates launcher RPM based on distance to goal.
@@ -104,13 +123,19 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
      * @param launcher The launcher subsystem
      * @param vision The vision subsystem (for AprilTag distance)
      * @param drive The drive subsystem (for odometry fallback)
+     * @param lighting The lighting subsystem (for ready feedback)
+     * @param gamepad The operator gamepad (for haptic feedback)
      */
     public ContinuousDistanceBasedSpinCommand(LauncherSubsystem launcher,
                                                VisionSubsystemLimelight vision,
-                                               DriveSubsystem drive) {
+                                               DriveSubsystem drive,
+                                               LightingSubsystem lighting,
+                                               Gamepad gamepad) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.vision = Objects.requireNonNull(vision, "vision required");
         this.drive = Objects.requireNonNull(drive, "drive required");
+        this.lighting = lighting;  // Can be null
+        this.gamepad = gamepad;    // Can be null
         requires(launcher);
         setInterruptible(true);
     }
@@ -120,6 +145,8 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         // Initialize diagnostics
         diagnostics.lastSource = "none";
         diagnostics.updateCount = 0;
+        lastSmoothedDistanceIn = 0.0;
+        feedbackTriggered = false;
 
         // Set spin mode to FULL to start spinning up
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
@@ -129,19 +156,51 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
     public void update() {
         diagnostics.updateCount++;
 
-        // Calculate distance to goal
-        double distance = calculateDistanceToGoal();
+        // Calculate raw distance to goal
+        double rawDistance = calculateDistanceToGoal();
 
-        if (distance > 0.0) {
-            // Set RPMs based on calculated distance
-            setRpmsForDistance(distance);
+        // Apply exponential smoothing to reduce jitter from noisy pose estimates
+        double smoothedDistance;
+        if (rawDistance > 0.0) {
+            if (lastSmoothedDistanceIn > 0.0) {
+                // Exponential moving average: smooth_new = factor * raw + (1 - factor) * smooth_old
+                smoothedDistance = DISTANCE_SMOOTHING_FACTOR * rawDistance + (1.0 - DISTANCE_SMOOTHING_FACTOR) * lastSmoothedDistanceIn;
+            } else {
+                // First measurement - use raw value
+                smoothedDistance = rawDistance;
+            }
+            lastSmoothedDistanceIn = smoothedDistance;
+        } else {
+            smoothedDistance = 0.0;
+            lastSmoothedDistanceIn = 0.0;
+        }
 
-            // Set hood positions based on distance
-            setHoodForDistance(distance);
+        if (smoothedDistance > 0.0) {
+            // Set RPMs based on smoothed distance
+            setRpmsForDistance(smoothedDistance);
+
+            // Set hood positions based on smoothed distance
+            setHoodForDistance(smoothedDistance);
+
+            // Check if any lane has reached 95% of target RPM for haptic/light feedback
+            checkAndTriggerReadyFeedback();
         }
 
         // Update diagnostics
-        diagnostics.lastCalculatedDistanceIn = distance;
+        diagnostics.lastCalculatedDistanceIn = smoothedDistance;
+
+        // Push diagnostics to telemetry packet
+        RobotState.packet.put("X Button Distance-Based/Update Count", diagnostics.updateCount);
+        RobotState.packet.put("X Button Distance-Based/Distance (in)", diagnostics.lastCalculatedDistanceIn);
+        RobotState.packet.put("X Button Distance-Based/Left RPM", diagnostics.lastLeftRpm);
+        RobotState.packet.put("X Button Distance-Based/Center RPM", diagnostics.lastCenterRpm);
+        RobotState.packet.put("X Button Distance-Based/Right RPM", diagnostics.lastRightRpm);
+        RobotState.packet.put("X Button Distance-Based/Hood Position", diagnostics.lastHoodPosition);
+        RobotState.packet.put("X Button Distance-Based/Data Source", diagnostics.lastSource);
+        RobotState.packet.put("X Button Distance-Based/Robot Pose Available", diagnostics.robotPoseAvailable);
+        RobotState.packet.put("X Button Distance-Based/Goal Pose Available", diagnostics.goalPoseAvailable);
+        RobotState.packet.put("X Button Distance-Based/Vision Pose Available", diagnostics.visionPoseAvailable);
+        RobotState.packet.put("X Button Distance-Based/Odometry Pose Available", diagnostics.odometryPoseAvailable);
     }
 
     @Override
@@ -152,11 +211,48 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-        // Clear RPM overrides to return to default values
-        launcher.clearOverrides();
-
-        // Note: Intentionally NOT spinning down here - the fire command will handle that
+        // Preserve the calculated RPMs so LaunchAllCommand can use them immediately
+        // Do NOT clear overrides - the fire command needs these RPMs to determine readiness
         // The launcher stays spun up at the calculated RPM for immediate firing
+    }
+
+    /**
+     * Checks if any launcher lane has reached 95% of target RPM and triggers feedback.
+     * Feedback is only triggered once per button press (when first crossing the threshold).
+     */
+    private void checkAndTriggerReadyFeedback() {
+        if (feedbackTriggered) {
+            return;  // Only trigger once
+        }
+
+        // Check each lane to see if it's at 95% of target RPM
+        double maxTargetRpm = 0.0;
+        double maxCurrentRpm = 0.0;
+
+        for (LauncherLane lane : LauncherLane.values()) {
+            double targetRpm = launcher.getLaunchRpm(lane);
+            double currentRpm = launcher.getCurrentRpm(lane);
+
+            if (targetRpm > 0.0) {
+                maxTargetRpm = Math.max(maxTargetRpm, targetRpm);
+                maxCurrentRpm = Math.max(maxCurrentRpm, currentRpm);
+            }
+        }
+
+        // Trigger feedback if current RPM >= 95% of target RPM
+        if (maxTargetRpm > 0.0 && maxCurrentRpm >= maxTargetRpm * RPM_READY_THRESHOLD_PERCENT) {
+            feedbackTriggered = true;
+
+            // Haptic feedback: rumble controller for 200ms
+            if (gamepad != null) {
+                gamepad.rumble(200);  // 200ms rumble
+            }
+
+            // Light feedback: flash yellow to indicate launcher ready
+            if (lighting != null) {
+                lighting.flashAimAligned();
+            }
+        }
     }
 
     /**
@@ -166,25 +262,36 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
      * @return Distance to goal in inches, or 0.0 if unable to determine
      */
     private double calculateDistanceToGoal() {
+        // Reset diagnostic flags
+        diagnostics.robotPoseAvailable = false;
+        diagnostics.goalPoseAvailable = false;
+        diagnostics.visionPoseAvailable = false;
+        diagnostics.odometryPoseAvailable = false;
+
         // Try to get robot pose from vision first
         Optional<Pose> poseOpt = vision.getRobotPoseFromTag();
+        diagnostics.visionPoseAvailable = poseOpt.isPresent();
 
         // Fall back to odometry if vision unavailable
         if (!poseOpt.isPresent()) {
             Pose odometryPose = drive.getFollower().getPose();
+            diagnostics.odometryPoseAvailable = (odometryPose != null);
             if (odometryPose != null) {
                 poseOpt = Optional.of(odometryPose);
                 diagnostics.lastSource = "odometry";
+                diagnostics.robotPoseAvailable = true;
             } else {
                 diagnostics.lastSource = "none";
                 return 0.0;
             }
         } else {
             diagnostics.lastSource = "vision";
+            diagnostics.robotPoseAvailable = true;
         }
 
         // Get goal pose based on alliance
         Optional<Pose> goalOpt = vision.getTargetGoalPose();
+        diagnostics.goalPoseAvailable = goalOpt.isPresent();
 
         if (!poseOpt.isPresent() || !goalOpt.isPresent()) {
             diagnostics.lastSource = "none";

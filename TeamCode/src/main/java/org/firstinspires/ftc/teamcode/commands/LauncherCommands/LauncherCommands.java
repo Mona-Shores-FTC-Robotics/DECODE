@@ -2,9 +2,12 @@ package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
 import com.bylazar.configurables.annotations.Configurable;
 
+import com.qualcomm.robotcore.hardware.Gamepad;
+
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
@@ -316,18 +319,26 @@ public class LauncherCommands {
 
     /**
      * Continuously calculates distance to goal and updates launcher RPM while held.
-     * Designed for hold-to-spin, release-to-fire button behavior.
+     * Hold X button to spin up at calculated RPM, release to fire all lanes.
      *
+     * Designed for hold-to-spin, release-to-fire button behavior.
      * While held: Continuously calculates distance and updates RPM targets
      * On release: Caller should trigger fire command
      *
+     * Triggers haptic feedback (controller rumble) and light flash when launcher
+     * reaches 95% of target RPM.
+     *
      * @param vision The vision subsystem (for AprilTag distance measurement)
      * @param drive The drive subsystem (for odometry fallback)
-     * @return Command that continuously updates RPM based on distance
+     * @param lighting The lighting subsystem (for ready feedback)
+     * @param gamepad The operator gamepad (for haptic feedback)
+     * @return Command that continuously adjusts RPM based on distance
      */
     public ContinuousDistanceBasedSpinCommand spinUpAtDistance(VisionSubsystemLimelight vision,
-                                                                DriveSubsystem drive) {
-        return new ContinuousDistanceBasedSpinCommand(launcher, vision, drive);
+                                                                DriveSubsystem drive,
+                                                                LightingSubsystem lighting,
+                                                                Gamepad gamepad) {
+        return new ContinuousDistanceBasedSpinCommand(launcher, vision, drive, lighting, gamepad);
     }
 
 }
