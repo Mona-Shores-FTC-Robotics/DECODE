@@ -55,38 +55,36 @@ public class OperatorBindings {
 
     public OperatorBindings(GamepadEx operator) {
 
-        // Consolidated Button Assignments
+        //Robot Intake
         runIntake = operator.rightBumper();
-        fireDistanceBased = operator.x();
-        fireShort = operator.a();  // SHORT range for close shots
-        fireLong = operator.b();
+
+        //Human Player Loading
         humanLoading = operator.y();
+
+        //launch based on range to april tag.
+        fireDistanceBased = operator.x();
+
+        //launch based on preset RPM and hood values for specific field locations
+        fireShort = operator.a();  // SHORT range for close shots (if vision is broken)
+        fireLong = operator.b(); // LONG range for far shots (if vision is broken)
+
+        //launch based on range to april tag - simultaneous or sequential (Obelisk Pattern) depending on launcher mode
         fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
-        motifTailCycle = operator.dpadRight();  // Cycle through 0 → 1 → 2 → 0
         toggleLauncherMode = operator.back();
-
-        //TODO analyze the launcher commands to make a command that sets RPM based on distance to goal
-                // use AprilTag range for RPM calculation (maybe pose geometry as fallback)
-                // make a formula to calculate RPM based on distance using LaunchAllAtPresetRangeCommand constants as guideposts
-                // consider setting hood position based on range too
-
-        //TODO analyze the launcher commands to make a command that sequences shots based on current Obelisk pattern (PPG, PGP, GPP)
-                // this command should leverage color data about artifacts currently in the robot
-
-        //TODO make a command that does both 1) sets RPM (and hood) based on distance and 2) sequences shots based on current Obelisk pattern (PPG, PGP, GPP)
+        motifTailCycle = operator.dpadRight();  // Cycle through 0 → 1 → 2 → 0
 
     }
 
     public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
-        this.rawGamepad = operatorGamepad;
+        this.rawGamepad = operatorGamepad; //Need the raw gamepad for rumble features
 
-        // Range-based shooting commands
+        // Preset range-based launching commands - delete once distance based is reliable
         LaunchAllAtPresetRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
         LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
-        // Distance-based shooting commands
-        ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand = robot.launcherCommands.spinUpAtDistance(
-            robot.vision, robot.drive, robot.lighting, rawGamepad);
+        // Distance-based launching commands
+        ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand =
+                robot.launcherCommands.spinUpAtDistance(robot.vision, robot.drive, robot.lighting, rawGamepad);
         LaunchAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
 
         // Universal smart shot command (distance-based + mode-aware)
