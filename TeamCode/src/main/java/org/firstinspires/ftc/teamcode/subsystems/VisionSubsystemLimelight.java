@@ -511,7 +511,7 @@ public class VisionSubsystemLimelight implements Subsystem {
         private final double targetAreaPercent;
 
         /**
-         * Constructor for MegaTag2 using fused pose from result.getBotpose_MT2()
+         * Constructor for MegaTagp2 using fused pose from result.getBotpose_MT2()
          */
         TagSnapshot(Alliance alliance,
                     int tagId,
@@ -525,7 +525,7 @@ public class VisionSubsystemLimelight implements Subsystem {
             this.decisionMargin = Double.isNaN(ta) ? 0.0 : ta;
 
             // MegaTag2: Use IMU-fused pose instead of individual tag pose
-            Pose3D pose = result.getBotpose_MT2();
+            Pose3D pose = result.getBotpose();
             if (pose != null && pose.getPosition() != null) {
                 double xIn = DistanceUnit.METER.toInches(pose.getPosition().x);
                 double yIn = DistanceUnit.METER.toInches(pose.getPosition().y);
