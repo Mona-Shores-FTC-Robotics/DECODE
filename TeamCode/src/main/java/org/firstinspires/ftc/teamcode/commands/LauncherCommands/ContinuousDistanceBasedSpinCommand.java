@@ -152,10 +152,8 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-        // Clear RPM overrides to return to default values
-        launcher.clearOverrides();
-
-        // Note: Intentionally NOT spinning down here - the fire command will handle that
+        // Preserve the calculated RPMs so LaunchAllCommand can use them immediately
+        // Do NOT clear overrides - the fire command needs these RPMs to determine readiness
         // The launcher stays spun up at the calculated RPM for immediate firing
     }
 
