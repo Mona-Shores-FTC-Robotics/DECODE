@@ -52,7 +52,7 @@ import java.util.Objects;
  * - Fires Purple, wait 500ms, Green, wait 500ms, Purple (no simultaneous optimization for PGP)
  */
 @Configurable
-public class FireInSequenceCommand extends Command {
+public class LaunchInSequenceCommand extends Command {
 
     @Configurable
     public static class SequenceConfig {
@@ -97,8 +97,8 @@ public class FireInSequenceCommand extends Command {
      * @param launcher The launcher subsystem
      * @param intake The intake subsystem (for prefeed roller control and artifact tracking)
      */
-    public FireInSequenceCommand(LauncherSubsystem launcher,
-                                  IntakeSubsystem intake) {
+    public LaunchInSequenceCommand(LauncherSubsystem launcher,
+                                    IntakeSubsystem intake) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = Objects.requireNonNull(intake, "intake required");
         requires(launcher);

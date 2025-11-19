@@ -6,9 +6,11 @@ import dev.nextftc.ftc.GamepadEx;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ContinuousDistanceBasedSpinCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtAutoRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireAllCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.FireModeAwareCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchModeAwareCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchSequentialCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.SpinUpUntilReadyCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
@@ -81,11 +83,11 @@ public class OperatorBindings {
 
         // Distance-based shooting commands
         ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand = robot.launcherCommands.spinUpAtDistance(robot.vision, robot.drive);
-        FireAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
+        LaunchAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
 
         // Mode-aware commands
         SpinUpUntilReadyCommand spinUpCommand = robot.launcherCommands.spinUpUntilReady();
-        FireModeAwareCommand fireModeAwareCommand = robot.launcherCommands.fireModeAware();
+        LaunchModeAwareCommand fireModeAwareCommand = robot.launcherCommands.fireModeAware();
 
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);

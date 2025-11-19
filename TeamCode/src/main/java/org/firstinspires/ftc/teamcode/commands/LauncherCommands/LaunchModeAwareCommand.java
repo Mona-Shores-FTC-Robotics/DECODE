@@ -21,7 +21,7 @@ import java.util.Objects;
  * - Automatically when 30 seconds remain in teleop (switches to DECODE)
  * - Set to DECODE by default in autonomous
  */
-public class FireModeAwareCommand extends Command {
+public class LaunchModeAwareCommand extends Command {
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
@@ -34,8 +34,8 @@ public class FireModeAwareCommand extends Command {
      * @param launcher The launcher subsystem
      * @param intake The intake subsystem (for prefeed roller control and artifact tracking)
      */
-    public FireModeAwareCommand(LauncherSubsystem launcher,
-                                 IntakeSubsystem intake) {
+    public LaunchModeAwareCommand(LauncherSubsystem launcher,
+                                   IntakeSubsystem intake) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = Objects.requireNonNull(intake, "intake required");
         requires(launcher);
@@ -54,7 +54,7 @@ public class FireModeAwareCommand extends Command {
         switch (mode) {
             case DECODE:
                 // DECODE mode: Fire in obelisk pattern sequence with motif tail offset
-                delegateCommand = new FireInSequenceCommand(
+                delegateCommand = new LaunchInSequenceCommand(
                     launcher,
                     intake
                 );

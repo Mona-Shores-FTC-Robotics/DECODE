@@ -158,8 +158,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a short-range shot
      */
-    public FireAllCommand fireAll(boolean spinDownAfterShot) {
-        return new FireAllCommand(launcher, intake, spinDownAfterShot);
+    public LaunchAllCommand fireAll(boolean spinDownAfterShot) {
+        return new LaunchAllCommand(launcher, intake, spinDownAfterShot);
     }
 
     // ========== Obelisk Pattern Commands ==========
@@ -232,8 +232,8 @@ public class LauncherCommands {
      *
      * @return Command that fires in motif-aware sequence
      */
-    public FireInSequenceCommand fireInSequence() {
-        return new FireInSequenceCommand(launcher, intake);
+    public LaunchInSequenceCommand fireInSequence() {
+        return new LaunchInSequenceCommand(launcher, intake);
     }
 
     /**
@@ -247,8 +247,8 @@ public class LauncherCommands {
      *
      * @return Command that fires using current launcher mode strategy
      */
-    public FireModeAwareCommand fireModeAware() {
-        return new FireModeAwareCommand(launcher, intake);
+    public LaunchModeAwareCommand fireModeAware() {
+        return new LaunchModeAwareCommand(launcher, intake);
     }
 
     // ========== Distance-Based Commands ==========
@@ -265,10 +265,10 @@ public class LauncherCommands {
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @return Command that auto-selects range and fires
      */
-    public FireAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
-                                                       DriveSubsystem drive,
-                                                       boolean spinDownAfterShot) {
-        return new FireAllAtAutoRangeCommand(launcher, intake, vision, drive, spinDownAfterShot);
+    public LaunchAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
+                                                         DriveSubsystem drive,
+                                                         boolean spinDownAfterShot) {
+        return new LaunchAllAtAutoRangeCommand(launcher, intake, vision, drive, spinDownAfterShot);
     }
 
     /**
@@ -279,8 +279,8 @@ public class LauncherCommands {
      * @param drive The drive subsystem
      * @return Command that auto-selects range and fires
      */
-    public FireAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
-                                                       DriveSubsystem drive) {
+    public LaunchAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
+                                                         DriveSubsystem drive) {
         return fireAllAutoRange(vision, drive, true);
     }
 

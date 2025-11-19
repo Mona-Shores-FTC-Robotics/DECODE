@@ -22,7 +22,7 @@ import java.util.Objects;
  *
  * Designed to be triggered when the operator releases the "launch all" button.
  */
-public class FireAllCommand extends Command {
+public class LaunchAllCommand extends Command {
 
     private enum Stage {
         WAITING_FOR_READY,
@@ -41,9 +41,9 @@ public class FireAllCommand extends Command {
     private final IntakeSubsystem intake;
 
 
-    public FireAllCommand(LauncherSubsystem launcher,
-                          IntakeSubsystem intake,
-                          boolean spinDownAfterShot) {
+    public LaunchAllCommand(LauncherSubsystem launcher,
+                            IntakeSubsystem intake,
+                            boolean spinDownAfterShot) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = intake; // Nullable - robot may not have prefeed roller
         this.spinDownAfterShot = spinDownAfterShot;
