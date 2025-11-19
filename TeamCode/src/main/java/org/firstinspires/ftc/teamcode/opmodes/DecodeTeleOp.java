@@ -184,10 +184,12 @@ public class DecodeTeleOp extends NextFTCOpMode {
             allianceSelector.applySelection(robot, robot.lighting);
             selectedAlliance = allianceSelector.getSelectedAlliance();
         }
-        if (robot.vision.shouldUpdateOdometry() && robot.drive.forceRelocalizeFromVision()) {
-            robot.drive.visionRelocalizeStatus = "Pose synced from Limelight";
-            robot.drive.visionRelocalizeStatusMs = System.currentTimeMillis();
-        }
+        // DISABLED: Skip initial relocalization to allow Limelight MT2 to stabilize with new heading
+        // User can manually relocalize by pressing A after START if needed
+        // if (robot.vision.shouldUpdateOdometry() && robot.drive.forceRelocalizeFromVision()) {
+        //     robot.drive.visionRelocalizeStatus = "Pose synced from Limelight";
+        //     robot.drive.visionRelocalizeStatusMs = System.currentTimeMillis();
+        // }
     }
 
     private static final class LoopTiming {
