@@ -10,6 +10,7 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -142,6 +143,15 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
 
         // Update diagnostics
         diagnostics.lastCalculatedDistanceIn = distance;
+
+        // Push diagnostics to telemetry packet
+        RobotState.packet.put("X Button Distance-Based/Update Count", diagnostics.updateCount);
+        RobotState.packet.put("X Button Distance-Based/Distance (in)", diagnostics.lastCalculatedDistanceIn);
+        RobotState.packet.put("X Button Distance-Based/Left RPM", diagnostics.lastLeftRpm);
+        RobotState.packet.put("X Button Distance-Based/Center RPM", diagnostics.lastCenterRpm);
+        RobotState.packet.put("X Button Distance-Based/Right RPM", diagnostics.lastRightRpm);
+        RobotState.packet.put("X Button Distance-Based/Hood Position", diagnostics.lastHoodPosition);
+        RobotState.packet.put("X Button Distance-Based/Data Source", diagnostics.lastSource);
     }
 
     @Override
