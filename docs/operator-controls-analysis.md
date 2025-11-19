@@ -419,24 +419,28 @@ robot.launcherCommands.fireUniversalSmart(vision, drive, lighting, gamepad)
 
 | Button | Function | Notes |
 |--------|----------|-------|
-| **X** | Distance-based shot | Hold to spin, release to fire (primary) |
+| **X** | Distance-based shot | Hold to spin, release to fire |
 | **A** | Short-range preset | ~2700 RPM (close shots safety net) |
 | **B** | Long-range preset | ~4200 RPM (safety net) |
 | **Y** | Human loading | Reverse flywheel + prefeed |
-| **D-Pad Down** | Mode-aware fire | THROUGHPUT or DECODE |
+| **D-Pad Down** | Mode-aware fire | THROUGHPUT or DECODE (preset RPM) |
+| **D-Pad Left** | **Universal smart shot** | **Distance + mode-aware (TESTING!)** |
 | **D-Pad Right** | Cycle motif tail | 0→1→2→0 with visual feedback |
 | **Back** | Toggle mode | THROUGHPUT ↔ DECODE |
 | **Right Bumper** | Intake forward | Hold to intake |
 | ~~**Left Bumper**~~ | ~~Pre-spin~~ | **REMOVED** |
-| ~~**D-Pad Left**~~ | ~~Motif tail 0~~ | **REMOVED** |
-| ~~**D-Pad Up**~~ | ~~Motif tail 1~~ | **REMOVED** |
+| ~~**D-Pad Up**~~ | ~~Available~~ | Open for future use |
 
-**Note:** A and B are safety nets - if X button's distance-based firing works reliably at all ranges, these preset buttons can be removed for further simplification.
+**Testing Focus:**
+- **D-Pad Left** = UniversalSmartShot (combines X button + D-Pad Down)
+- If reliable, could replace X and D-Pad Down entirely → ultimate one-button solution
+- A and B are safety nets - can be removed if X or D-Pad Left proves reliable at all ranges
 
-**Buttons Now Available:**
-- Left Bumper (could bind UniversalSmartShot here)
-- D-Pad Left (could bind individual lane controls for troubleshooting)
-- D-Pad Up (could bind emergency stop/clear queue)
+**Button Hierarchy:**
+1. **D-Pad Left** (testing) - Distance-based RPM + mode-aware firing = ULTIMATE
+2. **X** - Distance-based RPM only (current primary)
+3. **D-Pad Down** - Mode-aware with preset RPM (no distance calculation)
+4. **A/B** - Manual range presets (safety nets)
 
 ### 3. Benefits Achieved
 
