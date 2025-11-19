@@ -96,28 +96,11 @@ public class DriveSubsystem implements Subsystem {
         public double fallbackDtSeconds = 0.02;
     }
 
-    @Configurable
-    public static class VisionRelocalizationConfig {
-        /**
-         * Enable automatic vision relocalization during aiming in TeleOp.
-         *
-         * IMPORTANT: Currently using MegaTag1 (MT1) which is less reliable than MT2.
-         * MT1 provides single-tag poses with 4-8" accuracy and can be noisy/jumpy.
-         *
-         * Recommendation: Keep DISABLED until MegaTag2 (MT2) is fixed.
-         * - MT1 relocalization can introduce more error than odometry drift
-         * - Manual relocalization (A button) is still available when needed
-         * - Once MT2 is working (2-3" accuracy, multi-tag fusion), re-enable this
-         */
-        public boolean enableDuringAiming = false;
-    }
-
     public static TeleOpDriveConfig teleOpDriveConfig = new TeleOpDriveConfig();
     public static AimAssistConfig aimAssistConfig = new AimAssistConfig();
     public static VisionCenteredAimConfig visionCenteredAimConfig = new VisionCenteredAimConfig();
     public static FixedAngleAimConfig fixedAngleAimConfig = new FixedAngleAimConfig();
     public static RampConfig rampConfig = new RampConfig();
-    public static VisionRelocalizationConfig visionRelocalizationConfig = new VisionRelocalizationConfig();
 
     public String visionRelocalizeStatus = "Press A to re-localize";
     public long visionRelocalizeStatusMs = 0L;
@@ -167,7 +150,6 @@ public class DriveSubsystem implements Subsystem {
     private double rampTurn = 0.0;
     private long lastRampUpdateNs = 0L;
     private boolean teleOpControlEnabled = false;
-    private boolean visionRelocalizationEnabled = false;
 
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
 //        follower = Constants.createFollower(hardwareMap);
@@ -210,10 +192,6 @@ public class DriveSubsystem implements Subsystem {
 
     public void setTeleOpControlEnabled(boolean enabled) {
         teleOpControlEnabled = enabled;
-    }
-
-    public void setVisionRelocalizationEnabled(boolean enabled) {
-        visionRelocalizationEnabled = enabled;
     }
 
     @Override
@@ -538,11 +516,6 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = turn;
 
         follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
-
-        // Optionally relocalize if enabled
-        if (visionRelocalizationEnabled && vision.hasValidTag()) {
-            maybeRelocalizeFromVision();
-        }
     }
 
     /**
@@ -705,23 +678,6 @@ public class DriveSubsystem implements Subsystem {
         };
     }
 
-    private void maybeRelocalizeFromVision() {
-        if (! visionRelocalizationEnabled) {
-            return;
-        }
-        if (! vision.shouldUpdateOdometry()) {
-            return;
-        }
-
-        double speed = getRobotSpeedInchesPerSecond();
-        if (speed > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
-            return;
-        }
-
-        if (forceRelocalizeFromVision()) {
-            // Successful re-localization already recorded inside the helper.
-        }
-    }
 
     /**
      * Forces the follower pose to match the latest Limelight pose when available.
@@ -787,10 +743,6 @@ public class DriveSubsystem implements Subsystem {
 
         long visionTimestamp = vision.getLastPoseTimestampMs();
         if (visionTimestamp > 0L && visionTimestamp > lastFusionVisionTimestampMs) {
-            if (!visionRelocalizationEnabled) {
-                lastFusionVisionTimestampMs = visionTimestamp;
-                return;
-            }
             Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.getLastSnapshot();
             if (snapshotOpt.isPresent()) {
                 VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();

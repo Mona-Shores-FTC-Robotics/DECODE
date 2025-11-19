@@ -49,27 +49,36 @@ public class Robot {
     }
 
     public void initialize() {
-        initializeForTeleOp();
-    }
-
-    public void initializeForAuto() {
-        configureInitialization(false, false);
-    }
-
-    public void initializeForTeleOp() {
-        // Use configurable flag for vision relocalization (disabled by default with MT1)
-        configureInitialization(true, DriveSubsystem.visionRelocalizationConfig.enableDuringAiming);
-    }
-
-    private void configureInitialization(boolean enableTeleOpControl, boolean enableVisionRelocalization) {
-        drive.setTeleOpControlEnabled(enableTeleOpControl);
-        drive.setVisionRelocalizationEnabled(enableVisionRelocalization);
+        drive.setTeleOpControlEnabled(true);
         vision.initialize();
         drive.initialize();
         launcher.initialize();
         lighting.initialize();
         intake.initialize();
 
+        // Wire lighting to receive lane color updates from intake
+        intake.addLaneColorListener(lighting);
+    }
+
+    public void initializeForAuto() {
+        drive.setTeleOpControlEnabled(false);
+        vision.initialize();
+        drive.initialize();
+        launcher.initialize();
+        lighting.initialize();
+        intake.initialize();
+
+        // Wire lighting to receive lane color updates from intake
+        intake.addLaneColorListener(lighting);
+    }
+
+    public void initializeForTeleOp() {
+        drive.setTeleOpControlEnabled(true);
+        vision.initialize();
+        drive.initialize();
+        launcher.initialize();
+        lighting.initialize();
+        intake.initialize();
 
         // Wire lighting to receive lane color updates from intake
         intake.addLaneColorListener(lighting);
