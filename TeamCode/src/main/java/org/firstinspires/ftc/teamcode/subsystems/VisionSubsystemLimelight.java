@@ -64,6 +64,9 @@ public class VisionSubsystemLimelight implements Subsystem {
     private double currentHeadingRad = 0.0;
     private boolean hasValidHeading = false;
 
+    // Diagnostic mode: When true, external code controls heading updates (for testing different offsets)
+    private boolean diagnosticMode = false;
+
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
         this(hardwareMap, null);
     }
@@ -87,17 +90,15 @@ public class VisionSubsystemLimelight implements Subsystem {
 
         // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
         // This must be called every loop before requesting pose estimates
-        if (hasValidHeading) {
-            // TEST: Try Pedro heading directly (no conversion)
-            // Camera orientation=180° might mean Limelight expects heading in its own frame
-            double yawDegForLimelight = Math.toDegrees(currentHeadingRad);
+        // Skip in diagnostic mode to allow external control for testing different offsets
+        if (hasValidHeading && !diagnosticMode) {
+            // Convert Pedro heading to FTC heading (Pedro + 90°)
+            // Limelight with orientation=180° expects FTC coordinate frame heading
+            // Verified via diagnostic testing: offset=90° gives 2-3" accuracy
+            double pedroHeadingDeg = Math.toDegrees(currentHeadingRad);
+            double ftcHeadingDeg = AngleUnit.normalizeDegrees(pedroHeadingDeg + 90.0);
 
-            // Log all variations for debugging
-            RobotState.packet.put("Test/pedroHeadingDeg", Math.toDegrees(currentHeadingRad));
-            RobotState.packet.put("Test/ftcHeadingDeg", Math.toDegrees(currentHeadingRad + Math.PI / 2.0));
-            RobotState.packet.put("Test/sentToLimelight", yawDegForLimelight);
-
-            limelight.updateRobotOrientation(yawDegForLimelight);
+            limelight.updateRobotOrientation(ftcHeadingDeg);
         }
 
         // Throttle Limelight polling to 20Hz (50ms) to reduce loop time
@@ -122,6 +123,18 @@ public class VisionSubsystemLimelight implements Subsystem {
         limelight.stop();
         state = VisionState.OFF;
         clearSnapshot();
+    }
+
+    /**
+     * Enable diagnostic mode to allow external code to control heading updates.
+     * Used by diagnostic OpModes to test different heading offsets without interference.
+     */
+    public void setDiagnosticMode(boolean enabled) {
+        diagnosticMode = enabled;
+    }
+
+    public boolean isDiagnosticMode() {
+        return diagnosticMode;
     }
 
     public VisionState getState() {
@@ -513,7 +526,6 @@ public class VisionSubsystemLimelight implements Subsystem {
 
             // MegaTag2: Use IMU-fused pose instead of individual tag pose
             Pose3D pose = result.getBotpose_MT2();
-            RobotState.packet.put("Test/MT2Pose", pose);
             if (pose != null && pose.getPosition() != null) {
                 double xIn = DistanceUnit.METER.toInches(pose.getPosition().x);
                 double yIn = DistanceUnit.METER.toInches(pose.getPosition().y);
@@ -524,10 +536,8 @@ public class VisionSubsystemLimelight implements Subsystem {
                 } else {
                     // MT2 pose is already in FTC coordinates since we send correct heading via updateRobotOrientation()
                     this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg));
-                    RobotState.packet.put("Test/visionFTCPose", this.ftcPose);
                     Pose pedro = convertFtcToPedroPose(xIn, yIn, headingDeg);
                     this.pedroPose = pedro;
-                    RobotState.packet.put("Test/visionPedroPose", this.pedroPose);
                 }
                 this.ftcX = xIn;
                 this.ftcY = yIn;
