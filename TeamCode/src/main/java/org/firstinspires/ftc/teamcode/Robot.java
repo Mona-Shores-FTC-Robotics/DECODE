@@ -62,8 +62,8 @@ public class Robot {
     private void configureInitialization(boolean enableTeleOpControl, boolean enableVisionRelocalization) {
         drive.setTeleOpControlEnabled(enableTeleOpControl);
         drive.setVisionRelocalizationEnabled(enableVisionRelocalization);
-        drive.initialize();
         vision.initialize();
+        drive.initialize();
         launcher.initialize();
         lighting.initialize();
         intake.initialize();

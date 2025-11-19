@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import static org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight.convertFtcToPedroPose;
+import static org.firstinspires.ftc.teamcode.util.RobotState.packet;
 
 import androidx.annotation.NonNull;
 
@@ -214,8 +215,15 @@ public class DriveSubsystem implements Subsystem {
                 double yIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().y);
                 double headingDeg = mt1Pose.getOrientation().getYaw();
 
+                packet.put("Diagnostic/mt1FTCSeedPose Pose x", xIn);
+                packet.put("Diagnostic/mt1FTCSeedPose Pose y", yIn);
+                packet.put("Diagnostic/mt1FTCSeedPose Pose heading", headingDeg);
+
                 // Convert FTC pose to Pedro coordinate system
                 seed = convertFtcToPedroPose(xIn, yIn, headingDeg);
+                packet.put("Diagnostic/mt1PedroSeedPose x", xIn);
+                packet.put("Diagnostic/mt1PedroSeedPose Pose y", yIn);
+                packet.put("Diagnostic/mt1PedroSeedPose Pose heading", headingDeg);
             } else {
                 // Fallback if no tag visible at start (center of field, facing forward)
                 seed = new Pose(72, 72, Math.toRadians(90));
