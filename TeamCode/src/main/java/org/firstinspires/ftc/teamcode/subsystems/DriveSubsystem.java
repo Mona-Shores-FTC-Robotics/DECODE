@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight.convertFtcToPedroPose;
-import static org.firstinspires.ftc.teamcode.util.RobotState.packet;
-
 import androidx.annotation.NonNull;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -10,12 +7,10 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.math.Vector;
 import com.pedropathing.paths.PathChain;
-import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
-import com.qualcomm.robotcore.util.RobotLog;
 
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.subsystems.Subsystem;
@@ -24,12 +19,11 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.util.Alliance;
-import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
+import org.firstinspires.ftc.teamcode.util.PoseFrames;
 import org.firstinspires.ftc.teamcode.util.PoseFusion;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
@@ -207,45 +201,28 @@ public class DriveSubsystem implements Subsystem {
             follower.breakFollowing();
         }
 
-        Pose seed = RobotState.takeHandoffPose();
-        if (seed == null) {
-            // Handle case where limelight might be unavailable
-            LLResult result = (vision.limelight != null) ? vision.limelight.getLatestResult() : null;
-            Pose3D mt1Pose = result != null ? result.getBotpose() : null; // MegaTag1 FTCSpace pose
+        Pose pedroFollowerSeed = RobotState.takeHandoffPose();
 
-            if (mt1Pose != null && mt1Pose.getPosition() != null && mt1Pose.getOrientation() != null) {
-                double xIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().x);
-                double yIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().y);
-                double headingDeg = mt1Pose.getOrientation().getYaw();
+        if (pedroFollowerSeed == null) {
+            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
 
-                packet.put("Diagnostic/mt1FTCSeedPose Pose x", xIn);
-                packet.put("Diagnostic/mt1FTCSeedPose Pose y", yIn);
-                packet.put("Diagnostic/mt1FTCSeedPose Pose heading", headingDeg);
-
-                // Convert FTC pose to Pedro coordinate system
-                seed = convertFtcToPedroPose(xIn, yIn, headingDeg);
-                packet.put("Diagnostic/mt1PedroSeedPose x", xIn);
-                packet.put("Diagnostic/mt1PedroSeedPose Pose y", yIn);
-                packet.put("Diagnostic/mt1PedroSeedPose Pose heading", headingDeg);
-            } else {
-                // Fallback if no tag visible at start (center of field, facing forward)
-                seed = new Pose(72, 72, Math.toRadians(90));
-            }
-
+            pedroFollowerSeed = poseFromVision.orElseGet(() -> new Pose(0, 0, Math.toRadians(90.0)));
         }
-        packet.put("Diagnostic/Pedro Seed Pose x", seed.getX());
-        packet.put("Diagnostic/Pedro Seed Pose y", seed.getY());
-        packet.put("Diagnostic/Pedro Seed Pose heading", seed.getHeading());
 
-        follower.setStartingPose(seed);
-        follower.setPose(seed);
+        RobotState.putPose("Pedro Follower Seed Pose", pedroFollowerSeed);
+
+
+
+        // Follower initialization
+        follower.setStartingPose(pedroFollowerSeed);
+        follower.setPose(pedroFollowerSeed);
         follower.update();
-        // Always break following during init to prevent driving before match starts
-        // Call startTeleopDrive() explicitly when ready to enable motors
         follower.breakFollowing();
+
         fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
         visionHeadingCalibrated = false;
-        poseFusion.reset(seed , System.currentTimeMillis());
+
+        poseFusion.reset(pedroFollowerSeed, System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
     }
 
@@ -337,8 +314,7 @@ public class DriveSubsystem implements Subsystem {
         if (robotCentric != robotCentricConfig) {
             setRobotCentric(robotCentricConfig);
         }
-        double[] rotated = rotateFieldInput(fieldX , fieldY);
-        driveScaled(rotated[0] , rotated[1] , rotationInput , slowMode , rampMode);
+        driveScaled(fieldX , fieldY , rotationInput , slowMode , rampMode);
     }
 
     /**
@@ -713,71 +689,62 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public boolean forceRelocalizeFromVision() {
-        vision.findAllianceSnapshot(vision.getAlliance());
-        Optional<Pose> tagPoseOpt = vision.getRobotPoseFromTag();
-        if (!tagPoseOpt.isPresent()) {
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
+        if (!snapOpt.isPresent()) return false;
+
+        VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
+
+        long ageMs = System.currentTimeMillis() - vision.getLastPoseTimestampMs();
+        if (ageMs > 250) {
+            // Stale data, do not relocalize
             return false;
         }
+        Pose pedroPose = snap.pedroPoseMT1; //only use MT1 for relocalization
+        if (pedroPose == null) return false;
 
-        Pose tagPose = tagPoseOpt.get();
-        double currentHeading = follower.getHeading();
-        double visionHeading = tagPose.getHeading();
-        Pose adjustedPose = new Pose(tagPose.getX(), tagPose.getY(), visionHeading);
-        follower.setPose(adjustedPose);
+        follower.setPose(pedroPose);
+        poseFusion.reset(pedroPose, System.currentTimeMillis());
         vision.markOdometryUpdated();
-        vision.overrideRobotPose(adjustedPose);
-        poseFusion.reset(adjustedPose, System.currentTimeMillis());
-        lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
-        // Keep the driver-facing heading in sync with vision so offsets keep controls stable.
-        if (!visionHeadingCalibrated) {
-            fieldHeadingOffsetRad = 0.0;
-            visionHeadingCalibrated = true;
-        }
-        lastGoodVisionAngle = visionHeading;
-        lastVisionTimestamp = clock.milliseconds();
-        RobotLog.dd(LOG_TAG, "Forced re-localization from AprilTag: vision heading %.1f°, odometry heading %.1f°, offset %.1f° -> adjusted heading %.1f°",
-                Math.toDegrees(visionHeading),
-                Math.toDegrees(currentHeading),
-                Math.toDegrees(fieldHeadingOffsetRad),
-                Math.toDegrees(adjustedPose.getHeading()));
+        RobotState.putPose("Relocalized Pose", PoseFrames.pedroToFtc(pedroPose));
+
         return true;
     }
 
-
-
     private void updatePoseFusion() {
         long timestampMs = System.currentTimeMillis();
+
+        // 1. Always update with odometry
         poseFusion.updateWithOdometry(follower.getPose(), timestampMs);
 
-        long visionTimestamp = vision.getLastPoseTimestampMs();
-        if (visionTimestamp > 0L && visionTimestamp > lastFusionVisionTimestampMs) {
-            Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.getLastSnapshot();
-            if (snapshotOpt.isPresent()) {
-                VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-                Optional<Pose> visionPoseOpt = snapshot.getRobotPose();
-                if (visionPoseOpt.isPresent()) {
-                    poseFusion.addVisionMeasurement(
-                            visionPoseOpt.get(),
-                            visionTimestamp,
-                            snapshot.getFtcRange(),
-                            snapshot.getDecisionMargin()
-                    );
-                }
-            } else {
-                Optional<Pose> visionPoseOpt = vision.getRobotPoseFromTag();
-                if (visionPoseOpt.isPresent()) {
-                    poseFusion.addVisionMeasurement(
-                            visionPoseOpt.get(),
-                            visionTimestamp,
-                            Double.NaN,
-                            Double.NaN
-                    );
-                }
-            }
-            lastFusionVisionTimestampMs = visionTimestamp;
-        } else if (visionTimestamp == 0L) {
-            lastFusionVisionTimestampMs = 0L;
+        // 2. Get the latest LL tag snapshot
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.getLastSnapshot();
+        if (!snapshotOpt.isPresent()) {
+            return;
         }
+
+        VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
+        Pose visionPose = snapshot.getRobotPosePedroMT1().orElse(null);
+        //  Pose visionPose = snapshot.getRobotPosePedroMT2().orElse(null);  // try this once we think mt2 is working
+
+        if (visionPose == null) {
+            return;
+        }
+
+        // 3. Only use fresh measurements
+        long visionTimestamp = vision.getLastPoseTimestampMs();
+        if (visionTimestamp <= lastFusionVisionTimestampMs) {
+            return;
+        }
+
+        // 4. Use vision measurement
+        poseFusion.addVisionMeasurement(
+                visionPose,
+                visionTimestamp,
+                snapshot.getFtcRange(),
+                snapshot.getDecisionMargin()
+        );
+
+        lastFusionVisionTimestampMs = visionTimestamp;
     }
 
     public PoseFusion.State getPoseFusionStateSnapshot() {

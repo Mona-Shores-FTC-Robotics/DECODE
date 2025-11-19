@@ -6,7 +6,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
-import org.firstinspires.ftc.teamcode.util.PoseTransforms;
+import org.firstinspires.ftc.teamcode.util.PoseFrames;
 
 /**
  * Robot pose data for telemetry.
@@ -48,7 +48,7 @@ public class PoseTelemetryData {
         }
 
         // FTC pose
-        Pose ftcPose = PoseTransforms.toFtcPose(pedroPose);
+        Pose ftcPose = PoseFrames.pedroToFtc(pedroPose);
         if (ftcPose != null) {
             this.ftcXIn = ftcPose.getX();
             this.ftcYIn = ftcPose.getY();
@@ -64,6 +64,7 @@ public class PoseTelemetryData {
             this.visionPoseValid = true;
             this.visionPoseXIn = visionPose.getX();      // FTC Pose uses inches directly
             this.visionPoseYIn = visionPose.getY();      // FTC Pose uses inches directly
+            //TODO is this right? arent the vision poses in degrees from limelight?
             this.visionHeadingRad = visionPose.getHeading();  // FTC Pose uses radians directly
         } else {
             this.visionPoseValid = false;
@@ -78,4 +79,5 @@ public class PoseTelemetryData {
         Pose pedroPose = drive.getFollowerPose();
         return new PoseTelemetryData(pose, pedroPose, visionPose);
     }
+
 }

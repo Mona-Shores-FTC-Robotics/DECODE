@@ -1,9 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.pedroPathing.Tuning.follower;
-
 import com.pedropathing.geometry.Pose;
-import org.firstinspires.ftc.teamcode.util.AutoField;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -11,10 +8,10 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
+import org.firstinspires.ftc.teamcode.util.PoseFrames;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.core.subsystems.Subsystem;
@@ -44,7 +41,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     private Alliance activeAlliance = Alliance.UNKNOWN;
 
     private TagSnapshot lastSnapshot;
-    private Pose lastRobotPose;
+    private Pose lastRobotPosePedro;
     private Pose lastRobotPoseFtc;
     private boolean odometryUpdatePending;
     private long lastSnapshotTimestampMs = 0L;
@@ -200,9 +197,9 @@ public class VisionSubsystemLimelight implements Subsystem {
         return lastSnapshot == null ? -1 : lastSnapshot.getTagId();
     }
 
-    public Optional<Pose> getRobotPoseFromTag() {
+    public Optional<Pose> getRobotPoseFromTagPedro() {
         refreshSnapshotIfStale();
-        return Optional.ofNullable(lastRobotPose);
+        return Optional.ofNullable(lastRobotPosePedro);
     }
 
     public Optional<Pose> getRobotPoseFromTagFtc() {
@@ -235,7 +232,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     }
 
     public Optional<Double> getAimAngle() {
-        Optional<Pose> poseOpt = getRobotPoseFromTag();
+        Optional<Pose> poseOpt = getRobotPoseFromTagPedro();
         Optional<Pose> target = getTargetGoalPose();
         if (!poseOpt.isPresent() || !target.isPresent()) {
             return Optional.empty();
@@ -412,10 +409,10 @@ public class VisionSubsystemLimelight implements Subsystem {
         boolean stale = lastSnapshotTimestampMs == 0L || (now - lastSnapshotTimestampMs) > ODOMETRY_RESET_TIMEOUT_MS;
         lastSnapshot = snapshot;
         lastSnapshotTimestampMs = now;
-        Optional<Pose> poseOpt = snapshot.getRobotPose();
+        Optional<Pose> poseOpt = snapshot.getRobotPosePedroMT1();
         Optional<Pose> ftcPoseOpt = snapshot.getFtcPose();
         if (poseOpt.isPresent()) {
-            lastRobotPose = poseOpt.get();
+            lastRobotPosePedro = poseOpt.get();
             lastRobotPoseFtc = ftcPoseOpt.orElse(null);
             boolean newTag = snapshot.getTagId() != lastSeenTagId;
             if (newTag || stale) {
@@ -445,7 +442,7 @@ public class VisionSubsystemLimelight implements Subsystem {
         if (isStale) {
             odometryUpdatePending = false;
             lastSnapshot = null;
-            lastRobotPose = null;
+            lastRobotPosePedro = null;
             lastRobotPoseFtc = null;
             lastSeenTagId = -1;
         }
@@ -466,7 +463,7 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     private void clearSnapshot() {
         lastSnapshot = null;
-        lastRobotPose = null;
+        lastRobotPosePedro = null;
         lastRobotPoseFtc = null;
         odometryUpdatePending = false;
         lastSnapshotTimestampMs = 0L;
@@ -477,7 +474,7 @@ public class VisionSubsystemLimelight implements Subsystem {
         if (pose == null) {
             return;
         }
-        lastRobotPose = pose;
+        lastRobotPosePedro = pose;
         lastRobotPoseFtc = convertPedroToFtcPose(pose);
         lastSnapshotTimestampMs = System.currentTimeMillis();
     }
@@ -504,15 +501,15 @@ public class VisionSubsystemLimelight implements Subsystem {
     }
 
     public double getLastPoseXInches() {
-        return lastRobotPose != null ? lastRobotPose.getX() : Double.NaN;
+        return lastRobotPosePedro != null ? lastRobotPosePedro.getX() : Double.NaN;
     }
 
     public double getLastPoseYInches() {
-        return lastRobotPose != null ? lastRobotPose.getY() : Double.NaN;
+        return lastRobotPosePedro != null ? lastRobotPosePedro.getY() : Double.NaN;
     }
 
     public double getLastPoseHeadingDeg() {
-        return lastRobotPose != null ? Math.toDegrees(lastRobotPose.getHeading()) : Double.NaN;
+        return lastRobotPosePedro != null ? Math.toDegrees(lastRobotPosePedro.getHeading()) : Double.NaN;
     }
 
     public double getPoseXInches() {
@@ -542,78 +539,155 @@ public class VisionSubsystemLimelight implements Subsystem {
     public String getAllianceName() {
         return activeAlliance.name();
     }
+    public static class TagSnapshot {
 
-    public static final class TagSnapshot {
-        private final Alliance alliance;
-        private final int tagId;
-        private final double decisionMargin;
-        private final double ftcRange;
-        private final double ftcBearing;
-        private final double ftcYaw;
-        private final double ftcX;
-        private final double ftcY;
-        private final Pose pedroPose;
-        private final Pose ftcPose;
-        private final double txDegrees;
-        private final double tyDegrees;
-        private final double targetAreaPercent;
+        public final Alliance alliance;
+        public final int tagId;
+
+        // Raw Limelight offsets
+        public final double txDegrees;
+        public final double tyDegrees;
+        public final double targetAreaPercent;
+
+        // Decision metric (for MT2 we just reuse area)
+        public final double decisionMargin;
+
+        // MT1 robot pose (vision only)
+        public final Pose3D mt1Pose;
+
+        // MT2 robot pose (vision + IMU fused)
+        public final Pose3D mt2Pose;
+
+        // FTC-space poses
+        public final Pose ftcPoseMT1;
+        public final Pose ftcPoseMT2;
+
+        // Pedro-space poses
+        public final Pose pedroPoseMT1;
+        public final Pose pedroPoseMT2;
+
+        // Derived FTC polar data for MT1
+        public final double ftcYawMT1;
+        public final double ftcRangeMT1;
+        public final double ftcBearingMT1;
+
+        // Derived FTC polar data for MT2
+        public final double ftcYawMT2;
+        public final double ftcRangeMT2;
+        public final double ftcBearingMT2;
+
+        // Selected "best" pose (MT1 preferred, then MT2)
+        public final Pose pedroPose;  // primary Pedro pose
+        public final Pose ftcPose;    // primary FTC pose
+        public final double ftcYaw;   // primary FTC yaw (deg)
+        public final double ftcRange;
+        public final double ftcBearing;
 
         /**
-         * Constructor for MegaTagp2 using fused pose from result.getBotpose_MT2()
+         * Create a snapshot of tag data with both MT1 and MT2 pose availability.
          */
-        TagSnapshot(Alliance alliance,
-                    int tagId,
-                    LLResult result,
-                    double tx,
-                    double ty,
-                    double ta) {
+        public TagSnapshot(
+                Alliance alliance,
+                int tagId,
+                LLResult result,
+                double tx,
+                double ty,
+                double ta
+        ) {
             this.alliance = alliance == null ? Alliance.UNKNOWN : alliance;
             this.tagId = tagId;
-            // For MT2, use target area as decision margin (ambiguity not applicable to fused pose)
+
+            this.txDegrees = Double.isNaN(tx) ? Double.NaN : tx;
+            this.tyDegrees = Double.isNaN(ty) ? Double.NaN : ty;
+            this.targetAreaPercent = Double.isNaN(ta) ? Double.NaN : ta;
+
+            // For MT2 there is no ambiguity field in the FTC wrapper, so area is the best simple score
             this.decisionMargin = Double.isNaN(ta) ? 0.0 : ta;
 
-            // MegaTag2: Use IMU-fused pose instead of individual tag pose
-            Pose3D pose = result.getBotpose();
-            if (pose != null && pose.getPosition() != null) {
-                double xIn = DistanceUnit.METER.toInches(pose.getPosition().x);
-                double yIn = DistanceUnit.METER.toInches(pose.getPosition().y);
-                double headingDeg = pose.getOrientation() == null ? Double.NaN : pose.getOrientation().getYaw();
-                if (Double.isNaN(xIn) || Double.isNaN(yIn) || Double.isNaN(headingDeg)) {
-                    this.pedroPose = null;
-                    this.ftcPose = null;
-                } else {
-                    // MT2 pose is already in FTC coordinates since we send correct heading via updateRobotOrientation()
-                    this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg)+Math.PI);
-                    Pose pedro = convertFtcToPedroPose(xIn, yIn, AngleUnit.DEGREES.normalize(headingDeg+180));
-                    this.pedroPose = pedro;
-                }
-                this.ftcX = xIn;
-                this.ftcY = yIn;
-                //TODO figure out if this is correct?
-                this.ftcYaw = AngleUnit.DEGREES.normalize(headingDeg+180);
-                this.ftcRange = Math.hypot(xIn, yIn);
-                this.ftcBearing = Math.toDegrees(Math.atan2(yIn, xIn));
+            // -------------------------
+            // MT1 pose (botpose)
+            // -------------------------
+            this.mt1Pose = result.getBotpose();
+            if (mt1Pose != null && mt1Pose.getPosition() != null) {
+                this.ftcPoseMT1 = PoseFrames.mt1ToFtc(mt1Pose);
+                RobotState.putPose("MT1 Pose", this.ftcPoseMT1);
+                this.pedroPoseMT1 = PoseFrames.mt1ToPedro(mt1Pose);
+
+                this.ftcYawMT1 = Math.toDegrees(ftcPoseMT1.getHeading());
+                this.ftcRangeMT1 = Math.hypot(ftcPoseMT1.getX(), ftcPoseMT1.getY());
+                this.ftcBearingMT1 = Math.toDegrees(Math.atan2(ftcPoseMT1.getY(), ftcPoseMT1.getX()));
             } else {
-                this.pedroPose = null;
-                this.ftcPose = null;
-                this.ftcX = Double.NaN;
-                this.ftcY = Double.NaN;
+                this.ftcPoseMT1 = null;
+                this.pedroPoseMT1 = null;
+                this.ftcYawMT1 = Double.NaN;
+                this.ftcRangeMT1 = Double.NaN;
+                this.ftcBearingMT1 = Double.NaN;
+            }
+
+            // -------------------------
+            // MT2 pose (botpose_orb)
+            // -------------------------
+            this.mt2Pose = result.getBotpose_MT2();
+            if (mt2Pose != null && mt2Pose.getPosition() != null) {
+                this.ftcPoseMT2 = PoseFrames.mt2ToFtc(mt2Pose);
+                RobotState.putPose("MT2 Pose", this.ftcPoseMT2);
+                this.pedroPoseMT2 = PoseFrames.mt2ToPedro(mt2Pose);
+
+                this.ftcYawMT2 = Math.toDegrees(ftcPoseMT2.getHeading());
+                this.ftcRangeMT2 = Math.hypot(ftcPoseMT2.getX(), ftcPoseMT2.getY());
+                this.ftcBearingMT2 = Math.toDegrees(Math.atan2(ftcPoseMT2.getY(), ftcPoseMT2.getX()));
+            } else {
+                this.ftcPoseMT2 = null;
+                this.pedroPoseMT2 = null;
+                this.ftcYawMT2 = Double.NaN;
+                this.ftcRangeMT2 = Double.NaN;
+                this.ftcBearingMT2 = Double.NaN;
+            }
+
+            // -------------------------
+            // Choose primary pose (prefer MT1, fall back to MT1)
+            // -------------------------
+            Pose selectedPedro;
+            Pose selectedFtc;
+
+            if (pedroPoseMT1 != null) {
+                selectedPedro = pedroPoseMT1;
+                selectedFtc = ftcPoseMT1;
+            }else {
+                selectedPedro = pedroPoseMT2;
+                selectedFtc = ftcPoseMT2;
+            }
+
+            this.pedroPose = selectedPedro;
+            this.ftcPose = selectedFtc;
+
+            if (selectedFtc != null) {
+                if (ftcPoseMT1 != null) {
+                    this.ftcYaw = ftcYawMT1;
+                    this.ftcRange = ftcRangeMT1;
+                    this.ftcBearing = ftcBearingMT1;
+                } else {
+                    this.ftcYaw = ftcYawMT2;
+                    this.ftcRange = ftcRangeMT2;
+                    this.ftcBearing = ftcBearingMT2;
+                }
+            } else {
                 this.ftcYaw = Double.NaN;
                 this.ftcRange = Double.NaN;
                 this.ftcBearing = Double.NaN;
             }
-            this.txDegrees = Double.isNaN(tx) ? Double.NaN : tx;
-            this.tyDegrees = Double.isNaN(ty) ? Double.NaN : ty;
-            this.targetAreaPercent = Double.isNaN(ta) ? Double.NaN : ta;
         }
 
-        private static double sanitizeDecisionMetric(LLResultTypes.FiducialResult fiducial) {
-            double area = getTargetAreaSafe(fiducial);
-            if (!Double.isNaN(area) && area > 0.0) {
-                return area;
-            }
-            double ambiguity = getPoseAmbiguitySafe(fiducial);
-            return Double.isNaN(ambiguity) ? 0.0 : (1.0 - ambiguity);
+        // -------------------------
+        // Helpers and accessors
+        // -------------------------
+
+        public boolean hasMT2() {
+            return mt2Pose != null && mt2Pose.getPosition() != null;
+        }
+
+        public boolean hasMT1() {
+            return mt1Pose != null && mt1Pose.getPosition() != null;
         }
 
         public Alliance getAlliance() {
@@ -628,9 +702,14 @@ public class VisionSubsystemLimelight implements Subsystem {
             return decisionMargin;
         }
 
-        public Optional<Pose> getRobotPose() {
-            return Optional.ofNullable(pedroPose);
+        public Optional<Pose> getRobotPosePedroMT1() {
+            return Optional.ofNullable(pedroPoseMT1);
         }
+
+        public Optional<Pose> getRobotPosePeroMT2() {
+            return Optional.ofNullable(pedroPoseMT2) ;
+        }
+
 
         public double getRobotX() {
             return pedroPose == null ? Double.NaN : pedroPose.getX();
@@ -660,14 +739,6 @@ public class VisionSubsystemLimelight implements Subsystem {
             return ftcYaw;
         }
 
-        public double getFtcX() {
-            return ftcX;
-        }
-
-        public double getFtcY() {
-            return ftcY;
-        }
-
         public double getTxDegrees() {
             return txDegrees;
         }
@@ -681,20 +752,24 @@ public class VisionSubsystemLimelight implements Subsystem {
         }
     }
 
+    // ========================================================================
+    // Coordinate conversion helpers
+    // ========================================================================
+
     public static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
-        double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
+        double halfField = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
         double pedroX = ftcY + halfField;
         double pedroY = halfField - ftcX;
-        // Fixed 180° heading error: changed from -90° to +90° (inverse of forward conversion)
+        // Fixed 180 degree heading error: inverse of forward conversion
         double pedroHeading = AngleUnit.normalizeRadians(Math.toRadians(headingDeg) + Math.PI / 2.0);
         return new Pose(pedroX, pedroY, pedroHeading);
     }
 
     private static Pose convertPedroToFtcPose(Pose pedroPose) {
-        double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
+        double halfField = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
         double ftcX = halfField - pedroPose.getY();
         double ftcY = pedroPose.getX() - halfField;
-        // Fixed 180° heading error: changed from +90° to -90° (matches periodic() conversion)
+        // Matches periodic() conversion that sends FTC heading to Limelight
         double ftcHeading = AngleUnit.normalizeRadians(pedroPose.getHeading() - Math.PI / 2.0);
         return new Pose(ftcX, ftcY, ftcHeading);
     }
@@ -714,7 +789,5 @@ public class VisionSubsystemLimelight implements Subsystem {
             return Double.NaN;
         }
     }
-
-
 
 }

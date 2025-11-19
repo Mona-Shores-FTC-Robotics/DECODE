@@ -1,7 +1,13 @@
 package org.firstinspires.ftc.teamcode.util;
 
+import static org.firstinspires.ftc.teamcode.util.GoalGeometry.chebyshevCenter;
+import static org.firstinspires.ftc.teamcode.util.GoalGeometry.incenter;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Field reference points shared across subsystems.
@@ -18,48 +24,8 @@ public final class FieldConstants {
         // Utility only.
     }
 
-    public static final int BLUE_GOAL_TAG_ID = 20;
-    public static final int RED_GOAL_TAG_ID = 24;
-
-    /**
-     * AprilTag locations mounted on the face of the baskets.
-     */
-    public static final Pose BLUE_GOAL_TAG_APRILTAG = new Pose(7.0, 140.0, 0.0);
-    public static final Pose RED_GOAL_TAG_APRILTAG = new Pose(137.0, 140.0, 0.0);
-
-    /**
-     * Triangle corner locations of the goal openings (in inches) from field CAD.
-     */
-    public static final Pose BLUE_GOAL_LOWER  = new Pose(0.0,   115.0, 0.0);
-    public static final Pose BLUE_GOAL_CORNER = new Pose(0.0,   144.0, 0.0);
-    public static final Pose BLUE_GOAL_FAR    = new Pose(25.0,  144.0, 0.0);
-
-    public static final Pose RED_GOAL_LOWER   = new Pose(144.0, 115.0, 0.0);
-    public static final Pose RED_GOAL_CORNER  = new Pose(144.0, 144.0, 0.0);
-    public static final Pose RED_GOAL_FAR     = new Pose(119.0, 144.0, 0.0);
-
-    /**
-     * Incenter of the triangular openings.
-     * The incenter is the center of the circle that touches all three sides of the triangle.
-     *
-     * This produces a better aiming point than the centroid because it sits deeper inside
-     * the opening and is more centered with respect to all three faces.
-     *
-     * For Blue: incenter ≈ (7.86, 136.17)
-     * For Red: incenter ≈ (136.14, 136.17)
-     */
-    public static final Pose BLUE_GOAL_CENTER = incenter(BLUE_GOAL_LOWER, BLUE_GOAL_CORNER, BLUE_GOAL_FAR);
-    public static final Pose RED_GOAL_CENTER = incenter(RED_GOAL_LOWER, RED_GOAL_CORNER, RED_GOAL_FAR);
-
-    /**
-     * Configurable offset for basket aiming (tunable via FTC Dashboard).
-     * Allows fine-tuning the aim point based on projectile arc without changing code.
-     *
-     * Blue basket is in upper-LEFT corner, Red basket is in upper-RIGHT corner.
-     * Adjust these to compensate for projectile arc landing short or long.
-     */
     @Configurable
-    public static class BasketTargets {
+    public static class BasketTargetOffsets {
         /** Blue basket X offset from incenter (inches). Negative = left toward corner */
         public static double blueDeltaX = 0.0;
         /** Blue basket Y offset from incenter (inches). Positive = up toward corner */
@@ -70,30 +36,118 @@ public final class FieldConstants {
         public static double redDeltaY = 0.0;
     }
 
+
+    public static final double FIELD_WIDTH_INCHES = 144.0;
+
+    /**
+     * Goal AprilTags
+     */
+    public static final int BLUE_GOAL_TAG_ID = 20;
+    public static final Pose BLUE_GOAL_TAG_APRILTAG = new Pose(7.0, 140.0, 0.0);
+
+    public static final int RED_GOAL_TAG_ID = 24;
+    public static final Pose RED_GOAL_TAG_APRILTAG = new Pose(137.0, 140.0, 0.0);
+
+    /**
+     * Motif AprilTags
+     */
     public static final int DECODE_PATTERN_GREEN_PURPLE_PURPLE_ID = 21;
     public static final int DECODE_PATTERN_PURPLE_GREEN_PURPLE_ID = 22;
     public static final int DECODE_PATTERN_PURPLE_PURPLE_GREEN_ID = 23;
 
     /**
+     * Triangle corner locations of the goal openings (in inches) PEDRO Coordinate Frame.
+     */
+    public static final Pose BLUE_GOAL_LOWER_PEDRO = new Pose(0.0,   115.0, 0.0);
+    public static final Pose BLUE_GOAL_CORNER_PEDRO = new Pose(0.0,   144.0, 0.0);
+    public static final Pose BLUE_GOAL_FAR_PEDRO = new Pose(25.0,  144.0, 0.0);
+
+    public static final Pose RED_GOAL_LOWER_PEDRO = new Pose(144.0, 115.0, 0.0);
+    public static final Pose RED_GOAL_CORNER_PEDRO = new Pose(144.0, 144.0, 0.0);
+    public static final Pose RED_GOAL_FAR_PEDRO = new Pose(119.0, 144.0, 0.0);
+
+    /**
+     * Incenter of the triangular openings.
+     * The incenter is the center of the circle that touches all three sides of the triangle.
+     **/
+    public static final Pose BLUE_GOAL_CENTER = incenter(BLUE_GOAL_LOWER_PEDRO, BLUE_GOAL_CORNER_PEDRO, BLUE_GOAL_FAR_PEDRO);
+    public static final Pose RED_GOAL_CENTER = incenter(RED_GOAL_LOWER_PEDRO, RED_GOAL_CORNER_PEDRO, RED_GOAL_FAR_PEDRO);
+
+    /**
+     * Polygon coordinates of the goal openings (in inches) from field CAD.
+     */
+    public static final Pose BLUE_GOAL_CORNER_FTC = new Pose(-70.191315,   70.160065, 0.0);
+    public static final Pose BLUE_GOAL_FAR_FTC = new Pose(-47.581315,   70.160065, 0.0);
+    public static final Pose BLUE_GOAL_LOWER_INNER_FTC = new Pose(-70.191315,   48.792542, 0.0);
+    public static final Pose BLUE_GOAL_LOWER_EDGE_FTC = new Pose(-63.102536,   48.792542, 0.0);
+
+    public static final Pose RED_GOAL_CORNER_FTC = new Pose(70.191315,   70.160065, 0.0);
+    public static final Pose RED_GOAL_FAR_FTC = new Pose(47.581315,   70.160065, 0.0);
+    public static final Pose RED_GOAL_LOWER_INNER_FTC = new Pose(70.191315,   48.792542, 0.0);
+    public static final Pose RED_GOAL_LOWER_EDGE_FTC = new Pose(63.102536,   48.792542, 0.0);
+
+    public static final List<Pose> BLUE_GOAL_POLY = Arrays.asList(
+            BLUE_GOAL_CORNER_FTC,
+            BLUE_GOAL_FAR_FTC,
+            BLUE_GOAL_LOWER_EDGE_FTC,
+            BLUE_GOAL_LOWER_INNER_FTC
+    );
+
+    public static final Pose BLUE_GOAL_CHEBYSHEV_FTC = chebyshevCenter(BLUE_GOAL_POLY);
+    public static final Pose BLUE_GOAL_CHEBYSHEV_PEDRO = PoseFrames.ftcToPedro(BLUE_GOAL_CHEBYSHEV_FTC);
+
+    public static final List<Pose> RED_GOAL_POLY = Arrays.asList(
+            RED_GOAL_CORNER_FTC,
+            RED_GOAL_FAR_FTC,
+            RED_GOAL_LOWER_EDGE_FTC,
+            RED_GOAL_LOWER_INNER_FTC
+    );
+
+    public static final Pose RED_GOAL_CHEBYSHEV_FTC = chebyshevCenter(RED_GOAL_POLY);
+    public static final Pose RED_GOAL_CHEBYSHEV_PEDRO = PoseFrames.ftcToPedro(RED_GOAL_CHEBYSHEV_FTC);
+
+    /**
      * Gets the current blue basket aiming target with configurable offset.
      */
     public static Pose getBlueBasketTarget() {
-        return new Pose(
-            BLUE_GOAL_CENTER.getX() + BasketTargets.blueDeltaX,
-            BLUE_GOAL_CENTER.getY() + BasketTargets.blueDeltaY,
-            0.0
+        Pose triangleIncenterGoalPose =  new Pose(
+                BLUE_GOAL_CENTER.getX() + BasketTargetOffsets.blueDeltaX,
+                BLUE_GOAL_CENTER.getY() + BasketTargetOffsets.blueDeltaY,
+                0.0
         );
+        RobotState.putPose("INCENTER_GOAL", triangleIncenterGoalPose);
+
+        Pose chebyshevGoalPedroPose = new Pose(
+                BLUE_GOAL_CHEBYSHEV_PEDRO.getX() + BasketTargetOffsets.blueDeltaX,
+                BLUE_GOAL_CHEBYSHEV_PEDRO.getY() + BasketTargetOffsets.blueDeltaY,
+                0.0
+        );
+        Pose chebyshevGoalFTCPose = PoseFrames.pedroToFtc(chebyshevGoalPedroPose);
+        RobotState.putPose("CHEBYSHEV_GOAL", chebyshevGoalFTCPose); //Publish the chebyshev pose for AS
+
+        return chebyshevGoalPedroPose;
     }
 
     /**
      * Gets the current red basket aiming target with configurable offset.
      */
     public static Pose getRedBasketTarget() {
-        return new Pose(
-            RED_GOAL_CENTER.getX() + BasketTargets.redDeltaX,
-            RED_GOAL_CENTER.getY() + BasketTargets.redDeltaY,
-            0.0
+        Pose triangleIncenterGoalPose =  new Pose(
+                RED_GOAL_CENTER.getX() + BasketTargetOffsets.redDeltaX,
+                RED_GOAL_CENTER.getY() + BasketTargetOffsets.redDeltaY,
+                0.0
         );
+        RobotState.putPose("INCENTER_GOAL", triangleIncenterGoalPose);
+
+        Pose chebyshevGoalPedroPose = new Pose(
+                RED_GOAL_CHEBYSHEV_PEDRO.getX() + BasketTargetOffsets.redDeltaX,
+                RED_GOAL_CHEBYSHEV_PEDRO.getY() + BasketTargetOffsets.redDeltaY,
+                0.0
+        );
+        Pose chebyshevGoalFTCPose = PoseFrames.pedroToFtc(chebyshevGoalPedroPose);
+        RobotState.putPose("CHEBYSHEV_GOAL", chebyshevGoalFTCPose); //Publish the chebyshev pose for AS
+
+        return chebyshevGoalPedroPose;
     }
 
     /**
@@ -105,37 +159,4 @@ public final class FieldConstants {
         return Math.atan2(dy, dx);
     }
 
-    /**
-     * Computes the incenter of a triangle defined by points a, b, and c.
-     *
-     * The incenter is the weighted average of the vertices using the lengths of their
-     * opposite sides as the weights. This produces the point that is centered relative
-     * to all three sides.
-     *
-     * Formula:
-     *  Let A = length of side opposite vertex a (between b and c)
-     *  Let B = length of side opposite vertex b (between a and c)
-     *  Let C = length of side opposite vertex c (between a and b)
-     *
-     *  Incenter = (A*a + B*b + C*c) / (A + B + C)
-     */
-    private static Pose incenter(Pose a, Pose b, Pose c) {
-        double A = distance(b, c);
-        double B = distance(a, c);
-        double C = distance(a, b);
-
-        double x = (A * a.getX() + B * b.getX() + C * c.getX()) / (A + B + C);
-        double y = (A * a.getY() + B * b.getY() + C * c.getY()) / (A + B + C);
-
-        return new Pose(x, y, 0.0);
-    }
-
-    /**
-     * Distance between two poses, ignoring heading.
-     */
-    private static double distance(Pose p1, Pose p2) {
-        double dx = p2.getX() - p1.getX();
-        double dy = p2.getY() - p1.getY();
-        return Math.sqrt(dx * dx + dy * dy);
-    }
 }

@@ -24,6 +24,7 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -355,7 +356,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         }
 
         // Sanity check: pose should be on the field
-        double fieldWidthIn = AutoField.waypoints.fieldWidthIn;
+        double fieldWidthIn = FieldConstants.FIELD_WIDTH_INCHES ;
         if (candidate.getX() < 0 || candidate.getX() > fieldWidthIn ||
             candidate.getY() < 0 || candidate.getY() > fieldWidthIn) {
             return false;

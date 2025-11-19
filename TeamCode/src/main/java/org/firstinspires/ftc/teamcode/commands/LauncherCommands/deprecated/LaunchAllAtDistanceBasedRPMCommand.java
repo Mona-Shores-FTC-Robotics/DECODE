@@ -11,7 +11,6 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 import java.util.EnumSet;
@@ -268,7 +267,7 @@ public class LaunchAllAtDistanceBasedRPMCommand extends Command {
      */
     private double calculateDistanceToGoal() {
         // Try to get robot pose from vision first
-        Optional<Pose> poseOpt = vision.getRobotPoseFromTag();
+        Optional<Pose> poseOpt = vision.getRobotPoseFromTagPedro();
         boolean visionUsed = false;
 
         // Fall back to odometry if vision unavailable

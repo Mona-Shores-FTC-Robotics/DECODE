@@ -33,7 +33,6 @@ public final class AutoField {
 
 @Configurable
 public static class Waypoints {
-        public double fieldWidthIn = 144.0;
 
         public double startX = 56;
         public double startY = 8;
@@ -159,7 +158,7 @@ public static class Waypoints {
     private static Pose poseForAlliance(double x, double y, double headingDeg, Alliance alliance) {
         Pose base = new Pose(x, y, Math.toRadians(headingDeg));
         if (alliance == Alliance.RED) {
-            double mirroredX = waypoints.fieldWidthIn - base.getX();
+            double mirroredX = FieldConstants.FIELD_WIDTH_INCHES  - base.getX();
             double mirroredHeading = AngleUnit.normalizeRadians(Math.PI - base.getHeading());
             return new Pose(mirroredX, base.getY(), mirroredHeading);
         }

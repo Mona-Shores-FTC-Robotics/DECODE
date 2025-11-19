@@ -284,7 +284,7 @@ public class UniversalSmartShotCommand extends Command {
      */
     private double calculateDistanceToGoal() {
         // Try to get robot pose from vision first
-        Optional<Pose> poseOpt = vision.getRobotPoseFromTag();
+        Optional<Pose> poseOpt = vision.getRobotPoseFromTagPedro();
 
         // Fall back to odometry if vision unavailable
         if (!poseOpt.isPresent()) {

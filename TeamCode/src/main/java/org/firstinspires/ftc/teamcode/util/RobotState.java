@@ -76,4 +76,10 @@ public class RobotState {
 
     public static TelemetryPacket packet = new TelemetryPacket();
 
+    public static void putPose(String label, Pose pose) {
+        packet.put(label + " x", pose.getX());
+        packet.put(label + " y", pose.getY());
+        packet.put(label + " heading", pose.getHeading());
+        packet.put(label + " heading (deg)", Math.toDegrees(pose.getHeading()));
+    }
 }

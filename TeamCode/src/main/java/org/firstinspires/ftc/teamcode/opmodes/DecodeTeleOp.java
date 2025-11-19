@@ -83,10 +83,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
         robot.initializeForTeleOp();
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
 
-        //should we really do this in teleop?
-//        lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector);
-//        lightingInitController.initialize();
-
         addComponents(
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),

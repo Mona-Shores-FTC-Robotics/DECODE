@@ -269,7 +269,7 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         diagnostics.odometryPoseAvailable = false;
 
         // Try to get robot pose from vision first
-        Optional<Pose> poseOpt = vision.getRobotPoseFromTag();
+        Optional<Pose> poseOpt = vision.getRobotPoseFromTagPedro();
         diagnostics.visionPoseAvailable = poseOpt.isPresent();
 
         // Fall back to odometry if vision unavailable

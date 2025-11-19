@@ -21,6 +21,7 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -156,10 +157,8 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         // Extract detected start pose from vision
         if (snapshotOpt.isPresent()) {
             VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-            java.util.Optional<Pose> detectedPose = snapshot.getRobotPose();
-            if (detectedPose.isPresent()) {
-                lastDetectedStartPosePedro = copyPose(detectedPose.get());
-            }
+            java.util.Optional<Pose> detectedPose = snapshot.getRobotPosePedroMT1();
+            detectedPose.ifPresent(pose -> lastDetectedStartPosePedro = copyPose(pose));
         }
 
         Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
@@ -382,7 +381,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         }
 
         // Sanity check: pose should be on the field
-        double fieldWidthIn = AutoField.waypoints.fieldWidthIn;
+        double fieldWidthIn = FieldConstants.FIELD_WIDTH_INCHES ;
         if (candidate.getX() < 0 || candidate.getX() > fieldWidthIn ||
             candidate.getY() < 0 || candidate.getY() > fieldWidthIn) {
             return false;

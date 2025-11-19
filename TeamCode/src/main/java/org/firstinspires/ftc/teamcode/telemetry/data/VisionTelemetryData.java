@@ -93,8 +93,8 @@ public class VisionTelemetryData {
                     snapshot.getTxDegrees(),
                     snapshot.getTyDegrees(),
                     snapshot.getTargetAreaPercent(),
-                    snapshot.getFtcX(),
-                    snapshot.getFtcY(),
+                    snapshot.getFtcPose().get().getX(),
+                    snapshot.getFtcPose().get().getY(),
                     headingRad
             );
         } else {
