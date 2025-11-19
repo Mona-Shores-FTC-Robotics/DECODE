@@ -89,10 +89,6 @@ public class LauncherCommands {
         return new SetFeederPositionCommand(launcher, LauncherLane.LEFT, false);
     }
 
-    public SpinUpUntilReadyCommand spinUpUntilReady() {
-        return new SpinUpUntilReadyCommand(launcher);
-    }
-
     /**
      * Phase 1: Spin up to position-specific RPM (tunable in Dashboard)
      * @param position Field position we're launching from
@@ -239,83 +235,7 @@ public class LauncherCommands {
         return new LaunchInSequenceCommand(launcher, intake);
     }
 
-    /**
-     * Mode-aware fire command that adapts based on RobotState launcher mode.
-     *
-     * THROUGHPUT mode: Fires all lanes rapidly at MID range
-     * DECODE mode: Fires in obelisk pattern sequence with motif tail offset
-     *
-     * This is the recommended fire button command for TeleOp as it automatically
-     * adapts when the mode switches (e.g., at 30 seconds remaining).
-     *
-     * @return Command that fires using current launcher mode strategy
-     */
-    public LaunchModeAwareCommand fireModeAware() {
-        return new LaunchModeAwareCommand(launcher, intake);
-    }
-
     // ========== Distance-Based Commands ==========
-
-    /**
-     * Smart auto-range fire command - ONE BUTTON SOLUTION!
-     * Automatically selects SHORT/MID/LONG range based on distance to goal.
-     * Uses AprilTag vision for distance, falls back to odometry.
-     *
-     * Replaces the need for separate short/mid/long range buttons.
-     *
-     * @param vision The vision subsystem (for distance measurement)
-     * @param drive The drive subsystem (for odometry fallback)
-     * @param spinDownAfterShot Whether to spin down to idle after firing
-     * @return Command that auto-selects range and fires
-     */
-    public LaunchAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
-                                                         DriveSubsystem drive,
-                                                         boolean spinDownAfterShot) {
-        return new LaunchAllAtAutoRangeCommand(launcher, intake, vision, drive, spinDownAfterShot);
-    }
-
-    /**
-     * Smart auto-range fire command with spin-down.
-     * Automatically selects SHORT/MID/LONG range based on distance.
-     *
-     * @param vision The vision subsystem
-     * @param drive The drive subsystem
-     * @return Command that auto-selects range and fires
-     */
-    public LaunchAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
-                                                         DriveSubsystem drive) {
-        return fireAllAutoRange(vision, drive, true);
-    }
-
-    /**
-     * Fires all lanes with RPM and hood position calculated from distance to goal.
-     * Uses AprilTag vision to determine distance, falls back to odometry if unavailable.
-     * Interpolates RPM based on configurable distance/RPM calibration points.
-     *
-     * @param vision The vision subsystem (for AprilTag distance measurement)
-     * @param drive The drive subsystem (for odometry fallback)
-     * @param spinDownAfterShot Whether to spin down to idle after firing
-     * @return Command that fires all lanes at distance-calculated RPM
-     */
-    public LaunchAllAtDistanceBasedRPMCommand fireAllAtDistance(VisionSubsystemLimelight vision,
-                                                                 DriveSubsystem drive,
-                                                                 boolean spinDownAfterShot) {
-        return new LaunchAllAtDistanceBasedRPMCommand(launcher, intake, vision, drive, spinDownAfterShot);
-    }
-
-    /**
-     * Fires all lanes with RPM and hood position calculated from distance to goal.
-     * Uses AprilTag vision to determine distance, falls back to odometry if unavailable.
-     * Spins down to idle after firing.
-     *
-     * @param vision The vision subsystem (for AprilTag distance measurement)
-     * @param drive The drive subsystem (for odometry fallback)
-     * @return Command that fires all lanes at distance-calculated RPM
-     */
-    public LaunchAllAtDistanceBasedRPMCommand fireAllAtDistance(VisionSubsystemLimelight vision,
-                                                                 DriveSubsystem drive) {
-        return fireAllAtDistance(vision, drive, true);
-    }
 
     /**
      * Continuously calculates distance to goal and updates launcher RPM while held.
@@ -339,6 +259,45 @@ public class LauncherCommands {
                                                                 LightingSubsystem lighting,
                                                                 Gamepad gamepad) {
         return new ContinuousDistanceBasedSpinCommand(launcher, vision, drive, lighting, gamepad);
+    }
+
+    /**
+     * Toggle command for human loading station.
+     * Press once to start (reverse flywheel + prefeed, retract hoods).
+     * Press again to stop (return to normal).
+     *
+     * @return Command that toggles human loading mode
+     */
+    public HumanLoadingCommand toggleHumanLoading() {
+        return new HumanLoadingCommand(launcher, intake);
+    }
+
+    /**
+     * Universal smart shot - the ONE BUTTON SOLUTION!
+     * Combines distance-based RPM calculation with mode-aware firing strategy.
+     *
+     * This command automatically:
+     * - Calculates distance to goal (AprilTag vision with odometry fallback)
+     * - Interpolates RPM and hood position based on distance
+     * - Spins up with haptic/light feedback when ready
+     * - Fires using current launcher mode:
+     *   - THROUGHPUT: All lanes fire rapidly for maximum scoring rate
+     *   - DECODE: Fires in obelisk pattern sequence with motif tail offset
+     *
+     * This is the ultimate fire button - operator just presses when ready to shoot,
+     * and the robot handles distance, RPM, mode, and firing strategy automatically.
+     *
+     * @param vision The vision subsystem (for AprilTag distance measurement)
+     * @param drive The drive subsystem (for odometry fallback)
+     * @param lighting The lighting subsystem (for ready feedback)
+     * @param gamepad The operator gamepad (for haptic feedback)
+     * @return Command that does everything automatically
+     */
+    public UniversalSmartShotCommand fireUniversalSmart(VisionSubsystemLimelight vision,
+                                                         DriveSubsystem drive,
+                                                         LightingSubsystem lighting,
+                                                         Gamepad gamepad) {
+        return new UniversalSmartShotCommand(launcher, intake, vision, drive, lighting, gamepad);
     }
 
 }
