@@ -8,6 +8,7 @@ import dev.nextftc.ftc.GamepadEx;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ContinuousDistanceBasedSpinCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.HumanLoadingCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchModeAwareCommand;
@@ -26,7 +27,7 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * - X: Hold to continuously calculate distance and spin up at calculated RPM, release to fire all lanes
  * - A: Fire all lanes at SHORT range (~2700 RPM) - close shots safety net
  * - B: Fire all lanes at LONG range (~4200 RPM)
- * - Y: Human loading (reverse flywheel and prefeed)
+ * - Y: Toggle human loading (press once to start, press again to stop)
  * - D-Pad Down: Mode-aware fire (THROUGHPUT or DECODE sequence based on current mode)
  * - D-Pad Left: Universal smart shot (distance-based RPM + mode-aware firing) - THE ULTIMATE BUTTON!
  * - D-Pad Right: Cycle motif tail (0 → 1 → 2 → 0, visual feedback blinks corresponding lanes orange)
@@ -100,6 +101,9 @@ public class OperatorBindings {
         UniversalSmartShotCommand universalSmartShotCommand = robot.launcherCommands.fireUniversalSmart(
             robot.vision, robot.drive, robot.lighting, rawGamepad);
 
+        // Human loading toggle command
+        HumanLoadingCommand humanLoadingToggle = robot.launcherCommands.toggleHumanLoading();
+
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
@@ -116,14 +120,8 @@ public class OperatorBindings {
         runIntake.whenBecomesTrue(intakeForwardCommand);
         runIntake.whenBecomesFalse(intakeReverseCommand);
 
-        // Reverse Flywheel and Prefeed for Human Loading
-        humanLoading
-                .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
-                .whenBecomesTrue(robot.intake::setPrefeedReverse)
-                .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
-                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
-                .whenBecomesFalse(robot.intake::setPrefeedForward)
-                .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
+        // Human loading toggle: press once to start, press again to stop
+        humanLoading.whenBecomesTrue(humanLoadingToggle);
 
         // Mode-aware firing: adapts between THROUGHPUT and DECODE modes
         fireModeAware

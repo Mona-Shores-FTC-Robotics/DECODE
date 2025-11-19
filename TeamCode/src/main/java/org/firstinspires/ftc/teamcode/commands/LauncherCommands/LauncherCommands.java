@@ -342,6 +342,17 @@ public class LauncherCommands {
     }
 
     /**
+     * Toggle command for human loading station.
+     * Press once to start (reverse flywheel + prefeed, retract hoods).
+     * Press again to stop (return to normal).
+     *
+     * @return Command that toggles human loading mode
+     */
+    public HumanLoadingCommand toggleHumanLoading() {
+        return new HumanLoadingCommand(launcher, intake);
+    }
+
+    /**
      * Universal smart shot - the ONE BUTTON SOLUTION!
      * Combines distance-based RPM calculation with mode-aware firing strategy.
      *
