@@ -63,11 +63,11 @@ public class LaunchAllAtDistanceBasedRPMCommand extends Command {
         /** Distance in inches for short range reference point */
         public double shortRangeDistanceIn = 36.0;
         /** RPM for left lane at short range */
-        public double shortLeftRpm = 1000;
+        public double shortLeftRpm = 2700;
         /** RPM for center lane at short range */
-        public double shortCenterRpm = 1000;
+        public double shortCenterRpm = 2700;
         /** RPM for right lane at short range */
-        public double shortRightRpm = 1000;
+        public double shortRightRpm = 2700;
 
         /** Distance in inches for mid range reference point */
         public double midRangeDistanceIn = 72.0;
