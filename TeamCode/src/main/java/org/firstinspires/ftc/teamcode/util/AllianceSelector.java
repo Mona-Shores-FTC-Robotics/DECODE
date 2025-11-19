@@ -95,6 +95,35 @@ public final class AllianceSelector {
         }
     }
 
+    /**
+     * Convenience method for updating alliance selection during OpMode init (waitForStart loop).
+     * Combines vision updates and selection application into a single call.
+     *
+     * <p>This is the drop-in method for OpModes. Call this in your waitForStart loop to:
+     * <ul>
+     *   <li>Poll vision for AprilTag alliance detection</li>
+     *   <li>Process manual dpad overrides (requires BindingManager.update() to be called first)</li>
+     *   <li>Apply the selection to robot state and lighting</li>
+     * </ul>
+     *
+     * <p>Usage example in waitForStart:
+     * <pre>{@code
+     * BindingManager.update(); // Process button presses
+     * Alliance currentAlliance = allianceSelector.updateDuringInit(robot.vision, robot, robot.lighting);
+     * telemetry.addData("Alliance", currentAlliance.displayName());
+     * }</pre>
+     *
+     * @param vision Vision subsystem for AprilTag detection (can be null)
+     * @param robot Robot container to apply alliance selection (can be null)
+     * @param lighting Lighting subsystem to apply alliance colors (can be null)
+     * @return The currently selected alliance
+     */
+    public Alliance updateDuringInit(VisionSubsystemLimelight vision, Robot robot, LightingSubsystem lighting) {
+        updateFromVision(vision);
+        applySelection(robot, lighting);
+        return selectedAlliance;
+    }
+
     public void selectAllianceManually(Alliance alliance) {
         if (selectionLocked) {
             return;
