@@ -176,6 +176,10 @@ public final class AllianceSelector {
         selectionLocked = true;
     }
 
+    public boolean isSelectionLocked() {
+        return selectionLocked;
+    }
+
     public void unlockSelection() {
         selectionLocked = false;
         refreshSelectedAlliance();

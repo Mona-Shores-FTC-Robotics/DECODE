@@ -13,7 +13,6 @@ import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
@@ -113,7 +112,6 @@ public class TelemetryService {
             IntakeSubsystem intake,
             VisionSubsystemLimelight vision,
             LightingSubsystem lighting,
-            LauncherCoordinator launcherCoordinator,
             DriverBindings.DriveRequest driveRequest,
             Gamepad gamepad1,
             Gamepad gamepad2,
@@ -134,7 +132,6 @@ public class TelemetryService {
                 intake,
                 vision,
                 lighting,
-                launcherCoordinator,
                 driveRequest,
                 gamepad1,
                 gamepad2,

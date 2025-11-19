@@ -16,12 +16,15 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
+import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -63,6 +66,12 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         public double maxPathPower = .8;
         public double intakeDelaySeconds = .1; //how long into the path do we turn the intake on?
 
+        /**
+         * Starting launcher mode for autonomous.
+         * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
+         * THROUGHPUT: Rapid fire all lanes (recommended for early match throughput)
+         */
+        public LauncherMode startingLauncherMode = LauncherMode.DECODE;
     }
 
     public static DecodeAutonomousFarCommand.AutoMotionConfig config = new DecodeAutonomousFarCommand.AutoMotionConfig();
@@ -73,6 +82,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     private FieldLayout currentLayout;
     private IntakeCommands intakeCommands;
     private LauncherCommands launcherCommands;
+    private LightingSubsystem.InitController lightingInitController;
     private GamepadEx driverPad = new GamepadEx(() -> gamepad1);
 
     // AprilTag-based start pose detection
@@ -96,27 +106,25 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
 
-        robot.launcherCoordinator.lockIntake();
-        robot.launcherCoordinator.setIntakeAutomationEnabled(false);
-
         robot.initializeForAuto();
 
         // Initialize command factories
         intakeCommands = new IntakeCommands(robot.intake);
-        launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.launcherCoordinator, robot.manualSpinController);
+        launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
 
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
+        lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector, robot.lighting);
+        lightingInitController.initialize();
 
         addComponents(
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
                 new SubsystemComponent(robot.intake),
                 new SubsystemComponent(robot.lighting),
-                new SubsystemComponent(robot.vision),
-                new SubsystemComponent(robot.launcherCoordinator)
+                new SubsystemComponent(robot.vision)
         );
         publishTelemetry();
     }
@@ -124,10 +132,12 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     @Override
     public void onWaitForStart() {
         BindingManager.update();
+        if (lightingInitController != null) {
+            lightingInitController.updateDuringInit(gamepad1.dpad_up);
+        }
 
         // Update subsystems to poll sensors (especially intake color sensors)
         robot.intake.periodic();
-        robot.launcherCoordinator.periodic();
         robot.vision.periodic();
 
         publishTelemetry();
@@ -158,7 +168,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
-        telemetry.addData("Artifacts", "%d detected", robot.launcherCoordinator.getArtifactCount());
+        telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");
         telemetry.update();    }
@@ -167,10 +177,15 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     public void onStartButtonPressed() {
         BindingManager.reset();
         allianceSelector.lockSelection();
+        if (lightingInitController != null) {
+            lightingInitController.onStart();
+        }
 
-        robot.launcherCoordinator.setIntakeAutomationEnabled(true);
-        robot.launcherCoordinator.unlockIntake();
-        robot.launcher.requestSpinUp();
+        // Initialize launcher mode from config (defaults to DECODE, can be changed via Dashboard)
+        RobotState.setLauncherMode(config.startingLauncherMode);
+        RobotState.resetMotifTail(); // Start with fresh motif tail (0)
+
+        robot.launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
 
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();
@@ -182,8 +197,11 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
+        if (lightingInitController != null) {
+            lightingInitController.updateDuringMatch();
+        }
         publishTelemetry();
-                    }
+    }
 
     @Override
     public void onStop() {
@@ -324,7 +342,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         return new SequentialGroup(
 //            new Delay(config.launchDelaySeconds),
 //            launcherCommands.launchAllInSequence()  // Fires all lanes regardless of color detection
-                launcherCommands.fireAllAtRange(LauncherRange.LONG,false)
+                launcherCommands.launchAllAtRangePreset(LauncherRange.LONG,false)
         );
     }
 
@@ -375,7 +393,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
                 robot.intake,
                 robot.vision,
                 robot.lighting,
-                robot.launcherCoordinator,
                 null,
                 gamepad1,
                 gamepad2,

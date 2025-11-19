@@ -270,7 +270,6 @@ public class DriverStationFormatter {
         telemetry.addData("  Launcher", "%.1f ms", data.timing.launcherMs);
         telemetry.addData("  Lighting", "%.1f ms", data.timing.lightingMs);
         telemetry.addData("  Vision", "%.1f ms", data.timing.visionMs);
-        telemetry.addData("  Launch Coordinator", "%.1f ms", data.timing.launcherCoordMs);
     }
 
     /**

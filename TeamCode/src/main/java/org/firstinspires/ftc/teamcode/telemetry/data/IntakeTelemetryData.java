@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.telemetry.data;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 import java.util.Collections;
@@ -70,20 +69,15 @@ public class IntakeTelemetryData {
         this.laneRightSummary = laneRightSummary;
     }
 
-    public static IntakeTelemetryData capture(IntakeSubsystem intake, LauncherCoordinator coordinator) {
+    public static IntakeTelemetryData capture(IntakeSubsystem intake) {
         if (intake == null) {
             throw new IllegalArgumentException("Intake subsystem is required for telemetry capture");
         }
 
-        int artifactCount = 0;
-        String artifactState = "UNKNOWN";
+        int artifactCount = intake.getArtifactCount();
+        String artifactState = formatArtifactState(artifactCount);
         Map<LauncherLane, IntakeSubsystem.LaneSample> laneSamples =
                 Collections.unmodifiableMap(new EnumMap<>(intake.getLaneSampleSnapshot()));
-
-        if (coordinator != null) {
-            artifactCount = coordinator.getArtifactCount();
-            artifactState = coordinator.getArtifactState().name();
-        }
 
         LaneTelemetrySummary leftSummary = summarizeLane(laneSamples.get(LauncherLane.LEFT));
         LaneTelemetrySummary centerSummary = summarizeLane(laneSamples.get(LauncherLane.CENTER));
@@ -106,6 +100,16 @@ public class IntakeTelemetryData {
                 centerSummary,
                 rightSummary
         );
+    }
+
+    private static String formatArtifactState(int count) {
+        switch (count) {
+            case 0: return "EMPTY";
+            case 1: return "ONE";
+            case 2: return "TWO";
+            case 3: return "THREE";
+            default: return "UNKNOWN";
+        }
     }
 
     private static LaneTelemetrySummary summarizeLane(IntakeSubsystem.LaneSample sample) {

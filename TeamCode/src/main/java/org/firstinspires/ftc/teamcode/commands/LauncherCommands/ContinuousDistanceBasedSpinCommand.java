@@ -2,43 +2,34 @@ package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import dev.nextftc.core.commands.Command;
 
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
-import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Fires all three launcher lanes with RPM and hood position calculated from distance to goal.
+ * Continuously calculates distance to goal and updates launcher RPM while held.
  *
- * Uses AprilTag vision to determine robot pose and calculate distance to the goal tag.
- * Falls back to odometry pose if vision is unavailable. RPM is interpolated based on
- * configurable distance/RPM calibration points from FireAllAtRangeCommand.
+ * This command is designed for hold-to-spin, release-to-fire button behavior:
+ * 1. While held: Continuously calculates distance and updates RPM targets
+ * 2. On release: Caller should trigger fire command
  *
- * The command:
- * 1. Calculates distance to goal using vision (or odometry fallback)
- * 2. Interpolates RPM based on distance using calibrated data points
- * 3. Calculates hood position based on distance
- * 4. Spins up flywheels to calculated RPM
- * 5. Fires all lanes in sequence when ready
- * 6. Optionally spins down after firing
+ * Uses AprilTag vision for distance measurement, falls back to odometry if unavailable.
+ * RPM is interpolated based on configurable distance/RPM calibration points.
  */
 @Configurable
-public class FireAllAtDistanceCommand extends Command {
+public class ContinuousDistanceBasedSpinCommand extends Command {
 
     @Configurable
     public static class DiagnosticData {
-        /** Last calculated distance to goal in inches (updates during command execution) */
+        /** Last calculated distance to goal in inches (updates every loop) */
         public double lastCalculatedDistanceIn = 0.0;
         /** Last calculated left lane RPM */
         public double lastLeftRpm = 0.0;
@@ -48,12 +39,10 @@ public class FireAllAtDistanceCommand extends Command {
         public double lastRightRpm = 0.0;
         /** Last calculated hood position */
         public double lastHoodPosition = 0.0;
-        /** Whether vision was successfully used (true) or fell back to odometry (false) */
-        public boolean usedVision = false;
         /** Data source for distance: "vision", "odometry", or "none" */
         public String lastSource = "none";
-        /** Current command stage */
-        public String currentStage = "not_started";
+        /** Number of update cycles performed */
+        public int updateCount = 0;
     }
 
     public static DiagnosticData diagnostics = new DiagnosticData();
@@ -86,9 +75,6 @@ public class FireAllAtDistanceCommand extends Command {
         public double longCenterRpm = 2850;
         /** RPM for right lane at long range */
         public double longRightRpm = 3000;
-
-        /** Timeout in seconds before giving up on spin-up */
-        public double timeoutSeconds = 8.0;
     }
 
     @Configurable
@@ -108,174 +94,69 @@ public class FireAllAtDistanceCommand extends Command {
     public static DistanceRpmCalibration calibration = new DistanceRpmCalibration();
     public static HoodCalibration hoodCalibration = new HoodCalibration();
 
-    private enum Stage {
-        CALCULATING_DISTANCE,
-        SPINNING_UP,
-        WAITING_FOR_READY,
-        SHOTS_QUEUED,
-        COMPLETED
-    }
-
     private final LauncherSubsystem launcher;
-    private final IntakeSubsystem intake;
     private final VisionSubsystemLimelight vision;
     private final DriveSubsystem drive;
-    private final ManualSpinController manualSpinController;
-    private final boolean spinDownAfterShot;
-
-    private final EnumSet<LauncherLane> queuedLanes = EnumSet.noneOf(LauncherLane.class);
-    private final ElapsedTime timer = new ElapsedTime();
-
-    private Stage stage = Stage.CALCULATING_DISTANCE;
-    private boolean manualSpinActive = false;
-    private boolean spinDownApplied = false;
-    private double calculatedDistance = 0.0;
 
     /**
-     * Creates command that fires all lanes at RPM calculated from distance to goal.
+     * Creates command that continuously updates launcher RPM based on distance to goal.
      *
      * @param launcher The launcher subsystem
-     * @param intake The intake subsystem (for prefeed roller control, nullable)
      * @param vision The vision subsystem (for AprilTag distance)
      * @param drive The drive subsystem (for odometry fallback)
-     * @param spinDownAfterShot Whether to spin down to idle after firing
-     * @param manualSpinController Controller for manual spin state
      */
-    public FireAllAtDistanceCommand(LauncherSubsystem launcher,
-                                     IntakeSubsystem intake,
-                                     VisionSubsystemLimelight vision,
-                                     DriveSubsystem drive,
-                                     boolean spinDownAfterShot,
-                                     ManualSpinController manualSpinController) {
+    public ContinuousDistanceBasedSpinCommand(LauncherSubsystem launcher,
+                                               VisionSubsystemLimelight vision,
+                                               DriveSubsystem drive) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
-        this.intake = intake; // Nullable - robot may not have prefeed roller
         this.vision = Objects.requireNonNull(vision, "vision required");
         this.drive = Objects.requireNonNull(drive, "drive required");
-        this.spinDownAfterShot = spinDownAfterShot;
-        this.manualSpinController = Objects.requireNonNull(manualSpinController, "manualSpinController required");
         requires(launcher);
         setInterruptible(true);
     }
 
     @Override
     public void start() {
-        timer.reset();
-        stage = Stage.CALCULATING_DISTANCE;
-        queuedLanes.clear();
-        manualSpinActive = false;
-        spinDownApplied = false;
-        calculatedDistance = 0.0;
-
         // Initialize diagnostics
-        diagnostics.currentStage = stage.name();
         diagnostics.lastSource = "none";
-        diagnostics.usedVision = false;
+        diagnostics.updateCount = 0;
+
+        // Set spin mode to FULL to start spinning up
+        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
     }
 
     @Override
     public void update() {
-        diagnostics.currentStage = stage.name();
+        diagnostics.updateCount++;
 
-        switch (stage) {
-            case CALCULATING_DISTANCE:
-                // Calculate distance to goal and set RPMs
-                calculatedDistance = calculateDistanceToGoal();
-                if (calculatedDistance > 0.0) {
-                    // Enter manual spin mode to prevent automation from changing RPMs
-                    manualSpinController.enterManualSpin();
-                    manualSpinActive = true;
+        // Calculate distance to goal
+        double distance = calculateDistanceToGoal();
 
-                    // Activate prefeed roller in forward direction to help feed
-                    if (intake != null) {
-                        intake.setPrefeedForward();
-                    }
+        if (distance > 0.0) {
+            // Set RPMs based on calculated distance
+            setRpmsForDistance(distance);
 
-                    // Set RPMs based on calculated distance
-                    setRpmsForDistance(calculatedDistance);
-
-                    // Set hood positions based on distance
-                    setHoodForDistance(calculatedDistance);
-
-                    // Spin up to target
-                    launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
-
-                    stage = Stage.SPINNING_UP;
-                } else {
-                    // If we can't get distance, abort
-                    stage = Stage.COMPLETED;
-                }
-                break;
-
-            case SPINNING_UP:
-                // Wait briefly for flywheels to start ramping
-                if (timer.milliseconds() > 100) {
-                    stage = Stage.WAITING_FOR_READY;
-                }
-                break;
-
-            case WAITING_FOR_READY:
-                checkLaneReadiness();
-                if (areAllEnabledLanesQueued()) {
-                    stage = Stage.SHOTS_QUEUED;
-                }
-                // Timeout safety
-                if (timer.seconds() >= calibration.timeoutSeconds) {
-                    // Queue whatever lanes are ready to prevent hanging
-                    queueRemainingLanes();
-                    stage = Stage.SHOTS_QUEUED;
-                }
-                break;
-
-            case SHOTS_QUEUED:
-                if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
-                    stage = Stage.COMPLETED;
-                    if (spinDownAfterShot && !spinDownApplied) {
-                        launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
-                        spinDownApplied = true;
-                    }
-                }
-                break;
-
-            case COMPLETED:
-            default:
-                // nothing
-                break;
+            // Set hood positions based on distance
+            setHoodForDistance(distance);
         }
+
+        // Update diagnostics
+        diagnostics.lastCalculatedDistanceIn = distance;
     }
 
     @Override
     public boolean isDone() {
-        return stage == Stage.COMPLETED;
+        // This command runs continuously until interrupted (button release)
+        return false;
     }
 
     @Override
     public void stop(boolean interrupted) {
-        // Deactivate prefeed roller (returns to not spinning)
-        if (intake != null) {
-            intake.setPrefeedReverse();
-        }
-
         // Clear RPM overrides to return to default values
         launcher.clearOverrides();
 
-        // Exit manual spin mode
-        if (manualSpinActive) {
-            manualSpinController.exitManualSpin();
-            manualSpinActive = false;
-        }
-
-        // Clear queue if interrupted
-        if (interrupted && !queuedLanes.isEmpty()) {
-            launcher.clearQueue();
-        }
-
-        // Spin down if configured and not already done
-        if (interrupted && spinDownAfterShot && !spinDownApplied) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
-            spinDownApplied = true;
-
-
-        }
+        // Note: Intentionally NOT spinning down here - the fire command will handle that
+        // The launcher stays spun up at the calculated RPM for immediate firing
     }
 
     /**
@@ -287,7 +168,6 @@ public class FireAllAtDistanceCommand extends Command {
     private double calculateDistanceToGoal() {
         // Try to get robot pose from vision first
         Optional<Pose> poseOpt = vision.getRobotPoseFromTag();
-        boolean visionUsed = false;
 
         // Fall back to odometry if vision unavailable
         if (!poseOpt.isPresent()) {
@@ -295,17 +175,12 @@ public class FireAllAtDistanceCommand extends Command {
             if (odometryPose != null) {
                 poseOpt = Optional.of(odometryPose);
                 diagnostics.lastSource = "odometry";
-                diagnostics.usedVision = false;
             } else {
                 diagnostics.lastSource = "none";
-                diagnostics.usedVision = false;
-                diagnostics.lastCalculatedDistanceIn = 0.0;
                 return 0.0;
             }
         } else {
             diagnostics.lastSource = "vision";
-            diagnostics.usedVision = true;
-            visionUsed = true;
         }
 
         // Get goal pose based on alliance
@@ -313,8 +188,6 @@ public class FireAllAtDistanceCommand extends Command {
 
         if (!poseOpt.isPresent() || !goalOpt.isPresent()) {
             diagnostics.lastSource = "none";
-            diagnostics.usedVision = false;
-            diagnostics.lastCalculatedDistanceIn = 0.0;
             return 0.0;
         }
 
@@ -326,15 +199,12 @@ public class FireAllAtDistanceCommand extends Command {
         double dy = goalPose.getY() - robotPose.getY();
         double distance = Math.hypot(dx, dy);
 
-        // Update diagnostics
-        diagnostics.lastCalculatedDistanceIn = distance;
-
         return distance;
     }
 
     /**
      * Sets RPM targets for all lanes based on distance using linear interpolation.
-     * Uses calibration points from FireAllAtRangeCommand.
+     * Uses calibration points from LaunchAllAtPresetRangeCommand.
      */
     private void setRpmsForDistance(double distanceIn) {
         double leftRpm = interpolateRpm(distanceIn,
@@ -394,7 +264,7 @@ public class FireAllAtDistanceCommand extends Command {
             double t = (distance - midDist) / (longDist - midDist);
             return midRpm + t * (longRpm - midRpm);
         } else {
-            // Above long range - use long RPM (or extrapolate if desired)
+            // Above long range - use long RPM
             return longRpm;
         }
     }
@@ -417,67 +287,5 @@ public class FireAllAtDistanceCommand extends Command {
 
         // Update diagnostics
         diagnostics.lastHoodPosition = hoodPosition;
-    }
-
-    /**
-     * Checks each lane for readiness and queues shots immediately when ready.
-     */
-    private void checkLaneReadiness() {
-        for (LauncherLane lane : LauncherLane.values()) {
-            if (queuedLanes.contains(lane)) {
-                continue;
-            }
-
-            // Skip disabled lanes (RPM = 0)
-            if (launcher.getLaunchRpm(lane) <= 0.0) {
-                queuedLanes.add(lane); // Mark as "queued" to skip in future checks
-                continue;
-            }
-
-            // Queue shot immediately when lane is ready - no stability wait
-            if (launcher.isLaneReady(lane)) {
-                launcher.queueShot(lane);
-                queuedLanes.add(lane);
-            }
-        }
-    }
-
-    /**
-     * Checks if all enabled lanes have been queued.
-     */
-    private boolean areAllEnabledLanesQueued() {
-        for (LauncherLane lane : LauncherLane.values()) {
-            // Skip disabled lanes
-            if (launcher.getLaunchRpm(lane) <= 0.0) {
-                continue;
-            }
-            // If any enabled lane isn't queued, we're not done
-            if (!queuedLanes.contains(lane)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Queues all remaining enabled lanes (used on timeout).
-     */
-    private void queueRemainingLanes() {
-        for (LauncherLane lane : LauncherLane.values()) {
-            if (queuedLanes.contains(lane)) {
-                continue;
-            }
-            if (launcher.getLaunchRpm(lane) > 0.0) {
-                launcher.queueShot(lane);
-                queuedLanes.add(lane);
-            }
-        }
-    }
-
-    /**
-     * Gets the calculated distance for telemetry/logging.
-     */
-    public double getCalculatedDistance() {
-        return calculatedDistance;
     }
 }

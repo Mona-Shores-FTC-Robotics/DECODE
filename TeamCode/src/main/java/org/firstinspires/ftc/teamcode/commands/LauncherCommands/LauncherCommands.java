@@ -4,7 +4,6 @@ import com.bylazar.configurables.annotations.Configurable;
 
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
@@ -26,17 +25,11 @@ public class LauncherCommands {
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
-    private final LauncherCoordinator launcherCoordinator;
-    private final ManualSpinController manualSpinController;
 
     public LauncherCommands(LauncherSubsystem launcher,
-                           IntakeSubsystem intake,
-                           LauncherCoordinator launcherCoordinator,
-                           ManualSpinController manualSpinController) {
+                           IntakeSubsystem intake) {
         this.launcher = launcher;
         this.intake = intake;
-        this.launcherCoordinator = launcherCoordinator;
-        this.manualSpinController = manualSpinController;
     }
 
     public LaunchLaneCommand launchLane(LauncherLane lane) {
@@ -55,22 +48,6 @@ public class LauncherCommands {
         return launchLane(LauncherLane.RIGHT);
     }
 
-    public LaunchSequentialCommand launchAllInSequence() {
-        return launchAllInSequence(DEFAULT_BURST_SPACING_MS);
-    }
-
-    public LaunchSequentialCommand launchAllInSequence(double spacingMs) {
-        return new LaunchSequentialCommand(launcher , spacingMs);
-    }
-
-    public LaunchDetectedBurstCommand launchDetectedBurst() {
-        return launchDetectedBurst(DEFAULT_BURST_SPACING_MS);
-    }
-
-    public LaunchDetectedBurstCommand launchDetectedBurst(double spacingMs) {
-        return new LaunchDetectedBurstCommand(launcher , launcherCoordinator, spacingMs);
-    }
-
     /**
      * Immediate helper used by bindings that still trigger launcher actions imperatively.
      */
@@ -82,11 +59,7 @@ public class LauncherCommands {
     }
 
     public void queueDetectedBurst(double spacingMs) {
-        if (launcherCoordinator != null) {
-            launcherCoordinator.requestBurst(spacingMs);
-        } else {
-            launcher.queueBurstAll();
-        }
+        launcher.queueBurstAll();
     }
 
     public void cancelAll() {
@@ -140,8 +113,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a short-range shot
      */
-    public FireAllAtRangeCommand fireAllShortRange() {
-        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.SHORT, true, manualSpinController);
+    public LaunchAllAtPresetRangeCommand fireAllShortRange() {
+        return new LaunchAllAtPresetRangeCommand(launcher, intake, LauncherRange.SHORT, true);
     }
 
     /**
@@ -151,8 +124,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a mid-range shot
      */
-    public FireAllAtRangeCommand fireAllMidRange() {
-        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.MID, true, manualSpinController);
+    public LaunchAllAtPresetRangeCommand fireAllMidRange() {
+        return new LaunchAllAtPresetRangeCommand(launcher, intake, LauncherRange.MID, true);
     }
 
     /**
@@ -162,8 +135,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a long-range shot
      */
-    public FireAllAtRangeCommand fireAllLongRange() {
-        return new FireAllAtRangeCommand(launcher, intake, LauncherRange.LONG, true, manualSpinController);
+    public LaunchAllAtPresetRangeCommand fireAllLongRange() {
+        return new LaunchAllAtPresetRangeCommand(launcher, intake, LauncherRange.LONG, true);
     }
 
     /**
@@ -174,8 +147,8 @@ public class LauncherCommands {
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @return Command that executes the range-based shot
      */
-    public FireAllAtRangeCommand fireAllAtRange(LauncherRange range, boolean spinDownAfterShot) {
-        return new FireAllAtRangeCommand(launcher, intake, range, spinDownAfterShot, manualSpinController);
+    public LaunchAllAtPresetRangeCommand launchAllAtRangePreset(LauncherRange range, boolean spinDownAfterShot) {
+        return new LaunchAllAtPresetRangeCommand(launcher, intake, range, spinDownAfterShot);
     }
 
     /**
@@ -185,8 +158,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a short-range shot
      */
-    public FireAllCommand fireAll(boolean spinDownAfterShot) {
-        return new FireAllCommand(launcher, intake, spinDownAfterShot, manualSpinController);
+    public LaunchAllCommand fireAll(boolean spinDownAfterShot) {
+        return new LaunchAllCommand(launcher, intake, spinDownAfterShot);
     }
 
     // ========== Obelisk Pattern Commands ==========
@@ -200,7 +173,7 @@ public class LauncherCommands {
      * @return Command that fires matching artifacts in pattern order
      */
     public LaunchObeliskPatternCommand launchObeliskPattern(List<ArtifactColor> pattern, double spacingMs) {
-        return new LaunchObeliskPatternCommand(launcher, launcherCoordinator, pattern, spacingMs);
+        return new LaunchObeliskPatternCommand(launcher, intake, pattern, spacingMs);
     }
 
     /**
@@ -246,6 +219,38 @@ public class LauncherCommands {
         );
     }
 
+    // ========== Sequence Mode Commands ==========
+
+    /**
+     * Fires in obelisk pattern sequence with motif tail offset.
+     *
+     * Gets the detected motif pattern from RobotState, calculates the motif tail
+     * offset based on artifacts in ramp, rotates the pattern accordingly, and
+     * fires lanes in sequence with configurable spacing.
+     *
+     * Used for precise obelisk scoring in DECODE mode.
+     *
+     * @return Command that fires in motif-aware sequence
+     */
+    public LaunchInSequenceCommand fireInSequence() {
+        return new LaunchInSequenceCommand(launcher, intake);
+    }
+
+    /**
+     * Mode-aware fire command that adapts based on RobotState launcher mode.
+     *
+     * THROUGHPUT mode: Fires all lanes rapidly at MID range
+     * DECODE mode: Fires in obelisk pattern sequence with motif tail offset
+     *
+     * This is the recommended fire button command for TeleOp as it automatically
+     * adapts when the mode switches (e.g., at 30 seconds remaining).
+     *
+     * @return Command that fires using current launcher mode strategy
+     */
+    public LaunchModeAwareCommand fireModeAware() {
+        return new LaunchModeAwareCommand(launcher, intake);
+    }
+
     // ========== Distance-Based Commands ==========
 
     /**
@@ -260,10 +265,10 @@ public class LauncherCommands {
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @return Command that auto-selects range and fires
      */
-    public FireAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
-                                                       DriveSubsystem drive,
-                                                       boolean spinDownAfterShot) {
-        return new FireAllAtAutoRangeCommand(launcher, intake, vision, drive, manualSpinController, spinDownAfterShot);
+    public LaunchAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
+                                                         DriveSubsystem drive,
+                                                         boolean spinDownAfterShot) {
+        return new LaunchAllAtAutoRangeCommand(launcher, intake, vision, drive, spinDownAfterShot);
     }
 
     /**
@@ -274,8 +279,8 @@ public class LauncherCommands {
      * @param drive The drive subsystem
      * @return Command that auto-selects range and fires
      */
-    public FireAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
-                                                       DriveSubsystem drive) {
+    public LaunchAllAtAutoRangeCommand fireAllAutoRange(VisionSubsystemLimelight vision,
+                                                         DriveSubsystem drive) {
         return fireAllAutoRange(vision, drive, true);
     }
 
@@ -289,10 +294,10 @@ public class LauncherCommands {
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @return Command that fires all lanes at distance-calculated RPM
      */
-    public FireAllAtDistanceCommand fireAllAtDistance(VisionSubsystemLimelight vision,
-                                                       DriveSubsystem drive,
-                                                       boolean spinDownAfterShot) {
-        return new FireAllAtDistanceCommand(launcher, intake, vision, drive, spinDownAfterShot, manualSpinController);
+    public LaunchAllAtDistanceBasedRPMCommand fireAllAtDistance(VisionSubsystemLimelight vision,
+                                                                 DriveSubsystem drive,
+                                                                 boolean spinDownAfterShot) {
+        return new LaunchAllAtDistanceBasedRPMCommand(launcher, intake, vision, drive, spinDownAfterShot);
     }
 
     /**
@@ -304,9 +309,25 @@ public class LauncherCommands {
      * @param drive The drive subsystem (for odometry fallback)
      * @return Command that fires all lanes at distance-calculated RPM
      */
-    public FireAllAtDistanceCommand fireAllAtDistance(VisionSubsystemLimelight vision,
-                                                       DriveSubsystem drive) {
+    public LaunchAllAtDistanceBasedRPMCommand fireAllAtDistance(VisionSubsystemLimelight vision,
+                                                                 DriveSubsystem drive) {
         return fireAllAtDistance(vision, drive, true);
+    }
+
+    /**
+     * Continuously calculates distance to goal and updates launcher RPM while held.
+     * Designed for hold-to-spin, release-to-fire button behavior.
+     *
+     * While held: Continuously calculates distance and updates RPM targets
+     * On release: Caller should trigger fire command
+     *
+     * @param vision The vision subsystem (for AprilTag distance measurement)
+     * @param drive The drive subsystem (for odometry fallback)
+     * @return Command that continuously updates RPM based on distance
+     */
+    public ContinuousDistanceBasedSpinCommand spinUpAtDistance(VisionSubsystemLimelight vision,
+                                                                DriveSubsystem drive) {
+        return new ContinuousDistanceBasedSpinCommand(launcher, vision, drive);
     }
 
 }

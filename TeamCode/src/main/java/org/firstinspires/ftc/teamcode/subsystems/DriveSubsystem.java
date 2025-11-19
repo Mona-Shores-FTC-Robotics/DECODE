@@ -207,22 +207,28 @@ public class DriveSubsystem implements Subsystem {
 
         Pose seed = RobotState.takeHandoffPose();
         if (seed == null) {
-//            LLResult result = vision.limelight.getLatestResult();
-//            Pose3D mt1Pose = result != null ? result.getBotpose() : null; // MegaTag1 FTCSpace pose
-//
-//            if (mt1Pose != null && mt1Pose.getPosition() != null && mt1Pose.getOrientation() != null) {
-//                double xIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().x);
-//                double yIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().y);
-//                double headingDeg = mt1Pose.getOrientation().getYaw();
-//                packet.put("Diagnostic/FTC Seed Pose x", xIn);
-//                packet.put("Diagnostic/FTC Seed Pose y", yIn);
-//                packet.put("Diagnostic/FTC Seed Pose heading", headingDeg);
-//                // Convert FTC pose to Pedro coordinate system
-//                seed = convertFtcToPedroPose(xIn, yIn, Math.toRadians(headingDeg));
-//            } else {
-//                // Fallback if no tag visible at start (center of field, facing forward)
-                seed = new Pose(56, 8, Math.toRadians(90));
-//            }
+            LLResult result = vision.limelight.getLatestResult();
+            Pose3D mt1Pose = result != null ? result.getBotpose() : null; // MegaTag1 FTCSpace pose
+
+            if (mt1Pose != null && mt1Pose.getPosition() != null && mt1Pose.getOrientation() != null) {
+                double xIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().x);
+                double yIn = DistanceUnit.METER.toInches(mt1Pose.getPosition().y);
+                double headingDeg = mt1Pose.getOrientation().getYaw();
+
+                packet.put("Diagnostic/mt1FTCSeedPose Pose x", xIn);
+                packet.put("Diagnostic/mt1FTCSeedPose Pose y", yIn);
+                packet.put("Diagnostic/mt1FTCSeedPose Pose heading", headingDeg);
+
+                // Convert FTC pose to Pedro coordinate system
+                seed = convertFtcToPedroPose(xIn, yIn, headingDeg);
+                packet.put("Diagnostic/mt1PedroSeedPose x", xIn);
+                packet.put("Diagnostic/mt1PedroSeedPose Pose y", yIn);
+                packet.put("Diagnostic/mt1PedroSeedPose Pose heading", headingDeg);
+            } else {
+                // Fallback if no tag visible at start (center of field, facing forward)
+                seed = new Pose(72, 72, Math.toRadians(90));
+            }
+
         }
         packet.put("Diagnostic/Pedro Seed Pose x", seed.getX());
         packet.put("Diagnostic/Pedro Seed Pose y", seed.getY());

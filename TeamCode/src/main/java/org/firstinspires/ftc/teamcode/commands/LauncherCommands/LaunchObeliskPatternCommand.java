@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
@@ -25,13 +25,13 @@ import java.util.List;
  *
  * Example usage:
  * // For PPG pattern (Purple, Purple, Green)
- * new LaunchObeliskPatternCommand(launcher, coordinator,
+ * new LaunchObeliskPatternCommand(launcher, intake,
  *     Arrays.asList(ArtifactColor.PURPLE, ArtifactColor.PURPLE, ArtifactColor.GREEN),
  *     150.0)
  */
 public class LaunchObeliskPatternCommand extends LauncherCommand {
 
-    private final LauncherCoordinator coordinator;
+    private final IntakeSubsystem intake;
     private final List<ArtifactColor> desiredPattern;
     private final double spacingMs;
 
@@ -39,23 +39,23 @@ public class LaunchObeliskPatternCommand extends LauncherCommand {
      * Creates a command to fire artifacts matching an Obelisk pattern.
      *
      * @param launcher The launcher subsystem
-     * @param coordinator The launcher coordinator (tracks lane colors)
+     * @param intake The intake subsystem (tracks lane colors)
      * @param desiredPattern The desired color sequence (e.g., [PURPLE, PURPLE, GREEN])
      * @param spacingMs Milliseconds between shots
      */
     public LaunchObeliskPatternCommand(LauncherSubsystem launcher,
-                                       LauncherCoordinator coordinator,
+                                       IntakeSubsystem intake,
                                        List<ArtifactColor> desiredPattern,
                                        double spacingMs) {
-        super(launcher, true, coordinator);
-        this.coordinator = coordinator;
+        super(launcher, true, intake);
+        this.intake = intake;
         this.desiredPattern = desiredPattern;
         this.spacingMs = Math.max(0.0, spacingMs);
     }
 
     @Override
     protected boolean queueShots() {
-        if (coordinator == null || desiredPattern == null || desiredPattern.isEmpty()) {
+        if (intake == null || desiredPattern == null || desiredPattern.isEmpty()) {
             return false;
         }
 
@@ -111,7 +111,7 @@ public class LaunchObeliskPatternCommand extends LauncherCommand {
             }
 
             // Check if this lane has the color we need
-            ArtifactColor laneColor = coordinator.getLaneColor(lane);
+            ArtifactColor laneColor = intake.getLaneColor(lane);
             if (laneColor == color) {
                 return lane;
             }

@@ -7,7 +7,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherCoordinator;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
@@ -62,7 +61,6 @@ public class RobotTelemetryData {
      * @param intake Intake subsystem
      * @param vision Vision subsystem
      * @param lighting Lighting subsystem (may be null)
-     * @param coordinator Launcher coordinator (for artifact tracking)
      * @param driveRequest Current drive request from bindings
      * @param gamepad1 Driver gamepad (may be null)
      * @param gamepad2 Operator gamepad (may be null)
@@ -81,7 +79,6 @@ public class RobotTelemetryData {
             IntakeSubsystem intake,
             VisionSubsystemLimelight vision,
             LightingSubsystem lighting,
-            LauncherCoordinator coordinator,
             DriverBindings.DriveRequest driveRequest,
             Gamepad gamepad1,
             Gamepad gamepad2,
@@ -130,7 +127,7 @@ public class RobotTelemetryData {
         // Capture subsystem data
         DriveTelemetryData driveData = DriveTelemetryData.capture(drive, driveRequest);
         LauncherTelemetryData launcherData = LauncherTelemetryData.capture(launcher);
-        IntakeTelemetryData intakeData = IntakeTelemetryData.capture(intake, coordinator);
+        IntakeTelemetryData intakeData = IntakeTelemetryData.capture(intake);
 
         // Capture gamepad data
         GamepadTelemetryData gamepadData = GamepadTelemetryData.capture(gamepad1, gamepad2);
@@ -143,7 +140,6 @@ public class RobotTelemetryData {
                 intake,
                 launcher,
                 lighting,
-                coordinator,
                 vision
         );
 
