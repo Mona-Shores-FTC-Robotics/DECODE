@@ -92,11 +92,11 @@ public class VisionSubsystemLimelight implements Subsystem {
         // This must be called every loop before requesting pose estimates
         // Skip in diagnostic mode to allow external control for testing different offsets
         if (hasValidHeading && !diagnosticMode) {
-            // Convert Pedro heading to FTC heading (Pedro + 90°)
+            // Convert Pedro heading to FTC heading (Pedro - 90°)
+            // Fixed 180° heading error: changed from +90° to -90°
             // Limelight with orientation=180° expects FTC coordinate frame heading
-            // Verified via diagnostic testing: offset=90° gives 2-3" accuracy
             double pedroHeadingDeg = Math.toDegrees(currentHeadingRad);
-            double ftcHeadingDeg = AngleUnit.normalizeDegrees(pedroHeadingDeg + 90.0);
+            double ftcHeadingDeg = AngleUnit.normalizeDegrees(pedroHeadingDeg - 90.0);
 
             limelight.updateRobotOrientation(ftcHeadingDeg);
         }
@@ -535,13 +535,14 @@ public class VisionSubsystemLimelight implements Subsystem {
                     this.ftcPose = null;
                 } else {
                     // MT2 pose is already in FTC coordinates since we send correct heading via updateRobotOrientation()
-                    this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg));
-                    Pose pedro = convertFtcToPedroPose(xIn, yIn, headingDeg);
+                    this.ftcPose = new Pose(xIn, yIn, Math.toRadians(headingDeg)+Math.PI);
+                    Pose pedro = convertFtcToPedroPose(xIn, yIn, AngleUnit.DEGREES.normalize(headingDeg+180));
                     this.pedroPose = pedro;
                 }
                 this.ftcX = xIn;
                 this.ftcY = yIn;
-                this.ftcYaw = headingDeg;
+                //TODO figure out if this is correct?
+                this.ftcYaw = AngleUnit.DEGREES.normalize(headingDeg+180);
                 this.ftcRange = Math.hypot(xIn, yIn);
                 this.ftcBearing = Math.toDegrees(Math.atan2(yIn, xIn));
             } else {
@@ -636,7 +637,8 @@ public class VisionSubsystemLimelight implements Subsystem {
         double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
         double pedroX = ftcY + halfField;
         double pedroY = halfField - ftcX;
-        double pedroHeading = AngleUnit.normalizeRadians(Math.toRadians(headingDeg) - Math.PI / 2.0);
+        // Fixed 180° heading error: changed from -90° to +90° (inverse of forward conversion)
+        double pedroHeading = AngleUnit.normalizeRadians(Math.toRadians(headingDeg) + Math.PI / 2.0);
         return new Pose(pedroX, pedroY, pedroHeading);
     }
 
@@ -644,7 +646,8 @@ public class VisionSubsystemLimelight implements Subsystem {
         double halfField = AutoField.waypoints.fieldWidthIn / 2.0;
         double ftcX = halfField - pedroPose.getY();
         double ftcY = pedroPose.getX() - halfField;
-        double ftcHeading = AngleUnit.normalizeRadians(pedroPose.getHeading() + Math.PI / 2.0);
+        // Fixed 180° heading error: changed from +90° to -90° (matches periodic() conversion)
+        double ftcHeading = AngleUnit.normalizeRadians(pedroPose.getHeading() - Math.PI / 2.0);
         return new Pose(ftcX, ftcY, ftcHeading);
     }
 

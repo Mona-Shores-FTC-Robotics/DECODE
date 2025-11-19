@@ -228,7 +228,11 @@ public class DriveSubsystem implements Subsystem {
                 // Fallback if no tag visible at start (center of field, facing forward)
                 seed = new Pose(72, 72, Math.toRadians(90));
             }
+
         }
+        packet.put("Diagnostic/Pedro Seed Pose x", seed.getX());
+        packet.put("Diagnostic/Pedro Seed Pose y", seed.getY());
+        packet.put("Diagnostic/Pedro Seed Pose heading", seed.getHeading());
 
         follower.setStartingPose(seed);
         follower.setPose(seed);
