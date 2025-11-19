@@ -48,18 +48,6 @@ public class Robot {
         lighting.setAlliance(alliance);
     }
 
-    public void initialize() {
-        drive.setTeleOpControlEnabled(true);
-        vision.initialize();
-        drive.initialize();
-        launcher.initialize();
-        lighting.initialize();
-        intake.initialize();
-
-        // Wire lighting to receive lane color updates from intake
-        intake.addLaneColorListener(lighting);
-    }
-
     public void initializeForAuto() {
         drive.setTeleOpControlEnabled(false);
         vision.initialize();
