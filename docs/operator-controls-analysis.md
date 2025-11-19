@@ -422,25 +422,24 @@ robot.launcherCommands.fireUniversalSmart(vision, drive, lighting, gamepad)
 | **X** | Distance-based shot | Hold to spin, release to fire |
 | **A** | Short-range preset | ~2700 RPM (close shots safety net) |
 | **B** | Long-range preset | ~4200 RPM (safety net) |
-| **Y** | Human loading | Reverse flywheel + prefeed |
-| **D-Pad Down** | Mode-aware fire | THROUGHPUT or DECODE (preset RPM) |
+| **Y** | Toggle human loading | Press once to start, press again to stop |
 | **D-Pad Left** | **Universal smart shot** | **Distance + mode-aware (TESTING!)** |
 | **D-Pad Right** | Cycle motif tail | 0→1→2→0 with visual feedback |
 | **Back** | Toggle mode | THROUGHPUT ↔ DECODE |
 | **Right Bumper** | Intake forward | Hold to intake |
 | ~~**Left Bumper**~~ | ~~Pre-spin~~ | **REMOVED** |
+| ~~**D-Pad Down**~~ | ~~Mode-aware fire~~ | **REMOVED (redundant)** |
 | ~~**D-Pad Up**~~ | ~~Available~~ | Open for future use |
 
 **Testing Focus:**
-- **D-Pad Left** = UniversalSmartShot (combines X button + D-Pad Down)
-- If reliable, could replace X and D-Pad Down entirely → ultimate one-button solution
-- A and B are safety nets - can be removed if X or D-Pad Left proves reliable at all ranges
+- **D-Pad Left** = UniversalSmartShot (distance + mode-aware)
+- If reliable, could replace X entirely → ultimate one-button solution
+- A and B are safety nets - can be removed if D-Pad Left proves reliable at all ranges
 
 **Button Hierarchy:**
 1. **D-Pad Left** (testing) - Distance-based RPM + mode-aware firing = ULTIMATE
-2. **X** - Distance-based RPM only (current primary)
-3. **D-Pad Down** - Mode-aware with preset RPM (no distance calculation)
-4. **A/B** - Manual range presets (safety nets)
+2. **X** - Distance-based RPM only (hold/release)
+3. **A/B** - Manual range presets (safety nets)
 
 ### 3. Benefits Achieved
 
