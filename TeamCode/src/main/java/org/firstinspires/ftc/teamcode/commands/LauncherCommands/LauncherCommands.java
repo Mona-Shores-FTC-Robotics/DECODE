@@ -314,4 +314,20 @@ public class LauncherCommands {
         return fireAllAtDistance(vision, drive, true);
     }
 
+    /**
+     * Continuously calculates distance to goal and updates launcher RPM while held.
+     * Designed for hold-to-spin, release-to-fire button behavior.
+     *
+     * While held: Continuously calculates distance and updates RPM targets
+     * On release: Caller should trigger fire command
+     *
+     * @param vision The vision subsystem (for AprilTag distance measurement)
+     * @param drive The drive subsystem (for odometry fallback)
+     * @return Command that continuously updates RPM based on distance
+     */
+    public ContinuousDistanceBasedSpinCommand spinUpAtDistance(VisionSubsystemLimelight vision,
+                                                                DriveSubsystem drive) {
+        return new ContinuousDistanceBasedSpinCommand(launcher, vision, drive);
+    }
+
 }
