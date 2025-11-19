@@ -22,15 +22,20 @@ import dev.nextftc.ftc.GamepadEx;
  *
  * Drive Commands:
  * - Default: Normal field-centric drive with slow/ramp modes
- * - B button (hold): Geometry-based continuous aim-and-drive (uses pose + incenter)
+ * - B button (hold): Geometry-based continuous aim-and-drive (uses odometry + incenter)
  *
- * Testing Aiming Methods (D-pad):
- * - D-pad Up: Vision-centered continuous tracking (centers AprilTag in camera)
- * - D-pad Down: Fixed-angle continuous tracking (60° blue, 120° red)
+ * Aiming Methods (for testing/comparison):
+ * - B button: Geometry-based (odometry + incenter) - RECOMMENDED for competition
+ * - D-pad Up: Vision-centered continuous tracking (centers AprilTag tx)
+ * - D-pad Down: Fixed-angle continuous tracking (134° blue, 46° red) - RELIABLE from known positions
  * - D-pad Left: Capture-and-aim snap turn (samples then discrete turn)
  *
- * Other:
- * - A button: Vision relocalization (instant, no movement)
+ * Vision Relocalization:
+ * - A button: MANUAL vision relocalization (instant, no movement)
+ * - Automatic relocalization: DISABLED by default (see Robot.VisionConfig)
+ *   - Currently using MT1 which can be noisy (4-8" accuracy)
+ *   - Manual A button relocalization available when needed
+ *   - Will re-enable automatic when MT2 is fixed
  */
 public class DriverBindings {
 
