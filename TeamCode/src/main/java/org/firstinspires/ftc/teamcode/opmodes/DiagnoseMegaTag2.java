@@ -163,7 +163,7 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         // Log odometry pose to AdvantageScope (match existing Pose/ format for field dragging)
         packet.put("Diagnostic/OdomFTC Pose x", ftcX);
         packet.put("Diagnostic/OdomFTC Pose y", ftcY);
-        packet.put("Diagnostic/OdomFTC Pose heading", ftcHeading);
+        packet.put("Diagnostic/OdomFTC Pose heading", Math.toRadians(ftcHeading));
 
 
         // Show MT2 result
