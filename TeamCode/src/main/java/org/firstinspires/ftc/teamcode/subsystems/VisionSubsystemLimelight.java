@@ -610,8 +610,10 @@ public class VisionSubsystemLimelight implements Subsystem {
             this.mt1Pose = result.getBotpose();
             if (mt1Pose != null && mt1Pose.getPosition() != null) {
                 this.ftcPoseMT1 = PoseFrames.mt1ToFtc(mt1Pose);
-                RobotState.putPose("MT1 Pose", this.ftcPoseMT1);
+                RobotState.putPose("MT1 FTC Pose", this.ftcPoseMT1);
                 this.pedroPoseMT1 = PoseFrames.mt1ToPedro(mt1Pose);
+                RobotState.putPose("MT1 Pedro Pose", this.pedroPoseMT1);
+                //if this works that means mt1ToPedro is incorrect.
 
                 this.ftcYawMT1 = Math.toDegrees(ftcPoseMT1.getHeading());
                 this.ftcRangeMT1 = Math.hypot(ftcPoseMT1.getX(), ftcPoseMT1.getY());

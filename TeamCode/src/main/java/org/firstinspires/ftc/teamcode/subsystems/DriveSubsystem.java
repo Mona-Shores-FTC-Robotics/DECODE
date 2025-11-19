@@ -701,6 +701,7 @@ public class DriveSubsystem implements Subsystem {
         }
         Pose pedroPose = snap.pedroPoseMT1; //only use MT1 for relocalization
         if (pedroPose == null) return false;
+        RobotState.putPose("Pedro MT1 Pose force ", pedroPose );
 
         follower.setPose(pedroPose);
         poseFusion.reset(pedroPose, System.currentTimeMillis());
