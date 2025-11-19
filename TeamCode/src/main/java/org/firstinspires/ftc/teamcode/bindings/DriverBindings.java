@@ -55,8 +55,8 @@ public class DriverBindings {
     public DriverBindings(GamepadEx driver) {
 
         // Finalized Driver Buttons
-        fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND);
-        fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND).negate();
+        fieldX = driver.leftStickX().deadZone(TRANSLATION_DEADBAND).negate();
+        fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND);
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
         aimHold = driver.b();
