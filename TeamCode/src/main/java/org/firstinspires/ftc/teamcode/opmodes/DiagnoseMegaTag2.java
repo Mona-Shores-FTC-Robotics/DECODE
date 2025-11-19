@@ -25,19 +25,18 @@ import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 /**
- * Diagnostic OpMode to debug MegaTag2 heading transformation issues.
+ * Diagnostic OpMode to verify MegaTag2 localization accuracy.
+ *
+ * VERIFIED RESULT: 90° offset (Pedro → FTC conversion) produces 2-3" accuracy
  *
  * INSTRUCTIONS:
- * 1. Place robot at a known position on the field (write it down!)
+ * 1. Place robot at a known position on the field
  * 2. Make sure you can see AprilTag 20 (blue basket) or 24 (red basket)
  * 3. Run this OpMode
- * 4. Open FTC Dashboard: http://192.168.49.1:8080/dash
- * 5. Go to Config tab → DiagnoseMegaTag2 → headingOffsetDeg
- * 6. Try these values: 0, 90, 180, 270, -90
- * 7. Find the offset where MT2 pose matches odometry (error < 3 inches)
- * 8. RECORD THAT VALUE!
+ * 4. Verify "MT2 Pedro Pose" matches "Odometry Pose" within 2-3 inches
+ * 5. Check AdvantageScope for visual pose alignment
  *
- * The correct offset will make "MT2 Pedro Pose" match "Odometry Pose" closely.
+ * To test different offsets, adjust headingOffsetDeg in FTC Dashboard Config tab.
  */
 @Config
 @TeleOp(name = "Diagnose MegaTag2", group = "Diagnostics")
@@ -45,16 +44,13 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
 
     /**
      * Heading offset to add to Pedro heading before sending to Limelight.
-     * Adjust this via FTC Dashboard to find the correct value.
      *
-     * Try these values in order:
-     * - 0° = Send Pedro heading directly (camera handles everything)
-     * - 90° = Pedro + 90 (FTC heading convention)
-     * - 180° = Pedro + 180 (flip for camera orientation)
-     * - 270° = Pedro + 270 (FTC + 180)
-     * - -90° = Pedro - 90 (inverse FTC conversion)
+     * VERIFIED: 90° is correct (Pedro → FTC conversion)
+     * This produces 2-3" accuracy for MegaTag2 pose estimates.
+     *
+     * Can adjust via FTC Dashboard to test other scenarios if needed.
      */
-    public static double headingOffsetDeg = 0.0;
+    public static double headingOffsetDeg = 90.0;
     FtcDashboard dashboard;
 
     private Robot robot;
