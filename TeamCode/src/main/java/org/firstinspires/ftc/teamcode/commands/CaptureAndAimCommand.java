@@ -73,6 +73,12 @@ public class CaptureAndAimCommand extends Command {
 
     @Override
     public void start() {
+        // Validate configuration to prevent division by zero
+        if (config.sampleFrames < 1) {
+            throw new IllegalStateException(
+                "CaptureAndAimCommand: config.sampleFrames must be >= 1, got " + config.sampleFrames);
+        }
+
         capturedTargetHeadingRad = null;
         turnStarted = false;
         startTimeMs = System.currentTimeMillis();
@@ -94,6 +100,7 @@ public class CaptureAndAimCommand extends Command {
             // Check sampling timeout
             if (nowMs - startTimeMs >= config.samplingTimeoutMs) {
                 // Timeout during sampling - use whatever we've collected so far
+                // Defensive check: only compute mean if we have at least one valid sample
                 if (framesSampled > 0) {
                     capturedTargetHeadingRad = Math.atan2(summedSin / framesSampled, summedCos / framesSampled);
                 }
@@ -107,7 +114,8 @@ public class CaptureAndAimCommand extends Command {
             }
 
             // Once we have enough samples, compute the circular mean
-            if (framesSampled >= config.sampleFrames) {
+            // Defensive check: ensure we have at least one sample before dividing
+            if (framesSampled >= config.sampleFrames && framesSampled > 0) {
                 // Use circular mean instead of arithmetic mean to handle angle wrapping correctly.
                 // Arithmetic mean fails for angles near 0°/360° boundary (e.g., mean of [1°, 359°] = 180°).
                 // Circular mean: compute mean of sin/cos components, then use atan2 to recover the angle.
