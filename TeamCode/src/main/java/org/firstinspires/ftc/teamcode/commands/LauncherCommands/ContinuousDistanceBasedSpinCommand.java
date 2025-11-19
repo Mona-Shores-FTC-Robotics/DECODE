@@ -248,9 +248,9 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
                 gamepad.rumble(200);  // 200ms rumble
             }
 
-            // Light feedback: flash the ready indicator
+            // Light feedback: flash yellow to indicate launcher ready
             if (lighting != null) {
-                lighting.indicateLauncherReady();
+                lighting.flashAimAligned();
             }
         }
     }
