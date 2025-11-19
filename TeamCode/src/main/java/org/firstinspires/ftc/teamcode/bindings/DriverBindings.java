@@ -32,7 +32,7 @@ import dev.nextftc.ftc.GamepadEx;
  *
  * Vision Relocalization:
  * - A button: MANUAL vision relocalization (instant, no movement)
- * - Automatic relocalization: DISABLED by default (see Robot.VisionConfig)
+ * - Automatic relocalization: DISABLED by default (see Robot.RelocalizationConfig)
  *   - Currently using MT1 which can be noisy (4-8" accuracy)
  *   - Manual A button relocalization available when needed
  *   - Will re-enable automatic when MT2 is fixed
