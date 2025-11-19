@@ -31,8 +31,11 @@ public class Robot {
          * - Manual relocalization (A button) is still available when needed
          * - Once MT2 is working (2-3" accuracy, multi-tag fusion), re-enable this
          */
-        public static boolean enableAutoRelocalization = false;
+        public boolean enableAutoRelocalization = false;
     }
+
+    public static VisionConfig visionConfig = new VisionConfig();
+
     public final DriveSubsystem drive;
     public final LauncherSubsystem launcher;
     public final IntakeSubsystem intake;
@@ -75,7 +78,7 @@ public class Robot {
 
     public void initializeForTeleOp() {
         // Use configurable flag for vision relocalization (disabled by default with MT1)
-        configureInitialization(true, VisionConfig.enableAutoRelocalization);
+        configureInitialization(true, visionConfig.enableAutoRelocalization);
     }
 
     private void configureInitialization(boolean enableTeleOpControl, boolean enableVisionRelocalization) {
