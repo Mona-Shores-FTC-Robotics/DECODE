@@ -199,16 +199,27 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     private TagSnapshot selectSnapshot(Alliance preferredAlliance) {
         LLResult result = limelight.getLatestResult();
-        if (result == null) {
+        if (result == null || !result.isValid()) {
             return null;
         }
+
+        // Use MegaTag2 botpose for multi-tag fusion
+        Pose3D botpose = result.getBotpose();
+        if (botpose == null) {
+            return null;
+        }
+
+        // Get fiducial results to determine alliance and tag info
         List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
         if (fiducials == null || fiducials.isEmpty()) {
             return null;
         }
 
-        TagSnapshot bestSnapshot = null;
+        // Find best fiducial for alliance determination and decision margin
+        LLResultTypes.FiducialResult bestFiducial = null;
+        Alliance bestAlliance = Alliance.UNKNOWN;
         double bestScore = Double.NEGATIVE_INFINITY;
+
         for (LLResultTypes.FiducialResult fiducial : fiducials) {
             Alliance detectionAlliance = mapTagToAlliance(fiducial.getFiducialId());
             if (preferredAlliance != null && preferredAlliance != Alliance.UNKNOWN
@@ -218,18 +229,26 @@ public class VisionSubsystemLimelight implements Subsystem {
             if (detectionAlliance == Alliance.UNKNOWN && preferredAlliance != Alliance.UNKNOWN) {
                 continue;
             }
-            TagSnapshot candidate = new TagSnapshot(detectionAlliance, fiducial, result.getTx(), result.getTy(), result.getTa());
-            if (candidate.getDecisionMargin() > bestScore) {
-                bestScore = candidate.getDecisionMargin();
-                bestSnapshot = candidate;
+
+            double score = getTargetAreaSafe(fiducial);
+            if (!Double.isNaN(score) && score > bestScore) {
+                bestScore = score;
+                bestFiducial = fiducial;
+                bestAlliance = detectionAlliance;
             }
         }
 
-        if (bestSnapshot == null && preferredAlliance != null && preferredAlliance != Alliance.UNKNOWN) {
+        if (bestFiducial == null && preferredAlliance != null && preferredAlliance != Alliance.UNKNOWN) {
             // Retry without alliance filtering so we still capture pose data.
             return selectSnapshot(Alliance.UNKNOWN);
         }
-        return bestSnapshot;
+
+        if (bestFiducial == null) {
+            return null;
+        }
+
+        // Create snapshot using MegaTag2 botpose with fiducial metadata
+        return new TagSnapshot(bestAlliance, bestFiducial, botpose, result.getTx(), result.getTy(), result.getTa());
     }
 
     private void onSnapshotUpdated(TagSnapshot snapshot) {
@@ -388,15 +407,25 @@ public class VisionSubsystemLimelight implements Subsystem {
                     double tx,
                     double ty,
                     double ta) {
+            this(alliance, fiducial, fiducial.getRobotPoseFieldSpace(), tx, ty, ta);
+        }
+
+        TagSnapshot(Alliance alliance,
+                    LLResultTypes.FiducialResult fiducial,
+                    Pose3D botpose,
+                    double tx,
+                    double ty,
+                    double ta) {
             this.alliance = alliance == null ? Alliance.UNKNOWN : alliance;
             this.tagId = fiducial.getFiducialId();
             this.decisionMargin = sanitizeDecisionMetric(fiducial);
 
-            Pose3D pose = fiducial.getRobotPoseFieldSpace();
+            // Use MegaTag2 botpose instead of individual fiducial pose
+            Pose3D pose = botpose;
             if (pose != null && pose.getPosition() != null) {
                 double xIn = DistanceUnit.METER.toInches(pose.getPosition().x);
                 double yIn = DistanceUnit.METER.toInches(pose.getPosition().y);
-                double headingDeg = pose.getOrientation() == null ? Double.NaN : pose.getOrientation().getYaw();
+                double headingDeg = pose.getOrientation() == null ? Double.NaN : pose.getOrientation().getYaw(AngleUnit.DEGREES);
                 if (Double.isNaN(xIn) || Double.isNaN(yIn) || Double.isNaN(headingDeg)) {
                     this.pedroPose = null;
                     this.ftcPose = null;
