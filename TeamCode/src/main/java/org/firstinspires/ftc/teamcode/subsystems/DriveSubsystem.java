@@ -96,11 +96,28 @@ public class DriveSubsystem implements Subsystem {
         public double fallbackDtSeconds = 0.02;
     }
 
+    @Configurable
+    public static class VisionRelocalizationConfig {
+        /**
+         * Enable automatic vision relocalization during aiming in TeleOp.
+         *
+         * IMPORTANT: Currently using MegaTag1 (MT1) which is less reliable than MT2.
+         * MT1 provides single-tag poses with 4-8" accuracy and can be noisy/jumpy.
+         *
+         * Recommendation: Keep DISABLED until MegaTag2 (MT2) is fixed.
+         * - MT1 relocalization can introduce more error than odometry drift
+         * - Manual relocalization (A button) is still available when needed
+         * - Once MT2 is working (2-3" accuracy, multi-tag fusion), re-enable this
+         */
+        public boolean enableDuringAiming = false;
+    }
+
     public static TeleOpDriveConfig teleOpDriveConfig = new TeleOpDriveConfig();
     public static AimAssistConfig aimAssistConfig = new AimAssistConfig();
     public static VisionCenteredAimConfig visionCenteredAimConfig = new VisionCenteredAimConfig();
     public static FixedAngleAimConfig fixedAngleAimConfig = new FixedAngleAimConfig();
     public static RampConfig rampConfig = new RampConfig();
+    public static VisionRelocalizationConfig visionRelocalizationConfig = new VisionRelocalizationConfig();
 
     public String visionRelocalizeStatus = "Press A to re-localize";
     public long visionRelocalizeStatusMs = 0L;
