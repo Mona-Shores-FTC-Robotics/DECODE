@@ -80,7 +80,8 @@ public class OperatorBindings {
         LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
         // Distance-based shooting commands
-        ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand = robot.launcherCommands.spinUpAtDistance(robot.vision, robot.drive);
+        ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand = robot.launcherCommands.spinUpAtDistance(
+            robot.vision, robot.drive, robot.lighting, operatorPad.getGamepad());
         LaunchAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
 
         // Mode-aware commands

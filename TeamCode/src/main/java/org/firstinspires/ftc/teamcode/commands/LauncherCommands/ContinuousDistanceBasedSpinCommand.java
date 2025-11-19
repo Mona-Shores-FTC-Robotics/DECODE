@@ -4,10 +4,13 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.util.Range;
 
+import com.qualcomm.robotcore.hardware.Gamepad;
+
 import dev.nextftc.core.commands.Command;
 
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -106,9 +109,13 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
     private final LauncherSubsystem launcher;
     private final VisionSubsystemLimelight vision;
     private final DriveSubsystem drive;
+    private final LightingSubsystem lighting;
+    private final Gamepad gamepad;
 
     private double lastSmoothedDistanceIn = 0.0;
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;  // 0-1: higher = more filtering
+    private static final double RPM_READY_THRESHOLD_PERCENT = 0.95;  // Trigger feedback at 95% of target
+    private boolean feedbackTriggered = false;
 
     /**
      * Creates command that continuously updates launcher RPM based on distance to goal.
@@ -116,13 +123,19 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
      * @param launcher The launcher subsystem
      * @param vision The vision subsystem (for AprilTag distance)
      * @param drive The drive subsystem (for odometry fallback)
+     * @param lighting The lighting subsystem (for ready feedback)
+     * @param gamepad The operator gamepad (for haptic feedback)
      */
     public ContinuousDistanceBasedSpinCommand(LauncherSubsystem launcher,
                                                VisionSubsystemLimelight vision,
-                                               DriveSubsystem drive) {
+                                               DriveSubsystem drive,
+                                               LightingSubsystem lighting,
+                                               Gamepad gamepad) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.vision = Objects.requireNonNull(vision, "vision required");
         this.drive = Objects.requireNonNull(drive, "drive required");
+        this.lighting = lighting;  // Can be null
+        this.gamepad = gamepad;    // Can be null
         requires(launcher);
         setInterruptible(true);
     }
@@ -133,6 +146,7 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         diagnostics.lastSource = "none";
         diagnostics.updateCount = 0;
         lastSmoothedDistanceIn = 0.0;
+        feedbackTriggered = false;
 
         // Set spin mode to FULL to start spinning up
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
@@ -167,6 +181,9 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
 
             // Set hood positions based on smoothed distance
             setHoodForDistance(smoothedDistance);
+
+            // Check if any lane has reached 95% of target RPM for haptic/light feedback
+            checkAndTriggerReadyFeedback();
         }
 
         // Update diagnostics
@@ -197,6 +214,45 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         // Preserve the calculated RPMs so LaunchAllCommand can use them immediately
         // Do NOT clear overrides - the fire command needs these RPMs to determine readiness
         // The launcher stays spun up at the calculated RPM for immediate firing
+    }
+
+    /**
+     * Checks if any launcher lane has reached 95% of target RPM and triggers feedback.
+     * Feedback is only triggered once per button press (when first crossing the threshold).
+     */
+    private void checkAndTriggerReadyFeedback() {
+        if (feedbackTriggered) {
+            return;  // Only trigger once
+        }
+
+        // Check each lane to see if it's at 95% of target RPM
+        double maxTargetRpm = 0.0;
+        double maxCurrentRpm = 0.0;
+
+        for (LauncherLane lane : LauncherLane.values()) {
+            double targetRpm = launcher.getLaunchRpm(lane);
+            double currentRpm = launcher.getCurrentRpm(lane);
+
+            if (targetRpm > 0.0) {
+                maxTargetRpm = Math.max(maxTargetRpm, targetRpm);
+                maxCurrentRpm = Math.max(maxCurrentRpm, currentRpm);
+            }
+        }
+
+        // Trigger feedback if current RPM >= 95% of target RPM
+        if (maxTargetRpm > 0.0 && maxCurrentRpm >= maxTargetRpm * RPM_READY_THRESHOLD_PERCENT) {
+            feedbackTriggered = true;
+
+            // Haptic feedback: rumble controller for 200ms
+            if (gamepad != null) {
+                gamepad.rumble(200);  // 200ms rumble
+            }
+
+            // Light feedback: flash the ready indicator
+            if (lighting != null) {
+                lighting.indicateLauncherReady();
+            }
+        }
     }
 
     /**
