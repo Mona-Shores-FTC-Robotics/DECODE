@@ -64,11 +64,11 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         /** Distance in inches for short range reference point */
         public double shortRangeDistanceIn = 36.0;
         /** RPM for left lane at short range */
-        public double shortLeftRpm = 2100;
+        public double shortLeftRpm = 1900;
         /** RPM for center lane at short range */
-        public double shortCenterRpm = 2100;
+        public double shortCenterRpm = 1900;
         /** RPM for right lane at short range */
-        public double shortRightRpm = 2100;
+        public double shortRightRpm = 1900;
 
         /** Distance in inches for mid range reference point */
         public double midRangeDistanceIn = 72.0;
@@ -178,7 +178,6 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         if (smoothedDistance > 0.0) {
             // Set RPMs based on smoothed distance
             setRpmsForDistance(smoothedDistance);
-
             // Set hood positions based on smoothed distance
             setHoodForDistance(smoothedDistance);
 
@@ -190,17 +189,19 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         diagnostics.lastCalculatedDistanceIn = smoothedDistance;
 
         // Push diagnostics to telemetry packet
-        RobotState.packet.put("X Button Distance-Based/Update Count", diagnostics.updateCount);
-        RobotState.packet.put("X Button Distance-Based/Distance (in)", diagnostics.lastCalculatedDistanceIn);
-        RobotState.packet.put("X Button Distance-Based/Left RPM", diagnostics.lastLeftRpm);
-        RobotState.packet.put("X Button Distance-Based/Center RPM", diagnostics.lastCenterRpm);
-        RobotState.packet.put("X Button Distance-Based/Right RPM", diagnostics.lastRightRpm);
-        RobotState.packet.put("X Button Distance-Based/Hood Position", diagnostics.lastHoodPosition);
-        RobotState.packet.put("X Button Distance-Based/Data Source", diagnostics.lastSource);
-        RobotState.packet.put("X Button Distance-Based/Robot Pose Available", diagnostics.robotPoseAvailable);
-        RobotState.packet.put("X Button Distance-Based/Goal Pose Available", diagnostics.goalPoseAvailable);
-        RobotState.packet.put("X Button Distance-Based/Vision Pose Available", diagnostics.visionPoseAvailable);
-        RobotState.packet.put("X Button Distance-Based/Odometry Pose Available", diagnostics.odometryPoseAvailable);
+        RobotState.packet.put("SQUARE Distance-Based/Update Count", diagnostics.updateCount);
+        RobotState.packet.put("SQUARE Distance-Based/Distance (in)", diagnostics.lastCalculatedDistanceIn);
+        RobotState.packet.put("SQUARE Distance-Based/Left RPM", diagnostics.lastLeftRpm);
+        RobotState.packet.put("SQUARE Distance-Based/Center RPM", diagnostics.lastCenterRpm);
+        RobotState.packet.put("SQUARE Distance-Based/Right RPM", diagnostics.lastRightRpm);
+        RobotState.packet.put("SQUARE Distance-Based/Hood Position", diagnostics.lastHoodPosition);
+        RobotState.packet.put("SQUARE Distance-Based/Data Source", diagnostics.lastSource);
+        RobotState.packet.put("SQUARE Distance-Based/Robot Pose Available", diagnostics.robotPoseAvailable);
+        RobotState.packet.put("SQUARE Distance-Based/Goal Pose Available", diagnostics.goalPoseAvailable);
+        RobotState.packet.put("SQUARE Distance-Based/Vision Pose Available", diagnostics.visionPoseAvailable);
+        RobotState.packet.put("SQUARE Distance-Based/Odometry Pose Available", diagnostics.odometryPoseAvailable);
+        RobotState.packet.put("SQUARE Distance-Based/Feedback Triggered", feedbackTriggered);
+
     }
 
     @Override
@@ -245,7 +246,7 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
 
             // Haptic feedback: rumble controller for 200ms
             if (gamepad != null) {
-                gamepad.rumble(200);  // 200ms rumble
+                gamepad.rumble(2000);  // 200ms rumble
             }
 
             // Light feedback: flash yellow to indicate launcher ready

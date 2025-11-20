@@ -64,10 +64,10 @@ public class DriverBindings {
         fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND);
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
-        aimHold = driver.b();
+        aimHold = driver.circle();
 
         //Test Buttons
-        relocalizeRequest = driver.a();
+        relocalizeRequest = driver.cross();
 
         // D-pad for testing different aiming methods
         aimVisionCentered = driver.dpadUp();

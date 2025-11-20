@@ -291,7 +291,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         aimFlashRestoreSensorFollow = followSensorColors;
         setFollowSensorColors(false);
         applySolidPosition(clamp01(colorPositionConfig.yellowPosition));
-        aimFlashUntilMs = System.currentTimeMillis() + 2000L;
+        aimFlashUntilMs = System.currentTimeMillis() + 8000L;
     }
 
     /**
