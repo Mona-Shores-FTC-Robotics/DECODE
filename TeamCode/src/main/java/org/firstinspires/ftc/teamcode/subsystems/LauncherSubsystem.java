@@ -532,6 +532,15 @@ public class LauncherSubsystem implements Subsystem {
         shotQueue.clear();
     }
 
+    /**
+     * Clears recovery deadlines for all lanes, allowing them to fire immediately.
+     * Use this when starting a new spin-up sequence to ensure lanes can respond to new RPM targets.
+     */
+    public void clearRecoveryDeadlines() {
+        laneRecoveryDeadlineMs.clear();
+        laneLaunchHoldDeadlineMs.clear();
+    }
+
     public void abort() {
         clearQueue();
         reverseFlywheelActive = false;

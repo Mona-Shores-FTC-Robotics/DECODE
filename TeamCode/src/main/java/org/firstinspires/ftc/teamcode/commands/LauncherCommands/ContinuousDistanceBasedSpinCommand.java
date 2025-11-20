@@ -148,6 +148,10 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         lastSmoothedDistanceIn = 0.0;
         feedbackTriggered = false;
 
+        // Clear recovery deadlines so lanes can immediately respond to new RPM targets
+        // Without this, lanes in recovery from previous shots won't update their target RPM
+        launcher.clearRecoveryDeadlines();
+
         // Set spin mode to FULL to start spinning up
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
     }
