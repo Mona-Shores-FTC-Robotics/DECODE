@@ -717,25 +717,36 @@ public class DriveSubsystem implements Subsystem {
 
     public boolean forceRelocalizeFromVision() {
         Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
-        if (!snapOpt.isPresent()) return false;
+        if (!snapOpt.isPresent()) {
+            visionRelocalizeStatus = "No snapshot available";
+            return false;
+        }
 
         VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
 
         long ageMs = System.currentTimeMillis() - vision.getLastPoseTimestampMs();
         if (ageMs > 250) {
-            // Stale data, do not relocalize
+            visionRelocalizeStatus = "Vision data stale (" + ageMs + "ms)";
             return false;
         }
-        // Phase 1: Use MT2 (IMU-fused) for manual relocalization - eliminates ambiguity
-        // MT2 is MORE reliable after crashes because it uses your known heading from Pinpoint
+
+        // Phase 1: Try MT2 first (IMU-fused), fallback to MT1
         Pose pedroPose = snap.pedroPoseMT2;
-        // Fallback to MT1 if MT2 unavailable (shouldn't happen with proper heading updates)
+        boolean usedMT2 = (pedroPose != null);
+
         if (pedroPose == null) {
             pedroPose = snap.pedroPoseMT1;
         }
-        if (pedroPose == null) return false;
 
-        RobotState.putPose("Pedro MT2 Pose force", pedroPose);
+        if (pedroPose == null) {
+            visionRelocalizeStatus = "Both MT2 and MT1 poses are null";
+            return false;
+        }
+
+        // Log which method was used
+        String method = usedMT2 ? "MT2" : "MT1";
+        RobotState.putPose("Pedro " + method + " Pose force", pedroPose);
+        visionRelocalizeStatus = "Updated from " + method + " (tag " + snap.getTagId() + ")";
 
         follower.setPose(pedroPose);
         poseFusion.reset(pedroPose, System.currentTimeMillis());
