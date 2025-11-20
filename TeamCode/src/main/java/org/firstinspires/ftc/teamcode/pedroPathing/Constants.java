@@ -62,24 +62,24 @@ public class Constants {
 
     // ========= Pedro follower and localization =========
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .forwardZeroPowerAcceleration(-29.294739328)
-            .lateralZeroPowerAcceleration(-77.6639)
+//            .forwardZeroPowerAcceleration(-29.294739328)
+//            .lateralZeroPowerAcceleration(-77.6639)
             .useSecondaryTranslationalPIDF(true)
             .useSecondaryHeadingPIDF(true)
             .useSecondaryDrivePIDF(true)
-            .translationalPIDFCoefficients(new PIDFCoefficients(.030, 0, .0001, .08))
-            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.01, 0, 0.0001, .05))
-            .headingPIDFCoefficients(new PIDFCoefficients(.6, .0001, .035, .065))
-            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.4, 0, .015, .029))
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) //was .005p
-            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
+//            .translationalPIDFCoefficients(new PIDFCoefficients(.030, 0, .0001, .08))
+//            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.01, 0, 0.0001, .05))
+//            .headingPIDFCoefficients(new PIDFCoefficients(.6, .0001, .035, .065))
+//            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.4, 0, .015, .029))
+//            .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) //was .005p
+//            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
             .centripetalScaling(0.00005)
             .mass(15.4221); //34 pounds 11/16/25
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1.0)
-            .xVelocity(72.58829912801427) //tuned 11/16/25
-            .yVelocity(43.5633) //tuned 11/16/25
+//            .xVelocity(72.58829912801427) //tuned 11/16/25
+//            .yVelocity(43.5633) //tuned 11/16/25
             .rightFrontMotorName(HardwareNames.RF)
             .rightRearMotorName(HardwareNames.RB)
             .leftRearMotorName(HardwareNames.LB)
@@ -92,7 +92,7 @@ public class Constants {
 
     public static PinpointConstants localizerConstants = new PinpointConstants()
             .forwardPodY(6.25)
-            .strafePodX(6.25)
+            .strafePodX(0) //19429 6.25
             .distanceUnit(DistanceUnit.INCH)
             .hardwareMapName(HardwareNames.PINPOINT)
             .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)

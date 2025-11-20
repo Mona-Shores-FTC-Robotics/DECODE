@@ -41,7 +41,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
  * See the sensor's product page: https://www.gobilda.com/pinpoint-odometry-computer-imu-sensor-fusion-for-2-wheel-odometry/
  */
 @TeleOp(name = "Sensor: GoBilda Pinpoint", group = "Sensor")
-@Disabled
 public class SensorGoBildaPinpoint extends OpMode {
     // Create an instance of the sensor
     GoBildaPinpointDriver pinpoint;
@@ -75,6 +74,7 @@ public class SensorGoBildaPinpoint extends OpMode {
     }
 
     public void configurePinpoint(){
+
        /*
         *  Set the odometry pod positions relative to the point that you want the position to be measured from.
         *

@@ -417,12 +417,12 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
-        double[] rotated = rotateFieldInput(fieldX , fieldY);
+//        double[] rotated = rotateFieldInput(fieldX , fieldY);
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : normalMultiplier;
-        double forward = Range.clip(rotated[1] * multiplier , - 1.0 , 1.0);
-        double strafeLeft = Range.clip(- rotated[0] * multiplier , - 1.0 , 1.0);
+        double forward = Range.clip(-fieldX* multiplier , - 1.0 , 1.0);
+        double strafeLeft = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
 
         // Calculate target heading using pinpoint odometry + basket target coordinates
         Pose pose = follower.getPose();
@@ -464,12 +464,12 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
-        double[] rotated = rotateFieldInput(fieldX , fieldY);
+//        double[] rotated = rotateFieldInput(fieldX , fieldY);
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : normalMultiplier;
-        double forward = Range.clip(rotated[1] * multiplier , - 1.0 , 1.0);
-        double strafeLeft = Range.clip(- rotated[0] * multiplier , - 1.0 , 1.0);
+        double forward = Range.clip(-fieldX * multiplier , - 1.0 , 1.0);
+        double strafeLeft = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
 
         // Get vision aiming error (robot-relative, in radians)
         Optional<Double> visionErrorOpt = vision.getVisionAimErrorRad();
@@ -525,12 +525,12 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
-        double[] rotated = rotateFieldInput(fieldX , fieldY);
+//        double[] rotated = rotateFieldInput(fieldX , fieldY);
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : normalMultiplier;
-        double forward = Range.clip(rotated[1] * multiplier , - 1.0 , 1.0);
-        double strafeLeft = Range.clip(- rotated[0] * multiplier , - 1.0 , 1.0);
+        double forward = Range.clip(-fieldX * multiplier , - 1.0 , 1.0);
+        double strafeLeft = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
 
         // Get fixed target heading based on alliance
         Alliance alliance = vision.getAlliance();
