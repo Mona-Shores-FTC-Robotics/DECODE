@@ -32,6 +32,8 @@ public class Robot {
     }
 
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
+        ControlHubIdentifierUtil.setRobotName(hardwareMap);
+        RobotState.packet.put("_Config/Robot Name", RobotState.getRobotName());
         telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
@@ -41,8 +43,7 @@ public class Robot {
 
         launcherCommands = new LauncherCommands(launcher, intake);
         intakeCommands = new IntakeCommands(intake);
-        ControlHubIdentifierUtil.setRobotName(hardwareMap);
-        RobotState.packet.put("Robot Name", RobotState.getRobotName());
+
 
     }
 

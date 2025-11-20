@@ -215,10 +215,9 @@ public class LauncherSubsystem implements Subsystem {
     @Configurable
     public static class FeederConfig20245 extends FeederConfig {
         public FeederConfig20245() {
-            // Override defaults with 20245-specific values
-            // Example: left.loadPosition = 0.82;
-            // Tune these values for the 20245 robot
-        }
+            center.loadPosition = .18;
+            center.firePosition = .07;
+            }
     }
 
     @Configurable

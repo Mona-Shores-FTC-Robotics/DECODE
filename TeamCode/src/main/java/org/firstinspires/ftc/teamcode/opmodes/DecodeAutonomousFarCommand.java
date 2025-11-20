@@ -97,8 +97,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Override
     public void onInit() {
-        // Set robot name BEFORE Robot construction so configs are selected correctly
-        ControlHubIdentifierUtil.setRobotName(hardwareMap);
 
         BindingManager.reset();
         robot = new Robot(hardwareMap);
