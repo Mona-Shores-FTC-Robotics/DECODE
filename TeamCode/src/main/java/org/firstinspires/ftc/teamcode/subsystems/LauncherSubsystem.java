@@ -322,6 +322,14 @@ public class LauncherSubsystem implements Subsystem {
     public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
     public static FlywheelConfig flywheelConfig = new FlywheelConfig();
 
+    // Robot-specific FeederConfig instances - both visible in FTC Dashboard for tuning
+    public static FeederConfig19429 feederConfig19429 = new FeederConfig19429();
+    public static FeederConfig20245 feederConfig20245 = new FeederConfig20245();
+
+    // Robot-specific HoodConfig instances - both visible in FTC Dashboard for tuning
+    public static HoodConfig19429 hoodConfig19429 = new HoodConfig19429();
+    public static HoodConfig20245 hoodConfig20245 = new HoodConfig20245();
+
     /**
      * Gets the robot-specific FeederConfig based on RobotState.getRobotName().
      * @return FeederConfig19429 or FeederConfig20245
