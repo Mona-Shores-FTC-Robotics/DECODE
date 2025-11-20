@@ -106,7 +106,17 @@ public class IntakeSubsystem implements Subsystem {
 
         // Distance gating (used by all classifiers)
         public boolean useDistance = true;
-        public double presenceDistanceCm = 3.0;
+        public double presenceDistanceCm = 3.0;  // Legacy: single threshold for all lanes
+
+        // Per-lane distance thresholds (overrides presenceDistanceCm when enabled)
+        /** Enable per-lane distance thresholds instead of single global threshold */
+        public boolean usePerLaneThresholds = true;
+        /** Left lane artifact detection threshold (cm) - lower values = closer required */
+        public double leftLaneThresholdCm = 5.35;
+        /** Center lane artifact detection threshold (cm) */
+        public double centerLaneThresholdCm = 6.7; // Why was 6 afraid of 7? Because 7 ate 9!
+        /** Right lane artifact detection threshold (cm) */
+        public double rightLaneThresholdCm = 8.0;
 
         // Background detection - distinguishes empty space from artifacts
         /** Enable background similarity checking */
@@ -578,6 +588,30 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
+    /**
+     * Get the distance threshold for a specific lane.
+     * Uses per-lane thresholds if enabled, otherwise returns global threshold.
+     *
+     * @param lane The lane to get threshold for
+     * @return Distance threshold in cm
+     */
+    private double getDistanceThreshold(LauncherLane lane) {
+        if (!laneSensorConfig.usePerLaneThresholds) {
+            return laneSensorConfig.presenceDistanceCm;
+        }
+
+        switch (lane) {
+            case LEFT:
+                return laneSensorConfig.leftLaneThresholdCm;
+            case CENTER:
+                return laneSensorConfig.centerLaneThresholdCm;
+            case RIGHT:
+                return laneSensorConfig.rightLaneThresholdCm;
+            default:
+                return laneSensorConfig.presenceDistanceCm;
+        }
+    }
+
     private LaneSample sampleLane(LauncherLane lane) {
         NormalizedColorSensor colorSensor = laneSensors.get(lane);
         DistanceSensor distanceSensor = laneDistanceSensors.get(lane);
@@ -598,7 +632,9 @@ public class IntakeSubsystem implements Subsystem {
         } else if (!distanceValid) {
             withinDistance = false;
         } else {
-            withinDistance = distanceCm <= laneSensorConfig.presenceDistanceCm;
+            // Use per-lane thresholds if enabled, otherwise use global threshold
+            double threshold = getDistanceThreshold(lane);
+            withinDistance = distanceCm <= threshold;
         }
 
         // SINGLE I2C read for all color channels (red, green, blue, alpha)
@@ -630,13 +666,17 @@ public class IntakeSubsystem implements Subsystem {
         // Compute total RGB intensity for presence detection
         int totalIntensity = scaledRed + scaledGreen + scaledBlue;
 
+        // Get the appropriate distance threshold for this lane
+        double threshold = getDistanceThreshold(lane);
+
         // Classify color using selected classifier mode with enhanced presence/background detection
         ClassificationResult result = classifyColor(
                 hue, saturation, value,
                 maxComponent > 0,
                 totalIntensity,
                 distanceValid ? distanceCm : Double.NaN,
-                withinDistance
+                withinDistance,
+                threshold
         );
         ArtifactColor hsvColor = result.color;
         double confidence = result.confidence;
@@ -680,11 +720,13 @@ public class IntakeSubsystem implements Subsystem {
      * @param totalIntensity Total RGB intensity (0-765)
      * @param distanceCm Distance reading in cm (or NaN if unavailable)
      * @param withinDistance Whether distance is within presence threshold
+     * @param distanceThreshold The distance threshold used for this lane (cm)
      * @return Classification result with color and confidence
      */
     private ClassificationResult classifyColor(float hue, float saturation, float value,
                                                boolean hasSignal, int totalIntensity,
-                                               double distanceCm, boolean withinDistance) {
+                                               double distanceCm, boolean withinDistance,
+                                               double distanceThreshold) {
         // Basic quality check - no signal
         if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
@@ -692,7 +734,7 @@ public class IntakeSubsystem implements Subsystem {
 
         // Multi-factor presence detection - is something actually there?
         if (laneSensorConfig.enablePresenceScoring) {
-            double presenceScore = computePresenceScore(saturation, value, totalIntensity, distanceCm, withinDistance);
+            double presenceScore = computePresenceScore(saturation, value, totalIntensity, distanceCm, withinDistance, distanceThreshold);
             if (presenceScore < laneSensorConfig.minPresenceScore) {
                 // Not enough evidence that an artifact is present
                 return new ClassificationResult(ArtifactColor.NONE, 0.0);
@@ -734,17 +776,18 @@ public class IntakeSubsystem implements Subsystem {
      * Compute presence score - how confident are we that an artifact is actually present?
      * Combines distance, saturation, value, and total intensity.
      *
+     * @param distanceThreshold The distance threshold for this lane (cm)
      * @return Presence score 0.0-1.0 (higher = more confident artifact is present)
      */
     private double computePresenceScore(float saturation, float value, int totalIntensity,
-                                        double distanceCm, boolean withinDistance) {
+                                        double distanceCm, boolean withinDistance, double distanceThreshold) {
         double score = 0.0;
 
         // Distance factor - is something close enough?
         if (!Double.isNaN(distanceCm) && laneSensorConfig.useDistance) {
             if (withinDistance) {
-                // Linear scoring: closer = higher score
-                double distanceFactor = 1.0 - (distanceCm / laneSensorConfig.presenceDistanceCm);
+                // Linear scoring: closer = higher score (uses per-lane threshold)
+                double distanceFactor = 1.0 - (distanceCm / distanceThreshold);
                 score += laneSensorConfig.presenceDistanceWeight * Math.max(0.0, distanceFactor);
             }
             // else: distance factor contributes 0 (too far)
