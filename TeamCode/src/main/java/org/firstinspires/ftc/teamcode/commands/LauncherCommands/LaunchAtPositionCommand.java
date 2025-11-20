@@ -22,13 +22,13 @@ public class LaunchAtPositionCommand extends Command {
     @Configurable
     public static class PositionRpmConfig {
         /** RPM for shots from LAUNCH_FAR position */
-        public double farLaunchRpm = 2900;
+        public double farLaunchRpm = 2925;
 
         /** RPM for shots from LAUNCH_CLOSE position */
         public double closeLaunchRpm = 2150;
 
         /** Default RPM if position unknown */
-        public double defaultLaunchRpm = 2400;
+        public double defaultLaunchRpm = 2550;
 
         /** Timeout in seconds before giving up */
         public double timeoutSeconds = 3.0;

@@ -28,9 +28,9 @@ public class LaunchAllAtPresetRangeCommand extends Command {
     @Configurable
     public static class RangeRpmConfig {
         /** Short range configuration */
-        public double shortLeftRpm = 1000;
-        public double shortCenterRpm = 1000; // Center disabled by default
-        public double shortRightRpm = 1000;
+        public double shortLeftRpm = 2150;
+        public double shortCenterRpm = 2150; // Center disabled by default
+        public double shortRightRpm = 2150;
 
         /** Mid range configuration (default/current values) */
         public double midLeftRpm = 2550;
@@ -38,8 +38,8 @@ public class LaunchAllAtPresetRangeCommand extends Command {
         public double midRightRpm = 2550;
 
         /** Long range configuration */
-        public double longLeftRpm = 2900;
-        public double longCenterRpm = 2850; // Center disabled by default
+        public double longLeftRpm = 2925;
+        public double longCenterRpm = 2925; // Center disabled by default
         public double longRightRpm = 2925;
 
         /** Timeout in seconds before giving up on spin-up */

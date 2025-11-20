@@ -57,7 +57,7 @@ public class LaunchInSequenceCommand extends Command {
     @Configurable
     public static class SequenceConfig {
         /** Milliseconds between shots in sequence */
-        public double shotSpacingMs = 500.0;
+        public double shotSpacingMs = 1000;
 
         /** RPM for left lane in sequence mode */
         public double sequenceLeftRpm = 2550;
