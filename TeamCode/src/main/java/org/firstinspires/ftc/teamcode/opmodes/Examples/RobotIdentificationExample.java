@@ -12,10 +12,11 @@ import org.firstinspires.ftc.teamcode.util.RobotIdentifier;
  * This is useful when you have multiple robots (e.g., competition robot and practice robot)
  * and need to distinguish between them.
  *
- * Three main methods:
+ * Four main methods:
  * 1. Configuration name - easiest way (just use different configs on each robot)
- * 2. Control Hub serial number - unique identifier that never changes
- * 3. Quick check - simple boolean check for a specific robot
+ * 2. Control Hub name - set in Robot Controller app (Settings → Manage → Name)
+ * 3. Control Hub serial number - unique identifier that never changes
+ * 4. Quick check - simple boolean check for a specific robot
  */
 @TeleOp(name = "Example: Robot Identification", group = "Examples")
 @Disabled
@@ -29,6 +30,7 @@ public class RobotIdentificationExample extends LinearOpMode {
         // Display all robot identification info
         telemetry.addLine("=== Robot Identity ===");
         telemetry.addData("Config Name", identifier.getConfigName());
+        telemetry.addData("Control Hub Name", identifier.getControlHubName());
         telemetry.addData("Control Hub Serial", identifier.getControlHubSerial());
         telemetry.addData("Expansion Hub Serial", identifier.getExpansionHubSerial());
         telemetry.addLine();
@@ -54,7 +56,18 @@ public class RobotIdentificationExample extends LinearOpMode {
         telemetry.addData("Max Speed", maxSpeed);
         telemetry.addLine();
 
-        // Example 3: Use serial number for precise identification
+        // Example 3: Use Control Hub name (from Robot Controller app settings)
+        String hubName = identifier.getControlHubName();
+        if (hubName.contains("Competition")) {
+            telemetry.addLine("Competition robot detected (by hub name)");
+        } else if (hubName.contains("Practice")) {
+            telemetry.addLine("Practice robot detected (by hub name)");
+        } else {
+            telemetry.addLine("Hub name: " + hubName);
+        }
+        telemetry.addLine();
+
+        // Example 4: Use serial number for precise identification
         String controlHubSerial = identifier.getControlHubSerial();
         if (controlHubSerial.equals("DQ3YBV6L")) {
             telemetry.addLine("This is the competition robot (by serial)");
@@ -63,7 +76,7 @@ public class RobotIdentificationExample extends LinearOpMode {
         }
         telemetry.addLine();
 
-        // Example 4: Get a summary string
+        // Example 5: Get a summary string
         telemetry.addLine("=== Summary ===");
         telemetry.addLine(identifier.getSummary());
 
