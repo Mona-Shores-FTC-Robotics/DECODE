@@ -123,7 +123,6 @@ public class DashboardFormatter {
         packet.put("intake/motor/mode", data.intake.mode);
         packet.put("intake/motor/power", data.intake.power);
         packet.put("intake/roller_active", data.intake.rollerActive);
-        packet.put("intake/prefeed_active", data.intake.prefeedActive);
         addDebugLaneSamples(packet, data.intake);
 
 

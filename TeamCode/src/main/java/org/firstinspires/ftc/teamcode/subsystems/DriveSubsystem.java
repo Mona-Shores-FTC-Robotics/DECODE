@@ -41,11 +41,11 @@ public class DriveSubsystem implements Subsystem {
     @Configurable
     public static class TeleOpDriveConfig {
         /** Max power multiplier for normal (non-slow) teleop driving (0.0-1.0) */
-        public double normalMultiplier = .8;
+        public double normalMultiplier = 0.7;
         /** Max power multiplier for slow mode teleop driving (0.0-1.0) */
         public double slowMultiplier = 0.2;
         /** Turn multiplier for normal mode */
-        public double normalTurnMultiplier = .4;
+        public double normalTurnMultiplier = 0.4;
         /** Turn multiplier for slow mode */
         public double slowTurnMultiplier = 0.2;
         /** Rotation override threshold for aim assist */
@@ -144,6 +144,7 @@ public class DriveSubsystem implements Subsystem {
     private double rampTurn = 0.0;
     private long lastRampUpdateNs = 0L;
     private boolean teleOpControlEnabled = false;
+    private boolean visionRelocalizationEnabled = false;
 
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
 //        follower = Constants.createFollower(hardwareMap);
@@ -318,7 +319,9 @@ public class DriveSubsystem implements Subsystem {
         if (robotCentric != robotCentricConfig) {
             setRobotCentric(robotCentricConfig);
         }
-        driveScaled(fieldX , fieldY , rotationInput , slowMode , rampMode);
+        //TODO is this needed?
+        double[] rotated = rotateFieldInput(fieldX , fieldY);
+        driveScaled(rotated[0] , rotated[1] , rotationInput , slowMode , rampMode);
     }
 
     /**
@@ -504,6 +507,11 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = turn;
 
         follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
+
+        // Optionally relocalize if enabled
+        if (visionRelocalizationEnabled && vision.hasValidTag()) {
+            maybeRelocalizeFromVision();
+        }
     }
 
     /**
@@ -666,6 +674,23 @@ public class DriveSubsystem implements Subsystem {
         };
     }
 
+    private void maybeRelocalizeFromVision() {
+        if (! visionRelocalizationEnabled) {
+            return;
+        }
+        if (! vision.shouldUpdateOdometry()) {
+            return;
+        }
+
+        double speed = getRobotSpeedInchesPerSecond();
+        if (speed > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
+            return;
+        }
+
+        if (forceRelocalizeFromVision()) {
+            // Successful re-localization already recorded inside the helper.
+        }
+    }
 
     /**
      * Forces the follower pose to match the latest Limelight pose when available.

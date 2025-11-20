@@ -14,7 +14,6 @@ import org.firstinspires.ftc.teamcode.util.MotifPattern;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
@@ -113,9 +112,9 @@ public class LaunchInSequenceCommand extends Command {
         spinDownApplied = false;
         shotsQueued = false;
 
-        // Activate prefeed roller in forward direction to help feed
+        // gate Allow
         if (intake != null) {
-            intake.setPrefeedForward();
+            intake.setGateAllowArtifacts();
         }
 
         // Set RPMs for sequence firing (MID range by default)
@@ -183,7 +182,7 @@ public class LaunchInSequenceCommand extends Command {
     @Override
     public void stop(boolean interrupted) {
         if (intake != null) {
-            intake.setPrefeedReverse();
+            intake.setGatePreventArtifact();
         }
 
         // Clear RPM overrides to return to default values

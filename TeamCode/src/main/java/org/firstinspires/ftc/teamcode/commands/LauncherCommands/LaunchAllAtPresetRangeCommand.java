@@ -28,9 +28,9 @@ public class LaunchAllAtPresetRangeCommand extends Command {
     @Configurable
     public static class RangeRpmConfig {
         /** Short range configuration */
-        public double shortLeftRpm = 2150;
-        public double shortCenterRpm = 2150; // Center disabled by default
-        public double shortRightRpm = 2150;
+        public double shortLeftRpm = 2100;
+        public double shortCenterRpm = 2100; // Center disabled by default
+        public double shortRightRpm = 2100;
 
         /** Mid range configuration (default/current values) */
         public double midLeftRpm = 2550;
@@ -95,7 +95,7 @@ public class LaunchAllAtPresetRangeCommand extends Command {
 
         // Activate prefeed roller in forward direction to help feed
         if (intake != null) {
-            intake.setPrefeedForward();
+            intake.setGateAllowArtifacts();
         }
 
         // Set RPMs and hood angles for all lanes based on range
@@ -154,7 +154,7 @@ public class LaunchAllAtPresetRangeCommand extends Command {
     @Override
     public void stop(boolean interrupted) {
         if (intake != null) {
-            intake.setPrefeedReverse();
+            intake.setGatePreventArtifact();
         }
 
         // Clear RPM overrides to return to default values

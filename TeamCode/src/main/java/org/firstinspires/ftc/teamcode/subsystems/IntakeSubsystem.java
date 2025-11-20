@@ -154,13 +154,12 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     @Configurable
-    public static class PrefeedConfig {
-        public String servoName = "prefeed_roller";
+    public static class GateConfig {
+        public String servoName = "gate";
         /** Reverse speed (default) - prevents accidental feeding (continuous servo: 0.0 = full reverse) */
-        public double reversePosition = 1.0;
+        public double preventArtifacts = 1.0;
         /** Forward speed - helps feed artifacts when firing (continuous servo: 1.0 = full forward) */
-        public double forwardPosition = 0.0;
-        public double inactivePosition = .5;
+        public double allowArtifacts = .5;
     }
 
     @Configurable
@@ -172,7 +171,7 @@ public class IntakeSubsystem implements Subsystem {
     public static LaneSensorConfig laneSensorConfig = new LaneSensorConfig();
     public static MotorConfig motorConfig = new MotorConfig();
     public static RollerConfig rollerConfig = new RollerConfig();
-    public static PrefeedConfig prefeedConfig = new PrefeedConfig();
+    public static GateConfig gateConfig = new GateConfig();
     public static ManualModeConfig manualModeConfig = new ManualModeConfig();
 
     public static final class LaneSample {
@@ -270,9 +269,9 @@ public class IntakeSubsystem implements Subsystem {
     private final DcMotorEx intakeMotor;
     private double appliedMotorPower = 0.0;
     private final Servo rollerServo;
-    private final Servo prefeedServo;
+    private final Servo gateServo;
     private double lastRollerPosition = Double.NaN;
-    private double lastPrefeedPosition = Double.NaN;
+    private double lastGatePosition = Double.NaN;
     private boolean rollerEnabled = false;
     private boolean prefeedEnabled = false;
 
@@ -296,10 +295,10 @@ public class IntakeSubsystem implements Subsystem {
             rollerServo.setPosition(rollerConfig.inactivePosition);
         }
         rollerEnabled = false;
-        prefeedServo = tryGetServo(hardwareMap, prefeedConfig.servoName);
-        if (prefeedServo != null) {
-            prefeedServo.setPosition(prefeedConfig.inactivePosition);
-            lastPrefeedPosition = prefeedConfig.inactivePosition;
+        gateServo = tryGetServo(hardwareMap, gateConfig.servoName);
+        if (gateServo != null) {
+            gateServo.setPosition(gateConfig.allowArtifacts);
+            lastGatePosition = gateConfig.allowArtifacts;
         }
 
         for (LauncherLane lane : LauncherLane.values()) {
@@ -324,9 +323,9 @@ public class IntakeSubsystem implements Subsystem {
             lastRollerPosition = rollerConfig.inactivePosition;
         }
         rollerEnabled = false;
-        if (prefeedServo != null) {
-            prefeedServo.setPosition(prefeedConfig.inactivePosition);
-            lastPrefeedPosition = prefeedConfig.inactivePosition;
+        if (gateServo != null) {
+            gateServo.setPosition(gateConfig.allowArtifacts);
+            lastGatePosition = gateConfig.allowArtifacts;
         }
         prefeedEnabled = false;
     }
@@ -389,27 +388,17 @@ public class IntakeSubsystem implements Subsystem {
     }
 
 
-    public void setPrefeedForward() {
-        prefeedEnabled = true;
-        if (prefeedServo != null) {
-            prefeedServo.setPosition(prefeedConfig.forwardPosition);
-            lastPrefeedPosition = prefeedConfig.forwardPosition;
+    public void setGateAllowArtifacts() {
+        if (gateServo != null) {
+            gateServo.setPosition(gateConfig.allowArtifacts);
+            lastGatePosition = gateConfig.allowArtifacts;
         }
     }
 
-    public void setPrefeedReverse() {
-        prefeedEnabled = true;
-        if (prefeedServo != null) {
-            prefeedServo.setPosition(prefeedConfig.reversePosition);
-            lastPrefeedPosition = prefeedConfig.reversePosition;
-        }
-    }
-
-    public void deactivatePrefeed() {
-        prefeedEnabled = false;
-        if (prefeedServo != null) {
-            prefeedServo.setPosition(prefeedConfig.inactivePosition);
-            lastPrefeedPosition = prefeedConfig.inactivePosition;
+    public void setGatePreventArtifact() {
+        if (gateServo != null) {
+            gateServo.setPosition(gateConfig.preventArtifacts);
+            lastGatePosition = gateConfig.preventArtifacts;
         }
     }
 
@@ -452,7 +441,7 @@ public class IntakeSubsystem implements Subsystem {
         return rollerServo != null;
     }
     public boolean isPrefeedPresent() {
-        return prefeedServo != null;
+        return gateServo != null;
     }
 
 
@@ -460,18 +449,13 @@ public class IntakeSubsystem implements Subsystem {
         return rollerServo == null ? Double.NaN : lastRollerPosition;
     }
 
-    public double getPrefeedPosition() {
-        return prefeedServo == null ? Double.NaN : lastPrefeedPosition;
+    public double getGatePosition() {
+        return gateServo == null ? Double.NaN : lastGatePosition;
     }
 
     public boolean isRollerActive() {
         return rollerServo != null
                 && Math.abs(lastRollerPosition - rollerConfig.activePosition) < 1e-3;
-    }
-
-    public boolean isPrefeedActive() {
-        return prefeedServo != null
-                && Math.abs(lastPrefeedPosition - prefeedConfig.forwardPosition) < 1e-3;
     }
 
     private void pollLaneSensorsIfNeeded() {

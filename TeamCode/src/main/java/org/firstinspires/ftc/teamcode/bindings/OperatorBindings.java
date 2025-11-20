@@ -41,9 +41,9 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  */
 public class OperatorBindings {
     private final Button fireDistanceBased;
-    private final Button fireShort;
-    private final Button fireLong;
-    private final Button fireUniversalSmart;
+//    private final Button fireMid;
+//    private final Button fireLong;
+    private final Button fireModeAware;
 
     private final Button runIntake;
     private final Button humanLoading;
@@ -78,9 +78,9 @@ public class OperatorBindings {
     public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
         this.rawGamepad = operatorGamepad; //Need the raw gamepad for rumble features
 
-        // Preset range-based launching commands - delete once distance based is reliable
-        LaunchAllAtPresetRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
-        LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
+        // Range-based shooting commands
+//        LaunchAllAtPresetRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
+//        LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
         // Distance-based launching commands
         ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand =
@@ -103,8 +103,8 @@ public class OperatorBindings {
         fireDistanceBased.whenBecomesFalse(fireAllCommand);
 
         // Range-based shooting: press button to fire all lanes at that range
-        fireShort.whenBecomesTrue(fireShortRangeCommand);  // A: Close shots
-        fireLong.whenBecomesTrue(fireLongRangeCommand);    // B: Long shots
+//        fireMid.whenBecomesTrue(fireMidRangeCommand);
+//        fireLong.whenBecomesTrue(fireLongRangeCommand);
 
         // Intake control
         runIntake.whenBecomesTrue(intakeForwardCommand);
@@ -112,6 +112,15 @@ public class OperatorBindings {
 
         // Human loading toggle: press once to start, press again to stop
         humanLoading.whenBecomesTrue(humanLoadingToggle);
+        // Human Loading
+        humanLoading
+                .toggleOnBecomesTrue()
+                .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
+                .whenBecomesTrue(robot.intake::setGateAllowArtifacts)
+                .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
+                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
+                .whenBecomesFalse(robot.intake::setGatePreventArtifact)
+                .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
 
         // Universal smart shot: distance-based RPM + mode-aware firing (TESTING)
         fireUniversalSmart.whenBecomesTrue(universalSmartShotCommand);

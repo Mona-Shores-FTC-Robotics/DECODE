@@ -21,9 +21,8 @@ public class IntakeTelemetryData {
     public final boolean rollerPresent;
     public final boolean rollerActive;
     public final double rollerPosition;
-    public final boolean prefeedPresent;
-    public final boolean prefeedActive;
-    public final double prefeedPosition;
+    public final boolean gatePresent;
+    public final double gatePosition;
 
     // Artifact tracking
     public final int artifactCount;
@@ -42,9 +41,8 @@ public class IntakeTelemetryData {
             boolean rollerPresent,
             boolean rollerActive,
             double rollerPosition,
-            boolean prefeedPresent,
-            boolean prefeedActive,
-            double prefeedPosition,
+            boolean gatePresent,
+            double gatePosition,
             int artifactCount,
             String artifactState,
             Map<LauncherLane, IntakeSubsystem.LaneSample> laneSamples,
@@ -58,9 +56,8 @@ public class IntakeTelemetryData {
         this.rollerPresent = rollerPresent;
         this.rollerActive = rollerActive;
         this.rollerPosition = rollerPosition;
-        this.prefeedPresent = prefeedPresent;
-        this.prefeedActive = prefeedActive;
-        this.prefeedPosition = prefeedPosition;
+        this.gatePresent = gatePresent;
+        this.gatePosition = gatePosition;
         this.artifactCount = artifactCount;
         this.artifactState = artifactState;
         this.laneSamples = laneSamples;
@@ -91,8 +88,7 @@ public class IntakeTelemetryData {
                 intake.isRollerActive(),
                 intake.getRollerPosition(),
                 intake.isPrefeedPresent(),
-                intake.isPrefeedActive(),
-                intake.getPrefeedPosition(),
+                intake.getGatePosition(),
                 artifactCount,
                 artifactState,
                 laneSamples,
