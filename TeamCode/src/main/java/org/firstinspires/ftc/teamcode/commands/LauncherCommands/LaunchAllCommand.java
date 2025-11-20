@@ -7,6 +7,7 @@ import dev.nextftc.core.commands.Command;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.EnumSet;
 import java.util.Objects;
@@ -94,8 +95,20 @@ public class LaunchAllCommand extends Command {
             if (queuedLanes.contains(lane)) {
                 continue;
             }
+
+            // Diagnostic logging for lane readiness
+            boolean ready = launcher.isLaneReady(lane);
+            double launchRpm = launcher.getLaunchRpm(lane);
+            double currentRpm = launcher.getCurrentRpm(lane);
+            double targetRpm = launcher.getTargetRpm(lane);
+
+            RobotState.packet.put("LaunchAll/Lane " + lane.name() + "/Ready", ready);
+            RobotState.packet.put("LaunchAll/Lane " + lane.name() + "/Launch RPM", launchRpm);
+            RobotState.packet.put("LaunchAll/Lane " + lane.name() + "/Current RPM", currentRpm);
+            RobotState.packet.put("LaunchAll/Lane " + lane.name() + "/Target RPM", targetRpm);
+
             // Queue shot immediately when lane is ready - no stability wait
-            if (launcher.isLaneReady(lane)) {
+            if (ready) {
                 launcher.queueShot(lane);
                 queuedLanes.add(lane);
             }
