@@ -96,6 +96,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 new SubsystemComponent(robot.lighting),
                 new SubsystemComponent(robot.vision)
         );
+
+
     }
 
     @Override
