@@ -12,7 +12,6 @@ import java.util.List;
 public class RobotIdentifier {
 
     private final String configName;
-    private final String controlHubName;
     private final String controlHubSerial;
     private final String expansionHubSerial;
 
@@ -24,17 +23,6 @@ public class RobotIdentifier {
     public RobotIdentifier(HardwareMap hardwareMap) {
         // Get the active configuration name
         this.configName = hardwareMap.getActiveConfigurationName();
-
-        // Get the Control Hub name from Android resources
-        String hubName = "UNKNOWN";
-        try {
-            hubName = hardwareMap.appContext
-                    .getResources()
-                    .getString(com.qualcomm.ftcrobotcontroller.R.string.control_hub_module_name);
-        } catch (Exception e) {
-            // If we can't get the name, leave it as UNKNOWN
-        }
-        this.controlHubName = hubName;
 
         // Get Control Hub and Expansion Hub serial numbers
         List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
@@ -64,17 +52,6 @@ public class RobotIdentifier {
      */
     public String getConfigName() {
         return configName;
-    }
-
-    /**
-     * Gets the Control Hub name from the Robot Controller app settings.
-     * This is the name you set in the Robot Controller app (Settings → Manage → Name).
-     * Also appears in the WiFi SSID (e.g., "MyRobot-RC").
-     *
-     * @return Control Hub name (e.g., "DECODE-Competition", "DECODE-Practice")
-     */
-    public String getControlHubName() {
-        return controlHubName;
     }
 
     /**
@@ -113,8 +90,8 @@ public class RobotIdentifier {
      * @return Multi-line string with robot identification info
      */
     public String getSummary() {
-        return String.format("Config: %s\nHub Name: %s\nControl Hub Serial: %s\nExpansion Hub Serial: %s",
-                configName, controlHubName, controlHubSerial, expansionHubSerial);
+        return String.format("Config: %s\nControl Hub: %s\nExpansion Hub: %s",
+                configName, controlHubSerial, expansionHubSerial);
     }
 
     /**
