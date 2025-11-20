@@ -95,7 +95,7 @@ public class LaunchAllAtPresetRangeCommand extends Command {
 
         // Activate prefeed roller in forward direction to help feed
         if (intake != null) {
-            intake.setPrefeedForward();
+            intake.setGateAllowArtifacts();
         }
 
         // Set RPMs and hood angles for all lanes based on range
@@ -154,7 +154,7 @@ public class LaunchAllAtPresetRangeCommand extends Command {
     @Override
     public void stop(boolean interrupted) {
         if (intake != null) {
-            intake.setPrefeedReverse();
+            intake.setGatePreventArtifact();
         }
 
         // Clear RPM overrides to return to default values

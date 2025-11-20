@@ -11,7 +11,6 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 import java.util.EnumSet;
@@ -177,7 +176,7 @@ public class LaunchAllAtDistanceBasedRPMCommand extends Command {
                 if (calculatedDistance > 0.0) {
                     // Activate prefeed roller in forward direction to help feed
                     if (intake != null) {
-                        intake.setPrefeedForward();
+                        intake.setGateAllowArtifacts();
                     }
 
                     // Set RPMs based on calculated distance
@@ -242,7 +241,7 @@ public class LaunchAllAtDistanceBasedRPMCommand extends Command {
     public void stop(boolean interrupted) {
         // Deactivate prefeed roller (returns to not spinning)
         if (intake != null) {
-            intake.setPrefeedReverse();
+            intake.setGatePreventArtifact();
         }
 
         // Clear RPM overrides to return to default values

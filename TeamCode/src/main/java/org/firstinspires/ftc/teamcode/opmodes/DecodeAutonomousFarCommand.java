@@ -10,10 +10,8 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeUntilFullCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -190,7 +188,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();
         robot.intake.activateRoller();
-        robot.intake.setPrefeedForward();
+        robot.intake.setGateAllowArtifacts();
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
 
     }

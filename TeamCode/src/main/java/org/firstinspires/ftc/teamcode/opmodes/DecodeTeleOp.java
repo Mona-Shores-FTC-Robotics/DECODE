@@ -135,7 +135,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
             lightingInitController.onStart();
         }
         robot.intake.activateRoller();
-        robot.intake.setPrefeedReverse();
+        robot.intake.setGatePreventArtifact();
     }
 
     @Override
@@ -191,7 +191,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
         robot.launcher.abort();
         robot.intake.stop();
         robot.intake.deactivateRoller();
-        robot.intake.deactivatePrefeed();
         robot.lighting.indicateIdle();
         if (allianceSelector != null) {
             allianceSelector.unlockSelection();

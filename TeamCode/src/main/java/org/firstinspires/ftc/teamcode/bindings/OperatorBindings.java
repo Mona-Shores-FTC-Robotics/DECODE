@@ -113,10 +113,10 @@ public class OperatorBindings {
         // Reverse Flywheel and Prefeed for Human Loading
         humanLoading
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
-                .whenBecomesTrue(robot.intake::setPrefeedReverse)
+                .whenBecomesTrue(robot.intake::setGateAllowArtifacts)
                 .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
                 .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
-                .whenBecomesFalse(robot.intake::setPrefeedForward)
+                .whenBecomesFalse(robot.intake::setGatePreventArtifact)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
 
         spinLetGoToShoot
