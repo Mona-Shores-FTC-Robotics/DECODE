@@ -199,9 +199,10 @@ public class LauncherSubsystem implements Subsystem {
     /**
      * Robot-specific FeederConfig for DECODE_19429.
      * These values are tuned specifically for the 19429 robot.
+     * Note: Fields are redeclared (not inherited) so FTC Dashboard can see them.
      */
     @Configurable
-    public static class FeederConfig19429 {
+    public static class FeederConfig19429 extends FeederConfig {
         public LeftFeederConfig left = new LeftFeederConfig();
         public CenterFeederConfig center = new CenterFeederConfig();
         public RightFeederConfig right = new RightFeederConfig();
@@ -237,9 +238,10 @@ public class LauncherSubsystem implements Subsystem {
     /**
      * Robot-specific FeederConfig for DECODE_20245.
      * These values are tuned specifically for the 20245 robot.
+     * Note: Fields are redeclared (not inherited) so FTC Dashboard can see them.
      */
     @Configurable
-    public static class FeederConfig20245 {
+    public static class FeederConfig20245 extends FeederConfig {
         public LeftFeederConfig left = new LeftFeederConfig();
         public CenterFeederConfig center = new CenterFeederConfig();
         public RightFeederConfig right = new RightFeederConfig();
@@ -341,9 +343,10 @@ public class LauncherSubsystem implements Subsystem {
     /**
      * Robot-specific HoodConfig for DECODE_19429.
      * These values are tuned specifically for the 19429 robot.
+     * Note: Fields are redeclared (not inherited) so FTC Dashboard can see them.
      */
     @Configurable
-    public static class HoodConfig19429 {
+    public static class HoodConfig19429 extends HoodConfig {
         public double retractedPosition = 1;
         public double extendedPosition = 0;
 
@@ -382,9 +385,10 @@ public class LauncherSubsystem implements Subsystem {
     /**
      * Robot-specific HoodConfig for DECODE_20245.
      * These values are tuned specifically for the 20245 robot.
+     * Note: Fields are redeclared (not inherited) so FTC Dashboard can see them.
      */
     @Configurable
-    public static class HoodConfig20245 {
+    public static class HoodConfig20245 extends HoodConfig {
         public double retractedPosition = 1;
         public double extendedPosition = 0;
 
