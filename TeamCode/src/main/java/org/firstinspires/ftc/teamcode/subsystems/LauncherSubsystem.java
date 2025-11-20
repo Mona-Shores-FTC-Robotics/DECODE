@@ -196,92 +196,6 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    /**
-     * Robot-specific FeederConfig for DECODE_19429.
-     * These values are tuned specifically for the 19429 robot.
-     * Uses constructor to replace inherited field instances with robot-specific ones.
-     */
-    @Configurable
-    public static class FeederConfig19429 extends FeederConfig {
-        // Don't redeclare left/center/right - use inherited fields to avoid shadowing
-        // Constructor replaces instances in inherited fields
-        public FeederConfig19429() {
-            left = new LeftFeederConfig19429();
-            center = new CenterFeederConfig19429();
-            right = new RightFeederConfig19429();
-        }
-
-        @Configurable
-        public static class LeftFeederConfig19429 extends FeederConfig.LeftFeederConfig {
-            public String servoName = "feeder_left";
-            public boolean reversed = false;
-            public double loadPosition = .8;
-            public double firePosition = .61;
-            public double holdMs = 1000;
-        }
-
-        @Configurable
-        public static class CenterFeederConfig19429 extends FeederConfig.CenterFeederConfig {
-            public String servoName = "feeder_center";
-            public boolean reversed = false;
-            public double loadPosition = .93;
-            public double firePosition = .75;
-            public double holdMs = 1000;
-        }
-
-        @Configurable
-        public static class RightFeederConfig19429 extends FeederConfig.RightFeederConfig {
-            public String servoName = "feeder_right";
-            public boolean reversed = false;
-            public double loadPosition = .75;
-            public double firePosition = .56;
-            public double holdMs = 1000;
-        }
-    }
-
-    /**
-     * Robot-specific FeederConfig for DECODE_20245.
-     * These values are tuned specifically for the 20245 robot.
-     * Uses constructor to replace inherited field instances with robot-specific ones.
-     */
-    @Configurable
-    public static class FeederConfig20245 extends FeederConfig {
-        // Don't redeclare left/center/right - use inherited fields to avoid shadowing
-        // Constructor replaces instances in inherited fields
-        public FeederConfig20245() {
-            left = new LeftFeederConfig20245();
-            center = new CenterFeederConfig20245();
-            right = new RightFeederConfig20245();
-        }
-
-        @Configurable
-        public static class LeftFeederConfig20245 extends FeederConfig.LeftFeederConfig {
-            public String servoName = "feeder_left";
-            public boolean reversed = false;
-            public double loadPosition = .8;
-            public double firePosition = .61;
-            public double holdMs = 1000;
-        }
-
-        @Configurable
-        public static class CenterFeederConfig20245 extends FeederConfig.CenterFeederConfig {
-            public String servoName = "feeder_center";
-            public boolean reversed = false;
-            public double loadPosition = .18;  // Tuned for 20245
-            public double firePosition = .07;  // Tuned for 20245
-            public double holdMs = 1000;
-        }
-
-        @Configurable
-        public static class RightFeederConfig20245 extends FeederConfig.RightFeederConfig {
-            public String servoName = "feeder_right";
-            public boolean reversed = false;
-            public double loadPosition = .75;
-            public double firePosition = .56;
-            public double holdMs = 1000;
-        }
-    }
-
     @Configurable
     public static class HoodConfig {
         public double retractedPosition = 1;
@@ -348,92 +262,6 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    /**
-     * Robot-specific HoodConfig for DECODE_19429.
-     * These values are tuned specifically for the 19429 robot.
-     * Uses constructor to replace inherited field instances with robot-specific ones.
-     */
-    @Configurable
-    public static class HoodConfig19429 extends HoodConfig {
-        // Don't redeclare position fields or hoodLeft/Center/Right - use inherited to avoid shadowing
-        // Constructor replaces instances in inherited fields
-        public HoodConfig19429() {
-            hoodLeft = new LeftHoodConfig19429();
-            hoodCenter = new CenterHoodConfig19429();
-            hoodRight = new RightHoodConfig19429();
-        }
-
-        @Configurable
-        public static class LeftHoodConfig19429 extends HoodConfig.LeftHoodConfig {
-            public String servoName = "hood_left";
-            public double shortPosition = .45;
-            public double midPosition = 0;
-            public double longPosition = 0;
-            public double launcherGoalPosition = .9;
-        }
-
-        @Configurable
-        public static class CenterHoodConfig19429 extends HoodConfig.CenterHoodConfig {
-            public String servoName = "hood_center";
-            public double shortPosition = .45;
-            public double midPosition = 0;
-            public double longPosition = 0;
-            public double launcherGoalPosition = .9;
-        }
-
-        @Configurable
-        public static class RightHoodConfig19429 extends HoodConfig.RightHoodConfig {
-            public String servoName = "hood_right";
-            public double shortPosition = .45;
-            public double midPosition = 0;
-            public double longPosition = 0;
-            public double launcherGoalPosition = .9;
-        }
-    }
-
-    /**
-     * Robot-specific HoodConfig for DECODE_20245.
-     * These values are tuned specifically for the 20245 robot.
-     * Uses constructor to replace inherited field instances with robot-specific ones.
-     */
-    @Configurable
-    public static class HoodConfig20245 extends HoodConfig {
-        // Don't redeclare position fields or hoodLeft/Center/Right - use inherited to avoid shadowing
-        // Constructor replaces instances in inherited fields
-        public HoodConfig20245() {
-            hoodLeft = new LeftHoodConfig20245();
-            hoodCenter = new CenterHoodConfig20245();
-            hoodRight = new RightHoodConfig20245();
-        }
-
-        @Configurable
-        public static class LeftHoodConfig20245 extends HoodConfig.LeftHoodConfig {
-            public String servoName = "hood_left";
-            public double shortPosition = .45;  // Tune for 20245
-            public double midPosition = 0;  // Tune for 20245
-            public double longPosition = 0;  // Tune for 20245
-            public double launcherGoalPosition = .9;  // Tune for 20245
-        }
-
-        @Configurable
-        public static class CenterHoodConfig20245 extends HoodConfig.CenterHoodConfig {
-            public String servoName = "hood_center";
-            public double shortPosition = .45;  // Tune for 20245
-            public double midPosition = 0;  // Tune for 20245
-            public double longPosition = 0;  // Tune for 20245
-            public double launcherGoalPosition = .9;  // Tune for 20245
-        }
-
-        @Configurable
-        public static class RightHoodConfig20245 extends HoodConfig.RightHoodConfig {
-            public String servoName = "hood_right";
-            public double shortPosition = .45;  // Tune for 20245
-            public double midPosition = 0;  // Tune for 20245
-            public double longPosition = 0;  // Tune for 20245
-            public double launcherGoalPosition = .9;  // Tune for 20245
-        }
-    }
-
     @Configurable
     public static class ReverseFlywheelForHumanLoadingConfig {
         /** Power level for reverse intake (negative runs motors backward) */
@@ -444,17 +272,48 @@ public class LauncherSubsystem implements Subsystem {
     public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
     public static FlywheelConfig flywheelConfig = new FlywheelConfig();
 
-    // Robot-specific FeederConfig instances - both visible in FTC Dashboard for tuning
-    public static FeederConfig19429 feederConfig19429 = new FeederConfig19429();
-    public static FeederConfig20245 feederConfig20245 = new FeederConfig20245();
+    // Robot-specific FeederConfig instances - visible in Panels for tuning
+    @Configurable
+    public static FeederConfig feederConfig19429 = createFeederConfig19429();
+    @Configurable
+    public static FeederConfig feederConfig20245 = createFeederConfig20245();
 
-    // Robot-specific HoodConfig instances - both visible in FTC Dashboard for tuning
-    public static HoodConfig19429 hoodConfig19429 = new HoodConfig19429();
-    public static HoodConfig20245 hoodConfig20245 = new HoodConfig20245();
+    // Robot-specific HoodConfig instances - visible in Panels for tuning
+    @Configurable
+    public static HoodConfig hoodConfig19429 = createHoodConfig19429();
+    @Configurable
+    public static HoodConfig hoodConfig20245 = createHoodConfig20245();
+
+    // Helper to create 19429-specific feeder config
+    private static FeederConfig createFeederConfig19429() {
+        return new FeederConfig(); // Uses default values
+    }
+
+    // Helper to create 20245-specific feeder config
+    private static FeederConfig createFeederConfig20245() {
+        FeederConfig config = new FeederConfig();
+        // Apply 20245-specific values
+        config.center.loadPosition = .18;
+        config.center.firePosition = .07;
+        return config;
+    }
+
+    // Helper to create 19429-specific hood config
+    private static HoodConfig createHoodConfig19429() {
+        return new HoodConfig(); // Uses default values
+    }
+
+    // Helper to create 20245-specific hood config
+    private static HoodConfig createHoodConfig20245() {
+        HoodConfig config = new HoodConfig();
+        // Apply 20245-specific values if needed
+        // (currently using default values - customize as needed)
+        return config;
+    }
 
     /**
      * Gets the robot-specific FeederConfig based on RobotState.getRobotName().
-     * @return FeederConfig19429 or FeederConfig20245
+     * @return feederConfig19429 or feederConfig20245
      */
     public static FeederConfig feederConfig() {
         return RobotConfigs.getFeederConfig();
@@ -462,7 +321,7 @@ public class LauncherSubsystem implements Subsystem {
 
     /**
      * Gets the robot-specific HoodConfig based on RobotState.getRobotName().
-     * @return HoodConfig19429 or HoodConfig20245
+     * @return hoodConfig19429 or hoodConfig20245
      */
     public static HoodConfig hoodConfig() {
         return RobotConfigs.getHoodConfig();
