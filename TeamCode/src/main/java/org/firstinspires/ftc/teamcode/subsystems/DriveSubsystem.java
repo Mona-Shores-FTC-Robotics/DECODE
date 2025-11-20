@@ -529,8 +529,8 @@ public class DriveSubsystem implements Subsystem {
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : normalMultiplier;
-        double forward = Range.clip(-fieldX * multiplier , - 1.0 , 1.0);
-        double strafeLeft = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
+        double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
+        double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
         // Get fixed target heading based on alliance
         Alliance alliance = vision.getAlliance();
