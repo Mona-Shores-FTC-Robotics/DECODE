@@ -56,10 +56,10 @@ public class OperatorBindings {
         runIntake = operator.rightBumper();
 
         //Human Player Loading
-        humanLoading = operator.y();
+        humanLoading = operator.triangle();
 
         //launch based on range to april tag.
-        fireDistanceBased = operator.x();
+        fireDistanceBased = operator.square();
 
         //launch based on range to april tag - simultaneous or sequential (Obelisk Pattern) depending on launcher mode
         fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing

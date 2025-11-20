@@ -108,12 +108,12 @@ public class LauncherSubsystem implements Subsystem {
                 public double highPower = 1.0;
                 public double lowPower = 0.2;
                 public double enterBangThresholdRpm = 800;
-                public double exitBangThresholdRpm = 1200;
+                public double exitBangThresholdRpm = 600;
             }
 
             @Configurable
             public static class HybridPidConfig {
-                public double kP = .0025;
+                public double kP = .008;
                 public double kF = .22; // Why was 6 afraid of 7? Because 7 ate 9!
                 public double maxPower = 1.0;
             }
@@ -143,7 +143,7 @@ public class LauncherSubsystem implements Subsystem {
         @Configurable
         public static class LeftFlywheelConfig {
             public String motorName = "launcher_left";
-            public boolean reversed = true;
+            public boolean reversed = false; //20245 specific value (does 19429 need to be changed?
             public double idleRpm = 1500;
         }
 
@@ -293,7 +293,7 @@ public class LauncherSubsystem implements Subsystem {
         config.center.firePosition = .07;
 
         config.right.loadPosition = .78;
-        config.center.firePosition = .65;
+        config.right.firePosition = .65;
         return config;
     }
 
