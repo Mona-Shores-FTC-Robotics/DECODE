@@ -708,8 +708,8 @@ public class VisionSubsystemLimelight implements Subsystem {
             return Optional.ofNullable(pedroPoseMT1);
         }
 
-        public Optional<Pose> getRobotPosePeroMT2() {
-            return Optional.ofNullable(pedroPoseMT2) ;
+        public Optional<Pose> getRobotPosePedroMT2() {
+            return Optional.ofNullable(pedroPoseMT2);
         }
 
 

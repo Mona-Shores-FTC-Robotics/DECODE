@@ -726,9 +726,16 @@ public class DriveSubsystem implements Subsystem {
             // Stale data, do not relocalize
             return false;
         }
-        Pose pedroPose = snap.pedroPoseMT1; //only use MT1 for relocalization
+        // Phase 1: Use MT2 (IMU-fused) for manual relocalization - eliminates ambiguity
+        // MT2 is MORE reliable after crashes because it uses your known heading from Pinpoint
+        Pose pedroPose = snap.pedroPoseMT2;
+        // Fallback to MT1 if MT2 unavailable (shouldn't happen with proper heading updates)
+        if (pedroPose == null) {
+            pedroPose = snap.pedroPoseMT1;
+        }
         if (pedroPose == null) return false;
-        RobotState.putPose("Pedro MT1 Pose force ", pedroPose );
+
+        RobotState.putPose("Pedro MT2 Pose force", pedroPose);
 
         follower.setPose(pedroPose);
         poseFusion.reset(pedroPose, System.currentTimeMillis());
@@ -751,8 +758,12 @@ public class DriveSubsystem implements Subsystem {
         }
 
         VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-        Pose visionPose = snapshot.getRobotPosePedroMT1().orElse(null);
-        //  Pose visionPose = snapshot.getRobotPosePedroMT2().orElse(null);  // try this once we think mt2 is working
+        // Phase 1: Switch to MT2 (IMU-fused) for better accuracy and ambiguity resolution
+        Pose visionPose = snapshot.getRobotPosePedroMT2().orElse(null);
+        // Fallback to MT1 if MT2 unavailable (shouldn't happen with proper heading updates)
+        if (visionPose == null) {
+            visionPose = snapshot.getRobotPosePedroMT1().orElse(null);
+        }
 
         if (visionPose == null) {
             return;
