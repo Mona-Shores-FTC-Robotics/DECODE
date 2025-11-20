@@ -50,7 +50,6 @@ public class OperatorBindings {
     private final Button toggleLauncherMode;
 
     private Gamepad rawGamepad;  // Raw gamepad for haptic feedback
-    private boolean humanLoadingActive = false;  // Toggle state for human loading mode
 
     public OperatorBindings(GamepadEx operator) {
 
@@ -112,7 +111,14 @@ public class OperatorBindings {
         runIntake.whenBecomesFalse(intakeReverseCommand);
 
         // Human loading toggle: Y button toggles reverse flywheel and prefeed
-        humanLoading.whenBecomesTrue(() -> toggleHumanLoading(robot));
+        humanLoading
+                .toggleOnBecomesTrue()
+                .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
+                .whenBecomesTrue(robot.intake::setPrefeedReverse)
+                .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
+                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
+                .whenBecomesFalse(robot.intake::setPrefeedForward)
+                .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
 
         spinLetGoToShoot
                 .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
@@ -154,29 +160,6 @@ public class OperatorBindings {
                 ? LauncherMode.DECODE
                 : LauncherMode.THROUGHPUT;
         RobotState.setLauncherMode(newMode);
-    }
-
-    /**
-     * Toggles human loading mode on and off.
-     * When active: reverses flywheel, sets prefeed reverse, retracts hoods.
-     * When inactive: stops reverse flywheel, sets prefeed forward, extends hoods.
-     *
-     * @param robot The robot instance (for launcher and intake subsystem access)
-     */
-    private void toggleHumanLoading(Robot robot) {
-        humanLoadingActive = !humanLoadingActive;
-
-        if (humanLoadingActive) {
-            // Activate human loading mode
-            robot.launcher.runReverseFlywheelForHumanLoading();
-            robot.intake.setPrefeedReverse();
-            robot.launcher.setAllHoodsRetracted();
-        } else {
-            // Deactivate human loading mode
-            robot.launcher.stopReverseFlywheelForHumanLoading();
-            robot.intake.setPrefeedForward();
-            robot.launcher.setAllHoodsExtended();
-        }
     }
 
 }
