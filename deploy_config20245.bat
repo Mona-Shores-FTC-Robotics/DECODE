@@ -36,7 +36,7 @@ echo NOTE: Ensure you're already connected to Control Hub via ADB
 echo ^(Use ADB WiFi plugin or run: adb connect 192.168.49.1:5555^)
 echo.
 echo Pushing configuration file...
-"%ADB_PATH%" push DECODE_Robot_Config.xml /sdcard/FIRST/
+"%ADB_PATH%" push DECODE_Robot_Config20245.xml /sdcard/FIRST/
 
 if errorlevel 1 (
     echo ERROR: Failed to push configuration file

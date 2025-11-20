@@ -36,11 +36,11 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         /** Last calculated distance to goal in inches (updates every loop) */
         public double lastCalculatedDistanceIn = 0.0;
         /** Last calculated left lane RPM */
-        public double lastLeftRpm = 0.0;
+        public double lastLeftTargetRpm = 0.0;
         /** Last calculated center lane RPM */
-        public double lastCenterRpm = 0.0;
+        public double lastCenterTargetRpm = 0.0;
         /** Last calculated right lane RPM */
-        public double lastRightRpm = 0.0;
+        public double lastRightTargetRpm = 0.0;
         /** Last calculated hood position */
         public double lastHoodPosition = 0.0;
         /** Data source for distance: "vision", "odometry", or "none" */
@@ -55,6 +55,11 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         public boolean visionPoseAvailable = false;
         /** Odometry pose available */
         public boolean odometryPoseAvailable = false;
+
+        public double targetRPM = 0.0;
+        public double targetHoodPosition = 0.0;
+
+
     }
 
     public static DiagnosticData diagnostics = new DiagnosticData();
@@ -101,6 +106,7 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         public double shortToMidThresholdIn = 54.0;
         /** Distance threshold (inches) between mid and long range */
         public double midToLongThresholdIn = 90.0;
+
     }
 
     public static DistanceRpmCalibration calibration = new DistanceRpmCalibration();
@@ -182,6 +188,7 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         if (smoothedDistance > 0.0) {
             // Set RPMs based on smoothed distance
             setRpmsForDistance(smoothedDistance);
+
             // Set hood positions based on smoothed distance
             setHoodForDistance(smoothedDistance);
 
@@ -195,9 +202,9 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         // Push diagnostics to telemetry packet
         RobotState.packet.put("SQUARE Distance-Based/Update Count", diagnostics.updateCount);
         RobotState.packet.put("SQUARE Distance-Based/Distance (in)", diagnostics.lastCalculatedDistanceIn);
-        RobotState.packet.put("SQUARE Distance-Based/Left RPM", diagnostics.lastLeftRpm);
-        RobotState.packet.put("SQUARE Distance-Based/Center RPM", diagnostics.lastCenterRpm);
-        RobotState.packet.put("SQUARE Distance-Based/Right RPM", diagnostics.lastRightRpm);
+        RobotState.packet.put("SQUARE Distance-Based/Left Target RPM", diagnostics.lastLeftTargetRpm);
+        RobotState.packet.put("SQUARE Distance-Based/Center Target RPM", diagnostics.lastCenterTargetRpm);
+        RobotState.packet.put("SQUARE Distance-Based/Right Target RPM", diagnostics.lastRightTargetRpm);
         RobotState.packet.put("SQUARE Distance-Based/Hood Position", diagnostics.lastHoodPosition);
         RobotState.packet.put("SQUARE Distance-Based/Data Source", diagnostics.lastSource);
         RobotState.packet.put("SQUARE Distance-Based/Robot Pose Available", diagnostics.robotPoseAvailable);
@@ -339,9 +346,9 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         launcher.setLaunchRpm(LauncherLane.RIGHT, rightRpm);
 
         // Update diagnostics
-        diagnostics.lastLeftRpm = leftRpm;
-        diagnostics.lastCenterRpm = centerRpm;
-        diagnostics.lastRightRpm = rightRpm;
+        diagnostics.lastLeftTargetRpm = leftRpm;
+        diagnostics.lastCenterTargetRpm = centerRpm;
+        diagnostics.lastRightTargetRpm = rightRpm;
     }
 
     /**

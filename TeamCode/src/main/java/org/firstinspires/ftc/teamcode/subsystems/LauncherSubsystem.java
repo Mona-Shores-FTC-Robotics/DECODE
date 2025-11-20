@@ -294,6 +294,9 @@ public class LauncherSubsystem implements Subsystem {
 
         config.right.loadPosition = .78;
         config.right.firePosition = .65;
+
+        config.left.loadPosition = .33;
+        config.left.firePosition = .21;
         return config;
     }
 
