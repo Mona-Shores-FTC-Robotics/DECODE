@@ -256,7 +256,11 @@ public class DriveSubsystem implements Subsystem {
             vision.setRobotHeading(headingRad);
         }
 
+        // Update pose fusion with latest odometry and vision measurements
         updatePoseFusion();
+
+        // Apply fused pose back to follower for continuous MT2-based relocalization
+        applyFusedPoseToFollower();
 
         // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)
         Pose pose = follower.getPose();
@@ -728,9 +732,15 @@ public class DriveSubsystem implements Subsystem {
             // Stale data, do not relocalize
             return false;
         }
-        Pose pedroPose = snap.pedroPoseMT1; //only use MT1 for relocalization
+
+        // Prefer MT2 (IMU-fused), fallback to MT1 if unavailable
+        Pose pedroPose = snap.pedroPoseMT2;
+        if (pedroPose == null) {
+            pedroPose = snap.pedroPoseMT1;
+        }
         if (pedroPose == null) return false;
-        RobotState.putPose("Pedro MT1 Pose force ", pedroPose );
+
+        RobotState.putPose("Force Relocalize Pose", pedroPose);
 
         follower.setPose(pedroPose);
         poseFusion.reset(pedroPose, System.currentTimeMillis());
@@ -753,8 +763,13 @@ public class DriveSubsystem implements Subsystem {
         }
 
         VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-        Pose visionPose = snapshot.getRobotPosePedroMT1().orElse(null);
-        //  Pose visionPose = snapshot.getRobotPosePedroMT2().orElse(null);  // try this once we think mt2 is working
+
+        // Use MT2 (IMU-fused) for continuous relocalization - more robust than MT1
+        Pose visionPose = snapshot.getRobotPosePeroMT2().orElse(null);
+        if (visionPose == null) {
+            // Fallback to MT1 if MT2 unavailable
+            visionPose = snapshot.getRobotPosePedroMT1().orElse(null);
+        }
 
         if (visionPose == null) {
             return;
@@ -766,7 +781,7 @@ public class DriveSubsystem implements Subsystem {
             return;
         }
 
-        // 4. Use vision measurement
+        // 4. Use vision measurement - PoseFusion handles outlier rejection
         poseFusion.addVisionMeasurement(
                 visionPose,
                 visionTimestamp,
@@ -775,6 +790,36 @@ public class DriveSubsystem implements Subsystem {
         );
 
         lastFusionVisionTimestampMs = visionTimestamp;
+    }
+
+    /**
+     * Applies the fused pose (odometry + MT2 vision) back to the follower for continuous relocalization.
+     * This enables rock-solid pose tracking by continuously correcting odometry drift with AprilTag measurements.
+     * PoseFusion automatically handles outlier rejection and adaptive weighting based on range and confidence.
+     */
+    private void applyFusedPoseToFollower() {
+        PoseFusion.State fusionState = poseFusion.getStateSnapshot();
+
+        // Only apply if we have a valid fused pose and vision was recently accepted
+        if (!fusionState.hasFusedPose) {
+            return;
+        }
+
+        // Verify fusion state is valid
+        if (!Double.isFinite(fusionState.fusedXInches)
+                || !Double.isFinite(fusionState.fusedYInches)
+                || !Double.isFinite(fusionState.fusedHeadingRad)) {
+            return;
+        }
+
+        // Apply fused pose to follower
+        Pose fusedPose = new Pose(
+                fusionState.fusedXInches,
+                fusionState.fusedYInches,
+                fusionState.fusedHeadingRad
+        );
+
+        follower.setPose(fusedPose);
     }
 
     public PoseFusion.State getPoseFusionStateSnapshot() {
