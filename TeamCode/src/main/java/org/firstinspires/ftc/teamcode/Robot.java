@@ -12,6 +12,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 
@@ -40,6 +41,9 @@ public class Robot {
 
         launcherCommands = new LauncherCommands(launcher, intake);
         intakeCommands = new IntakeCommands(intake);
+        ControlHubIdentifierUtil.setRobotName(hardwareMap);
+        RobotState.packet.put("Robot Name", RobotState.getRobotName());
+
     }
 
     public void setAlliance(Alliance alliance) {

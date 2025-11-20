@@ -94,8 +94,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 new SubsystemComponent(robot.vision)
         );
 
-        ControlHubIdentifierUtil.setRobotName(hardwareMap);
-        RobotState.packet.put("Robot Name", RobotState.getRobotName());
+
     }
 
     @Override
