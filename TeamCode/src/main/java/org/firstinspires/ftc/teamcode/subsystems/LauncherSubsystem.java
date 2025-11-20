@@ -201,10 +201,36 @@ public class LauncherSubsystem implements Subsystem {
      * These values are tuned specifically for the 19429 robot.
      */
     @Configurable
-    public static class FeederConfig19429 extends FeederConfig {
-        public FeederConfig19429() {
-            // Override defaults with 19429-specific values if needed
-            // Currently using base class defaults - tune these as needed
+    public static class FeederConfig19429 {
+        public LeftFeederConfig left = new LeftFeederConfig();
+        public CenterFeederConfig center = new CenterFeederConfig();
+        public RightFeederConfig right = new RightFeederConfig();
+
+        @Configurable
+        public static class LeftFeederConfig {
+            public String servoName = "feeder_left";
+            public boolean reversed = false;
+            public double loadPosition = .8;
+            public double firePosition = .61;
+            public double holdMs = 1000;
+        }
+
+        @Configurable
+        public static class CenterFeederConfig {
+            public String servoName = "feeder_center";
+            public boolean reversed = false;
+            public double loadPosition = .93;
+            public double firePosition = .75;
+            public double holdMs = 1000;
+        }
+
+        @Configurable
+        public static class RightFeederConfig {
+            public String servoName = "feeder_right";
+            public boolean reversed = false;
+            public double loadPosition = .75;
+            public double firePosition = .56;
+            public double holdMs = 1000;
         }
     }
 
@@ -213,11 +239,37 @@ public class LauncherSubsystem implements Subsystem {
      * These values are tuned specifically for the 20245 robot.
      */
     @Configurable
-    public static class FeederConfig20245 extends FeederConfig {
-        public FeederConfig20245() {
-            center.loadPosition = .18;
-            center.firePosition = .07;
-            }
+    public static class FeederConfig20245 {
+        public LeftFeederConfig left = new LeftFeederConfig();
+        public CenterFeederConfig center = new CenterFeederConfig();
+        public RightFeederConfig right = new RightFeederConfig();
+
+        @Configurable
+        public static class LeftFeederConfig {
+            public String servoName = "feeder_left";
+            public boolean reversed = false;
+            public double loadPosition = .8;
+            public double firePosition = .61;
+            public double holdMs = 1000;
+        }
+
+        @Configurable
+        public static class CenterFeederConfig {
+            public String servoName = "feeder_center";
+            public boolean reversed = false;
+            public double loadPosition = .18;  // Tuned for 20245
+            public double firePosition = .07;  // Tuned for 20245
+            public double holdMs = 1000;
+        }
+
+        @Configurable
+        public static class RightFeederConfig {
+            public String servoName = "feeder_right";
+            public boolean reversed = false;
+            public double loadPosition = .75;
+            public double firePosition = .56;
+            public double holdMs = 1000;
+        }
     }
 
     @Configurable
@@ -291,10 +343,39 @@ public class LauncherSubsystem implements Subsystem {
      * These values are tuned specifically for the 19429 robot.
      */
     @Configurable
-    public static class HoodConfig19429 extends HoodConfig {
-        public HoodConfig19429() {
-            // Override defaults with 19429-specific values if needed
-            // Currently using base class defaults - tune these as needed
+    public static class HoodConfig19429 {
+        public double retractedPosition = 1;
+        public double extendedPosition = 0;
+
+        public LeftHoodConfig hoodLeft = new LeftHoodConfig();
+        public CenterHoodConfig hoodCenter = new CenterHoodConfig();
+        public RightHoodConfig hoodRight = new RightHoodConfig();
+
+        @Configurable
+        public static class LeftHoodConfig {
+            public String servoName = "hood_left";
+            public double shortPosition = .45;
+            public double midPosition = 0;
+            public double longPosition = 0;
+            public double launcherGoalPosition = .9;
+        }
+
+        @Configurable
+        public static class CenterHoodConfig {
+            public String servoName = "hood_center";
+            public double shortPosition = .45;
+            public double midPosition = 0;
+            public double longPosition = 0;
+            public double launcherGoalPosition = .9;
+        }
+
+        @Configurable
+        public static class RightHoodConfig {
+            public String servoName = "hood_right";
+            public double shortPosition = .45;
+            public double midPosition = 0;
+            public double longPosition = 0;
+            public double launcherGoalPosition = .9;
         }
     }
 
@@ -303,11 +384,39 @@ public class LauncherSubsystem implements Subsystem {
      * These values are tuned specifically for the 20245 robot.
      */
     @Configurable
-    public static class HoodConfig20245 extends HoodConfig {
-        public HoodConfig20245() {
-            // Override defaults with 20245-specific values
-            // Example: hoodLeft.shortPosition = 0.48;
-            // Tune these values for the 20245 robot
+    public static class HoodConfig20245 {
+        public double retractedPosition = 1;
+        public double extendedPosition = 0;
+
+        public LeftHoodConfig hoodLeft = new LeftHoodConfig();
+        public CenterHoodConfig hoodCenter = new CenterHoodConfig();
+        public RightHoodConfig hoodRight = new RightHoodConfig();
+
+        @Configurable
+        public static class LeftHoodConfig {
+            public String servoName = "hood_left";
+            public double shortPosition = .45;  // Tune for 20245
+            public double midPosition = 0;  // Tune for 20245
+            public double longPosition = 0;  // Tune for 20245
+            public double launcherGoalPosition = .9;  // Tune for 20245
+        }
+
+        @Configurable
+        public static class CenterHoodConfig {
+            public String servoName = "hood_center";
+            public double shortPosition = .45;  // Tune for 20245
+            public double midPosition = 0;  // Tune for 20245
+            public double longPosition = 0;  // Tune for 20245
+            public double launcherGoalPosition = .9;  // Tune for 20245
+        }
+
+        @Configurable
+        public static class RightHoodConfig {
+            public String servoName = "hood_right";
+            public double shortPosition = .45;  // Tune for 20245
+            public double midPosition = 0;  // Tune for 20245
+            public double longPosition = 0;  // Tune for 20245
+            public double launcherGoalPosition = .9;  // Tune for 20245
         }
     }
 
