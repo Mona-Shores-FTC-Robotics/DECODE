@@ -21,6 +21,7 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
+import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -92,10 +93,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 new SubsystemComponent(robot.lighting),
                 new SubsystemComponent(robot.vision)
         );
-        String controlHubName = hardwareMap.appContext
-                .getResources()
-                .getString(com.qualcomm.ftcrobotcontroller.R.string.serialNumberNotAttached);
-        RobotState.packet.put("hub name", controlHubName);
+
+        ControlHubIdentifierUtil.setRobotName(hardwareMap);
+        RobotState.packet.put("Robot Name", RobotState.getRobotName());
     }
 
     @Override
