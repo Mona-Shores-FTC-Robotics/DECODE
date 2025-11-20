@@ -112,7 +112,7 @@ public class LaunchInSequenceCommand extends Command {
         spinDownApplied = false;
         shotsQueued = false;
 
-        // Activate prefeed roller in forward direction to help feed
+        // gate Allow
         if (intake != null) {
             intake.setGateAllowArtifacts();
         }

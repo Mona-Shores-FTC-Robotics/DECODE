@@ -58,7 +58,7 @@ public class LaunchAllCommand extends Command {
         queuedLanes.clear();
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
         spinDownApplied = false;
-        // Activate prefeed roller in forward direction to help feed
+        // Activate gate in forward direction to help feed
         if (intake != null) {
             intake.setGateAllowArtifacts();
         }
@@ -109,7 +109,7 @@ public class LaunchAllCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-        // Deactivate prefeed roller (returns to not spinning)
+        // put gate down
         if (intake != null) {
             intake.setGatePreventArtifact();
         }

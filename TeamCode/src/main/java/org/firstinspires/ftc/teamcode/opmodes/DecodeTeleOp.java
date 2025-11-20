@@ -151,9 +151,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
             lightingInitController.updateDuringMatch();
         }
 
-
-
-
         telemetryStartNs = System.nanoTime();
         prevMainLoopMs =  TimeUnit.NANOSECONDS.toMillis(mainLoopStartMs - telemetryStartNs);
         publishTelemetry();

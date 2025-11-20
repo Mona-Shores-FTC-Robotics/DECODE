@@ -75,15 +75,14 @@ public class OperatorBindings {
                 // this command should leverage color data about artifacts currently in the robot
 
         //TODO make a command that does both 1) sets RPM (and hood) based on distance and 2) sequences shots based on current Obelisk pattern (PPG, PGP, GPP)
-
     }
 
     public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
         this.rawGamepad = operatorGamepad;
 
         // Range-based shooting commands
-        LaunchAllAtPresetRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
-        LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
+//        LaunchAllAtPresetRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
+//        LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
 
         // Distance-based shooting commands
         ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand = robot.launcherCommands.spinUpAtDistance(
@@ -110,14 +109,17 @@ public class OperatorBindings {
         runIntake.whenBecomesTrue(intakeForwardCommand);
         runIntake.whenBecomesFalse(intakeReverseCommand);
 
-        // Reverse Flywheel and Prefeed for Human Loading
+        // Human Loading
         humanLoading
+                .toggleOnBecomesTrue()
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
                 .whenBecomesTrue(robot.intake::setGateAllowArtifacts)
                 .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
                 .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
                 .whenBecomesFalse(robot.intake::setGatePreventArtifact)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
+
+
 
         spinLetGoToShoot
                 .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
