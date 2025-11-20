@@ -36,8 +36,8 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  */
 public class OperatorBindings {
     private final Button fireDistanceBased;
-    private final Button fireMid;
-    private final Button fireLong;
+//    private final Button fireMid;
+//    private final Button fireLong;
     private final Button fireModeAware;
 
     private final Button runIntake;
@@ -56,8 +56,8 @@ public class OperatorBindings {
         // Planned Final Button Assignments
         runIntake = operator.rightBumper();
         fireDistanceBased = operator.x();
-        fireMid = operator.a();
-        fireLong = operator.b();
+//        fireMid = operator.a();
+//        fireLong = operator.b();
         humanLoading = operator.y();
         spinLetGoToShoot = operator.leftBumper();
         fireModeAware = operator.dpadDown();
@@ -103,8 +103,8 @@ public class OperatorBindings {
         fireDistanceBased.whenBecomesFalse(fireAllCommand);
 
         // Range-based shooting: press button to fire all lanes at that range
-        fireMid.whenBecomesTrue(fireMidRangeCommand);
-        fireLong.whenBecomesTrue(fireLongRangeCommand);
+//        fireMid.whenBecomesTrue(fireMidRangeCommand);
+//        fireLong.whenBecomesTrue(fireLongRangeCommand);
 
         // Intake control
         runIntake.whenBecomesTrue(intakeForwardCommand);

@@ -1364,8 +1364,16 @@ public class LauncherSubsystem implements Subsystem {
             if (!Double.isNaN(lastSampleTimeMs)) {
                 double deltaMs = nowMs - lastSampleTimeMs;
                 if (deltaMs > 1.0) {
-                    double ticksPerSec = (position - lastPositionTicks) * 1000.0 / deltaMs;
-                    estimatedTicksPerSec = Math.abs(ticksPerSec);
+                    int deltaTicks = position - lastPositionTicks;
+                    // Validate encoder delta to prevent glitch-induced RPM spikes
+                    // Max physical RPM ~6000, which is ~2800 ticks/sec
+                    // Allow 2x safety margin = 5600 ticks/sec max
+                    double maxTicksDelta = 5600.0 * deltaMs / 1000.0;
+                    if (Math.abs(deltaTicks) < maxTicksDelta) {
+                        double ticksPerSec = deltaTicks * 1000.0 / deltaMs;
+                        estimatedTicksPerSec = Math.abs(ticksPerSec);
+                    }
+                    // If delta is too large, keep previous estimate (encoder glitch detected)
                 }
             }
             lastPositionTicks = position;

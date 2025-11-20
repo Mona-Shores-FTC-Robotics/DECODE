@@ -28,9 +28,9 @@ public class LaunchAllAtPresetRangeCommand extends Command {
     @Configurable
     public static class RangeRpmConfig {
         /** Short range configuration */
-        public double shortLeftRpm = 1000;
-        public double shortCenterRpm = 1000; // Center disabled by default
-        public double shortRightRpm = 1000;
+        public double shortLeftRpm = 2100;
+        public double shortCenterRpm = 2100; // Center disabled by default
+        public double shortRightRpm = 2100;
 
         /** Mid range configuration (default/current values) */
         public double midLeftRpm = 2550;
