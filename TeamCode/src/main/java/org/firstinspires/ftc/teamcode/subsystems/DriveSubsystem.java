@@ -205,7 +205,7 @@ public class DriveSubsystem implements Subsystem {
         Pose pedroFollowerSeed = RobotState.takeHandoffPose();
 
         if (pedroFollowerSeed == null) {
-            pedroFollowerSeed = new Pose(0, 0, Math.toRadians(90));
+            pedroFollowerSeed = new Pose(56, 8, Math.toRadians(90));
 
 //            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
 //            pedroFollowerSeed = poseFromVision.orElseGet(() -> new Pose(0, 0, Math.toRadians(90.0)));
