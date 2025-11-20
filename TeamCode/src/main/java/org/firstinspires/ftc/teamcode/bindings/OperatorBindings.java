@@ -25,7 +25,7 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * - X: Hold to continuously calculate distance and spin up at calculated RPM, release to fire all lanes
  * - A: Fire all lanes at MID range (~3600 RPM)
  * - B: Fire all lanes at LONG range (~4200 RPM)
- * - Y: Human loading (reverse flywheel and prefeed)
+ * - Y: Toggle human loading mode (reverse flywheel and prefeed)
  * - D-Pad Down: Mode-aware fire (THROUGHPUT or DECODE sequence based on current mode)
  * - D-Pad Left: Set motif tail to 0 (all 3 lanes blink orange)
  * - D-Pad Up: Set motif tail to 1 (left lane blinks orange)
@@ -50,6 +50,7 @@ public class OperatorBindings {
     private final Button toggleLauncherMode;
 
     private Gamepad rawGamepad;  // Raw gamepad for haptic feedback
+    private boolean humanLoadingActive = false;  // Toggle state for human loading mode
 
     public OperatorBindings(GamepadEx operator) {
 
@@ -110,14 +111,8 @@ public class OperatorBindings {
         runIntake.whenBecomesTrue(intakeForwardCommand);
         runIntake.whenBecomesFalse(intakeReverseCommand);
 
-        // Reverse Flywheel and Prefeed for Human Loading
-        humanLoading
-                .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
-                .whenBecomesTrue(robot.intake::setPrefeedReverse)
-                .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
-                .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
-                .whenBecomesFalse(robot.intake::setPrefeedForward)
-                .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
+        // Human loading toggle: Y button toggles reverse flywheel and prefeed
+        humanLoading.whenBecomesTrue(() -> toggleHumanLoading(robot));
 
         spinLetGoToShoot
                 .whenBecomesTrue(spinUpCommand) //this command just makes us spin up until we're ready to shoot (does not go to idle after)
@@ -159,6 +154,29 @@ public class OperatorBindings {
                 ? LauncherMode.DECODE
                 : LauncherMode.THROUGHPUT;
         RobotState.setLauncherMode(newMode);
+    }
+
+    /**
+     * Toggles human loading mode on and off.
+     * When active: reverses flywheel, sets prefeed reverse, retracts hoods.
+     * When inactive: stops reverse flywheel, sets prefeed forward, extends hoods.
+     *
+     * @param robot The robot instance (for launcher and intake subsystem access)
+     */
+    private void toggleHumanLoading(Robot robot) {
+        humanLoadingActive = !humanLoadingActive;
+
+        if (humanLoadingActive) {
+            // Activate human loading mode
+            robot.launcher.runReverseFlywheelForHumanLoading();
+            robot.intake.setPrefeedReverse();
+            robot.launcher.setAllHoodsRetracted();
+        } else {
+            // Deactivate human loading mode
+            robot.launcher.stopReverseFlywheelForHumanLoading();
+            robot.intake.setPrefeedForward();
+            robot.launcher.setAllHoodsExtended();
+        }
     }
 
 }
