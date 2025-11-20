@@ -291,6 +291,9 @@ public class LauncherSubsystem implements Subsystem {
         // Apply 20245-specific values
         config.center.loadPosition = .18;
         config.center.firePosition = .07;
+
+        config.right.loadPosition = .78;
+        config.center.firePosition = .65;
         return config;
     }
 
@@ -302,6 +305,17 @@ public class LauncherSubsystem implements Subsystem {
     // Helper to create 20245-specific hood config
     private static HoodConfig createHoodConfig20245() {
         HoodConfig config = new HoodConfig();
+        config.hoodRight.midPosition = .5;
+        config.hoodRight.longPosition = 0;
+        config.hoodRight.shortPosition = 1;
+
+        config.hoodCenter.midPosition = .5;
+        config.hoodCenter.longPosition = 0;
+        config.hoodCenter.shortPosition = 1;
+
+        config.hoodLeft.midPosition = .5;
+        config.hoodLeft.longPosition = 0;
+        config.hoodLeft.shortPosition = 1;
         // Apply 20245-specific values if needed
         // (currently using default values - customize as needed)
         return config;

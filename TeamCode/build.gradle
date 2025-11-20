@@ -49,6 +49,8 @@ dependencies {
 
     //Panels
     implementation('com.bylazar:fullpanels:1.0.10')
+    implementation "com.bylazar:configurables:1.0.4"
+
 
     //FTC Dashboard
     implementation('com.acmerobotics.dashboard:dashboard:0.5.1') {
