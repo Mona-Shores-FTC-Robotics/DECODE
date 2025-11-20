@@ -98,6 +98,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onWaitForStart() {
+        telemetry.addData("Robot", robot.identifier.getConfigName());
         telemetry.addData("Alliance", selectedAlliance.displayName());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");

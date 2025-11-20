@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.RobotIdentifier;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 
@@ -21,6 +22,7 @@ public class Robot {
     public final LightingSubsystem lighting;
     public final VisionSubsystemLimelight vision;
     public final TelemetryService telemetry;
+    public final RobotIdentifier identifier;
 
     public final LauncherCommands launcherCommands;
     public final IntakeCommands intakeCommands;
@@ -31,6 +33,7 @@ public class Robot {
 
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
         telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
+        identifier = new RobotIdentifier(hardwareMap);
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
         launcher = new LauncherSubsystem(hardwareMap);
