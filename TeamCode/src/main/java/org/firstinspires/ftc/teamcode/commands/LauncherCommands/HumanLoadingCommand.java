@@ -50,14 +50,14 @@ public class HumanLoadingCommand extends Command {
             // START LOADING: Reverse everything, retract hoods
             launcher.runReverseFlywheelForHumanLoading();
             if (intake != null) {
-                intake.setPrefeedReverse();
+                intake.setGateAllowArtifacts();
             }
             launcher.setAllHoodsRetracted();
         } else {
             // STOP LOADING: Stop reverse, return to normal
             launcher.stopReverseFlywheelForHumanLoading();
             if (intake != null) {
-                intake.setPrefeedForward();
+                intake.setGatePreventArtifact();
             }
             launcher.setAllHoodsExtended();
         }

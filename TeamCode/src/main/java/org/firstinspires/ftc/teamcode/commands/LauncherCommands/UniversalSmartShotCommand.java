@@ -184,7 +184,7 @@ public class UniversalSmartShotCommand extends Command {
 
             // Activate prefeed roller
             if (intake != null) {
-                intake.setPrefeedForward();
+                intake.setGatePreventArtifact();
             }
 
             // Spin up to target
@@ -263,7 +263,7 @@ public class UniversalSmartShotCommand extends Command {
 
         // Deactivate prefeed roller
         if (intake != null) {
-            intake.setPrefeedReverse();
+            intake.setGatePreventArtifact();
         }
 
         // Clear RPM overrides

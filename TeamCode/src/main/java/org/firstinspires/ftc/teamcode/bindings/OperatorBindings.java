@@ -41,10 +41,7 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  */
 public class OperatorBindings {
     private final Button fireDistanceBased;
-//    private final Button fireMid;
-//    private final Button fireLong;
-    private final Button fireModeAware;
-
+    private final Button fireUniversalSmart;
     private final Button runIntake;
     private final Button humanLoading;
 
@@ -64,12 +61,9 @@ public class OperatorBindings {
         //launch based on range to april tag.
         fireDistanceBased = operator.x();
 
-        //launch based on preset RPM and hood values for specific field locations
-        fireShort = operator.a();  // SHORT range for close shots (if vision is broken)
-        fireLong = operator.b(); // LONG range for far shots (if vision is broken)
-
         //launch based on range to april tag - simultaneous or sequential (Obelisk Pattern) depending on launcher mode
         fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
+
         toggleLauncherMode = operator.back();
         motifTailCycle = operator.dpadRight();  // Cycle through 0 → 1 → 2 → 0
 
@@ -78,40 +72,22 @@ public class OperatorBindings {
     public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
         this.rawGamepad = operatorGamepad; //Need the raw gamepad for rumble features
 
-        // Range-based shooting commands
-//        LaunchAllAtPresetRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
-//        LaunchAllAtPresetRangeCommand fireLongRangeCommand = robot.launcherCommands.fireAllLongRange();
-
         // Distance-based launching commands
         ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand =
                 robot.launcherCommands.spinUpAtDistance(robot.vision, robot.drive, robot.lighting, rawGamepad);
         LaunchAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
-
-        // Universal smart shot command (distance-based + mode-aware)
-        UniversalSmartShotCommand universalSmartShotCommand = robot.launcherCommands.fireUniversalSmart(
-            robot.vision, robot.drive, robot.lighting, rawGamepad);
-
-        // Human loading toggle command
-        HumanLoadingCommand humanLoadingToggle = robot.launcherCommands.toggleHumanLoading();
+        // X button: Hold to spin up at distance-calculatedRPM, release to fire all lanes
+        fireDistanceBased.whenBecomesTrue(spinUpAtDistanceCommand);
+        fireDistanceBased.whenBecomesFalse(fireAllCommand);
 
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
 
-        // X button: Hold to spin up at distance-calculated RPM, release to fire all lanes
-        fireDistanceBased.whenBecomesTrue(spinUpAtDistanceCommand);
-        fireDistanceBased.whenBecomesFalse(fireAllCommand);
-
-        // Range-based shooting: press button to fire all lanes at that range
-//        fireMid.whenBecomesTrue(fireMidRangeCommand);
-//        fireLong.whenBecomesTrue(fireLongRangeCommand);
-
         // Intake control
         runIntake.whenBecomesTrue(intakeForwardCommand);
         runIntake.whenBecomesFalse(intakeReverseCommand);
 
-        // Human loading toggle: press once to start, press again to stop
-        humanLoading.whenBecomesTrue(humanLoadingToggle);
         // Human Loading
         humanLoading
                 .toggleOnBecomesTrue()
@@ -121,6 +97,11 @@ public class OperatorBindings {
                 .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
                 .whenBecomesFalse(robot.intake::setGatePreventArtifact)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
+
+
+        // Universal smart shot command (distance-based + mode-aware)
+        UniversalSmartShotCommand universalSmartShotCommand = robot.launcherCommands.fireUniversalSmart(
+                robot.vision, robot.drive, robot.lighting, rawGamepad);
 
         // Universal smart shot: distance-based RPM + mode-aware firing (TESTING)
         fireUniversalSmart.whenBecomesTrue(universalSmartShotCommand);
