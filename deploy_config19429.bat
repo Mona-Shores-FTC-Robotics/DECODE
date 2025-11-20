@@ -24,7 +24,7 @@ if not exist "%ADB_PATH%" (
 )
 
 REM Check if config file exists
-if not exist "DECODE_Robot_Config20245.xml" (
+if not exist "DECODE_Robot_Config19429.xml" (
     echo ERROR: DECODE_Robot_Config.xml not found in current directory
     pause
     exit /b 1
