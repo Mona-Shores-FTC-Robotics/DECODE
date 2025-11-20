@@ -13,8 +13,8 @@
 
             <!-- Control Hub Servos (Feeders and Indicators) -->
             <Servo name="indicator_left" port="0"/>
-            <Servo name="feeder_left" port="1"/>
-            <Servo name="indicator_center" port="2"/>
+            //PORT 1 IS DEAD
+            <Servo name="feeder_left" port="2"/>
             <Servo name="feeder_center" port="3"/>
             <Servo name="indicator_right" port="4"/>
             <Servo name="feeder_right" port="5"/>
@@ -32,10 +32,11 @@
 
             <!-- Expansion Hub Servos (Intake rollers and hoods) -->
             <Servo name="intake_roller" port="0"/>
-            <Servo name="prefeed_roller" port="1"/>
-            <Servo name="hood_left" port="2"/>
-            <Servo name="hood_center" port="3"/>
-            <Servo name="hood_right" port="4"/>
+            <Servo name="hood_left" port="1"/>
+            <Servo name="hood_center" port="2"/>
+            <Servo name="hood_right" port="3"/>
+            <Servo name="gate" port="4"/>
+            <Servo name="indicator_center" port="5"/>
 
             <!-- Expansion Hub I2C (Color sensors) -->
             <RevColorSensorV3 name="lane_left_color" port="0" bus="0"/>

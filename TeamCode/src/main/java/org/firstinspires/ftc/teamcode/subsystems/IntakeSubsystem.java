@@ -106,7 +106,7 @@ public class IntakeSubsystem implements Subsystem {
 
         // Distance gating (used by all classifiers)
         public boolean useDistance = true;
-        public double presenceDistanceCm = 3.0;
+        public double presenceDistanceCm = 5;
 
         // Background detection - distinguishes empty space from artifacts
         /** Enable background similarity checking */
