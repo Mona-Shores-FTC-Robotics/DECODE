@@ -41,6 +41,7 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  */
 public class OperatorBindings {
     private final Button fireDistanceBased;
+    private final Button fireShortRange;
     private final Button fireUniversalSmart;
     private final Button runIntake;
     private final Button humanLoading;
@@ -60,6 +61,9 @@ public class OperatorBindings {
 
         //launch based on range to april tag.
         fireDistanceBased = operator.x();
+
+        //launch at short range - close shots safety net
+        fireShortRange = operator.a();
 
         //launch based on range to april tag - simultaneous or sequential (Obelisk Pattern) depending on launcher mode
         fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
@@ -98,6 +102,10 @@ public class OperatorBindings {
                 .whenBecomesFalse(robot.intake::setGatePreventArtifact)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
 
+
+        // A button: Fire all lanes at SHORT range
+        LaunchAllAtPresetRangeCommand fireShortCommand = robot.launcherCommands.fireAllShortRange();
+        fireShortRange.whenBecomesTrue(fireShortCommand);
 
         // Universal smart shot command (distance-based + mode-aware)
         UniversalSmartShotCommand universalSmartShotCommand = robot.launcherCommands.fireUniversalSmart(

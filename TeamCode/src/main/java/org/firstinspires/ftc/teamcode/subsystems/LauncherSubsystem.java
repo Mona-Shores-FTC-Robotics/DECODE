@@ -66,7 +66,7 @@ public class LauncherSubsystem implements Subsystem {
         /** Time to keep flywheel at launch speed after firing to ensure artifact clears (ms). */
         public double launchHoldAfterFireMs = 500;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-        public double recoveryMs = 150;
+        public double recoveryMs = 100;  // Reduced from 150ms for faster follow-up shots
         /** Delay between sequential shots when bursting all three lanes (ms). */
         public double burstSpacingMs = 120.0;
     }
@@ -174,7 +174,7 @@ public class LauncherSubsystem implements Subsystem {
             public boolean reversed = false;
             public double loadPosition = .8;
             public double firePosition = .61; //toward 0 moves toward fire position
-            public double holdMs = 1000;
+            public double holdMs = 250;  // Reduced from 1000ms for faster cycling
         }
 
         @Configurable
@@ -183,7 +183,7 @@ public class LauncherSubsystem implements Subsystem {
             public boolean reversed = false;
             public double loadPosition = .93;
             public double firePosition = .75; //toward 0 moves toward fire position
-            public double holdMs = 1000;
+            public double holdMs = 250;  // Reduced from 1000ms for faster cycling
         }
 
         @Configurable
@@ -192,7 +192,7 @@ public class LauncherSubsystem implements Subsystem {
             public boolean reversed = false;
             public double loadPosition = .75;
             public double firePosition = .56; //toward 0 moves toward fire position
-            public double holdMs = 1000;
+            public double holdMs = 250;  // Reduced from 1000ms for faster cycling
         }
     }
 
