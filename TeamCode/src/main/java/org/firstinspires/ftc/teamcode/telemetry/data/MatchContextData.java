@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.telemetry.data;
 
 import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 
 /**
  * Match and OpMode context data for telemetry.
@@ -12,13 +13,22 @@ public class MatchContextData {
     public final double matchTimeSec;
     public final String opMode;
     public final boolean isAutonomous;
+    public final String robotConfig;
 
-    public MatchContextData(Alliance alliance, double runtimeSec, double matchTimeSec, String opMode, boolean isAutonomous) {
+    public MatchContextData(Alliance alliance, double runtimeSec, double matchTimeSec, String opMode, boolean isAutonomous, String robotConfig) {
         this.alliance = alliance != null ? alliance : Alliance.UNKNOWN;
         this.runtimeSec = runtimeSec;
         this.matchTimeSec = matchTimeSec;
         this.opMode = opMode != null ? opMode : "Unknown";
         this.isAutonomous = isAutonomous;
+        this.robotConfig = robotConfig != null ? robotConfig : "Unknown";
+    }
+
+    /**
+     * Convenience constructor that automatically fetches active robot config.
+     */
+    public MatchContextData(Alliance alliance, double runtimeSec, double matchTimeSec, String opMode, boolean isAutonomous) {
+        this(alliance, runtimeSec, matchTimeSec, opMode, isAutonomous, RobotConfigs.getActiveConfigName());
     }
 
     /**

@@ -101,6 +101,9 @@ public class DriverStationFormatter {
         // Alliance
         telemetry.addData("Alliance", data.context.alliance.displayName());
 
+        // Robot config (which robot - 19429 or 20245)
+        telemetry.addData("Robot", data.context.robotConfig);
+
         // Match time
         telemetry.addData("Match Time", formatMatchTime(data.context.matchTimeSec));
 
@@ -139,6 +142,9 @@ public class DriverStationFormatter {
 
         // Alliance
         telemetry.addData("Alliance", data.context.alliance.displayName());
+
+        // Robot config (which robot - 19429 or 20245)
+        telemetry.addData("Robot", data.context.robotConfig);
 
         // Match time
         telemetry.addData("Match Time", formatMatchTime(data.context.matchTimeSec));

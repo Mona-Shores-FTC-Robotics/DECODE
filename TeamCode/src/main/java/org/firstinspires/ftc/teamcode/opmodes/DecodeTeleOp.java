@@ -70,6 +70,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        // Set robot name BEFORE Robot construction so configs are selected correctly
+        ControlHubIdentifierUtil.setRobotName(hardwareMap);
+
         robot = new Robot(hardwareMap);
         robot.attachPedroFollower();
 
@@ -93,9 +96,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 new SubsystemComponent(robot.lighting),
                 new SubsystemComponent(robot.vision)
         );
-
-        ControlHubIdentifierUtil.setRobotName(hardwareMap);
-        RobotState.packet.put("Robot Name", RobotState.getRobotName());
     }
 
     @Override

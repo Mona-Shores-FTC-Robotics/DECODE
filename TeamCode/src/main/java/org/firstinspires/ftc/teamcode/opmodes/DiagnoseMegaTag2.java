@@ -21,6 +21,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AutoField;
+import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -63,6 +64,9 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
 
     @Override
     public void onInit() {
+        // Set robot name BEFORE Robot construction so configs are selected correctly
+        ControlHubIdentifierUtil.setRobotName(hardwareMap);
+
         this.dashboard = FtcDashboard.getInstance();
 
         robot = new Robot(hardwareMap);

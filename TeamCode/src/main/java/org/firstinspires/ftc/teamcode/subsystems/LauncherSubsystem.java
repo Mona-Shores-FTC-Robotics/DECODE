@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.util.Range;
 import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -195,6 +196,31 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    /**
+     * Robot-specific FeederConfig for DECODE_19429.
+     * These values are tuned specifically for the 19429 robot.
+     */
+    @Configurable
+    public static class FeederConfig19429 extends FeederConfig {
+        public FeederConfig19429() {
+            // Override defaults with 19429-specific values if needed
+            // Currently using base class defaults - tune these as needed
+        }
+    }
+
+    /**
+     * Robot-specific FeederConfig for DECODE_20245.
+     * These values are tuned specifically for the 20245 robot.
+     */
+    @Configurable
+    public static class FeederConfig20245 extends FeederConfig {
+        public FeederConfig20245() {
+            // Override defaults with 20245-specific values
+            // Example: left.loadPosition = 0.82;
+            // Tune these values for the 20245 robot
+        }
+    }
+
     @Configurable
     public static class HoodConfig {
         public double retractedPosition = 1;
@@ -261,6 +287,31 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    /**
+     * Robot-specific HoodConfig for DECODE_19429.
+     * These values are tuned specifically for the 19429 robot.
+     */
+    @Configurable
+    public static class HoodConfig19429 extends HoodConfig {
+        public HoodConfig19429() {
+            // Override defaults with 19429-specific values if needed
+            // Currently using base class defaults - tune these as needed
+        }
+    }
+
+    /**
+     * Robot-specific HoodConfig for DECODE_20245.
+     * These values are tuned specifically for the 20245 robot.
+     */
+    @Configurable
+    public static class HoodConfig20245 extends HoodConfig {
+        public HoodConfig20245() {
+            // Override defaults with 20245-specific values
+            // Example: hoodLeft.shortPosition = 0.48;
+            // Tune these values for the 20245 robot
+        }
+    }
+
     @Configurable
     public static class ReverseFlywheelForHumanLoadingConfig {
         /** Power level for reverse intake (negative runs motors backward) */
@@ -270,8 +321,22 @@ public class LauncherSubsystem implements Subsystem {
     public static Timing timing = new Timing();
     public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
     public static FlywheelConfig flywheelConfig = new FlywheelConfig();
-    public static FeederConfig feederConfig = new FeederConfig();
-    public static HoodConfig HoodConfig = new HoodConfig();
+
+    /**
+     * Gets the robot-specific FeederConfig based on RobotState.getRobotName().
+     * @return FeederConfig19429 or FeederConfig20245
+     */
+    public static FeederConfig feederConfig() {
+        return RobotConfigs.getFeederConfig();
+    }
+
+    /**
+     * Gets the robot-specific HoodConfig based on RobotState.getRobotName().
+     * @return HoodConfig19429 or HoodConfig20245
+     */
+    public static HoodConfig hoodConfig() {
+        return RobotConfigs.getHoodConfig();
+    }
 
     public static ReverseFlywheelForHumanLoadingConfig reverseFlywheelForHumanLoadingConfig = new ReverseFlywheelForHumanLoadingConfig();
 
@@ -529,13 +594,13 @@ public class LauncherSubsystem implements Subsystem {
 
     public void setAllHoodsRetracted() {
         for (Hood hood : hoods.values()) {
-            hood.setPosition(HoodConfig.retractedPosition);
+            hood.setPosition(hoodConfig().retractedPosition);
         }
     }
 
     public void setAllHoodsExtended() {
         for (Hood hood : hoods.values()) {
-            hood.setPosition(HoodConfig.extendedPosition);
+            hood.setPosition(hoodConfig().extendedPosition);
         }
     }
 
@@ -956,48 +1021,48 @@ public class LauncherSubsystem implements Subsystem {
     private static double feederHoldMsFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, feederConfig.left.holdMs);
+                return Math.max(0.0, feederConfig().left.holdMs);
             case CENTER:
-                return Math.max(0.0, feederConfig.center.holdMs);
+                return Math.max(0.0, feederConfig().center.holdMs);
             case RIGHT:
             default:
-                return Math.max(0.0, feederConfig.right.holdMs);
+                return Math.max(0.0, feederConfig().right.holdMs);
         }
     }
 
     private static double feederLoadPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(feederConfig.left.loadPosition);
+                return clampServo(feederConfig().left.loadPosition);
             case CENTER:
-                return clampServo(feederConfig.center.loadPosition);
+                return clampServo(feederConfig().center.loadPosition);
             case RIGHT:
             default:
-                return clampServo(feederConfig.right.loadPosition);
+                return clampServo(feederConfig().right.loadPosition);
         }
     }
 
     private static double feederFirePositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(feederConfig.left.firePosition);
+                return clampServo(feederConfig().left.firePosition);
             case CENTER:
-                return clampServo(feederConfig.center.firePosition);
+                return clampServo(feederConfig().center.firePosition);
             case RIGHT:
             default:
-                return clampServo(feederConfig.right.firePosition);
+                return clampServo(feederConfig().right.firePosition);
         }
     }
 
     private static boolean feederReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return feederConfig.left.reversed;
+                return feederConfig().left.reversed;
             case CENTER:
-                return feederConfig.center.reversed;
+                return feederConfig().center.reversed;
             case RIGHT:
             default:
-                return feederConfig.right.reversed;
+                return feederConfig().right.reversed;
         }
     }
 
@@ -1028,12 +1093,12 @@ public class LauncherSubsystem implements Subsystem {
     private static String feederNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return feederConfig.left.servoName;
+                return feederConfig().left.servoName;
             case CENTER:
-                return feederConfig.center.servoName;
+                return feederConfig().center.servoName;
             case RIGHT:
             default:
-                return feederConfig.right.servoName;
+                return feederConfig().right.servoName;
         }
     }
 
@@ -1502,48 +1567,48 @@ public class LauncherSubsystem implements Subsystem {
     private static String hoodNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return HoodConfig.hoodLeft.servoName;
+                return hoodConfig().hoodLeft.servoName;
             case CENTER:
-                return HoodConfig.hoodCenter.servoName;
+                return hoodConfig().hoodCenter.servoName;
             case RIGHT:
             default:
-                return HoodConfig.hoodRight.servoName;
+                return hoodConfig().hoodRight.servoName;
         }
     }
 
     public static double hoodShortPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(HoodConfig.hoodLeft.shortPosition);
+                return clampServo(hoodConfig().hoodLeft.shortPosition);
             case CENTER:
-                return clampServo(HoodConfig.hoodCenter.shortPosition);
+                return clampServo(hoodConfig().hoodCenter.shortPosition);
             case RIGHT:
             default:
-                return clampServo(HoodConfig.hoodRight.shortPosition);
+                return clampServo(hoodConfig().hoodRight.shortPosition);
         }
     }
 
     public static double hoodMidPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(HoodConfig.hoodLeft.midPosition);
+                return clampServo(hoodConfig().hoodLeft.midPosition);
             case CENTER:
-                return clampServo(HoodConfig.hoodCenter.midPosition);
+                return clampServo(hoodConfig().hoodCenter.midPosition);
             case RIGHT:
             default:
-                return clampServo(HoodConfig.hoodRight.midPosition);
+                return clampServo(hoodConfig().hoodRight.midPosition);
         }
     }
 
     public static double hoodLongPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(HoodConfig.hoodLeft.longPosition);
+                return clampServo(hoodConfig().hoodLeft.longPosition);
             case CENTER:
-                return clampServo(HoodConfig.hoodCenter.longPosition);
+                return clampServo(hoodConfig().hoodCenter.longPosition);
             case RIGHT:
             default:
-                return clampServo(HoodConfig.hoodRight.longPosition);
+                return clampServo(hoodConfig().hoodRight.longPosition);
         }
     }
 
