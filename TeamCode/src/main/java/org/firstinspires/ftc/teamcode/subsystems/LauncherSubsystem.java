@@ -273,15 +273,11 @@ public class LauncherSubsystem implements Subsystem {
     public static FlywheelConfig flywheelConfig = new FlywheelConfig();
 
     // Robot-specific FeederConfig instances - visible in Panels for tuning
-    @Configurable
     public static FeederConfig feederConfig19429 = createFeederConfig19429();
-    @Configurable
     public static FeederConfig feederConfig20245 = createFeederConfig20245();
 
     // Robot-specific HoodConfig instances - visible in Panels for tuning
-    @Configurable
     public static HoodConfig hoodConfig19429 = createHoodConfig19429();
-    @Configurable
     public static HoodConfig hoodConfig20245 = createHoodConfig20245();
 
     // Helper to create 19429-specific feeder config
