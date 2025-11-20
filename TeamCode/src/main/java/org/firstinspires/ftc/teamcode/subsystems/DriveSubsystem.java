@@ -319,9 +319,7 @@ public class DriveSubsystem implements Subsystem {
         if (robotCentric != robotCentricConfig) {
             setRobotCentric(robotCentricConfig);
         }
-        //TODO is this needed?
-        double[] rotated = rotateFieldInput(fieldX , fieldY);
-        driveScaled(rotated[0] , rotated[1] , rotationInput , slowMode , rampMode);
+        driveScaled(fieldX , fieldY , rotationInput , slowMode , rampMode);
     }
 
     /**
