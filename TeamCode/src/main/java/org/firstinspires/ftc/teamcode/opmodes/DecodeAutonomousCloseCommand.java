@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.opmodes;
 import static org.firstinspires.ftc.teamcode.opmodes.DecodeAutonomousFarCommand.buildPath;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -51,7 +52,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  * 1. Starts at LAUNCH_CLOSE position
  * 2. Collects samples from Gate Close, Gate Far, and Parking Zone
  * 3. Scores each sample set at LAUNCH_CLOSE
- *
+ *m
  * Uses NextFTC command framework to coordinate:
  * - Driving with intake/launcher positioning (parallel)
  * - Sequential scoring and collection routines
@@ -203,6 +204,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         if (lightingInitController != null) {
             lightingInitController.updateDuringMatch();
         }
+        publishTelemetry();
     }
 
     @Override
@@ -234,7 +236,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         Pose artifactsSet2ControlPoint = AutoField.artifactsSet2ControlPoint(activeAlliance);
 
         Pose artifactsSet3Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_3_270);
-        Pose artifactsSet3Control = AutoField.parkingArtifactsControlPoint(activeAlliance);
+        Pose artifactsSet3Control = AutoField.artifactSet3ControlPoint(activeAlliance);
         Pose moveToGatePose = currentLayout.pose(FieldPoint.MOVE_TO_GATE);
 
         return new SequentialGroup(
@@ -355,7 +357,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     private void drawPreviewForAlliance(Alliance alliance) {
         FieldLayout layout = AutoField.layoutForAlliance(alliance);
         // Preview paths would be drawn here using PanelsBridge
-        PanelsBridge.drawPreview(new PathChain[0], layout.pose(FieldPoint.LAUNCH_CLOSE), alliance == Alliance.RED);
+        PanelsBridge.drawPreview(new PathChain[0], layout.pose(FieldPoint.START_CLOSE), alliance == Alliance.RED);
     }
 
     /**
@@ -405,5 +407,48 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return null;
         }
         return new Pose(pose.getX(), pose.getY(), pose.getHeading());
+    }
+
+
+    private void publishTelemetry() {
+        robot.telemetry.publishLoopTelemetry(
+                robot.drive,
+                robot.launcher,
+                robot.intake,
+                robot.vision,
+                robot.lighting,
+                null,
+                gamepad1,
+                gamepad2,
+                RobotState.getAlliance(),
+                getRuntime(),
+                Math.max(0.0, 150.0 - getRuntime()),
+                telemetry,
+                "Auto",
+                true,
+                null,
+                0,
+                0
+        );
+    }
+
+    /**
+     * Builds a PathChain from start to end with optional control points.
+     * This is public static so test OpModes can visualize the same paths.
+     */
+    public static PathChain buildPath(Follower follower, Pose startPose, Pose endPose, Pose... controlPoints) {
+        if (controlPoints.length > 0) {
+            // Curved path with control points
+            return follower.pathBuilder()
+                    .addPath(new BezierCurve(startPose, controlPoints[0], endPose))
+                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), 0.5)
+                    .build();
+        } else {
+            // Straight line
+            return follower.pathBuilder()
+                    .addPath(new BezierLine(startPose, endPose))
+                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), .5)
+                    .build();
+        }
     }
 }
