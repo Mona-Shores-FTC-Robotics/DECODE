@@ -58,6 +58,8 @@ public class DriveSubsystem implements Subsystem {
         public double kP = 0.5;
         /** Max turn speed when aiming (0.0-1.0) */
         public double kMaxTurn = 0.7;
+
+        public double MT2DistanceThreshold = 12;
     }
 
     @Configurable
@@ -831,9 +833,24 @@ public class DriveSubsystem implements Subsystem {
             // Stale data, do not relocalize
             return false;
         }
-        Pose pedroPose = snap.pedroPoseMT2; //only use MT1 for relocalization
-        if (pedroPose == null) return false;
-        RobotState.putPose("/vision/Poses/RelocalizeMT2", PoseFrames.pedroToFtc(pedroPose));
+        Pose pedroPoseMT1 = snap.pedroPoseMT1; //only use MT1 for relocalization
+        Pose pedroPoseMT2 = snap.pedroPoseMT2; //only use MT1 for relocalization
+
+        // MT1 and MT2 positions are in meters in Pedro space
+        double dx = pedroPoseMT1.getX() - pedroPoseMT2.getX();
+        double dy = pedroPoseMT1.getY() - pedroPoseMT2.getY();
+
+        // Euclidean distance between the two poses
+        double distanceMeters = Math.hypot(dx, dy);
+        boolean relocalizeWithMT2 = distanceMeters < aimAssistConfig.MT2DistanceThreshold;
+        Pose pedroPose = pedroPoseMT1;
+
+        if (relocalizeWithMT2) {
+            pedroPose = pedroPoseMT2;
+        }
+        RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distanceMeters);
+        RobotState.packet.put("/vision/Poses/relocalizeWithMT2", relocalizeWithMT2);
+        RobotState.putPose("/vision/Poses/Relocalize", PoseFrames.pedroToFtc(pedroPose));
 
         follower.setPose(pedroPose);
         poseFusion.reset(pedroPose, System.currentTimeMillis());
