@@ -152,8 +152,8 @@ public class DriveSubsystem implements Subsystem {
      */
     private static InitialPoseConfig createInitialPoseConfig20245() {
         InitialPoseConfig config = new InitialPoseConfig();
-        config.startX = 0;
-        config.startY = 0;
+        config.startX = 56;  // Updated from 0 to match 19429 starting position
+        config.startY = 9;   // Updated from 0 to match 19429 starting position
         config.startHeadingDeg = 90;
         return config;
     }
