@@ -188,10 +188,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             lightingInitController.onStart();
         }
 
-        // Register PedroComponent NOW that follower exists
-        // Try passing follower instance directly instead of lambda
-        addComponents(new PedroComponent(robot.drive.getFollower()));
-
         // Initialize launcher mode from config (defaults to DECODE, can be changed via Dashboard)
         RobotState.setLauncherMode(config.startingLauncherMode);
         RobotState.resetMotifTail(); // Start with fresh motif tail (0)
