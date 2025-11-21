@@ -239,6 +239,8 @@ public class DriveSubsystem implements Subsystem {
 
     public void attachFollower() {
         this.follower = follower();
+        // Log which config set is being used for diagnostics
+        RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName());
     }
 
     /**

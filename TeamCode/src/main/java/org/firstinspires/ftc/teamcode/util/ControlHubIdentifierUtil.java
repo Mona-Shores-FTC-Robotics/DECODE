@@ -20,16 +20,42 @@ public class ControlHubIdentifierUtil {
 
     /**
      * Retrieves the RobotType based on the Control Hub's SSID.
+     * Retries up to 3 times with delays if initial retrieval fails.
+     * This handles the case where WiFi isn't fully initialized on first boot after battery removal.
      *
      * @param hardwareMap The HardwareMap instance from the OpMode.
      * @return The corresponding RobotType, or null if identification fails.
      */
     public static void setRobotName(HardwareMap hardwareMap) {
+        final int MAX_RETRIES = 3;
+        final long RETRY_DELAY_MS = 200; // 200ms between retries
 
-        String ssid = retrieveSSID(hardwareMap);
-        if (ssid != null) {
-            mapSSIDToRobotType(ssid);
+        String ssid = null;
+        for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            ssid = retrieveSSID(hardwareMap);
+            if (ssid != null) {
+                mapSSIDToRobotType(ssid);
+                if (attempt > 0) {
+                    // Log that retry succeeded
+                    RobotState.packet.put("Info", "SSID retrieval succeeded on attempt " + (attempt + 1));
+                }
+                return;
+            }
+
+            // If not last attempt, wait before retrying
+            if (attempt < MAX_RETRIES - 1) {
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    logError("Interrupted during SSID retrieval retry");
+                    return;
+                }
+            }
         }
+
+        // All retries failed
+        logError("Failed to retrieve SSID after " + MAX_RETRIES + " attempts. Robot name remains UNKNOWN.");
     }
 
     /**
