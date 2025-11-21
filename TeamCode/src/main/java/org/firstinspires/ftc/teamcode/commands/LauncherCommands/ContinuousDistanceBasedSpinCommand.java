@@ -269,7 +269,7 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
 
     /**
      * Calculates distance to the goal tag in inches.
-     * Uses vision pose if available, falls back to odometry pose.
+     * Uses odometry pose only (vision not used for distance calculation).
      *
      * @return Distance to goal in inches, or 0.0 if unable to determine
      */
@@ -280,25 +280,18 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         diagnostics.visionPoseAvailable = false;
         diagnostics.odometryPoseAvailable = false;
 
-        // Try to get robot pose from vision first
-        Optional<Pose> poseOpt = vision.getRobotPoseFromTagPedro();
-        diagnostics.visionPoseAvailable = poseOpt.isPresent();
+        // Use odometry pose only
+        Pose odometryPose = drive.getFollower().getPose();
+        diagnostics.odometryPoseAvailable = (odometryPose != null);
 
-        // Fall back to odometry if vision unavailable
-        if (!poseOpt.isPresent()) {
-            Pose odometryPose = drive.getFollower().getPose();
-            diagnostics.odometryPoseAvailable = (odometryPose != null);
-            if (odometryPose != null) {
-                poseOpt = Optional.of(odometryPose);
-                diagnostics.lastSource = "odometry";
-                diagnostics.robotPoseAvailable = true;
-            } else {
-                diagnostics.lastSource = "none";
-                return 0.0;
-            }
-        } else {
-            diagnostics.lastSource = "vision";
+        Optional<Pose> poseOpt = Optional.empty();
+        if (odometryPose != null) {
+            poseOpt = Optional.of(odometryPose);
+            diagnostics.lastSource = "odometry";
             diagnostics.robotPoseAvailable = true;
+        } else {
+            diagnostics.lastSource = "none";
+            return 0.0;
         }
 
         // Get goal pose based on alliance
