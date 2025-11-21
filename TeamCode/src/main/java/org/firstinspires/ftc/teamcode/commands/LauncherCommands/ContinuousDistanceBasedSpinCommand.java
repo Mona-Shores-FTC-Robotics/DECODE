@@ -69,29 +69,29 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         /** Distance in inches for short range reference point */
         public double shortRangeDistanceIn = 36.0;
         /** RPM for left lane at short range */
-        public double shortLeftRpm = 1900;
+        public double shortLeftRpm = 2050;
         /** RPM for center lane at short range */
-        public double shortCenterRpm = 1900;
+        public double shortCenterRpm = 2050;
         /** RPM for right lane at short range */
-        public double shortRightRpm = 1900;
+        public double shortRightRpm = 2050;
 
         /** Distance in inches for mid range reference point */
-        public double midRangeDistanceIn = 72.0;
+        public double midRangeDistanceIn = 90.0;
         /** RPM for left lane at mid range */
-        public double midLeftRpm = 2550;
+        public double midLeftRpm = 2400;
         /** RPM for center lane at mid range */
-        public double midCenterRpm = 2550;
+        public double midCenterRpm = 2400;
         /** RPM for right lane at mid range */
-        public double midRightRpm = 2550;
+        public double midRightRpm = 2400;
 
         /** Distance in inches for long range reference point */
-        public double longRangeDistanceIn = 108.0;
+        public double longRangeDistanceIn = 128.0;
         /** RPM for left lane at long range */
-        public double longLeftRpm = 3000;
+        public double longLeftRpm = 2850;
         /** RPM for center lane at long range */
-        public double longCenterRpm = 3000;
+        public double longCenterRpm = 2850;
         /** RPM for right lane at long range */
-        public double longRightRpm = 3000;
+        public double longRightRpm = 2850;
     }
 
     @Configurable
@@ -103,9 +103,9 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         /** Hood position for distances above long range threshold */
         public double longHoodPosition = 0.0;
         /** Distance threshold (inches) between short and mid range */
-        public double shortToMidThresholdIn = 54.0;
+        public double shortToMidThresholdIn = 60.0;
         /** Distance threshold (inches) between mid and long range */
-        public double midToLongThresholdIn = 90.0;
+        public double midToLongThresholdIn = 100.0;
 
     }
 
