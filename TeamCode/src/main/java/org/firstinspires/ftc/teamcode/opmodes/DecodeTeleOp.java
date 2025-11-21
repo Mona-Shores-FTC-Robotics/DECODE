@@ -22,6 +22,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
+import org.firstinspires.ftc.teamcode.util.FollowerHolder;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -64,8 +65,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 CommandManager.INSTANCE,
-                // PedroComponent registered here but gets follower lazily after robot is initialized
-                new PedroComponent(() -> robot != null ? robot.drive.getFollower() : null)
+                // PedroComponent uses static FollowerHolder to get follower created with correct configs
+                new PedroComponent(FollowerHolder::getFollower)
         );
     }
 

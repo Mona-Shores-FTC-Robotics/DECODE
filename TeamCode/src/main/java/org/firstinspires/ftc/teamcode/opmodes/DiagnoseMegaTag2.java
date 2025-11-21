@@ -23,6 +23,7 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
+import org.firstinspires.ftc.teamcode.util.FollowerHolder;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 /**
@@ -58,8 +59,8 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     {
         addComponents(
                 BulkReadComponent.INSTANCE,
-                // PedroComponent registered here but gets follower lazily after robot is initialized
-                new PedroComponent(() -> robot != null ? robot.drive.getFollower() : null)
+                // PedroComponent uses static FollowerHolder to get follower created with correct configs
+                new PedroComponent(FollowerHolder::getFollower)
         );
     }
 

@@ -26,6 +26,7 @@ import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
+import org.firstinspires.ftc.teamcode.util.FollowerHolder;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -95,8 +96,8 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 CommandManager.INSTANCE,
-                // PedroComponent registered here but gets follower lazily after robot is initialized
-                new PedroComponent(() -> robot != null ? robot.drive.getFollower() : null)
+                // PedroComponent uses static FollowerHolder to get follower created with correct configs
+                new PedroComponent(FollowerHolder::getFollower)
         );
     }
     @Override

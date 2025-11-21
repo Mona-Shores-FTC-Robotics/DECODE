@@ -241,6 +241,10 @@ public class DriveSubsystem implements Subsystem {
     public void attachFollower() {
         // Create follower directly here (AFTER robot name is set) instead of using PedroComponent
         this.follower = Constants.createFollower(hardwareMap);
+
+        // Store in static holder for PedroComponent access
+        org.firstinspires.ftc.teamcode.util.FollowerHolder.setFollower(this.follower);
+
         // Log which config set is being used for diagnostics
         RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName());
     }
