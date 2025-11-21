@@ -142,7 +142,7 @@ public class Constants {
         return new MecanumConstants()
                 .maxPower(1.0)
                 .xVelocity(59.1365506697527) //20245
-                .yVelocity(53.16551100362942) //20245
+                .yVelocity(43.5633) //20245
                 .rightFrontMotorName(HardwareNames.RF)
                 .rightRearMotorName(HardwareNames.RB)
                 .leftRearMotorName(HardwareNames.LB)

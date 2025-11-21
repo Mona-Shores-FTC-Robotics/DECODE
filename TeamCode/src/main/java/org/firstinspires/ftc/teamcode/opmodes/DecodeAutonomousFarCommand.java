@@ -62,7 +62,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public double maxPathPower = .8;
+        public double maxPathPower = 1.0;
         public double intakeDelaySeconds = .1; //how long into the path do we turn the intake on?
 
         /**
@@ -301,13 +301,13 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             // Curved path with control points
             return follower.pathBuilder()
                     .addPath(new BezierCurve(startPose, controlPoints[0], endPose))
-                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), 0.7)
+                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), 0.5)
                     .build();
         } else {
             // Straight line
             return follower.pathBuilder()
                     .addPath(new BezierLine(startPose, endPose))
-                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), 0.7)
+                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), .5)
                     .build();
         }
     }

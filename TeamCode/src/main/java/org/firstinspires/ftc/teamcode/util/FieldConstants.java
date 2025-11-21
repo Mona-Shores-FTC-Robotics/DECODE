@@ -27,9 +27,9 @@ public final class FieldConstants {
     @Configurable
     public static class BasketTargetOffsets {
         /** Blue basket X offset from incenter (inches). Negative = left toward corner */
-        public static double blueDeltaX = 0.0;
+        public static double blueDeltaX = 0;
         /** Blue basket Y offset from incenter (inches). Positive = up toward corner */
-        public static double blueDeltaY = 0.0;
+        public static double blueDeltaY = 0;
         /** Red basket X offset from incenter (inches). Positive = right toward corner */
         public static double redDeltaX = 0.0;
         /** Red basket Y offset from incenter (inches). Positive = up toward corner */

@@ -243,6 +243,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                         spinUpLauncher(),
                         followPath(startClosePose, launchClosePose)
                 ),
+                scoreSequence(),
 
                 followPath(launchClosePose, preArtifacts1Pose),
 

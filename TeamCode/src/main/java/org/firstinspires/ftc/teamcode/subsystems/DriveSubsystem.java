@@ -55,7 +55,7 @@ public class DriveSubsystem implements Subsystem {
     @Configurable
     public static class AimAssistConfig {
         /** Proportional gain for geometry-based aiming - higher = faster response to error */
-        public double kP = 0.5;
+        public double kP = 0.9;
         /** Max turn speed when aiming (0.0-1.0) */
         public double kMaxTurn = 0.7;
 
@@ -527,6 +527,8 @@ public class DriveSubsystem implements Subsystem {
 
         double headingError = normalizeAngle(targetHeading - follower.getHeading());
         lastAimErrorRad = headingError;
+        RobotState.packet.put("Aim Error", Math.toDegrees(headingError));
+
 
         // Simple P controller
         double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
