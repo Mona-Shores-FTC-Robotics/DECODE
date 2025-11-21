@@ -62,6 +62,40 @@ public class Constants {
     }
 
     // ========= Pedro follower and localization =========
+    // Robot-specific follower constants
+    private static FollowerConstants createFollowerConstants19429() {
+        return new FollowerConstants()
+                .forwardZeroPowerAcceleration(-29.294739328)
+                .lateralZeroPowerAcceleration(-77.6639)
+                .useSecondaryTranslationalPIDF(true)
+                .useSecondaryHeadingPIDF(true)
+                .useSecondaryDrivePIDF(true)
+                .translationalPIDFCoefficients(new PIDFCoefficients(.030, 0, .0001, .08))
+                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.01, 0, 0.0001, .05))
+                .headingPIDFCoefficients(new PIDFCoefficients(.6, .0001, .035, .065))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.4, 0, .015, .029))
+                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) //was .005p
+                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
+                .centripetalScaling(0.00005)
+                .mass(15.4221); //34 pounds 11/16/25
+    }
+
+    private static FollowerConstants createFollowerConstants20245() {
+        return new FollowerConstants()
+                .forwardZeroPowerAcceleration(-29.294739328) // TODO: Tune for 20245
+                .lateralZeroPowerAcceleration(-77.6639) // TODO: Tune for 20245
+                .useSecondaryTranslationalPIDF(true)
+                .useSecondaryHeadingPIDF(true)
+                .useSecondaryDrivePIDF(true)
+                .translationalPIDFCoefficients(new PIDFCoefficients(.030, 0, .0001, .08)) // TODO: Tune for 20245
+                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.01, 0, 0.0001, .05))
+                .headingPIDFCoefficients(new PIDFCoefficients(.6, .0001, .035, .065)) // TODO: Tune for 20245
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.4, 0, .015, .029))
+                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) // TODO: Tune for 20245
+                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
+                .centripetalScaling(0.00005)
+                .mass(15.4221); // TODO: Update mass for 20245
+    }
     public static FollowerConstants followerConstants = new FollowerConstants()
 //            .forwardZeroPowerAcceleration(-29.294739328) //19429
 //            .lateralZeroPowerAcceleration(-77.6639) //19429
@@ -94,6 +128,42 @@ public class Constants {
             .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
             .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
             .useBrakeModeInTeleOp(true);
+    public static FollowerConstants followerConstants19429 = createFollowerConstants19429();
+    public static FollowerConstants followerConstants20245 = createFollowerConstants20245();
+    public static FollowerConstants followerConstants = followerConstants19429; // Default to 19429
+
+    // Robot-specific drive constants
+    private static MecanumConstants createDriveConstants19429() {
+        return new MecanumConstants()
+                .maxPower(1.0)
+                .xVelocity(72.58829912801427) //tuned 11/16/25
+                .yVelocity(43.5633) //tuned 11/16/25
+                .rightFrontMotorName(HardwareNames.RF)
+                .rightRearMotorName(HardwareNames.RB)
+                .leftRearMotorName(HardwareNames.LB)
+                .leftFrontMotorName(HardwareNames.LF)
+                .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
+                .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
+                .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
+                .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
+                .useBrakeModeInTeleOp(true);
+    }
+
+    private static MecanumConstants createDriveConstants20245() {
+        return new MecanumConstants()
+                .maxPower(1.0)
+                .xVelocity(72.58829912801427) // TODO: Tune for 20245
+                .yVelocity(43.5633) // TODO: Tune for 20245
+                .rightFrontMotorName(HardwareNames.RF)
+                .rightRearMotorName(HardwareNames.RB)
+                .leftRearMotorName(HardwareNames.LB)
+                .leftFrontMotorName(HardwareNames.LF)
+                .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
+                .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
+                .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
+                .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
+                .useBrakeModeInTeleOp(true);
+    }
 
     // Robot-specific PinpointConstants instances - visible for tuning
     public static PinpointConstants localizerConstants19429 = createPinpointConstants19429();
@@ -136,6 +206,36 @@ public class Constants {
     public static PinpointConstants localizerConstants() {
         return RobotConfigs.getPinpointConstants();
     }
+    public static MecanumConstants driveConstants19429 = createDriveConstants19429();
+    public static MecanumConstants driveConstants20245 = createDriveConstants20245();
+    public static MecanumConstants driveConstants = driveConstants19429; // Default to 19429
+
+    // Robot-specific localizer constants
+    private static PinpointConstants createPinpointConstants19429() {
+        return new PinpointConstants()
+                .forwardPodY(6.25)
+                .strafePodX(6.25) //19429 6.25
+                .distanceUnit(DistanceUnit.INCH)
+                .hardwareMapName(HardwareNames.PINPOINT)
+                .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
+                .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
+                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+    }
+
+    private static PinpointConstants createPinpointConstants20245() {
+        return new PinpointConstants()
+                .forwardPodY(6.25) // TODO: Measure for 20245
+                .strafePodX(6.25) // TODO: Measure for 20245
+                .distanceUnit(DistanceUnit.INCH)
+                .hardwareMapName(HardwareNames.PINPOINT)
+                .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
+                .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
+                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+    }
+
+    public static PinpointConstants localizerConstants19429 = createPinpointConstants19429();
+    public static PinpointConstants localizerConstants20245 = createPinpointConstants20245();
+    public static PinpointConstants localizerConstants = localizerConstants19429; // Default to 19429
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 
