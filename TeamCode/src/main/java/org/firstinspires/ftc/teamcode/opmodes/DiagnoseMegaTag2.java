@@ -9,6 +9,7 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import dev.nextftc.core.components.SubsystemComponent;
+import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
@@ -70,6 +71,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         // This timing gives WiFi more time to initialize on first boot
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
+
+        // Register PedroComponent AFTER follower is created so it uses our follower
+        addComponents(new PedroComponent(robot.drive::getFollower));
+
         robot.setAlliance(Alliance.BLUE); // Default for testing
         robot.initializeForTeleOp();
 

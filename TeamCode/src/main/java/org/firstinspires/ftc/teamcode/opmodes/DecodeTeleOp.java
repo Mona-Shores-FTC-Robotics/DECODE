@@ -7,6 +7,7 @@ import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
+import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -72,6 +73,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
         robot = new Robot(hardwareMap);
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
+
+        // Register PedroComponent AFTER follower is created so it uses our follower
+        addComponents(new PedroComponent(robot.drive::getFollower));
 
         // Apply alliance from previous OpMode (auto) before initializing
         // so lighting subsystem shows correct color from the start

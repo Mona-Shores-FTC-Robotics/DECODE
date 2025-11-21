@@ -38,6 +38,7 @@ import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.FollowPath;
+import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -103,6 +104,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
 
         robot.attachPedroFollower();
+
+        // Register PedroComponent AFTER follower is created so FollowPath commands can access it
+        addComponents(new PedroComponent(robot.drive::getFollower));
 
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
