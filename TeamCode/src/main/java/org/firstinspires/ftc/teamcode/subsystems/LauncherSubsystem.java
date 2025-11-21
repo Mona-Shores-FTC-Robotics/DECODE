@@ -212,7 +212,7 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition = .45;
+            public double shortPosition = .2;
             /**
              * Hood position for mid range shots
              */
@@ -230,7 +230,7 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition = .45;
+            public double shortPosition = .2;
             /**
              * Hood position for mid range shots
              */
@@ -248,7 +248,7 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition = .45;
+            public double shortPosition = .2;
             //TODO consider idle position and weirdness if idle is above the short shot.
             /**
              * Hood position for mid range shots
@@ -290,13 +290,13 @@ public class LauncherSubsystem implements Subsystem {
         FeederConfig config = new FeederConfig();
         // Apply 20245-specific values
         config.center.loadPosition = .18;
-        config.center.firePosition = .07;
+        config.center.firePosition = .03;
 
         config.right.loadPosition = .78;
-        config.right.firePosition = .65;
+        config.right.firePosition = .58;
 
         config.left.loadPosition = .33;
-        config.left.firePosition = .21;
+        config.left.firePosition = .18;
         return config;
     }
 
@@ -323,17 +323,17 @@ public class LauncherSubsystem implements Subsystem {
     // Helper to create 20245-specific hood config
     private static HoodConfig createHoodConfig20245() {
         HoodConfig config = new HoodConfig();
-        config.hoodRight.midPosition = .5;
+        config.hoodRight.midPosition = 0;
         config.hoodRight.longPosition = 0;
-        config.hoodRight.shortPosition = 1;
+        config.hoodRight.shortPosition = .2;
 
-        config.hoodCenter.midPosition = .5;
+        config.hoodCenter.midPosition = .0;
         config.hoodCenter.longPosition = 0;
-        config.hoodCenter.shortPosition = 1;
+        config.hoodCenter.shortPosition = .2;
 
-        config.hoodLeft.midPosition = .5;
+        config.hoodLeft.midPosition = 0;
         config.hoodLeft.longPosition = 0;
-        config.hoodLeft.shortPosition = 1;
+        config.hoodLeft.shortPosition = .2;
         // Apply 20245-specific values if needed
         // (currently using default values - customize as needed)
         return config;
