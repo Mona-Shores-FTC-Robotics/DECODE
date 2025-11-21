@@ -63,8 +63,10 @@ public class Constants {
 
     // ========= Pedro follower and localization =========
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .forwardZeroPowerAcceleration(-29.294739328)
-            .lateralZeroPowerAcceleration(-77.6639)
+//            .forwardZeroPowerAcceleration(-29.294739328) //19429
+//            .lateralZeroPowerAcceleration(-77.6639) //19429
+            .forwardZeroPowerAcceleration(-27.104224075758907) //20245
+            .lateralZeroPowerAcceleration(-87.36247959701339) //20245
             .useSecondaryTranslationalPIDF(true)
             .useSecondaryHeadingPIDF(true)
             .useSecondaryDrivePIDF(true)
@@ -79,8 +81,10 @@ public class Constants {
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1.0)
-            .xVelocity(72.58829912801427) //tuned 11/16/25
-            .yVelocity(43.5633) //tuned 11/16/25
+//            .xVelocity(72.58829912801427) //tuned 11/16/25 for 19429
+//            .yVelocity(43.5633) //tuned 11/16/25 for 19429
+            .xVelocity(59.1365506697527) //tuned 11/21 for 20245
+            .yVelocity(53.16551100362942) //tuned 11/21/25 for 20245
             .rightFrontMotorName(HardwareNames.RF)
             .rightRearMotorName(HardwareNames.RB)
             .leftRearMotorName(HardwareNames.LB)
