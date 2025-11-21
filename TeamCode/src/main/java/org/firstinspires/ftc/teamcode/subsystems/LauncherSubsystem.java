@@ -1181,7 +1181,7 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     private static double ticksPerSecondToRpm(double ticksPerSecond) {
-        return ticksPerSecond * 60.0 / (flywheelConfig.parameters.ticksPerRev * flywheelConfig().parameters.gearRatio);
+        return ticksPerSecond * 60.0 / (flywheelConfig().parameters.ticksPerRev * flywheelConfig().parameters.gearRatio);
     }
 
     private static double clampServo(double position) {
@@ -1438,8 +1438,8 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyBangBangControl(double error) {
-            double high = Range.clip(flywheelConfig.modeConfig.bangBang.highPower, -1.0, 1.0);
-            double low = Range.clip(flywheelConfig.modeConfig.bangBang.lowPower, -1.0, 1.0);
+            double high = Range.clip(flywheelConfig().modeConfig.bangBang.highPower, -1.0, 1.0);
+            double low = Range.clip(flywheelConfig().modeConfig.bangBang.lowPower, -1.0, 1.0);
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
@@ -1472,7 +1472,7 @@ public class LauncherSubsystem implements Subsystem {
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
             holdPower = Range.clip(holdPower * voltageMultiplier, 0.0, 1.0);
-            double lowPower = Range.clip(flywheelConfig.modeConfig.bangBang.lowPower * voltageMultiplier, 0.0, 1.0);
+            double lowPower = Range.clip(flywheelConfig().modeConfig.bangBang.lowPower * voltageMultiplier, 0.0, 1.0);
 
             if (error < 0.0) {
                 motor.setPower(lowPower);
