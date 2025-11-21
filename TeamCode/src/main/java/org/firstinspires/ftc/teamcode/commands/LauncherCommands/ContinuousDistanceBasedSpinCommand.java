@@ -69,11 +69,11 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         /** Distance in inches for short range reference point */
         public double shortRangeDistanceIn = 36.0;
         /** RPM for left lane at short range */
-        public double shortLeftRpm = 2050;
+        public double shortLeftRpm = 2000;
         /** RPM for center lane at short range */
-        public double shortCenterRpm = 2050;
+        public double shortCenterRpm = 2000;
         /** RPM for right lane at short range */
-        public double shortRightRpm = 2050;
+        public double shortRightRpm = 2000;
 
         /** Distance in inches for mid range reference point */
         public double midRangeDistanceIn = 90.0;
@@ -97,9 +97,9 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
     @Configurable
     public static class HoodCalibration {
         /** Hood position for distances below short range threshold */
-        public double shortHoodPosition = 0.45;
+        public double shortHoodPosition = .3;
         /** Hood position for distances in mid range */
-        public double midHoodPosition = 0.0;
+        public double midHoodPosition = 0.05;
         /** Hood position for distances above long range threshold */
         public double longHoodPosition = 0.0;
         /** Distance threshold (inches) between short and mid range */
