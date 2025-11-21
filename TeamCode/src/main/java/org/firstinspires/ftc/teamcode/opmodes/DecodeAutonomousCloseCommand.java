@@ -40,9 +40,9 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.extensions.pedro.FollowPath;
-import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
+
+import org.firstinspires.ftc.teamcode.commands.PathFollowingCommands.CustomFollowPath;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
@@ -295,12 +295,13 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     }
 
     /**
-     * Creates a path following command
+     * Creates a path following command using our custom implementation
+     * that bypasses PedroComponent and gets follower directly from FollowerHolder
      */
     private Command followPath(Pose startPose, Pose endPose, Pose... controlPoints) {
         PathChain path = buildPath(robot.drive.getFollower(), startPose, endPose, controlPoints);
         double maxPower = Range.clip(config.maxPathPower, 0.0, 1.0);
-        return new FollowPath(path, false, maxPower);
+        return new CustomFollowPath(path, false, maxPower);
     }
 
     /**
