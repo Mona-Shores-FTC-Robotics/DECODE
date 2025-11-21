@@ -47,7 +47,7 @@ public static class Waypoints {
 
         public double launchFarX = 55;
         public double launchFarY = 17.3;
-        public double launchFarHeadingDeg = 112;
+        public double launchFarHeadingDeg = 107.1;
 
         public double allianceWallArtifactsX = 9;
         public double allianceWallArtifactsY = 8.2;

@@ -212,11 +212,11 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition;
+            public double shortPosition = .3;
             /**
              * Hood position for mid range shots
              */
-            public double midPosition = 0;
+            public double midPosition = .05;
             /**
              * Hood position for long range shots
              */
@@ -229,15 +229,15 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition;
+            public double shortPosition = .3;
             /**
              * Hood position for mid range shots
              */
-            public double midPosition;
+            public double midPosition = .05;
             /**
              * Hood position for long range shots
              */
-            public double longPosition;
+            public double longPosition = 0;
         }
 
         @Configurable
@@ -246,16 +246,16 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition;
+            public double shortPosition =.3;
             //TODO consider idle position and weirdness if idle is above the short shot.
             /**
              * Hood position for mid range shots
              */
-            public double midPosition;
+            public double midPosition = .05;
             /**
              * Hood position for long range shots
              */
-            public double longPosition;
+            public double longPosition = 0;
         }
     }
 
@@ -301,18 +301,18 @@ public class LauncherSubsystem implements Subsystem {
     private static FlywheelConfig createFlywheelConfig19429() {
         FlywheelConfig config = new FlywheelConfig();
         config.parameters.rpmTolerance = 50;  // Tighter tolerance
-        config.modeConfig.hybridPid.kP = 0.0065;  // Different PID gain
+        config.modeConfig.hybridPid.kP = 0.008;  // Different PID gain
         config.flywheelLeft.reversed = true;  // 19429 has left motor reversed
-        config.flywheelLeft.idleRpm = 1100;
-        config.flywheelCenter.idleRpm = 1100;
-        config.flywheelRight.idleRpm = 1100;
+        config.flywheelLeft.idleRpm = 1500;
+        config.flywheelCenter.idleRpm = 1500;
+        config.flywheelRight.idleRpm = 1500;
         return config;
     }
 
     // Helper to create 20245-specific flywheel config
     private static FlywheelConfig createFlywheelConfig20245() {
         FlywheelConfig config = new FlywheelConfig();
-        config.parameters.rpmTolerance = 200;  // Looser tolerance
+        config.parameters.rpmTolerance = 50;  // Looser tolerance
         config.modeConfig.hybridPid.kP = 0.008;
         config.flywheelLeft.reversed = false;  // 20245 has left motor forward
         config.flywheelLeft.idleRpm = 1500;

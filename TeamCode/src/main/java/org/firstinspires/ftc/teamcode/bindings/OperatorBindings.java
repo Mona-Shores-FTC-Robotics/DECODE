@@ -98,13 +98,11 @@ public class OperatorBindings {
 
         // Human Loading
         humanLoading
-                .toggleOnBecomesTrue()
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
                 .whenBecomesTrue(robot.intake::setGateReverseConfig)
                 .whenBecomesTrue(robot.intake::startForward)
                 .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
                 .whenBecomesTrue(robot.intake::deactivateRoller)
-
 
                 .whenBecomesFalse(robot.intake::startReverseIntakeMotor)
                 .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
