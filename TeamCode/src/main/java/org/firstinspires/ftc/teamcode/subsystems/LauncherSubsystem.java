@@ -300,15 +300,15 @@ public class LauncherSubsystem implements Subsystem {
     // Helper to create 19429-specific hood config
     private static HoodConfig createHoodConfig19429() {
         HoodConfig config = new HoodConfig();
-        config.hoodRight.midPosition = 0;
+        config.hoodRight.midPosition = 0.05;
         config.hoodRight.longPosition = 0;
         config.hoodRight.shortPosition = .3;
 
-        config.hoodCenter.midPosition = 0;
+        config.hoodCenter.midPosition = 0.05;
         config.hoodCenter.longPosition = 0;
         config.hoodCenter.shortPosition = .3;
 
-        config.hoodLeft.midPosition = 0;
+        config.hoodLeft.midPosition = 0.05;
         config.hoodLeft.longPosition = 0;
         config.hoodLeft.shortPosition = .3;
         // Apply 20245-specific values if needed
