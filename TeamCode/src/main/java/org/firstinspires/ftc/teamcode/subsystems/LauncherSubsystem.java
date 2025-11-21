@@ -143,7 +143,7 @@ public class LauncherSubsystem implements Subsystem {
         @Configurable
         public static class LeftFlywheelConfig {
             public String motorName = "launcher_left";
-            public boolean reversed = false; //20245 specific value (does 19429 need to be changed?
+            public boolean reversed = true; ///19429 has to be true.
             public double idleRpm = 1500;
         }
 
