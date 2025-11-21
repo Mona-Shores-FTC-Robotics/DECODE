@@ -276,7 +276,7 @@ public class LauncherSubsystem implements Subsystem {
     public static FeederConfig feederConfig19429 = createFeederConfig19429();
     public static FeederConfig feederConfig20245 = createFeederConfig20245();
 
-    // Robot-specific HoodConfig instances - visible in Panels for tuning
+    // Robot-specific HoodConfig instances - visible in Paflynels for tuning
     public static HoodConfig hoodConfig19429 = createHoodConfig19429();
     public static HoodConfig hoodConfig20245 = createHoodConfig20245();
 
@@ -302,7 +302,22 @@ public class LauncherSubsystem implements Subsystem {
 
     // Helper to create 19429-specific hood config
     private static HoodConfig createHoodConfig19429() {
-        return new HoodConfig(); // Uses default values
+        HoodConfig config = new HoodConfig();
+        config.hoodRight.midPosition = 0;
+        config.hoodRight.longPosition = 0;
+        config.hoodRight.shortPosition = .3;
+
+        config.hoodCenter.midPosition = 0;
+        config.hoodCenter.longPosition = 0;
+        config.hoodCenter.shortPosition = .3;
+
+        config.hoodLeft.midPosition = 0;
+        config.hoodLeft.longPosition = 0;
+        config.hoodLeft.shortPosition = .3;
+        // Apply 20245-specific values if needed
+        // (currently using default values - customize as needed)
+        return config;
+
     }
 
     // Helper to create 20245-specific hood config
