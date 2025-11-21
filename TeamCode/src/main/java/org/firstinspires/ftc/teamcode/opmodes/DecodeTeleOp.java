@@ -64,7 +64,10 @@ public class DecodeTeleOp extends NextFTCOpMode {
         addComponents(
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE
+                CommandManager.INSTANCE,
+                // PedroComponent in instance initializer now works because placeholder follower
+                // is created in Robot constructor, then replaced with correct config in attachFollower()
+                new PedroComponent(hardwareMap -> FollowerHolder.getFollower())
         );
     }
 
@@ -72,10 +75,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
     public void onInit() {
         robot = new Robot(hardwareMap);
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
-        robot.attachPedroFollower();
 
-        // Add PedroComponent AFTER follower is created and stored in FollowerHolder
-        addComponents(new PedroComponent(hardwareMap -> FollowerHolder.getFollower()));
+        // Recreate follower with correct robot-specific config after robot name is set
+        robot.attachPedroFollower();
 
         // Apply alliance from previous OpMode (auto) before initializing
         // so lighting subsystem shows correct color from the start

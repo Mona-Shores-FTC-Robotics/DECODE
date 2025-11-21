@@ -238,11 +238,28 @@ public class DriveSubsystem implements Subsystem {
         this.vision = vision;
     }
 
-    public void attachFollower() {
-        // Create follower directly here (AFTER robot name is set) instead of using PedroComponent
+    /**
+     * Creates a placeholder follower with default config so PedroComponent can be registered early.
+     * Called from Robot constructor before robot name is known.
+     * The follower will be recreated with correct config in attachFollower().
+     */
+    public void createPlaceholderFollower() {
+        // Create follower with default config (will default to DECODE_19429)
         this.follower = Constants.createFollower(hardwareMap);
 
-        // Store in static holder for PedroComponent access
+        // Store in static holder so PedroComponent in instance initializer can access it
+        org.firstinspires.ftc.teamcode.util.FollowerHolder.setFollower(this.follower);
+    }
+
+    /**
+     * Recreates the follower with robot-specific config after robot name is detected.
+     * Called from OpMode.onInit() after ControlHubIdentifierUtil.setRobotName().
+     */
+    public void attachFollower() {
+        // Recreate follower with correct robot-specific config (AFTER robot name is set)
+        this.follower = Constants.createFollower(hardwareMap);
+
+        // Update static holder with correctly-configured follower
         org.firstinspires.ftc.teamcode.util.FollowerHolder.setFollower(this.follower);
 
         // Log which config set is being used for diagnostics

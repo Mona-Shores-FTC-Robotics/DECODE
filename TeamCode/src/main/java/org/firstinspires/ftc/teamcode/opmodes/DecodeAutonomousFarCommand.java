@@ -92,7 +92,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         addComponents(
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE
+                CommandManager.INSTANCE,
+                // PedroComponent in instance initializer now works because placeholder follower
+                // is created in Robot constructor, then replaced with correct config in attachFollower()
+                new PedroComponent(hardwareMap -> FollowerHolder.getFollower())
         );
     }
 
@@ -103,10 +106,8 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         robot = new Robot(hardwareMap);
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
 
+        // Recreate follower with correct robot-specific config after robot name is set
         robot.attachPedroFollower();
-
-        // Add PedroComponent AFTER follower is created and stored in FollowerHolder
-        addComponents(new PedroComponent(hardwareMap -> FollowerHolder.getFollower()));
 
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
