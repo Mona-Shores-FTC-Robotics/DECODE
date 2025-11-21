@@ -189,7 +189,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();
-        robot.intake.activateRoller();
+        robot.intake.forwardRoller();
         robot.intake.setGateAllowArtifacts();
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
 

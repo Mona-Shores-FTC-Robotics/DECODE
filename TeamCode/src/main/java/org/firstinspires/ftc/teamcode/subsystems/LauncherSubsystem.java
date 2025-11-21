@@ -290,13 +290,13 @@ public class LauncherSubsystem implements Subsystem {
         FeederConfig config = new FeederConfig();
         // Apply 20245-specific values
         config.center.loadPosition = .18;
-        config.center.firePosition = .07;
+        config.center.firePosition = .03;
 
         config.right.loadPosition = .78;
-        config.right.firePosition = .65;
+        config.right.firePosition = .58;
 
         config.left.loadPosition = .33;
-        config.left.firePosition = .21;
+        config.left.firePosition = .18;
         return config;
     }
 

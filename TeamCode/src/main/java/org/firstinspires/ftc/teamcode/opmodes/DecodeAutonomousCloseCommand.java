@@ -194,6 +194,9 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
+
+        robot.intake.forwardRoller();
+        robot.intake.setGateAllowArtifacts();
     }
 
     @Override
