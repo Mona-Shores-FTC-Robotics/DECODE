@@ -646,6 +646,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         }
 
         private boolean hasRequiredPreloads() {
+            // Check color classification first
             EnumMap<LauncherLane, ArtifactColor> snapshot = lightingSubsystem.getSensorLaneColorSnapshot();
 
             int greens = 0;
@@ -659,10 +660,34 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
                 } else if (color == ArtifactColor.PURPLE) {
                     purples++;
                     detected++;
+                } else if (color == ArtifactColor.BACKGROUND) {
+                    // Count BACKGROUND as detected - likely an artifact that looks similar to field mat
+                    detected++;
                 }
             }
 
-            return detected == 3 && greens == 1 && purples == 2;
+            // Primary check: 3 detected with correct color distribution (1 green, 2 purple)
+            boolean hasCorrectColors = detected >= 3 && greens >= 1 && purples >= 2;
+            if (hasCorrectColors) {
+                return true;
+            }
+
+            // Fallback: Check distance sensors if color classification is uncertain
+            // This handles cases where artifacts are present but misclassified during init
+            if (robot != null && robot.intake != null) {
+                int withinDistanceCount = 0;
+                for (LauncherLane lane : LauncherLane.values()) {
+                    IntakeSubsystem.LaneSample sample = robot.intake.getLaneSample(lane);
+                    if (sample.withinDistance) {
+                        withinDistanceCount++;
+                    }
+                }
+                // If 3 objects are within distance, assume preloads are present
+                // (Better to allow start than block due to color sensor calibration issues)
+                return withinDistanceCount >= 3;
+            }
+
+            return false;
         }
     }
 
