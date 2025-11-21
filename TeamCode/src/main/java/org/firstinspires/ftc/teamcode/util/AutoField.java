@@ -65,7 +65,7 @@ public static class Waypoints {
 
 
         //Auto Close
-        public double startCloseX = 24.56872037914692;
+         public double startCloseX = 24.56872037914692;
         public double startCloseY = 130.18009478672985;
         public double startCloseHeading = 144;
 
@@ -73,27 +73,27 @@ public static class Waypoints {
         public double launchCloseY = 112.9478672985782;
         public double launchCloseHeading = 136;
 
-        public double preGateArtifactsX = 21;
+        public double preGateArtifactsX = 23.886255924170616;
         public double preGateArtifactsY = 99.4691943127962;
         public double preGateArtifactsHeading270 = 270;
 
-        public double artifactSet1X = 21;
+        public double artifactSet1X = 23.886255924170616;
         public double artifactSet1Y = 80.3601895734597;
         public double artifactSet1Heading = 270;
 
-        public double artifactSet2X = 21;
+        public double artifactSet2X = 23.886255924170616;
         public double artifactSet2Y = 80.3601895734597;
         public double artifactSet2Heading = 270;
         public double artifactSet2ControlX = 23.203791469194314;
         public double artifactSet2ControlY = 94.69194312796208;
 
-        public double artifactSet3X = 21;
-        public double artifactSet3Y = 31.222748815165875;
+        public double artifactSet3X = 23.886255924170616;
+        public double artifactSet3Y = 41;
         public double artifactSet3Heading = 270;
         public double artifactSet3ControlX = 24.398104265402843;
         public double artifactSet3ControlY = 56.4739336492891;
 
-        public double moveToGateX = 21;
+        public double moveToGateX = 23.886255924170616;
         public double moveToGateY = 70.63507109004739;
         public double moveToGateHeading  = 180;
 
