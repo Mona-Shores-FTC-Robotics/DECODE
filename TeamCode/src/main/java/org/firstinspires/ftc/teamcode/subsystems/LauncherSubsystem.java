@@ -93,7 +93,7 @@ public class LauncherSubsystem implements Subsystem {
             /** Output wheel revolutions per motor revolution. */
             public double gearRatio = 1.0;
             /** Acceptable RPM error when considering a lane ready to fire. */
-            public double rpmTolerance = 200;
+            public double rpmTolerance = 50;
         }
 
         @Configurable
@@ -113,7 +113,7 @@ public class LauncherSubsystem implements Subsystem {
 
             @Configurable
             public static class HybridPidConfig {
-                public double kP = .008;
+                public double kP = .0065;
                 public double kF = .22; // Why was 6 afraid of 7? Because 7 ate 9!
                 public double maxPower = 1.0;
             }
@@ -144,21 +144,21 @@ public class LauncherSubsystem implements Subsystem {
         public static class LeftFlywheelConfig {
             public String motorName = "launcher_left";
             public boolean reversed = true; ///19429 has to be true.
-            public double idleRpm = 1500;
+            public double idleRpm = 800;
         }
 
         @Configurable
         public static class CenterFlywheelConfig {
             public String motorName = "launcher_center";
             public boolean reversed = false;
-            public double idleRpm = 1500;
+            public double idleRpm = 800;
         }
 
         @Configurable
         public static class RightFlywheelConfig { //actually left
             public String motorName = "launcher_right";
             public boolean reversed = true;
-            public double idleRpm = 1500;
+            public double idleRpm = 800;
         }
     }
 
@@ -212,7 +212,7 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition = .2;
+            public double shortPosition;
             /**
              * Hood position for mid range shots
              */
@@ -221,7 +221,6 @@ public class LauncherSubsystem implements Subsystem {
              * Hood position for long range shots
              */
             public double longPosition = 0;
-            public double launcherGoalPosition = .9; //.9 2100 for shoot with launchers adj
         }
 
         @Configurable
@@ -230,16 +229,15 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition = .2;
+            public double shortPosition;
             /**
              * Hood position for mid range shots
              */
-            public double midPosition = 0;
+            public double midPosition;
             /**
              * Hood position for long range shots
              */
-            public double longPosition = 0;
-            public double launcherGoalPosition = .9; //.9 2100 for shoot with launchers adj
+            public double longPosition;
         }
 
         @Configurable
@@ -248,17 +246,16 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition = .2;
+            public double shortPosition;
             //TODO consider idle position and weirdness if idle is above the short shot.
             /**
              * Hood position for mid range shots
              */
-            public double midPosition = 0;
+            public double midPosition;
             /**
              * Hood position for long range shots
              */
-            public double longPosition = 0;
-            public double launcherGoalPosition = .9; //.9 2100 for shoot with launchers adj
+            public double longPosition;
         }
     }
 
