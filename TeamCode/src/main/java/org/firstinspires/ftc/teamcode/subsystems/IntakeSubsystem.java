@@ -431,8 +431,8 @@ public class IntakeSubsystem implements Subsystem {
 
     public void setGateReverseConfig() {
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig.reverseConfig);
-            lastGatePosition = gateConfig.reverseConfig;
+            gateServo.setPosition(gateConfig().reverseConfig);
+            lastGatePosition = gateConfig().reverseConfig;
         }
     }
 
