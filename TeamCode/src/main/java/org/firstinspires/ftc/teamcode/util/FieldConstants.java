@@ -75,16 +75,19 @@ public final class FieldConstants {
 
     /**
      * Polygon coordinates of the goal openings (in inches) from field CAD.
+     * NOTE: FTC coordinate values swapped from original CAD to match Pedro coordinate system naming.
+     * Blue goal (left side in Pedro) uses positive X in FTC after ftcToPedro conversion.
+     * Red goal (right side in Pedro) uses negative X in FTC after ftcToPedro conversion.
      */
-    public static final Pose BLUE_GOAL_CORNER_FTC = new Pose(-70.191315,   70.160065, 0.0);
-    public static final Pose BLUE_GOAL_FAR_FTC = new Pose(-47.581315,   70.160065, 0.0);
-    public static final Pose BLUE_GOAL_LOWER_INNER_FTC = new Pose(-70.191315,   48.792542, 0.0);
-    public static final Pose BLUE_GOAL_LOWER_EDGE_FTC = new Pose(-63.102536,   48.792542, 0.0);
+    public static final Pose BLUE_GOAL_CORNER_FTC = new Pose(70.191315,   70.160065, 0.0);
+    public static final Pose BLUE_GOAL_FAR_FTC = new Pose(47.581315,   70.160065, 0.0);
+    public static final Pose BLUE_GOAL_LOWER_INNER_FTC = new Pose(70.191315,   48.792542, 0.0);
+    public static final Pose BLUE_GOAL_LOWER_EDGE_FTC = new Pose(63.102536,   48.792542, 0.0);
 
-    public static final Pose RED_GOAL_CORNER_FTC = new Pose(70.191315,   70.160065, 0.0);
-    public static final Pose RED_GOAL_FAR_FTC = new Pose(47.581315,   70.160065, 0.0);
-    public static final Pose RED_GOAL_LOWER_INNER_FTC = new Pose(70.191315,   48.792542, 0.0);
-    public static final Pose RED_GOAL_LOWER_EDGE_FTC = new Pose(63.102536,   48.792542, 0.0);
+    public static final Pose RED_GOAL_CORNER_FTC = new Pose(-70.191315,   70.160065, 0.0);
+    public static final Pose RED_GOAL_FAR_FTC = new Pose(-47.581315,   70.160065, 0.0);
+    public static final Pose RED_GOAL_LOWER_INNER_FTC = new Pose(-70.191315,   48.792542, 0.0);
+    public static final Pose RED_GOAL_LOWER_EDGE_FTC = new Pose(-63.102536,   48.792542, 0.0);
 
     public static final List<Pose> BLUE_GOAL_POLY = Arrays.asList(
             BLUE_GOAL_CORNER_FTC,
@@ -123,7 +126,7 @@ public final class FieldConstants {
                 0.0
         );
         Pose chebyshevGoalFTCPose = PoseFrames.pedroToFtc(chebyshevGoalPedroPose);
-        RobotState.putPose("CHEBYSHEV_GOAL", chebyshevGoalFTCPose); //Publish the chebyshev pose for AS
+        RobotState.putPose("BLUE_CHEBYSHEV_GOAL", chebyshevGoalFTCPose); //Publish the chebyshev pose for AS
 
         return chebyshevGoalPedroPose;
     }
@@ -145,7 +148,7 @@ public final class FieldConstants {
                 0.0
         );
         Pose chebyshevGoalFTCPose = PoseFrames.pedroToFtc(chebyshevGoalPedroPose);
-        RobotState.putPose("CHEBYSHEV_GOAL", chebyshevGoalFTCPose); //Publish the chebyshev pose for AS
+        RobotState.putPose("RED_CHEBYSHEV_GOAL", chebyshevGoalFTCPose); //Publish the chebyshev pose for AS
 
         return chebyshevGoalPedroPose;
     }

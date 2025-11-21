@@ -409,7 +409,11 @@ public class VisionSubsystemLimelight implements Subsystem {
         boolean stale = lastSnapshotTimestampMs == 0L || (now - lastSnapshotTimestampMs) > ODOMETRY_RESET_TIMEOUT_MS;
         lastSnapshot = snapshot;
         lastSnapshotTimestampMs = now;
-        Optional<Pose> poseOpt = snapshot.getRobotPosePedroMT1();
+        // Prefer MT2 (IMU-fused) over MT1 for better accuracy
+        Optional<Pose> poseOpt = snapshot.getRobotPosePeroMT2();
+        if (!poseOpt.isPresent()) {
+            poseOpt = snapshot.getRobotPosePedroMT1();
+        }
         Optional<Pose> ftcPoseOpt = snapshot.getFtcPose();
         if (poseOpt.isPresent()) {
             lastRobotPosePedro = poseOpt.get();
@@ -610,7 +614,7 @@ public class VisionSubsystemLimelight implements Subsystem {
             this.mt1Pose = result.getBotpose();
             if (mt1Pose != null && mt1Pose.getPosition() != null) {
                 this.ftcPoseMT1 = PoseFrames.mt1ToFtc(mt1Pose);
-                RobotState.putPose("MT1 FTC Pose", this.ftcPoseMT1);
+                RobotState.putPose("DiagMT1 FTC Pose", this.ftcPoseMT1);
                 this.pedroPoseMT1 = PoseFrames.mt1ToPedro(mt1Pose);
                 RobotState.putPose("MT1 Pedro Pose", this.pedroPoseMT1);
                 //if this works that means mt1ToPedro is incorrect.

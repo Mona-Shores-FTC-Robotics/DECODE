@@ -60,6 +60,7 @@ public class DashboardFormatter {
         // Drive essentials
         packet.put("drive/aim_mode", data.drive.aimMode);
         packet.put("drive/mode", data.drive.driveMode);
+        packet.put("drive/distance_to_goal_in", data.drive.distanceToGoalIn);
 
         // Launcher high-level
         packet.put("launcher/ready", data.launcher.ready);

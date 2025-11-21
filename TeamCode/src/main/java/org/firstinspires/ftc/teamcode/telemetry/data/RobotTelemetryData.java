@@ -125,7 +125,7 @@ public class RobotTelemetryData {
         }
 
         // Capture subsystem data
-        DriveTelemetryData driveData = DriveTelemetryData.capture(drive, driveRequest);
+        DriveTelemetryData driveData = DriveTelemetryData.capture(drive, driveRequest, vision);
         LauncherTelemetryData launcherData = LauncherTelemetryData.capture(launcher);
         IntakeTelemetryData intakeData = IntakeTelemetryData.capture(intake);
 

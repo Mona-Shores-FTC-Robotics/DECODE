@@ -1,9 +1,13 @@
 package org.firstinspires.ftc.teamcode.telemetry.data;
 
+import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
+import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 
 /**
  * Drive subsystem telemetry data.
@@ -29,6 +33,9 @@ public class DriveTelemetryData {
     public final MotorData leftBack;
     public final MotorData rightBack;
 
+    // Distance to goal (based on odometry)
+    public final double distanceToGoalIn;
+
     public DriveTelemetryData(
             String driveMode,
             boolean aimMode,
@@ -39,7 +46,8 @@ public class DriveTelemetryData {
             MotorData leftFront,
             MotorData rightFront,
             MotorData leftBack,
-            MotorData rightBack
+            MotorData rightBack,
+            double distanceToGoalIn
     ) {
         this.driveMode = driveMode;
         this.aimMode = aimMode;
@@ -51,6 +59,7 @@ public class DriveTelemetryData {
         this.rightFront = rightFront;
         this.leftBack = leftBack;
         this.rightBack = rightBack;
+        this.distanceToGoalIn = distanceToGoalIn;
     }
 
     /**
@@ -68,7 +77,7 @@ public class DriveTelemetryData {
         }
     }
 
-    public static DriveTelemetryData capture(DriveSubsystem drive, DriverBindings.DriveRequest request) {
+    public static DriveTelemetryData capture(DriveSubsystem drive, DriverBindings.DriveRequest request, VisionSubsystemLimelight vision) {
         boolean slowMode = request != null && request.slowMode;
         boolean aimMode = request != null && request.aimMode;
 
@@ -77,6 +86,9 @@ public class DriveTelemetryData {
         MotorData lb = new MotorData(drive.getLbPower(), drive.getLbVelocityTicksPerSec());
         MotorData rb = new MotorData(drive.getRbPower(), drive.getRbVelocityTicksPerSec());
 
+        // Calculate distance to goal using odometry
+        double distanceToGoal = calculateDistanceToGoal(drive, vision);
+
         return new DriveTelemetryData(
                 drive.getDriveMode().name(),
                 aimMode,
@@ -84,7 +96,45 @@ public class DriveTelemetryData {
                 drive.getLastCommandDrive(),
                 drive.getLastCommandStrafe(),
                 drive.getLastCommandTurn(),
-                lf, rf, lb, rb
+                lf, rf, lb, rb,
+                distanceToGoal
         );
+    }
+
+    /**
+     * Calculates distance from current robot pose to goal basket.
+     * Uses odometry pose and alliance-specific goal coordinates.
+     *
+     * @param drive Drive subsystem (for odometry pose)
+     * @param vision Vision subsystem (for alliance)
+     * @return Distance to goal in inches, or NaN if unavailable
+     */
+    private static double calculateDistanceToGoal(DriveSubsystem drive, VisionSubsystemLimelight vision) {
+        // Get current robot pose from odometry
+        Pose robotPose = drive.getFollower().getPose();
+        if (robotPose == null) {
+            return Double.NaN;
+        }
+
+        // Get goal pose based on alliance
+        Alliance alliance = vision.getAlliance();
+
+        // Debug: publish alliance and goal coordinates
+        org.firstinspires.ftc.teamcode.util.RobotState.packet.put("drive/distance_calc_alliance", alliance.name());
+
+        Pose goalPose = (alliance == Alliance.RED)
+                ? FieldConstants.getRedBasketTarget()
+                : FieldConstants.getBlueBasketTarget();
+
+        // Debug: publish goal coordinates being used
+        org.firstinspires.ftc.teamcode.util.RobotState.packet.put("drive/goal_x", goalPose.getX());
+        org.firstinspires.ftc.teamcode.util.RobotState.packet.put("drive/goal_y", goalPose.getY());
+        org.firstinspires.ftc.teamcode.util.RobotState.packet.put("drive/robot_x", robotPose.getX());
+        org.firstinspires.ftc.teamcode.util.RobotState.packet.put("drive/robot_y", robotPose.getY());
+
+        // Calculate Euclidean distance
+        double dx = goalPose.getX() - robotPose.getX();
+        double dy = goalPose.getY() - robotPose.getY();
+        return Math.hypot(dx, dy);
     }
 }
