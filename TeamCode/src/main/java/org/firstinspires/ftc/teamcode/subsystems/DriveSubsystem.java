@@ -27,7 +27,6 @@ import org.firstinspires.ftc.teamcode.util.PoseFrames;
 import org.firstinspires.ftc.teamcode.util.PoseFusion;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
-import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 
 
 @Configurable
@@ -194,6 +193,7 @@ public class DriveSubsystem implements Subsystem {
     private final VisionSubsystemLimelight vision;
     private final PoseFusion poseFusion = new PoseFusion();
     private final ElapsedTime clock = new ElapsedTime();
+    private final HardwareMap hardwareMap;
 
     // Default command for NextFTC command scheduler
     private Command driveDefaultCommand = null;
@@ -226,7 +226,8 @@ public class DriveSubsystem implements Subsystem {
     private boolean visionRelocalizationEnabled = false;
 
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
-//        follower = Constants.createFollower(hardwareMap);
+        // Store hardwareMap to create follower later (after robot name is set)
+        this.hardwareMap = hardwareMap;
         driveMotors = new Constants.Motors(hardwareMap);
         driveMotors.setRunWithoutEncoder();
 
@@ -238,7 +239,8 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public void attachFollower() {
-        this.follower = follower();
+        // Create follower directly here (AFTER robot name is set) instead of using PedroComponent
+        this.follower = Constants.createFollower(hardwareMap);
         // Log which config set is being used for diagnostics
         RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName());
     }

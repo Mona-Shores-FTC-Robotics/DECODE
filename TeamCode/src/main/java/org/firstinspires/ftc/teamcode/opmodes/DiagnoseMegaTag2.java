@@ -9,7 +9,6 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
@@ -57,8 +56,8 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
 
     {
         addComponents(
-                BulkReadComponent.INSTANCE,
-                new PedroComponent(Constants::createFollower)
+                BulkReadComponent.INSTANCE
+                // Note: Follower now created in robot.attachPedroFollower() after robot name is set
         );
     }
 

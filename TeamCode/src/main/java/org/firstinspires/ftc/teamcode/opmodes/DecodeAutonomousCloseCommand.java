@@ -40,7 +40,6 @@ import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.FollowPath;
-import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -93,9 +92,9 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     {
         addComponents(
                 BulkReadComponent.INSTANCE,
-                new PedroComponent(Constants::createFollower),
                 BindingsComponent.INSTANCE,
                 CommandManager.INSTANCE
+                // Note: Follower now created in robot.attachPedroFollower() after robot name is set
         );
     }
     @Override
