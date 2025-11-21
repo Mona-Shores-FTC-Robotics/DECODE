@@ -96,7 +96,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
                 CommandManager.INSTANCE
-                // Removed PedroComponent - testing if FollowPath can work without it
+                // PedroComponent will be added in onStartButtonPressed after follower is created
         );
     }
     @Override
@@ -187,6 +187,9 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         if (lightingInitController != null) {
             lightingInitController.onStart();
         }
+
+        // Register PedroComponent NOW that follower exists
+        addComponents(new PedroComponent(hardwareMap -> FollowerHolder.getFollower()));
 
         // Initialize launcher mode from config (defaults to DECODE, can be changed via Dashboard)
         RobotState.setLauncherMode(config.startingLauncherMode);

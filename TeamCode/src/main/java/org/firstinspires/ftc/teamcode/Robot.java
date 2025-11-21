@@ -32,11 +32,16 @@ public class Robot {
     }
 
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
-        // Note: setRobotName() is now called from OpMode.onInit() BEFORE attachPedroFollower()
-        // This ensures follower is created with correct robot-specific config
+        // Create follower early (before PedroComponent needs it in instance initializer)
+        // This will use default config initially, then be recreated with correct config in attachPedroFollower()
         telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
+
+        // Create initial follower so PedroComponent can access it
+        // Will be replaced with correctly-configured follower after setRobotName()
+        drive.createInitialFollower();
+
         launcher = new LauncherSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
