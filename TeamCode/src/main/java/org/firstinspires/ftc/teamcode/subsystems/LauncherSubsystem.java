@@ -302,23 +302,36 @@ public class LauncherSubsystem implements Subsystem {
 
     // Helper to create 19429-specific hood config
     private static HoodConfig createHoodConfig19429() {
-        return new HoodConfig(); // Uses default values
+        HoodConfig config = new HoodConfig();
+
+        config.hoodRight.midPosition = 0;
+        config.hoodRight.longPosition = 0;
+        config.hoodRight.shortPosition = .2;
+
+        config.hoodCenter.midPosition = .0;
+        config.hoodCenter.longPosition = 0;
+        config.hoodCenter.shortPosition = .2;
+
+        config.hoodLeft.midPosition = 0;
+        config.hoodLeft.longPosition = 0;
+        config.hoodLeft.shortPosition = .2;
+        return config;
     }
 
     // Helper to create 20245-specific hood config
     private static HoodConfig createHoodConfig20245() {
         HoodConfig config = new HoodConfig();
-        config.hoodRight.midPosition = .5;
+        config.hoodRight.midPosition = 0;
         config.hoodRight.longPosition = 0;
-        config.hoodRight.shortPosition = 1;
+        config.hoodRight.shortPosition = .2;
 
-        config.hoodCenter.midPosition = .5;
+        config.hoodCenter.midPosition = .0;
         config.hoodCenter.longPosition = 0;
-        config.hoodCenter.shortPosition = 1;
+        config.hoodCenter.shortPosition = .2;
 
-        config.hoodLeft.midPosition = .5;
+        config.hoodLeft.midPosition = 0;
         config.hoodLeft.longPosition = 0;
-        config.hoodLeft.shortPosition = 1;
+        config.hoodLeft.shortPosition = .2;
         // Apply 20245-specific values if needed
         // (currently using default values - customize as needed)
         return config;
