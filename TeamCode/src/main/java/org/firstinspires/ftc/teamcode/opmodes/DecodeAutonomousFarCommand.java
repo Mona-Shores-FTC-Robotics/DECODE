@@ -92,9 +92,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         addComponents(
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE,
-                // PedroComponent uses static FollowerHolder to get follower created with correct configs
-                new PedroComponent(FollowerHolder::getFollower)
+                CommandManager.INSTANCE
         );
     }
 
@@ -106,6 +104,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
 
         robot.attachPedroFollower();
+
+        // Add PedroComponent AFTER follower is created and stored in FollowerHolder
+        addComponents(new PedroComponent(hardwareMap -> FollowerHolder.getFollower()));
 
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
