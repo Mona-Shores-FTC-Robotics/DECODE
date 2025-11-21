@@ -157,9 +157,6 @@ public class LaunchAllAtPresetRangeCommand extends Command {
             intake.setGatePreventArtifact();
         }
 
-        // Clear RPM overrides to return to default values
-        launcher.clearOverrides();
-
         // Clear queue if interrupted
         if (interrupted && !queuedLanes.isEmpty()) {
             launcher.clearQueue();
@@ -169,6 +166,11 @@ public class LaunchAllAtPresetRangeCommand extends Command {
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
             launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
             spinDownApplied = true;
+        }
+
+        // Only clear RPM overrides when spinning down (otherwise preserve for next command)
+        if (spinDownAfterShot || interrupted) {
+            launcher.clearOverrides();
         }
     }
 
