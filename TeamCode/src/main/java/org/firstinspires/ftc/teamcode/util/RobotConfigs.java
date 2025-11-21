@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.util;
 
+import com.pedropathing.follower.FollowerConstants;
+import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.constants.PinpointConstants;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
@@ -53,10 +55,30 @@ public class RobotConfigs {
     public static PinpointConstants getPinpointConstants() {
         String robotName = RobotState.getRobotName();
         if ("DECODE_20245".equals(robotName)) {
-            return Constants.localizerConstants20245;
+            return Constants.pinpointConstants20245;
         } else {
             // Default to 19429 config if robot name is unknown or is 19429
-            return Constants.localizerConstants19429;
+            return Constants.pinpointConstants19429;
+        }
+    }
+
+    public static FollowerConstants getFollowerConstants() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_20245".equals(robotName)) {
+            return Constants.followerConstants20245;
+        } else {
+            // Default to 19429 config if robot name is unknown or is 19429
+            return Constants.followerConstants19429;
+        }
+    }
+
+    public static MecanumConstants getDriveConstants() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_20245".equals(robotName)) {
+            return Constants.driveConstants20245;
+        } else {
+            // Default to 19429 config if robot name is unknown or is 19429
+            return Constants.driveConstants19429;
         }
     }
 
