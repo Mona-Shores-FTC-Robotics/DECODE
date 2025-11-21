@@ -32,25 +32,17 @@ public class Robot {
     }
 
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
-        // Note: setRobotName() is now called from OpMode.onInit()
-        // We create a placeholder follower here so PedroComponent can be in instance initializer
-        // The follower will be recreated with correct config in attachPedroFollower()
+        // Note: setRobotName() is now called from OpMode.onInit() BEFORE attachPedroFollower()
+        // This ensures follower is created with correct robot-specific config
         telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
-
-        // Create initial follower with default config for PedroComponent
-        // This will be recreated with correct robot-specific config after setRobotName() is called
-        drive.createPlaceholderFollower();
-
         launcher = new LauncherSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
 
         launcherCommands = new LauncherCommands(launcher, intake);
         intakeCommands = new IntakeCommands(intake);
-
-
     }
 
     public void setAlliance(Alliance alliance) {
