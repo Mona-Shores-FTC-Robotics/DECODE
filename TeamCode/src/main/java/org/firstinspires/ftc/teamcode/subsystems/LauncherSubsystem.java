@@ -66,7 +66,7 @@ public class LauncherSubsystem implements Subsystem {
         /** Time to keep flywheel at launch speed after firing to ensure artifact clears (ms). */
         public double launchHoldAfterFireMs = 500;
         /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-        public double recoveryMs = 150;
+        public double recoveryMs = 350;
         /** Delay between sequential shots when bursting all three lanes (ms). */
         public double burstSpacingMs = 120.0;
     }
@@ -144,21 +144,21 @@ public class LauncherSubsystem implements Subsystem {
         public static class LeftFlywheelConfig {
             public String motorName = "launcher_left";
             public boolean reversed = true; ///19429 has to be true.
-            public double idleRpm = 800;
+            public double idleRpm = 1100;
         }
 
         @Configurable
         public static class CenterFlywheelConfig {
             public String motorName = "launcher_center";
             public boolean reversed = false;
-            public double idleRpm = 800;
+            public double idleRpm = 1100;
         }
 
         @Configurable
         public static class RightFlywheelConfig { //actually left
             public String motorName = "launcher_right";
             public boolean reversed = true;
-            public double idleRpm = 800;
+            public double idleRpm = 1100;
         }
     }
 
@@ -320,17 +320,17 @@ public class LauncherSubsystem implements Subsystem {
     // Helper to create 20245-specific hood config
     private static HoodConfig createHoodConfig20245() {
         HoodConfig config = new HoodConfig();
-        config.hoodRight.midPosition = 0;
+        config.hoodRight.midPosition = 0.05;
         config.hoodRight.longPosition = 0;
-        config.hoodRight.shortPosition = .2;
+        config.hoodRight.shortPosition = .3;
 
-        config.hoodCenter.midPosition = .0;
+        config.hoodCenter.midPosition = 0.05;
         config.hoodCenter.longPosition = 0;
-        config.hoodCenter.shortPosition = .2;
+        config.hoodCenter.shortPosition = .3;
 
-        config.hoodLeft.midPosition = 0;
+        config.hoodLeft.midPosition = 0.05;
         config.hoodLeft.longPosition = 0;
-        config.hoodLeft.shortPosition = .2;
+        config.hoodLeft.shortPosition = .3;
         // Apply 20245-specific values if needed
         // (currently using default values - customize as needed)
         return config;

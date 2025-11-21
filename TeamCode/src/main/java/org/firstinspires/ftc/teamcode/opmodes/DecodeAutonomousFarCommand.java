@@ -148,10 +148,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         allianceSelector.applySelection(robot, robot.lighting);
 
-        // Extract detected start pose from vision
+//         Extract detected start pose from vision
 //        if (snapshotOpt.isPresent()) {
 //            VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-//            java.util.Optional<Pose> detectedPose = snapshot.getRobotPose();
+//            java.util.Optional<Pose> detectedPose = snapshot.getRobotPosePeroMT2();
 //            if (detectedPose.isPresent()) {
 //                Pose candidate = detectedPose.get();
 //                if (shouldUpdateStartPose(candidate)) {
@@ -229,7 +229,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         Pose parking90DegPose = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS_PICKUP_90_DEG);
         Pose gateFar90DegPose = currentLayout.pose(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_90_DEG);
         Pose parkingControlPoint = AutoField.parkingArtifactsControlPoint(activeAlliance);
+//        Pose gateFarControlPoint = AutoField.artifactsSet2ControlPoint(activeAlliance);
         Pose gateFarControlPoint = AutoField.gateFarArtifactsControlPoint(activeAlliance);
+
+
 
         return new SequentialGroup(
                 // Phase 1: Drive to launch position and score preload
@@ -340,9 +343,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
      */
     private Command scoreSequence() {
         return new SequentialGroup(
-//            new Delay(config.launchDelaySeconds),
-//            launcherCommands.launchAllInSequence()  // Fires all lanes regardless of color detection
-                launcherCommands.launchAllAtRangePreset(LauncherRange.LONG,false)
+           launcherCommands.launchAllAtRangePreset(LauncherRange.LONG,false)
         );
     }
 

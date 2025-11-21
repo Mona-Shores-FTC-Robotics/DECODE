@@ -85,14 +85,10 @@ public final class PoseFrames {
 
         double pedroX = half - ftcPose.getX();
         double pedroY = ftcPose.getY() + half;
-        RobotState.packet.put("PoseDiag/xFTCTOPEDRO", ftcPose.getX());
-        RobotState.packet.put("PoseDiag/yFTCTOPEDRO", ftcPose.getY());
 
         double pedroHeading = AngleUnit.normalizeRadians(ftcPose.getHeading()-Math.PI/2);
-        RobotState.packet.put("PoseDiag/headingFTCTOPEDRO", pedroHeading);
 
-
-        return new Pose(pedroX, pedroY, pedroHeading);
+        return new Pose(pedroY, pedroX, pedroHeading);
     }
 
     /**
@@ -107,8 +103,8 @@ public final class PoseFrames {
 
         double half = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
 
-        double xFTC = half-pedroPose.getX(); // 72 - 56 = 16
-        double yFTC = pedroPose.getY() - half; // 8-72 = -65
+        double xFTC = half - pedroPose.getX(); // 72 - 56 = 16
+        double yFTC = pedroPose.getY() - half; // 8 - 72 = -65
         double headingFTC = AngleUnit.normalizeRadians(pedroPose.getHeading()+Math.PI/2);
 
         return new Pose(-yFTC, -xFTC, headingFTC);

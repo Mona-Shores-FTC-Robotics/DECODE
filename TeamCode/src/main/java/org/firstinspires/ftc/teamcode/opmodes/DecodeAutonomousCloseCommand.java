@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import static org.firstinspires.ftc.teamcode.opmodes.DecodeAutonomousFarCommand.buildPath;
+
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
@@ -13,6 +15,7 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
@@ -21,7 +24,6 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
-import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -33,6 +35,7 @@ import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.FollowPath;
@@ -62,9 +65,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     @Configurable
     public static class AutoMotionConfig {
         public double maxPathPower = .6;
-        public double intakeTimeSeconds = 2.0;
-        public double launchDelaySeconds = 0.5;
-
+        public double intakeDelaySeconds = .1;
         /**
          * Starting launcher mode for autonomous.
          * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
@@ -136,8 +137,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 new SubsystemComponent(robot.lighting),
                 new SubsystemComponent(robot.vision)
         );
-
-
     }
 
     @Override
@@ -204,7 +203,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         if (lightingInitController != null) {
             lightingInitController.updateDuringMatch();
         }
-        robot.telemetry.updateDriverStation(telemetry);
     }
 
     @Override
@@ -227,23 +225,37 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return new Delay(0.01);
         }
 
+        Pose startClosePose = currentLayout.pose(FieldPoint.START_CLOSE);
         Pose launchClosePose = currentLayout.pose(FieldPoint.LAUNCH_CLOSE);
-        Pose gateClosePose = currentLayout.pose(FieldPoint.GATE_CLOSE_ARTIFACTS_PICKUP);
-        Pose gateFar270DegPose = currentLayout.pose(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_270_DEG);
-        Pose parking270DegPose = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS_PICKUP_270_DEG);
+        Pose preArtifacts1Pose = currentLayout.pose(FieldPoint.PRE_GATE_ARTIFACTS_PICKUP_270_DEG);
+        Pose artifactsSet1Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_1_270);
+
+        Pose artifactsSet2Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_2_270);
+        Pose artifactsSet2ControlPoint = AutoField.artifactsSet2ControlPoint(activeAlliance);
+
+        Pose artifactsSet3Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_3_270);
+        Pose artifactsSet3Control = AutoField.parkingArtifactsControlPoint(activeAlliance);
+        Pose moveToGatePose = currentLayout.pose(FieldPoint.MOVE_TO_GATE);
 
         return new SequentialGroup(
             // Start already at LAUNCH_CLOSE, so spin up launcher
-            spinUpLauncher(),
+                new ParallelGroup(
+                        spinUpLauncher(),
+                        followPath(startClosePose, launchClosePose)
+                ),
 
-            // Phase 1: Collect from Gate Close and score
-            collectAndScore(launchClosePose, gateClosePose, launchClosePose),
+                followPath(launchClosePose, preArtifacts1Pose),
+
+                // Phase 1: Collect from Gate Close and score
+            collectAndScore(preArtifacts1Pose, artifactsSet1Pose, launchClosePose),
 
             // Phase 2: Collect from Gate Far and score
-            collectAndScore(launchClosePose, gateFar270DegPose, launchClosePose),
+            collectAndScore(launchClosePose, artifactsSet2Pose, launchClosePose, artifactsSet2ControlPoint),
 
             // Phase 3: Collect from Parking Zone and score
-            collectAndScore(launchClosePose, parking270DegPose, launchClosePose)
+            collectAndScore(launchClosePose, artifactsSet3Pose, launchClosePose, artifactsSet3Control),
+
+                followPath(launchClosePose, moveToGatePose)
         );
     }
 
@@ -252,57 +264,36 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
      * @param fromPose Starting pose
      * @param pickupPose Pickup location
      * @param scorePose Score location
+     * @param controlPoints Optional control points for curved paths
      */
-    private Command collectAndScore(Pose fromPose, Pose pickupPose, Pose scorePose) {
+    private Command collectAndScore(Pose fromPose, Pose pickupPose, Pose scorePose, Pose... controlPoints) {
         return new SequentialGroup(
-            // Drive to pickup while preparing intake
-            new ParallelGroup(
-                followPath(fromPose, pickupPose),
+                // Drive to pickup while preparing intake
+                new ParallelGroup(
+                        followPath(fromPose, pickupPose, controlPoints),
+                        new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
+                ),
                 new SequentialGroup(
-                    new Delay(0.3),
-                    prepareIntake()
-                )
-            ),
+                        new Delay(config.intakeDelaySeconds)
+//                    new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
+                ),
 
-            // Collect samples
-            intakeCommands.timedIntake(config.intakeTimeSeconds),
+                // Drive to score while spinning up launcher
+                new ParallelGroup(
+                        followPath(pickupPose, scorePose),
+                        spinUpLauncher()
+                ),
 
-            // Drive to score while spinning up launcher
-            new ParallelGroup(
-                followPath(pickupPose, scorePose),
-                new SequentialGroup(
-                    new Delay(0.3),
-                    spinUpLauncher()
-                )
-            ),
-
-            // Score the samples
-            scoreSequence()
+                // Score the samples
+                scoreSequence()
         );
     }
 
     /**
      * Creates a path following command
      */
-    private Command followPath(Pose startPose, Pose endPose) {
-        PathChain path;
-
-        // Use curved path if poses are far apart, straight line otherwise
-        double distance = Math.hypot(endPose.getX() - startPose.getX(), endPose.getY() - startPose.getY());
-        if (distance > 30.0) {
-            // Use curved path for longer distances
-            path = robot.drive.getFollower().pathBuilder()
-                    .addPath(new BezierCurve(startPose, endPose))
-                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), 0.7)
-                    .build();
-        } else {
-            // Straight line for shorter distances
-            path = robot.drive.getFollower().pathBuilder()
-                    .addPath(new BezierLine(startPose, endPose))
-                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), 0.7)
-                    .build();
-        }
-
+    private Command followPath(Pose startPose, Pose endPose, Pose... controlPoints) {
+        PathChain path = buildPath(robot.drive.getFollower(), startPose, endPose, controlPoints);
         double maxPower = Range.clip(config.maxPathPower, 0.0, 1.0);
         return new FollowPath(path, false, maxPower);
     }
@@ -338,8 +329,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
      */
     private Command scoreSequence() {
         return new SequentialGroup(
-            new Delay(config.launchDelaySeconds),
-            launcherCommands.launchAllAtRangePreset(LauncherRange.LONG, false)  // Fires all enabled lanes at long range
+            launcherCommands.launchAllAtRangePreset(LauncherRange.SHORT, false)  // Fires all enabled lanes at long range
         );
     }
 
@@ -356,7 +346,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             lastAppliedStartPosePedro = copyPose(startOverride);
         }
 
-        Pose startPose = currentLayout.pose(FieldPoint.LAUNCH_CLOSE);
+        Pose startPose = currentLayout.pose(FieldPoint.START_CLOSE);
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
     }
