@@ -64,14 +64,14 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public double maxPathPower = .6;
+        public double maxPathPower = .8;
         public double intakeDelaySeconds = .1;
         /**
          * Starting launcher mode for autonomous.
          * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
          * THROUGHPUT: Rapid fire all lanes (recommended for early match throughput)
          */
-        public LauncherMode startingLauncherMode = LauncherMode.DECODE;
+        public LauncherMode startingLauncherMode = LauncherMode.THROUGHPUT;
     }
 
     // Public static instance for FTC Dashboard Config tab
@@ -119,10 +119,10 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         // Manual overrides (D-pad left/right) still work as expected
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
-        driverPad.y().whenBecomesTrue(() -> applyAlliance(allianceSelector.getSelectedAlliance(), lastAppliedStartPosePedro));
-        driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
-        driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
-        driverPad.a().whenBecomesTrue(this::applyLastDetectedStartPose);
+//        driverPad.y().whenBecomesTrue(() -> applyAlliance(allianceSelector.getSelectedAlliance(), lastAppliedStartPosePedro));
+//        driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
+//        driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
+//        driverPad.a().whenBecomesTrue(this::applyLastDetectedStartPose);
         lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector, robot.lighting);
         lightingInitController.initialize();
 

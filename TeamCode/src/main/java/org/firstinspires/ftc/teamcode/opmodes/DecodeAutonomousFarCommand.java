@@ -70,7 +70,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
          * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
          * THROUGHPUT: Rapid fire all lanes (recommended for early match throughput)
          */
-        public LauncherMode startingLauncherMode = LauncherMode.DECODE;
+        public LauncherMode startingLauncherMode = LauncherMode.THROUGHPUT;
     }
 
     public static DecodeAutonomousFarCommand.AutoMotionConfig config = new DecodeAutonomousFarCommand.AutoMotionConfig();

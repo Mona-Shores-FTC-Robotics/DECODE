@@ -498,7 +498,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             motifPersisted = (observedMotif != null && observedMotif != MotifPattern.UNKNOWN);
 
             lightingSubsystem.setFollowSensorColors(false);
-            lightingSubsystem.showRainbowAlert(System.currentTimeMillis());
+//            lightingSubsystem.showRainbowAlert(System.currentTimeMillis());
 
             nextAllianceReminderMs = System.currentTimeMillis() + ALLIANCE_REMINDER_PERIOD_MS;
         }
