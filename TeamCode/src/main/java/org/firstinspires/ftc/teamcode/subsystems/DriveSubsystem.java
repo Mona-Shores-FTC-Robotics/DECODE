@@ -850,6 +850,7 @@ public class DriveSubsystem implements Subsystem {
         }
         RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distanceMeters);
         RobotState.packet.put("/vision/Poses/relocalizeWithMT2", relocalizeWithMT2);
+        RobotState.packet.put("/vision/Poses/RelocalizePedro",pedroPose);
         RobotState.putPose("/vision/Poses/Relocalize", PoseFrames.pedroToFtc(pedroPose));
 
         follower.setPose(pedroPose);

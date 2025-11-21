@@ -36,7 +36,6 @@ public class Constants {
         return RobotConfigs.getPinpointConstants();
     }
 
-
     public static MecanumConstants driveConstants19429 = createDriveConstants19429();
     public static MecanumConstants driveConstants20245 = createDriveConstants20245();
     public static MecanumConstants driveConstants() {
@@ -177,7 +176,7 @@ public class Constants {
                 .hardwareMapName(HardwareNames.PINPOINT)
                 .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
                 .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
-                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 

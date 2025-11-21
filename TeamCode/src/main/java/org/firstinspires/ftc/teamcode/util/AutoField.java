@@ -34,8 +34,8 @@ public final class AutoField {
 @Configurable
 public static class Waypoints {
 
-        public double startX = 56;
-        public double startY = 9;
+        public double startX = 59;
+        public double startY = 7.5;
         public double startHeadingDeg = 90.0;
 
         public double launchFarX = 55;

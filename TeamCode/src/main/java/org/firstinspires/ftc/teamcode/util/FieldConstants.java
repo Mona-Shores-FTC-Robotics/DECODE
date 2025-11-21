@@ -79,10 +79,10 @@ public final class FieldConstants {
      * Blue goal (left side in Pedro) uses positive X in FTC after ftcToPedro conversion.
      * Red goal (right side in Pedro) uses negative X in FTC after ftcToPedro conversion.
      */
-    public static final Pose BLUE_GOAL_CORNER_FTC = new Pose(70.191315,   70.160065, 0.0);
-    public static final Pose BLUE_GOAL_FAR_FTC = new Pose(47.581315,   70.160065, 0.0);
-    public static final Pose BLUE_GOAL_LOWER_INNER_FTC = new Pose(70.191315,   48.792542, 0.0);
-    public static final Pose BLUE_GOAL_LOWER_EDGE_FTC = new Pose(63.102536,   48.792542, 0.0);
+    public static final Pose BLUE_GOAL_CORNER_FTC = new Pose(-70.191315,   -70.160065, 0.0);
+    public static final Pose BLUE_GOAL_FAR_FTC = new Pose(-47.581315,   -70.160065, 0.0);
+    public static final Pose BLUE_GOAL_LOWER_INNER_FTC = new Pose(-70.191315,   -48.792542, 0.0);
+    public static final Pose BLUE_GOAL_LOWER_EDGE_FTC = new Pose(-63.102536,   -48.792542, 0.0);
 
     public static final Pose RED_GOAL_CORNER_FTC = new Pose(-70.191315,   70.160065, 0.0);
     public static final Pose RED_GOAL_FAR_FTC = new Pose(-47.581315,   70.160065, 0.0);

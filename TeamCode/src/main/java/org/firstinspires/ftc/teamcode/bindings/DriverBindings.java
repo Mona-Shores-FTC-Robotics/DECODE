@@ -52,7 +52,7 @@ public class DriverBindings {
     // D-pad buttons for testing different aiming methods
     private final Button aimVisionCentered;
     private final Button aimFixedAngle;
-    private final Button aimCaptureSnap;
+
 
     Command defaultDrive;
     Command aimAndDrive;
@@ -64,15 +64,15 @@ public class DriverBindings {
         fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND);
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
-        aimFixedAngle = driver.circle();
+        aimFixedAngle = driver.triangle();
+        aimHold = driver.circle();
 
         //Test Buttons
         relocalizeRequest = driver.cross();
 
         // D-pad for testing different aiming methods
         aimVisionCentered = driver.dpadUp();
-        aimHold = driver.dpadDown();
-        aimCaptureSnap = driver.dpadLeft();
+//
     }
 
     /**
@@ -130,9 +130,9 @@ public class DriverBindings {
 
         if (robot.vision != null) {
             // Method 4: Capture-and-aim snap turn (D-pad Left)
-            Command captureAndAimCmd = new CaptureAndAimCommand(robot.drive, robot.vision);
-            aimCaptureSnap.whenBecomesTrue(captureAndAimCmd)
-                    .whenBecomesFalse(captureAndAimCmd::cancel);
+//            Command captureAndAimCmd = new CaptureAndAimCommand(robot.drive, robot.vision);
+//            aimCaptureSnap.whenBecomesTrue(captureAndAimCmd)
+//                    .whenBecomesFalse(captureAndAimCmd::cancel);
 
             relocalizeRequest.whenBecomesTrue(robot.drive::tryRelocalize);
         }
