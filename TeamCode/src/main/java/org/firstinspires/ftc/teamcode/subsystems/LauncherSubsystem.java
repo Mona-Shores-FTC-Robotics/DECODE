@@ -212,7 +212,7 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition = .45;
+            public double shortPosition = .2;
             /**
              * Hood position for mid range shots
              */
@@ -230,7 +230,7 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition = .45;
+            public double shortPosition = .2;
             /**
              * Hood position for mid range shots
              */
@@ -248,7 +248,7 @@ public class LauncherSubsystem implements Subsystem {
             /**
              * Hood position for short range shots
              */
-            public double shortPosition = .45;
+            public double shortPosition = .2;
             //TODO consider idle position and weirdness if idle is above the short shot.
             /**
              * Hood position for mid range shots
