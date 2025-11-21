@@ -41,12 +41,15 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  */
 public class OperatorBindings {
     private final Button fireDistanceBased;
-    private final Button fireUniversalSmart;
+//    private final Button fireUniversalSmart;
     private final Button runIntake;
     private final Button humanLoading;
 
     private final Button motifTailCycle;
     private final Button toggleLauncherMode;
+
+    private final Button fireShort;
+    private final Button fireMid;
 
     private Gamepad rawGamepad;  // Raw gamepad for haptic feedback
 
@@ -62,10 +65,15 @@ public class OperatorBindings {
         fireDistanceBased = operator.square();
 
         //launch based on range to april tag - simultaneous or sequential (Obelisk Pattern) depending on launcher mode
-        fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
+//        fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
 
         toggleLauncherMode = operator.back();
         motifTailCycle = operator.dpadRight();  // Cycle through 0 → 1 → 2 → 0
+
+        //launch based on preset RPM and hood values for specific field locations
+        fireShort = operator.dpadDown();  // SHORT range for close shots (if vision is broken)
+        fireMid = operator.dpadLeft(); // LONG range for far shots (if vision is broken)
+
 
     }
 
@@ -104,13 +112,21 @@ public class OperatorBindings {
                 robot.vision, robot.drive, robot.lighting, rawGamepad);
 
         // Universal smart shot: distance-based RPM + mode-aware firing (TESTING)
-        fireUniversalSmart.whenBecomesTrue(universalSmartShotCommand);
+//        fireUniversalSmart.whenBecomesTrue(universalSmartShotCommand);
 
         // Motif tail cycle: single button cycles through 0 → 1 → 2 → 0 with visual feedback
         motifTailCycle.whenBecomesTrue(() -> cycleMotifTailWithFeedback(robot));
 
         // Mode toggle: manually switch between THROUGHPUT and DECODE
         toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
+
+        // Preset range-based launching commands - delete once distance based is reliable
+        LaunchAllAtPresetRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
+        LaunchAllAtPresetRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
+        // Range-based shooting: press button to fire all lanes at that range
+        fireShort.whenBecomesTrue(fireShortRangeCommand);  // A: Close shots
+        fireMid.whenBecomesTrue(fireMidRangeCommand);    // B: Long shots
+
     }
 
     /**

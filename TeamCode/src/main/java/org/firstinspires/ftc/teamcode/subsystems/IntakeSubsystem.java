@@ -141,7 +141,7 @@ public class IntakeSubsystem implements Subsystem {
     public static class MotorConfig {
         public String motorName = "intake";
         public double defaultForwardPower = -.6;
-        public double defaultReversePower = .1;
+        public double defaultReversePower = .3;
         public boolean brakeOnZero = true;
         public boolean reverseDirection = true;
     }
