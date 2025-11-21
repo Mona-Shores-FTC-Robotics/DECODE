@@ -332,7 +332,7 @@ public class IntakeSubsystem implements Subsystem {
         rollerEnabled = false;
         gateServo = tryGetServo(hardwareMap, gateConfig().servoName);
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig.allowArtifacts);
+            gateServo.setPosition(gateConfig().allowArtifacts);
             lastGatePosition = gateConfig().allowArtifacts;
         }
 
@@ -359,7 +359,7 @@ public class IntakeSubsystem implements Subsystem {
         }
         rollerEnabled = false;
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig.allowArtifacts);
+            gateServo.setPosition(gateConfig().allowArtifacts);
             lastGatePosition = gateConfig().allowArtifacts;
         }
         prefeedEnabled = false;
@@ -425,14 +425,14 @@ public class IntakeSubsystem implements Subsystem {
 
     public void setGateAllowArtifacts() {
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig.allowArtifacts);
+            gateServo.setPosition(gateConfig().allowArtifacts);
             lastGatePosition = gateConfig().allowArtifacts;
         }
     }
 
     public void setGatePreventArtifact() {
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig.preventArtifacts);
+            gateServo.setPosition(gateConfig().preventArtifacts);
             lastGatePosition = gateConfig().preventArtifacts;
         }
     }

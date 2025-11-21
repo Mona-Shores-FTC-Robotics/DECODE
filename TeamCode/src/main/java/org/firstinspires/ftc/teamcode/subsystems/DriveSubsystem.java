@@ -141,7 +141,7 @@ public class DriveSubsystem implements Subsystem {
     private static InitialPoseConfig createInitialPoseConfig19429() {
         InitialPoseConfig config = new InitialPoseConfig();
         config.startX = 56;
-        config.startY = 8;
+        config.startY = 9;
         config.startHeadingDeg = 90;
         return config;
     }
@@ -833,7 +833,7 @@ public class DriveSubsystem implements Subsystem {
         }
         Pose pedroPose = snap.pedroPoseMT1; //only use MT1 for relocalization
         if (pedroPose == null) return false;
-        RobotState.putPose("Pedro MT1 Pose force ", pedroPose );
+        RobotState.putPose("Relocalize/forcedPose", pedroPose );
 
         follower.setPose(pedroPose);
         poseFusion.reset(pedroPose, System.currentTimeMillis());
