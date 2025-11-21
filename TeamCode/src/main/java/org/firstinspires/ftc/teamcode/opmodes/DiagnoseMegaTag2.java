@@ -57,8 +57,9 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
 
     {
         addComponents(
-                BulkReadComponent.INSTANCE
-                // Note: Follower now created in robot.attachPedroFollower() after robot name is set
+                BulkReadComponent.INSTANCE,
+                // PedroComponent registered here but gets follower lazily after robot is initialized
+                new PedroComponent(() -> robot != null ? robot.drive.getFollower() : null)
         );
     }
 
@@ -71,9 +72,6 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         // This timing gives WiFi more time to initialize on first boot
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
-
-        // Register PedroComponent AFTER follower is created so it uses our follower
-        addComponents(new PedroComponent(robot.drive::getFollower));
 
         robot.setAlliance(Alliance.BLUE); // Default for testing
         robot.initializeForTeleOp();

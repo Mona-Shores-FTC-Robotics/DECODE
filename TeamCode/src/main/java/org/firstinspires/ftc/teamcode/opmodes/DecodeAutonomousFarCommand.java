@@ -91,8 +91,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         addComponents(
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE
-                // Note: Follower now created in robot.attachPedroFollower() after robot name is set
+                CommandManager.INSTANCE,
+                // PedroComponent registered here but gets follower lazily after robot is initialized
+                new PedroComponent(() -> robot != null ? robot.drive.getFollower() : null)
         );
     }
 
@@ -104,9 +105,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
 
         robot.attachPedroFollower();
-
-        // Register PedroComponent AFTER follower is created so FollowPath commands can access it
-        addComponents(new PedroComponent(robot.drive::getFollower));
 
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
