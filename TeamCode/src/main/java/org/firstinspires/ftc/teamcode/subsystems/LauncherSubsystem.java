@@ -268,9 +268,15 @@ public class LauncherSubsystem implements Subsystem {
         public double reversePower = -0.7;
     }
 
-    public static Timing timing = new Timing();
     public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
-    public static FlywheelConfig flywheelConfig = new FlywheelConfig();
+
+    // Robot-specific Timing instances - visible in Panels for tuning
+    public static Timing timing19429 = createTiming19429();
+    public static Timing timing20245 = createTiming20245();
+
+    // Robot-specific FlywheelConfig instances - visible in Panels for tuning
+    public static FlywheelConfig flywheelConfig19429 = createFlywheelConfig19429();
+    public static FlywheelConfig flywheelConfig20245 = createFlywheelConfig20245();
 
     // Robot-specific FeederConfig instances - visible in Panels for tuning
     public static FeederConfig feederConfig19429 = createFeederConfig19429();
@@ -279,6 +285,44 @@ public class LauncherSubsystem implements Subsystem {
     // Robot-specific HoodConfig instances - visible in Panels for tuning
     public static HoodConfig hoodConfig19429 = createHoodConfig19429();
     public static HoodConfig hoodConfig20245 = createHoodConfig20245();
+
+    // Helper to create 19429-specific timing config
+    private static Timing createTiming19429() {
+        Timing timing = new Timing();
+        timing.recoveryMs = 350;  // 19429 uses longer recovery time
+        return timing;
+    }
+
+    // Helper to create 20245-specific timing config
+    private static Timing createTiming20245() {
+        Timing timing = new Timing();
+        timing.recoveryMs = 150;  // 20245 uses shorter recovery time
+        return timing;
+    }
+
+    // Helper to create 19429-specific flywheel config
+    private static FlywheelConfig createFlywheelConfig19429() {
+        FlywheelConfig config = new FlywheelConfig();
+        config.parameters.rpmTolerance = 50;  // Tighter tolerance
+        config.modeConfig.hybridPid.kP = 0.0065;  // Different PID gain
+        config.flywheelLeft.reversed = true;  // 19429 has left motor reversed
+        config.flywheelLeft.idleRpm = 1100;
+        config.flywheelCenter.idleRpm = 1100;
+        config.flywheelRight.idleRpm = 1100;
+        return config;
+    }
+
+    // Helper to create 20245-specific flywheel config
+    private static FlywheelConfig createFlywheelConfig20245() {
+        FlywheelConfig config = new FlywheelConfig();
+        config.parameters.rpmTolerance = 200;  // Looser tolerance
+        config.modeConfig.hybridPid.kP = 0.008;
+        config.flywheelLeft.reversed = false;  // 20245 has left motor forward
+        config.flywheelLeft.idleRpm = 1500;
+        config.flywheelCenter.idleRpm = 1500;
+        config.flywheelRight.idleRpm = 1500;
+        return config;
+    }
 
     // Helper to create 19429-specific feeder config
     private static FeederConfig createFeederConfig19429() {
@@ -322,6 +366,22 @@ public class LauncherSubsystem implements Subsystem {
         // Apply 20245-specific values if needed
         // (currently using default values - customize as needed)
         return config;
+    }
+
+    /**
+     * Gets the robot-specific Timing based on RobotState.getRobotName().
+     * @return timing19429 or timing20245
+     */
+    public static Timing timing() {
+        return RobotConfigs.getTiming();
+    }
+
+    /**
+     * Gets the robot-specific FlywheelConfig based on RobotState.getRobotName().
+     * @return flywheelConfig19429 or flywheelConfig20245
+     */
+    public static FlywheelConfig flywheelConfig() {
+        return RobotConfigs.getFlywheelConfig();
     }
 
     /**
@@ -392,7 +452,7 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     public static FlywheelControlMode getFlywheelControlMode() {
-        return flywheelConfig.modeConfig.mode;
+        return flywheelConfig().modeConfig.mode;
     }
 
      public String getPhaseName(LauncherLane lane) {
@@ -527,7 +587,7 @@ public class LauncherSubsystem implements Subsystem {
         double delayMs = 0.0;
         for (LauncherLane lane : LauncherLane.DEFAULT_BURST_ORDER) {
             scheduleShot(lane, delayMs);
-            delayMs += timing.burstSpacingMs;
+            delayMs += timing().burstSpacingMs;
         }
     }
 
@@ -550,7 +610,7 @@ public class LauncherSubsystem implements Subsystem {
         double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
             laneLaunchHoldDeadlineMs.put(lane, 0.0);
-            laneRecoveryDeadlineMs.put(lane, now + timing.recoveryMs);
+            laneRecoveryDeadlineMs.put(lane, now + timing().recoveryMs);
             feeders.get(lane).stop();
             flywheels.get(lane).stop();
         }
@@ -860,8 +920,8 @@ public class LauncherSubsystem implements Subsystem {
                 Feeder feeder = feeders.get(next.lane);
                 if (feeder != null && !feeder.isBusy()) {
                     feeder.fire();
-                    laneLaunchHoldDeadlineMs.put(next.lane, now + timing.launchHoldAfterFireMs);
-                    laneRecoveryDeadlineMs.put(next.lane, now + timing.recoveryMs);
+                    laneLaunchHoldDeadlineMs.put(next.lane, now + timing().launchHoldAfterFireMs);
+                    laneRecoveryDeadlineMs.put(next.lane, now + timing().recoveryMs);
                     iterator.remove();
                 }
             }
@@ -1020,12 +1080,12 @@ public class LauncherSubsystem implements Subsystem {
         }
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, flywheelConfig.flywheelLeft.idleRpm);
+                return Math.max(0.0, flywheelConfig().flywheelLeft.idleRpm);
             case CENTER:
-                return Math.max(0.0, flywheelConfig.flywheelCenter.idleRpm);
+                return Math.max(0.0, flywheelConfig().flywheelCenter.idleRpm);
             case RIGHT:
             default:
-                return Math.max(0.0, flywheelConfig.flywheelRight.idleRpm);
+                return Math.max(0.0, flywheelConfig().flywheelRight.idleRpm);
         }
     }
 
@@ -1080,24 +1140,24 @@ public class LauncherSubsystem implements Subsystem {
     private static String motorNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig.flywheelLeft.motorName;
+                return flywheelConfig().flywheelLeft.motorName;
             case CENTER:
-                return flywheelConfig.flywheelCenter.motorName;
+                return flywheelConfig().flywheelCenter.motorName;
             case RIGHT:
             default:
-                return flywheelConfig.flywheelRight.motorName;
+                return flywheelConfig().flywheelRight.motorName;
         }
     }
 
     private static boolean motorReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig.flywheelLeft.reversed;
+                return flywheelConfig().flywheelLeft.reversed;
             case CENTER:
-                return flywheelConfig.flywheelCenter.reversed;
+                return flywheelConfig().flywheelCenter.reversed;
             case RIGHT:
             default:
-                return flywheelConfig.flywheelRight.reversed;
+                return flywheelConfig().flywheelRight.reversed;
         }
     }
 
@@ -1117,11 +1177,11 @@ public class LauncherSubsystem implements Subsystem {
         if (rpm <= 0.0) {
             return 0.0;
         }
-        return rpm * flywheelConfig.parameters.ticksPerRev * flywheelConfig.parameters.gearRatio / 60.0;
+        return rpm * flywheelConfig().parameters.ticksPerRev * flywheelConfig().parameters.gearRatio / 60.0;
     }
 
     private static double ticksPerSecondToRpm(double ticksPerSecond) {
-        return ticksPerSecond * 60.0 / (flywheelConfig.parameters.ticksPerRev * flywheelConfig.parameters.gearRatio);
+        return ticksPerSecond * 60.0 / (flywheelConfig.parameters.ticksPerRev * flywheelConfig().parameters.gearRatio);
     }
 
     private static double clampServo(double position) {
@@ -1238,7 +1298,7 @@ public class LauncherSubsystem implements Subsystem {
             double error = Math.abs(currentRpm - launchRpm);
 
             // Primary check: within tolerance of target RPM
-            if (error <= flywheelConfig.parameters.rpmTolerance) {
+            if (error <= flywheelConfig().parameters.rpmTolerance) {
                 return true;
             }
 
@@ -1250,14 +1310,14 @@ public class LauncherSubsystem implements Subsystem {
 
             // Fallback for spinning UP: allow if minimal time elapsed and we've commanded the right RPM
             // This handles encoder issues but still requires the command to be sent
-            if (elapsed >= timing.fallbackReadyMs) {
+            if (elapsed >= timing().fallbackReadyMs) {
                 return true;  // Timeout - assume ready
             }
 
             // For early ready (before fallback timeout), check both:
             // 1. Minimal spin-up time elapsed
             // 2. Current RPM is appropriate for target (works for both spin-up and spin-down)
-            if (elapsed >= timing.minimalSpinUpMs) {
+            if (elapsed >= timing().minimalSpinUpMs) {
                 // Check if we're close enough OR if spinning down, at least below a reasonable threshold
                 // Allow some headroom when spinning down (within 10% above target is acceptable)
                 double upperThreshold = launchRpm * 1.1;  // 10% overspeed tolerance
@@ -1299,9 +1359,9 @@ public class LauncherSubsystem implements Subsystem {
             switch (phase) {
                 case BANG:
                     if (getFlywheelControlMode() == FlywheelControlMode.BANG_BANG_HOLD) {
-                        if (absError <= flywheelConfig.modeConfig.bangBang.exitBangThresholdRpm) {
+                        if (absError <= flywheelConfig().modeConfig.bangBang.exitBangThresholdRpm) {
                             bangToHoldCounter++;
-                            if (bangToHoldCounter >= Math.max(1, flywheelConfig.modeConfig.phaseSwitch.bangToHoldConfirmCycles)) {
+                            if (bangToHoldCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.bangToHoldConfirmCycles)) {
                                 phase = ControlPhase.HOLD;
                                 bangToHoldCounter = 0;
                             }
@@ -1310,9 +1370,9 @@ public class LauncherSubsystem implements Subsystem {
                         }
                         bangToHybridCounter = 0;
                     } else {
-                        if (absError <= flywheelConfig.modeConfig.bangBang.exitBangThresholdRpm) {
+                        if (absError <= flywheelConfig().modeConfig.bangBang.exitBangThresholdRpm) {
                             bangToHybridCounter++;
-                            if (bangToHybridCounter >= Math.max(1, flywheelConfig.modeConfig.phaseSwitch.bangToHybridConfirmCycles)) {
+                            if (bangToHybridCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.bangToHybridConfirmCycles)) {
                                 phase = ControlPhase.HYBRID;
                                 bangToHybridCounter = 0;
                             }
@@ -1325,9 +1385,9 @@ public class LauncherSubsystem implements Subsystem {
                     holdToBangCounter = 0;
                     break;
                 case HYBRID:
-                    if (absError >= flywheelConfig.modeConfig.bangBang.enterBangThresholdRpm) {
+                    if (absError >= flywheelConfig().modeConfig.bangBang.enterBangThresholdRpm) {
                         hybridToBangCounter++;
-                        if (hybridToBangCounter >= Math.max(1, flywheelConfig.modeConfig.phaseSwitch.hybridToBangConfirmCycles)) {
+                        if (hybridToBangCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.hybridToBangConfirmCycles)) {
                             phase = ControlPhase.BANG;
                             hybridToBangCounter = 0;
                             bangToHybridCounter = 0;
@@ -1339,9 +1399,9 @@ public class LauncherSubsystem implements Subsystem {
                     holdToBangCounter = 0;
                     break;
                 case HOLD:
-                    if (absError >= flywheelConfig.modeConfig.bangBang.enterBangThresholdRpm) {
+                    if (absError >= flywheelConfig().modeConfig.bangBang.enterBangThresholdRpm) {
                         holdToBangCounter++;
-                        if (holdToBangCounter >= Math.max(1, flywheelConfig.modeConfig.phaseSwitch.holdToBangConfirmCycles)) {
+                        if (holdToBangCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.holdToBangConfirmCycles)) {
                             phase = ControlPhase.BANG;
                             holdToBangCounter = 0;
                             bangToHoldCounter = 0;
@@ -1395,8 +1455,8 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyHybridControl(double error) {
-            double power = flywheelConfig.modeConfig.hybridPid.kF + flywheelConfig.modeConfig.hybridPid.kP * error;
-            power = Range.clip(power, 0.0, Math.max(0.0, flywheelConfig.modeConfig.hybridPid.maxPower));
+            double power = flywheelConfig().modeConfig.hybridPid.kF + flywheelConfig().modeConfig.hybridPid.kP * error;
+            power = Range.clip(power, 0.0, Math.max(0.0, flywheelConfig().modeConfig.hybridPid.maxPower));
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
@@ -1406,8 +1466,8 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyHoldControl(double error) {
-            double holdPower = flywheelConfig.modeConfig.hold.baseHoldPower + flywheelConfig.modeConfig.hold.rpmPowerGain * commandedRpm;
-            holdPower = Range.clip(holdPower, flywheelConfig.modeConfig.hold.minHoldPower, flywheelConfig.modeConfig.hold.maxHoldPower);
+            double holdPower = flywheelConfig().modeConfig.hold.baseHoldPower + flywheelConfig().modeConfig.hold.rpmPowerGain * commandedRpm;
+            holdPower = Range.clip(holdPower, flywheelConfig().modeConfig.hold.minHoldPower, flywheelConfig().modeConfig.hold.maxHoldPower);
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();

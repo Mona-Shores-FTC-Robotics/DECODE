@@ -160,6 +160,8 @@ public class IntakeSubsystem implements Subsystem {
         public double preventArtifacts = .7;
         /** Forward speed - helps feed artifacts when firing (continuous servo: 1.0 = full forward) */
         public double allowArtifacts = .3;
+        /** Reverse configuration setting */
+        public double reverseConfig = 1.0;
     }
 
     @Configurable
@@ -171,8 +173,41 @@ public class IntakeSubsystem implements Subsystem {
     public static LaneSensorConfig laneSensorConfig = new LaneSensorConfig();
     public static MotorConfig motorConfig = new MotorConfig();
     public static RollerConfig rollerConfig = new RollerConfig();
-    public static GateConfig gateConfig = new GateConfig();
     public static ManualModeConfig manualModeConfig = new ManualModeConfig();
+
+    // Robot-specific GateConfig instances - visible in Panels for tuning
+    public static GateConfig gateConfig19429 = createGateConfig19429();
+    public static GateConfig gateConfig20245 = createGateConfig20245();
+
+    /**
+     * Helper to create 19429-specific gate configuration.
+     */
+    private static GateConfig createGateConfig19429() {
+        GateConfig config = new GateConfig();
+        config.preventArtifacts = .5;
+        config.allowArtifacts = .1;
+        config.reverseConfig = .8;
+        return config;
+    }
+
+    /**
+     * Helper to create 20245-specific gate configuration.
+     */
+    private static GateConfig createGateConfig20245() {
+        GateConfig config = new GateConfig();
+        config.preventArtifacts = .7;
+        config.allowArtifacts = .3;
+        config.reverseConfig = 1.0;
+        return config;
+    }
+
+    /**
+     * Gets the robot-specific GateConfig based on RobotState.getRobotName().
+     * @return gateConfig19429 or gateConfig20245
+     */
+    public static GateConfig gateConfig() {
+        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getGateConfig();
+    }
 
     public static final class LaneSample {
         public final boolean sensorPresent;
@@ -295,10 +330,10 @@ public class IntakeSubsystem implements Subsystem {
             rollerServo.setPosition(rollerConfig.inactivePosition);
         }
         rollerEnabled = false;
-        gateServo = tryGetServo(hardwareMap, gateConfig.servoName);
+        gateServo = tryGetServo(hardwareMap, gateConfig().servoName);
         if (gateServo != null) {
             gateServo.setPosition(gateConfig.allowArtifacts);
-            lastGatePosition = gateConfig.allowArtifacts;
+            lastGatePosition = gateConfig().allowArtifacts;
         }
 
         for (LauncherLane lane : LauncherLane.values()) {
@@ -325,7 +360,7 @@ public class IntakeSubsystem implements Subsystem {
         rollerEnabled = false;
         if (gateServo != null) {
             gateServo.setPosition(gateConfig.allowArtifacts);
-            lastGatePosition = gateConfig.allowArtifacts;
+            lastGatePosition = gateConfig().allowArtifacts;
         }
         prefeedEnabled = false;
     }
@@ -391,14 +426,14 @@ public class IntakeSubsystem implements Subsystem {
     public void setGateAllowArtifacts() {
         if (gateServo != null) {
             gateServo.setPosition(gateConfig.allowArtifacts);
-            lastGatePosition = gateConfig.allowArtifacts;
+            lastGatePosition = gateConfig().allowArtifacts;
         }
     }
 
     public void setGatePreventArtifact() {
         if (gateServo != null) {
             gateServo.setPosition(gateConfig.preventArtifacts);
-            lastGatePosition = gateConfig.preventArtifacts;
+            lastGatePosition = gateConfig().preventArtifacts;
         }
     }
 

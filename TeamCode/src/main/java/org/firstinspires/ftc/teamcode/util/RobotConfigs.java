@@ -1,5 +1,9 @@
 package org.firstinspires.ftc.teamcode.util;
 
+import com.pedropathing.ftc.localization.constants.PinpointConstants;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 
 /**
@@ -38,6 +42,91 @@ public class RobotConfigs {
         } else {
             // Default to 19429 config if robot name is unknown or is 19429
             return LauncherSubsystem.hoodConfig19429;
+        }
+    }
+
+    /**
+     * Gets the active PinpointConstants for the current robot.
+     * Returns the static instance from Constants so Dashboard edits are applied.
+     * @return PinpointConstants19429 or PinpointConstants20245 based on robot name
+     */
+    public static PinpointConstants getPinpointConstants() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_20245".equals(robotName)) {
+            return Constants.localizerConstants20245;
+        } else {
+            // Default to 19429 config if robot name is unknown or is 19429
+            return Constants.localizerConstants19429;
+        }
+    }
+
+    /**
+     * Gets the active FixedAngleAimConfig for the current robot.
+     * Returns the static instance from DriveSubsystem so Dashboard edits are applied.
+     * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245 based on robot name
+     */
+    public static DriveSubsystem.FixedAngleAimConfig getFixedAngleAimConfig() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_20245".equals(robotName)) {
+            return DriveSubsystem.fixedAngleAimConfig20245;
+        } else {
+            return DriveSubsystem.fixedAngleAimConfig19429;
+        }
+    }
+
+    /**
+     * Gets the active InitialPoseConfig for the current robot.
+     * Returns the static instance from DriveSubsystem so Dashboard edits are applied.
+     * @return initialPoseConfig19429 or initialPoseConfig20245 based on robot name
+     */
+    public static DriveSubsystem.InitialPoseConfig getInitialPoseConfig() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_20245".equals(robotName)) {
+            return DriveSubsystem.initialPoseConfig20245;
+        } else {
+            return DriveSubsystem.initialPoseConfig19429;
+        }
+    }
+
+    /**
+     * Gets the active Timing for the current robot.
+     * Returns the static instance from LauncherSubsystem so Dashboard edits are applied.
+     * @return timing19429 or timing20245 based on robot name
+     */
+    public static LauncherSubsystem.Timing getTiming() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_20245".equals(robotName)) {
+            return LauncherSubsystem.timing20245;
+        } else {
+            return LauncherSubsystem.timing19429;
+        }
+    }
+
+    /**
+     * Gets the active FlywheelConfig for the current robot.
+     * Returns the static instance from LauncherSubsystem so Dashboard edits are applied.
+     * @return flywheelConfig19429 or flywheelConfig20245 based on robot name
+     */
+    public static LauncherSubsystem.FlywheelConfig getFlywheelConfig() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_20245".equals(robotName)) {
+            return LauncherSubsystem.flywheelConfig20245;
+        } else {
+            return LauncherSubsystem.flywheelConfig19429;
+        }
+    }
+
+    /**
+     * Gets the active GateConfig for the current robot.
+     * Returns the static instance from IntakeSubsystem so Dashboard edits are applied.
+     * @return gateConfig19429 or gateConfig20245 based on robot name
+     */
+    public static IntakeSubsystem.GateConfig getGateConfig() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_20245".equals(robotName)) {
+            return IntakeSubsystem.gateConfig20245;
+        } else {
+            return IntakeSubsystem.gateConfig19429;
         }
     }
 

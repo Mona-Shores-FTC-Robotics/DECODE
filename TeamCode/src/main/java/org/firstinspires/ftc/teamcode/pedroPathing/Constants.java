@@ -18,6 +18,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 
 public class Constants {
     /** Centralized hardware names. Use these everywhere. */
@@ -90,20 +91,53 @@ public class Constants {
             .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
             .useBrakeModeInTeleOp(true);
 
-    public static PinpointConstants localizerConstants = new PinpointConstants()
-            .forwardPodY(6.25)
-            .strafePodX(6.25) //19429 6.25
-            .distanceUnit(DistanceUnit.INCH)
-            .hardwareMapName(HardwareNames.PINPOINT)
-            .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
-            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
-            .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+    // Robot-specific PinpointConstants instances - visible for tuning
+    public static PinpointConstants localizerConstants19429 = createPinpointConstants19429();
+    public static PinpointConstants localizerConstants20245 = createPinpointConstants20245();
+
+    /**
+     * Helper to create 19429-specific Pinpoint configuration.
+     * 19429 robot has strafe pod at X=6.25, strafe encoder reversed.
+     */
+    private static PinpointConstants createPinpointConstants19429() {
+        return new PinpointConstants()
+                .forwardPodY(6.25)
+                .strafePodX(6.25)
+                .distanceUnit(DistanceUnit.INCH)
+                .hardwareMapName(HardwareNames.PINPOINT)
+                .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
+                .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
+                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+    }
+
+    /**
+     * Helper to create 20245-specific Pinpoint configuration.
+     * 20245 robot has strafe pod at X=0 (centered), strafe encoder forward.
+     */
+    private static PinpointConstants createPinpointConstants20245() {
+        return new PinpointConstants()
+                .forwardPodY(6.25)
+                .strafePodX(0)
+                .distanceUnit(DistanceUnit.INCH)
+                .hardwareMapName(HardwareNames.PINPOINT)
+                .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
+                .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
+                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
+    }
+
+    /**
+     * Gets the robot-specific PinpointConstants based on RobotState.getRobotName().
+     * @return localizerConstants19429 or localizerConstants20245
+     */
+    public static PinpointConstants localizerConstants() {
+        return RobotConfigs.getPinpointConstants();
+    }
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants, hardwareMap)
-                .pinpointLocalizer(localizerConstants)
+                .pinpointLocalizer(localizerConstants())
                 .pathConstraints(pathConstraints)
                 .mecanumDrivetrain(driveConstants)
                 .build();

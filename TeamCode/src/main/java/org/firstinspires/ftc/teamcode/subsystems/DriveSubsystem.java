@@ -83,6 +83,16 @@ public class DriveSubsystem implements Subsystem {
     }
 
     @Configurable
+    public static class InitialPoseConfig {
+        /** Starting X position in Pedro coordinates (inches) */
+        public double startX = 56;
+        /** Starting Y position in Pedro coordinates (inches) */
+        public double startY = 8;
+        /** Starting heading in degrees */
+        public double startHeadingDeg = 90;
+    }
+
+    @Configurable
     public static class RampConfig {
         public double forwardRatePerSec = 0.3;
         public double strafeRatePerSec = 0.3;
@@ -93,8 +103,75 @@ public class DriveSubsystem implements Subsystem {
     public static TeleOpDriveConfig teleOpDriveConfig = new TeleOpDriveConfig();
     public static AimAssistConfig aimAssistConfig = new AimAssistConfig();
     public static VisionCenteredAimConfig visionCenteredAimConfig = new VisionCenteredAimConfig();
-    public static FixedAngleAimConfig fixedAngleAimConfig = new FixedAngleAimConfig();
     public static RampConfig rampConfig = new RampConfig();
+
+    // Robot-specific configs - visible in Panels for tuning
+    public static FixedAngleAimConfig fixedAngleAimConfig19429 = createFixedAngleAimConfig19429();
+    public static FixedAngleAimConfig fixedAngleAimConfig20245 = createFixedAngleAimConfig20245();
+    public static InitialPoseConfig initialPoseConfig19429 = createInitialPoseConfig19429();
+    public static InitialPoseConfig initialPoseConfig20245 = createInitialPoseConfig20245();
+
+    /**
+     * Helper to create 19429-specific fixed angle aim configuration.
+     */
+    private static FixedAngleAimConfig createFixedAngleAimConfig19429() {
+        FixedAngleAimConfig config = new FixedAngleAimConfig();
+        config.blueHeadingDeg = 133.9;
+        config.redHeadingDeg = 45.2;
+        config.kP = 0.7;
+        config.kMaxTurn = 0.7;
+        return config;
+    }
+
+    /**
+     * Helper to create 20245-specific fixed angle aim configuration.
+     */
+    private static FixedAngleAimConfig createFixedAngleAimConfig20245() {
+        FixedAngleAimConfig config = new FixedAngleAimConfig();
+        config.blueHeadingDeg = 135.2;
+        config.redHeadingDeg = 45.2;
+        config.kP = 0.5;
+        config.kMaxTurn = 0.7;
+        return config;
+    }
+
+    /**
+     * Helper to create 19429-specific initial pose configuration.
+     */
+    private static InitialPoseConfig createInitialPoseConfig19429() {
+        InitialPoseConfig config = new InitialPoseConfig();
+        config.startX = 56;
+        config.startY = 8;
+        config.startHeadingDeg = 90;
+        return config;
+    }
+
+    /**
+     * Helper to create 20245-specific initial pose configuration.
+     */
+    private static InitialPoseConfig createInitialPoseConfig20245() {
+        InitialPoseConfig config = new InitialPoseConfig();
+        config.startX = 0;
+        config.startY = 0;
+        config.startHeadingDeg = 90;
+        return config;
+    }
+
+    /**
+     * Gets the robot-specific FixedAngleAimConfig based on RobotState.getRobotName().
+     * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245
+     */
+    public static FixedAngleAimConfig fixedAngleAimConfig() {
+        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
+    }
+
+    /**
+     * Gets the robot-specific InitialPoseConfig based on RobotState.getRobotName().
+     * @return initialPoseConfig19429 or initialPoseConfig20245
+     */
+    public static InitialPoseConfig initialPoseConfig() {
+        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getInitialPoseConfig();
+    }
 
     public String visionRelocalizeStatus = "Press A to re-localize";
     public long visionRelocalizeStatusMs = 0L;
@@ -205,7 +282,8 @@ public class DriveSubsystem implements Subsystem {
         Pose pedroFollowerSeed = RobotState.takeHandoffPose();
 
         if (pedroFollowerSeed == null) {
-            pedroFollowerSeed = new Pose(56, 8, Math.toRadians(90));
+            InitialPoseConfig poseConfig = initialPoseConfig();
+            pedroFollowerSeed = new Pose(poseConfig.startX, poseConfig.startY, Math.toRadians(poseConfig.startHeadingDeg));
 
 //            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
 //            pedroFollowerSeed = poseFromVision.orElseGet(() -> new Pose(0, 0, Math.toRadians(90.0)));
@@ -335,6 +413,13 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public void driveScaled(double fieldX , double fieldY , double rotationInput , boolean slowMode , boolean rampMode) {
+        // Invert controls for Red alliance so driver perspective matches their side of field
+        Alliance alliance = vision.getAlliance();
+        if (alliance == Alliance.RED) {
+            fieldX = -fieldX;
+            fieldY = -fieldY;
+        }
+
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestRotation = rotationInput;
@@ -414,6 +499,13 @@ public class DriveSubsystem implements Subsystem {
      * @param slowMode Whether slow mode is active
      */
     public void aimAndDrive(double fieldX , double fieldY , boolean slowMode) {
+        // Invert controls for Red alliance so driver perspective matches their side of field
+        Alliance alliance = vision.getAlliance();
+        if (alliance == Alliance.RED) {
+            fieldX = -fieldX;
+            fieldY = -fieldY;
+        }
+
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
@@ -426,7 +518,6 @@ public class DriveSubsystem implements Subsystem {
 
         // Calculate target heading using pinpoint odometry + basket target coordinates
         Pose pose = follower.getPose();
-        Alliance alliance = vision.getAlliance();
         Pose targetPose = (alliance == Alliance.RED)
             ? FieldConstants.getRedBasketTarget()
             : FieldConstants.getBlueBasketTarget();
@@ -461,6 +552,13 @@ public class DriveSubsystem implements Subsystem {
      * @param slowMode Whether slow mode is active
      */
     public void aimAndDriveVisionCentered(double fieldX , double fieldY , boolean slowMode) {
+        // Invert controls for Red alliance so driver perspective matches their side of field
+        Alliance alliance = vision.getAlliance();
+        if (alliance == Alliance.RED) {
+            fieldX = -fieldX;
+            fieldY = -fieldY;
+        }
+
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
@@ -522,6 +620,13 @@ public class DriveSubsystem implements Subsystem {
      * @param slowMode Whether slow mode is active
      */
     public void aimAndDriveFixedAngle(double fieldX , double fieldY , boolean slowMode) {
+        // Invert controls for Red alliance so driver perspective matches their side of field
+        Alliance alliance = vision.getAlliance();
+        if (alliance == Alliance.RED) {
+            fieldX = -fieldX;
+            fieldY = -fieldY;
+        }
+
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
@@ -533,10 +638,10 @@ public class DriveSubsystem implements Subsystem {
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
         // Get fixed target heading based on alliance
-        Alliance alliance = vision.getAlliance();
+        FixedAngleAimConfig aimConfig = fixedAngleAimConfig();
         double targetHeadingDeg = (alliance == Alliance.RED)
-            ? fixedAngleAimConfig.redHeadingDeg
-            : fixedAngleAimConfig.blueHeadingDeg;
+            ? aimConfig.redHeadingDeg
+            : aimConfig.blueHeadingDeg;
         double targetHeadingRad = Math.toRadians(targetHeadingDeg);
 
         // Calculate heading error
@@ -544,8 +649,8 @@ public class DriveSubsystem implements Subsystem {
         lastAimErrorRad = headingError;
 
         // Simple P controller
-        double maxTurn = Math.max(0.0, fixedAngleAimConfig.kMaxTurn);
-        double turn = Range.clip(fixedAngleAimConfig.kP * headingError, -maxTurn, maxTurn);
+        double maxTurn = Math.max(0.0, aimConfig.kMaxTurn);
+        double turn = Range.clip(aimConfig.kP * headingError, -maxTurn, maxTurn);
 
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
