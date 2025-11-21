@@ -831,14 +831,13 @@ public class DriveSubsystem implements Subsystem {
             // Stale data, do not relocalize
             return false;
         }
-        Pose pedroPose = snap.pedroPoseMT1; //only use MT1 for relocalization
+        Pose pedroPose = snap.pedroPoseMT2; //only use MT1 for relocalization
         if (pedroPose == null) return false;
-        RobotState.putPose("Relocalize/forcedPose", pedroPose );
+        RobotState.putPose("/vision/Poses/RelocalizeMT2", PoseFrames.pedroToFtc(pedroPose));
 
         follower.setPose(pedroPose);
         poseFusion.reset(pedroPose, System.currentTimeMillis());
         vision.markOdometryUpdated();
-        RobotState.putPose("Relocalized Pose", PoseFrames.pedroToFtc(pedroPose));
 
         return true;
     }
