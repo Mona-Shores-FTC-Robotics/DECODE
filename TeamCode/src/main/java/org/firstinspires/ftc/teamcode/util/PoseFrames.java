@@ -76,7 +76,11 @@ public final class PoseFrames {
      * to Pedro frame (origin at Blue-left corner).
      */
     public static Pose ftcToPedro(Pose ftcPose) {
-        if (ftcPose == null) {return null; }
+
+        if (ftcPose == null) {
+            return null;
+        }
+
         double half = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
         double pedroY = half + -ftcPose.getX();
         double pedroX = ftcPose.getY() + half;

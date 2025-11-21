@@ -20,22 +20,29 @@ public final class AutoField {
     }
 
     public enum FieldPoint {
+        //Far Auto Points
         START_FAR,
         LAUNCH_FAR,
         ALLIANCE_WALL_ARTIFACTS_PICKUP,
         PARKING_ARTIFACTS_PICKUP_90_DEG,
         GATE_FAR_ARTIFACTS_PICKUP_90_DEG,
+
+        //Close Auto Points
+        START_CLOSE,
         LAUNCH_CLOSE,
-        GATE_CLOSE_ARTIFACTS_PICKUP,
-        GATE_FAR_ARTIFACTS_PICKUP_270_DEG,
-        PARKING_ARTIFACTS_PICKUP_270_DEG
-    }
+        PRE_GATE_ARTIFACTS_PICKUP_270_DEG,
+        ARTIFACTS_SET_1_270,
+        ARTIFACTS_SET_2_270,
+        ARTIFACTS_SET_3_270,
+        MOVE_TO_GATE
+        }
+
 
 @Configurable
 public static class Waypoints {
 
-        public double startX = 59;
-        public double startY = 7.5;
+        public double startFarX = 56;
+        public double startFarY = 8;
         public double startHeadingDeg = 90.0;
 
         public double launchFarX = 55;
@@ -55,20 +62,44 @@ public static class Waypoints {
         public double gateFarX = 24;
         public double gateFarY = 56;
         public double gateFarHeadingDeg90 = 90.0;
-        public double gateFarHeadingDeg270 = 270;
 
-        public double launchCloseX = 21.5;
-        public double launchCloseY = 124;
-        public double launchCloseHeading = 324;
 
-        public double gateCloseX = 24;
-        public double gateCloseY = 87;
+        //Auto Close
+        public double startCloseX = 24.56872037914692;
+        public double startCloseY = 130.18009478672985;
+        public double startCloseHeading = 144;
 
-        public double gateCloseHeading = 270;
-        public double parkingArtifactsHeading270 = 270;
+        public double launchCloseX = 30.19905213270142;
+        public double launchCloseY = 112.9478672985782;
+        public double launchCloseHeading = 134;
+
+        public double preGateArtifactsX = 23.886255924170616;
+        public double preGateArtifactsY = 99.4691943127962;
+        public double preGateArtifactsHeading270 = 270;
+
+        public double artifactSet1X = 23.886255924170616;
+        public double artifactSet1Y = 80.3601895734597;
+        public double artifactSet1Heading = 270;
+
+        public double artifactSet2X = 23.886255924170616;
+        public double artifactSet2Y = 80.3601895734597;
+        public double artifactSet2Heading = 270;
+        public double artifactSet2ControlX = 23.203791469194314;
+        public double artifactSet2ControlY = 94.69194312796208;
+
+        public double artifactSet3X = 23.886255924170616;
+        public double artifactSet3Y = 31.222748815165875;
+        public double artifactSet3Heading = 270;
+        public double artifactSet3ControlX = 24.398104265402843;
+        public double artifactSet3ControlY = 56.4739336492891;
+
+        public double moveToGateX = 21.838862559241708;
+        public double moveToGateY = 70.63507109004739;
+        public double moveToGateHeading  = 180;
 
         ArrayList<Pose> parkingControlPoints = new ArrayList<>();
         Pose gateFarControlPoint = new Pose(22, 29, 0);
+
     }
 
     public static AutoField.Waypoints waypoints = new AutoField.Waypoints();
@@ -77,8 +108,8 @@ public static class Waypoints {
     public static FieldLayout layoutForAlliance(Alliance alliance) {
         EnumMap<FieldPoint, Pose> layout = new EnumMap<>(FieldPoint.class);
         layout.put(FieldPoint.START_FAR, poseForAlliance(
-                waypoints.startX,
-                waypoints.startY,
+                waypoints.startFarX,
+                waypoints.startFarY,
                 waypoints.startHeadingDeg,
                 alliance
         ));
@@ -100,38 +131,61 @@ public static class Waypoints {
                 waypoints.parkingArtifactsHeadingDeg90,
                 alliance
         ));
+
         layout.put(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_90_DEG, poseForAlliance(
                 waypoints.gateFarX,
                 waypoints.gateFarY,
                 waypoints.gateFarHeadingDeg90,
                 alliance
         ));
+
+        layout.put(FieldPoint.START_CLOSE, poseForAlliance(
+                waypoints.startCloseX,
+                waypoints.startCloseY,
+                waypoints.startCloseHeading,
+                alliance
+        ));
+
         layout.put(FieldPoint.LAUNCH_CLOSE, poseForAlliance(
                 waypoints.launchCloseX,
                 waypoints.launchCloseY,
                 waypoints.launchCloseHeading,
                 alliance
-
         ));
-        layout.put(FieldPoint.GATE_CLOSE_ARTIFACTS_PICKUP, poseForAlliance(
-                waypoints.gateCloseX,
-                waypoints.gateCloseY,
-                waypoints.gateCloseHeading,
+
+        layout.put(FieldPoint.PRE_GATE_ARTIFACTS_PICKUP_270_DEG, poseForAlliance(
+                waypoints.preGateArtifactsX,
+                waypoints.preGateArtifactsY,
+                waypoints.preGateArtifactsHeading270,
                 alliance
         ));
-        layout.put(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_270_DEG, poseForAlliance(
-                waypoints.gateFarX,
-                waypoints.gateFarY,
-                waypoints.gateFarHeadingDeg270,
-                alliance
 
+        layout.put(FieldPoint.ARTIFACTS_SET_1_270, poseForAlliance(
+                waypoints.artifactSet1X,
+                waypoints.artifactSet1Y,
+                waypoints.artifactSet1Heading,
+                alliance
         ));
-        layout.put(FieldPoint.PARKING_ARTIFACTS_PICKUP_270_DEG, poseForAlliance(
-                waypoints.parkingArtifactsX,
-                waypoints.parkingArtifactsY,
-                waypoints.parkingArtifactsHeading270,
-                alliance
 
+        layout.put(FieldPoint.ARTIFACTS_SET_2_270, poseForAlliance(
+                waypoints.artifactSet2X,
+                waypoints.artifactSet2Y,
+                waypoints.artifactSet2Heading,
+                alliance
+        ));
+
+        layout.put(FieldPoint.ARTIFACTS_SET_3_270, poseForAlliance(
+                waypoints.artifactSet3X,
+                waypoints.artifactSet3Y,
+                waypoints.artifactSet3Heading,
+                alliance
+        ));
+
+        layout.put(FieldPoint.MOVE_TO_GATE, poseForAlliance(
+                waypoints.moveToGateX,
+                waypoints.moveToGateY,
+                waypoints.moveToGateHeading,
+                alliance
         ));
         return new FieldLayout(layout);
     }
@@ -141,7 +195,6 @@ public static class Waypoints {
                 waypoints.parkingArtifactsControlPointX,
                 waypoints.parkingArtifactsControlPointY,
                 waypoints.parkingArtifactsHeadingDeg90,
-
                 alliance
         );
     }
@@ -150,6 +203,25 @@ public static class Waypoints {
                 waypoints.gateFarControlPoint.getX(),
                 waypoints.gateFarControlPoint.getY(),
                 waypoints.gateFarHeadingDeg90,
+                alliance
+        );
+    }
+
+
+    public static Pose artifactsSet2ControlPoint(Alliance alliance) {
+        return poseForAlliance(
+                waypoints.artifactSet2ControlX,
+                waypoints.artifactSet2ControlY,
+                waypoints.artifactSet2Heading,
+                alliance
+        );
+    }
+
+    public static Pose artifactSet3ControlPoint(Alliance alliance) {
+        return poseForAlliance(
+                waypoints.artifactSet3ControlX,
+                waypoints.artifactSet3ControlY,
+                waypoints.artifactSet3Heading,
                 alliance
         );
     }
@@ -184,4 +256,5 @@ public static class Waypoints {
             poses.put(FieldPoint.START_FAR, new Pose(startPose.getX(), startPose.getY(), startPose.getHeading()));
         }
     }
+
 }

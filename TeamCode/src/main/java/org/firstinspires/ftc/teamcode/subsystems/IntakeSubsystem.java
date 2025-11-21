@@ -149,19 +149,19 @@ public class IntakeSubsystem implements Subsystem {
     @Configurable
     public static class RollerConfig {
         public String servoName = "intake_roller";
-        public double activePosition = 0;
+        public double forward = 0;
         public double inactivePosition = 0.5;
+        public double reverse = 1;
     }
 
     @Configurable
     public static class GateConfig {
         public String servoName = "gate";
         /** Reverse speed (default) - prevents accidental feeding (continuous servo: 0.0 = full reverse) */
-        public double preventArtifacts = .7;
+        public double preventArtifacts = .5;
         /** Forward speed - helps feed artifacts when firing (continuous servo: 1.0 = full forward) */
-        public double allowArtifacts = .3;
-        /** Reverse configuration setting */
-        public double reverseConfig = 1.0;
+        public double allowArtifacts = .1;
+        public double reverseConfig = .8;
     }
 
     @Configurable
@@ -385,11 +385,6 @@ public class IntakeSubsystem implements Subsystem {
         lastSensorPollMs = (System.nanoTime() - sensorPollStart) / 1_000_000.0;
 
         long servoStart = System.nanoTime();
-        if (rollerServo != null) {
-            double target = rollerEnabled ? rollerConfig.activePosition : rollerConfig.inactivePosition;
-            rollerServo.setPosition(target);
-            lastRollerPosition = target;
-        }
 
         lastServoUpdateMs = (System.nanoTime() - servoStart) / 1_000_000.0;
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
@@ -409,10 +404,21 @@ public class IntakeSubsystem implements Subsystem {
         return alliance;
     }
 
-    public void activateRoller() {
+    public void forwardRoller() {
         rollerEnabled = true;
+        if (rollerServo != null) {
+            rollerServo.setPosition(rollerConfig.forward);
+            lastRollerPosition = rollerConfig.forward;
+        }
     }
 
+    public void reverseRoller() {
+        rollerEnabled = true;
+        if (rollerServo != null) {
+            rollerServo.setPosition(rollerConfig.reverse);
+            lastRollerPosition = rollerConfig.reverse;
+        }
+    }
 
     public void deactivateRoller() {
         rollerEnabled = false;
@@ -422,6 +428,13 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
+
+    public void setGateReverseConfig() {
+        if (gateServo != null) {
+            gateServo.setPosition(gateConfig.reverseConfig);
+            lastGatePosition = gateConfig.reverseConfig;
+        }
+    }
 
     public void setGateAllowArtifacts() {
         if (gateServo != null) {
@@ -466,7 +479,7 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     public void startForward() { setMode(IntakeMode.ACTIVE_FORWARD); }
-    public void startReverse() { setMode(IntakeMode.PASSIVE_REVERSE); }
+    public void startReverseIntakeMotor() { setMode(IntakeMode.PASSIVE_REVERSE); }
 
     public IntakeMode getResolvedMode() {
         return resolveMode();
@@ -490,7 +503,7 @@ public class IntakeSubsystem implements Subsystem {
 
     public boolean isRollerActive() {
         return rollerServo != null
-                && Math.abs(lastRollerPosition - rollerConfig.activePosition) < 1e-3;
+                && Math.abs(lastRollerPosition - rollerConfig.forward) < 1e-3;
     }
 
     private void pollLaneSensorsIfNeeded() {

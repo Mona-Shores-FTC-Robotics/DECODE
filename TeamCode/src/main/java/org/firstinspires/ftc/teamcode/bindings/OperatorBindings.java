@@ -8,7 +8,6 @@ import dev.nextftc.ftc.GamepadEx;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ContinuousDistanceBasedSpinCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.HumanLoadingCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.UniversalSmartShotCommand;
@@ -45,11 +44,12 @@ public class OperatorBindings {
     private final Button runIntake;
     private final Button humanLoading;
 
-    private final Button motifTailCycle;
-    private final Button toggleLauncherMode;
-
     private final Button fireShort;
     private final Button fireMid;
+
+
+    private final Button motifTailCycle;
+    private final Button toggleLauncherMode;
 
     private Gamepad rawGamepad;  // Raw gamepad for haptic feedback
 
@@ -62,7 +62,7 @@ public class OperatorBindings {
         humanLoading = operator.triangle();
 
         //launch based on range to april tag.
-        fireDistanceBased = operator.square();
+        fireDistanceBased = operator.cross();
 
         //launch based on range to april tag - simultaneous or sequential (Obelisk Pattern) depending on launcher mode
 //        fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
@@ -100,11 +100,17 @@ public class OperatorBindings {
         humanLoading
                 .toggleOnBecomesTrue()
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
-                .whenBecomesTrue(robot.intake::setGateAllowArtifacts)
+                .whenBecomesTrue(robot.intake::setGateReverseConfig)
+                .whenBecomesTrue(robot.intake::startForward)
                 .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
+                .whenBecomesTrue(robot.intake::deactivateRoller)
+
+
+                .whenBecomesFalse(robot.intake::startReverseIntakeMotor)
                 .whenBecomesFalse(robot.launcher::stopReverseFlywheelForHumanLoading)
                 .whenBecomesFalse(robot.intake::setGatePreventArtifact)
-                .whenBecomesFalse(robot.launcher::setAllHoodsExtended);
+                .whenBecomesFalse(robot.launcher::setAllHoodsExtended)
+                .whenBecomesFalse(robot.intake::forwardRoller);
 
 
         // Universal smart shot command (distance-based + mode-aware)
@@ -120,12 +126,11 @@ public class OperatorBindings {
         // Mode toggle: manually switch between THROUGHPUT and DECODE
         toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
 
-        // Preset range-based launching commands - delete once distance based is reliable
-        LaunchAllAtPresetRangeCommand fireShortRangeCommand = robot.launcherCommands.fireAllShortRange();
-        LaunchAllAtPresetRangeCommand fireMidRangeCommand = robot.launcherCommands.fireAllMidRange();
-        // Range-based shooting: press button to fire all lanes at that range
-        fireShort.whenBecomesTrue(fireShortRangeCommand);  // A: Close shots
-        fireMid.whenBecomesTrue(fireMidRangeCommand);    // B: Long shots
+        LaunchAllAtPresetRangeCommand launchAllShortCommand = robot.launcherCommands.fireAllShortRange();
+        fireShort.whenBecomesTrue(launchAllShortCommand);
+
+        LaunchAllAtPresetRangeCommand launchAllMidCommand = robot.launcherCommands.fireAllMidRange();
+        fireMid.whenBecomesTrue(launchAllMidCommand);
 
     }
 
