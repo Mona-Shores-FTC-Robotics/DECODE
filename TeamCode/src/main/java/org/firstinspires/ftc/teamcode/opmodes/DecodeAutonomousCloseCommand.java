@@ -95,10 +95,8 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         addComponents(
                 BulkReadComponent.INSTANCE,
                 BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE,
-                // PedroComponent in instance initializer now works because placeholder follower
-                // is created in Robot constructor, then replaced with correct config in attachFollower()
-                new PedroComponent(hardwareMap -> FollowerHolder.getFollower())
+                CommandManager.INSTANCE
+                // Removed PedroComponent - testing if FollowPath can work without it
         );
     }
     @Override
