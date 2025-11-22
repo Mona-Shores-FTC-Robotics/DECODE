@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.util;
 
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -278,5 +280,37 @@ public class AutoRoutineBuilder {
             names.add(segment.name);
         }
         return names;
+    }
+
+    /**
+     * Visualize the paths on PanelsBridge without running them.
+     * Useful for testing paths without hardware.
+     *
+     * @param alliance Alliance for coloring (RED or BLUE)
+     */
+    public void visualizePaths(Alliance alliance) {
+        List<PathChain> chains = new ArrayList<>();
+
+        // Build all path chains with default settings
+        for (PedroPathLoader.PathSegment segment : segments) {
+            chains.add(segment.buildPathChain(follower));
+        }
+
+        // Get start pose from first segment
+        Pose startPose = segments.isEmpty() ? null : segments.get(0).startPose;
+
+        // Draw on PanelsBridge
+        PanelsBridge.drawPreview(
+            chains.toArray(new PathChain[0]),
+            startPose,
+            alliance == Alliance.RED
+        );
+    }
+
+    /**
+     * Get all segments (for advanced use cases)
+     */
+    public List<PedroPathLoader.PathSegment> getSegments() {
+        return new ArrayList<>(segments);
     }
 }

@@ -11,6 +11,29 @@ Instead of hardcoding poses and paths in Java, you can:
 
 ## Quick Start
 
+### 0. Test Without Hardware (Recommended First Step!)
+
+**Visualize paths on FTControl Panels before running on robot:**
+
+```java
+// Use the VisualizePathsFromPpFile OpMode
+// 1. Connect to Panels: http://192.168.49.1:5800
+// 2. Init the OpMode (don't press START!)
+// 3. See paths drawn on field
+// 4. Change config.ppFileName or config.alliance in FTC Dashboard
+// 5. Stop and re-init to refresh
+```
+
+Or in your own OpMode:
+```java
+@Override
+public void onWaitForStart() {
+    AutoRoutineBuilder builder = AutoRoutineBuilder.fromPpFile(
+        "trajectory.pp", robot, hardwareMap, alliance);
+    builder.visualizePaths(alliance);  // Draw on Panels!
+}
+```
+
 ### 1. Create Your Path File
 
 Use the Pedro Pathing path editor to design your autonomous path. Save as a `.pp` file.
@@ -306,6 +329,69 @@ Design your paths for **BLUE alliance**, and red alliance gets mirrored automati
 - Heading is always interpolated (can't disable completely)
 - For exact heading control, use multiple short segments
 
+## Path Visualization (No Hardware Required!)
+
+### Dedicated Visualization OpMode
+
+The **`VisualizePathsFromPpFile`** OpMode lets you preview paths without moving the robot:
+
+**How to use:**
+1. Connect to FTControl Panels: `http://192.168.49.1:5800`
+2. Select the OpMode on driver station
+3. **Init the OpMode (DO NOT press START!)**
+4. Paths appear on Panels field view
+5. Change configuration in FTC Dashboard:
+   - `ppFileName` - which .pp file to visualize
+   - `alliance` - RED or BLUE (see mirroring)
+   - `showSegmentDetails` - show/hide segment info
+6. Stop and re-init to refresh visualization
+
+**What you'll see:**
+- All path segments drawn on field
+- Start pose (robot position)
+- Curved vs straight paths
+- Alliance-specific mirroring
+
+### Visualization in Your OpMode
+
+Add visualization to any OpMode's `onWaitForStart()`:
+
+```java
+@Override
+public void onWaitForStart() {
+    // Load builder
+    AutoRoutineBuilder builder = AutoRoutineBuilder.fromPpFile(
+        "trajectory.pp", robot, hardwareMap, activeAlliance);
+
+    // Visualize paths (draws on Panels)
+    builder.visualizePaths(activeAlliance);
+
+    // Continue with normal init...
+}
+```
+
+This lets you:
+- Preview paths before pressing START
+- Verify path changes before running
+- Check alliance mirroring is correct
+- Debug path loading issues
+
+### Quick Path Comparison
+
+Compare different .pp files or alliances:
+
+```java
+// Blue alliance
+AutoRoutineBuilder builderBlue = AutoRoutineBuilder.fromPpFile(
+    "trajectory.pp", robot, hardwareMap, Alliance.BLUE);
+builderBlue.visualizePaths(Alliance.BLUE);
+
+// Red alliance (mirrored)
+AutoRoutineBuilder builderRed = AutoRoutineBuilder.fromPpFile(
+    "trajectory.pp", robot, hardwareMap, Alliance.RED);
+builderRed.visualizePaths(Alliance.RED);
+```
+
 ## Advanced: Testing and Debugging
 
 ### Get segment information
@@ -371,6 +457,8 @@ telemetry.update();
 **Utilities:**
 - `getSegmentCount()` - Get number of segments
 - `getSegmentNames()` - Get list of segment names
+- `visualizePaths(alliance)` - Draw paths on PanelsBridge
+- `getSegments()` - Get raw segment list
 
 ### SegmentConfigurator
 
