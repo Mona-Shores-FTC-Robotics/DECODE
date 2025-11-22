@@ -26,6 +26,7 @@ public final class AutoField {
         ALLIANCE_WALL_ARTIFACTS_PICKUP,
         PARKING_ARTIFACTS_PICKUP_90_DEG,
         GATE_FAR_ARTIFACTS_PICKUP_90_DEG,
+        MOVE_OFF_LINE_FAR,
 
         //Close Auto Points
         START_CLOSE,
@@ -187,6 +188,14 @@ public static class Waypoints {
                 waypoints.moveToGateHeading,
                 alliance
         ));
+
+        layout.put(FieldPoint.MOVE_OFF_LINE_FAR, poseForAlliance(
+                48,
+                48,
+                90,
+                alliance
+        ));
+
         return new FieldLayout(layout);
     }
 

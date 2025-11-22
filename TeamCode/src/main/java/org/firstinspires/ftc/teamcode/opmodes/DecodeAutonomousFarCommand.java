@@ -63,7 +63,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public double maxPathPower = 1.0;
+        public double maxPathPower = .9;
         public double intakeDelaySeconds = .1; //how long into the path do we turn the intake on?
 
         /**
@@ -233,17 +233,19 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         Pose parkingControlPoint = AutoField.parkingArtifactsControlPoint(activeAlliance);
 //        Pose gateFarControlPoint = AutoField.artifactsSet2ControlPoint(activeAlliance);
         Pose gateFarControlPoint = AutoField.gateFarArtifactsControlPoint(activeAlliance);
+        Pose moveOffLineFar = currentLayout.pose(FieldPoint.MOVE_OFF_LINE_FAR);
+
+
 
 
 
         return new SequentialGroup(
                 // Phase 1: Drive to launch position and score preload
                 new ParallelGroup(
-                    spinUpLauncher(), //finishes when we are at launch RPM
-                    followPath(startFarPose, launchFarPose)
+                        spinUpLauncher(), //finishes when we are at launch RPM
+                        followPath(startFarPose, launchFarPose)
                 ),
                 scoreSequence(),
-
                 // Phase 2: Collect from Alliance Wall and score
                 collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
 
@@ -251,7 +253,10 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
                 collectAndScore(launchFarPose, parking90DegPose, launchFarPose, parkingControlPoint),
 
                 // Phase 4: Collect from Gate Far and score
-                collectAndScore(launchFarPose, gateFar90DegPose, launchFarPose, gateFarControlPoint)
+                collectAndScore(launchFarPose, gateFar90DegPose, launchFarPose, gateFarControlPoint),
+
+                followPath(launchFarPose, moveOffLineFar)
+
         );
     }
 
