@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -32,6 +33,7 @@ import org.firstinspires.ftc.teamcode.util.FieldConstants;
  * - Dpad Up: Offset = 1
  * - Dpad Right: Offset = 2
  */
+@Disabled
 @TeleOp(name = "AprilTag Pattern Recognition", group = "Vision")
 public class AprilTagPatternRecognition extends LinearOpMode {
 

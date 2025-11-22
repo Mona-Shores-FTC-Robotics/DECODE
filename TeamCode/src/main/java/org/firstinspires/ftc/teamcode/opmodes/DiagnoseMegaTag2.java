@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import dev.nextftc.core.components.SubsystemComponent;
@@ -39,7 +40,7 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  *
  * To test different offsets, adjust headingOffsetDeg in FTC Dashboard Config tab.
  */
-@Config
+@Disabled
 @TeleOp(name = "Diagnose MegaTag2", group = "Diagnostics")
 public class DiagnoseMegaTag2 extends NextFTCOpMode {
 

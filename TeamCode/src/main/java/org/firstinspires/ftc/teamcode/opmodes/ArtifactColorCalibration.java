@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -36,6 +37,7 @@ import java.util.Locale;
  * - X: Clear all samples and start over
  * - Y: Toggle continuous sampling mode
  */
+@Disabled
 @TeleOp(name = "Artifact Color Calibration", group = "Tuning")
 public class ArtifactColorCalibration extends LinearOpMode {
 
