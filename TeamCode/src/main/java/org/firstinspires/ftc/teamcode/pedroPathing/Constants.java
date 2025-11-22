@@ -96,7 +96,7 @@ public class Constants {
                 .useSecondaryDrivePIDF(true)
                 .translationalPIDFCoefficients(new PIDFCoefficients(.030, 0, .0001, .08))
                 .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.01, 0, 0.0001, .05))
-                .headingPIDFCoefficients(new PIDFCoefficients(.6, .0001, .035, .065))
+                .headingPIDFCoefficients(new PIDFCoefficients(.67, .0001, .035, .065))
                 .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.4, 0, .015, .029))
                 .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) //was .005p
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
