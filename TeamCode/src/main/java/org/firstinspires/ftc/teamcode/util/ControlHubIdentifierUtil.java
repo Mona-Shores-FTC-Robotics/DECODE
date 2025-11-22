@@ -7,6 +7,8 @@ import android.net.wifi.WifiManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.robot.Robot;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -17,33 +19,42 @@ public class ControlHubIdentifierUtil {
 
     // Cached Method instance to optimize reflection performance
     private static Method getWifiApConfigMethod = null;
+    private static Telemetry telemetry = null;
 
     /**
      * Retrieves the RobotType based on the Control Hub's SSID.
-     * Retries up to 3 times with delays if initial retrieval fails.
+     * Retries up to 5 times with delays if initial retrieval fails.
      * This handles the case where WiFi isn't fully initialized on first boot after battery removal.
      *
      * @param hardwareMap The HardwareMap instance from the OpMode.
-     * @return The corresponding RobotType, or null if identification fails.
+     * @param opModeTelemetry The telemetry object for logging (optional, can be null)
      */
-    public static void setRobotName(HardwareMap hardwareMap) {
-        final int MAX_RETRIES = 3;
-        final long RETRY_DELAY_MS = 200; // 200ms between retries
+    public static void setRobotName(HardwareMap hardwareMap, Telemetry opModeTelemetry) {
+        telemetry = opModeTelemetry;
+        final int MAX_RETRIES = 5;
+        final long RETRY_DELAY_MS = 500; // 500ms between retries (increased from 200ms)
+
+        log("Detecting robot by SSID...");
 
         String ssid = null;
         for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
             ssid = retrieveSSID(hardwareMap);
             if (ssid != null) {
                 mapSSIDToRobotType(ssid);
+                String robotName = RobotState.getRobotName();
+                RobotState.packet.put("_Config/Robot Name", robotName);
+
                 if (attempt > 0) {
-                    // Log that retry succeeded
-                    RobotState.packet.put("Info", "SSID retrieval succeeded on attempt " + (attempt + 1));
+                    log("✓ SSID found on attempt " + (attempt + 1) + ": " + robotName);
+                } else {
+                    log("✓ Robot detected: " + robotName);
                 }
                 return;
             }
 
             // If not last attempt, wait before retrying
             if (attempt < MAX_RETRIES - 1) {
+                log("⟳ SSID not ready, retrying (" + (attempt + 1) + "/" + MAX_RETRIES + ")...");
                 try {
                     Thread.sleep(RETRY_DELAY_MS);
                 } catch (InterruptedException e) {
@@ -55,7 +66,8 @@ public class ControlHubIdentifierUtil {
         }
 
         // All retries failed
-        logError("Failed to retrieve SSID after " + MAX_RETRIES + " attempts. Robot name remains UNKNOWN.");
+        logError("✗ Failed to retrieve SSID after " + MAX_RETRIES + " attempts. Using default (19429) config.");
+        RobotState.packet.put("_Config/Robot Name", "UNKNOWN (using 19429 default)");
     }
 
     /**
@@ -141,11 +153,28 @@ public class ControlHubIdentifierUtil {
     }
 
     /**
-     * Logs error messages to MatchConfig.telemetryPacket.
+     * Logs informational messages to both telemetry and packet.
+     *
+     * @param message The message to log.
+     */
+    private static void log(String message) {
+        if (telemetry != null) {
+            telemetry.addData("Robot ID", message);
+            telemetry.update();
+        }
+        RobotState.packet.put("_Config/Status", message);
+    }
+
+    /**
+     * Logs error messages to both telemetry and packet.
      *
      * @param message The error message to log.
      */
     private static void logError(String message) {
-        RobotState.packet.put("Error", message);
+        if (telemetry != null) {
+            telemetry.addData("Robot ID ERROR", message);
+            telemetry.update();
+        }
+        RobotState.packet.put("_Config/Error", message);
     }
 }

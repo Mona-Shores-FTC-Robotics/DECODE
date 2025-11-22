@@ -64,12 +64,12 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
 
     @Override
     public void onInit() {
-        // Set robot name BEFORE Robot construction so configs are selected correctly
-        ControlHubIdentifierUtil.setRobotName(hardwareMap);
-
         this.dashboard = FtcDashboard.getInstance();
 
         robot = new Robot(hardwareMap);
+        // Set robot name AFTER Robot construction but BEFORE attachPedroFollower
+        // This timing gives WiFi more time to initialize on first boot
+        ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
         robot.setAlliance(Alliance.BLUE); // Default for testing
         robot.initializeForTeleOp();

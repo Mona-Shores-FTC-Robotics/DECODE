@@ -32,8 +32,8 @@ public class Robot {
     }
 
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
-        ControlHubIdentifierUtil.setRobotName(hardwareMap);
-        RobotState.packet.put("_Config/Robot Name", RobotState.getRobotName());
+        // Note: setRobotName() is now called from OpMode.onInit() BEFORE attachPedroFollower()
+        // to give WiFi more time to initialize on first boot
         telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
