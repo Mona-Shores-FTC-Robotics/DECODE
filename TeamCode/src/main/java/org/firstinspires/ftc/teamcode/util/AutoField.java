@@ -48,19 +48,19 @@ public static class Waypoints {
 
         public double launchFarX = 55;
         public double launchFarY = 17.3;
-        public double launchFarHeadingDeg = 107.5;
+        public double launchFarHeadingDeg = 111;
 
         public double allianceWallArtifactsX = 9;
         public double allianceWallArtifactsY = 8.2;
         public double allianceWallArtifactsHeadingDeg = 180;
 
-        public double parkingArtifactsX = 23;
+        public double parkingArtifactsX = 27;
         public double parkingArtifactsY = 33;
         public double parkingArtifactsHeadingDeg90 = 90.0;
         public double parkingArtifactsControlPointX = 28;
         public double parkingArtifactsControlPointY = 2;
 
-        public double gateFarX = 24;
+        public double gateFarX = 28;
         public double gateFarY = 56;
         public double gateFarHeadingDeg90 = 90.0;
 
