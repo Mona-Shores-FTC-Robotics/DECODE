@@ -118,8 +118,8 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
-        lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector, robot.lighting);
-        lightingInitController.initialize();
+//        lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector, robot.lighting);
+//        lightingInitController.initialize();
 
         addComponents(
                 new SubsystemComponent(robot.drive),
@@ -134,9 +134,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     @Override
     public void onWaitForStart() {
         BindingManager.update();
-        if (lightingInitController != null) {
-            lightingInitController.updateDuringInit(gamepad1.dpad_up);
-        }
+//        if (lightingInitController != null) {
+//            lightingInitController.updateDuringInit(gamepad1.dpad_up);
+//        }
 
         // Update subsystems to poll sensors (especially intake color sensors)
         robot.intake.periodic();
