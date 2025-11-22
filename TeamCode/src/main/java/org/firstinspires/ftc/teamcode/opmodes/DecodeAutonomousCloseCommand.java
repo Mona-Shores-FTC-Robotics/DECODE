@@ -69,7 +69,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     @Configurable
     public static class AutoMotionConfig {
         public double maxPathPower = .79;
-        public double intakeDelaySeconds = .1;
+        public double intakeDelaySeconds = 2.5;
         /**
          * Starting launcher mode for autonomous.
          * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
@@ -288,13 +288,14 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                         followPath(fromPose, pickupPose, controlPoints),
                         new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
-                new SequentialGroup(
-                        new Delay(config.intakeDelaySeconds)
-//                    new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
-                ),
+
 
                 // Drive to score while spinning up launcher
                 new ParallelGroup(
+                        new SequentialGroup(
+                                new Delay(config.intakeDelaySeconds),
+                                new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
+                        ),
                         followPath(pickupPose, scorePose),
                         spinUpLauncher()
                 ),
