@@ -53,7 +53,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  * 1. Starts at LAUNCH_CLOSE position
  * 2. Collects samples from Gate Close, Gate Far, and Parking Zone
  * 3. Scores each sample set at LAUNCH_CLOSE
- *
+ *m
  * Uses NextFTC command framework to coordinate:
  * - Driving with intake/launcher positioning (parallel)
  * - Sequential scoring and collection routines
@@ -66,7 +66,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     @Configurable
     public static class AutoMotionConfig {
-        public double maxPathPower = 1;
+        public double maxPathPower = .8;
         public double intakeDelaySeconds = .1;
         /**
          * Starting launcher mode for autonomous.
