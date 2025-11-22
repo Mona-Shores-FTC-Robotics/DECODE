@@ -60,7 +60,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  * - Driving with intake/launcher positioning (parallel)
  * - Sequential scoring and collection routines
  */
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Auto Close (Command)", group = "Command")
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Fixed Auto Close (Command)", group = "Command")
 @Configurable
 public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
