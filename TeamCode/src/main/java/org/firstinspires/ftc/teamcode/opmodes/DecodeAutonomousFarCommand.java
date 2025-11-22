@@ -168,21 +168,21 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             applyAlliance(activeAlliance, null);
         }
 
+        // Diagnostic telemetry for lane sensors during init
+        for (LauncherLane lane : LauncherLane.values()) {
+            IntakeSubsystem.LaneSample sample = robot.intake.getLaneSample(lane);
+            String prefix = "Auto Init/" + lane.name();
+            RobotState.packet.put(prefix + "/color", sample.color.name());
+            RobotState.packet.put(prefix + "/distance_cm", sample.distanceCm);
+            RobotState.packet.put(prefix + "/within_distance", sample.withinDistance);
+            RobotState.packet.put(prefix + "/hue", sample.hue);
+            RobotState.packet.put(prefix + "/saturation", sample.saturation);
+            RobotState.packet.put(prefix + "/value", sample.value);
+        }
+
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
         telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
-
-        // Diagnostic info for each lane
-        for (LauncherLane lane : LauncherLane.values()) {
-            IntakeSubsystem.LaneSample sample = robot.intake.getLaneSample(lane);
-            telemetry.addData(lane.name(),
-                "Color: %s | Dist: %.1fcm | Within: %s",
-                sample.color.name(),
-                sample.distanceCm,
-                sample.withinDistance ? "YES" : "NO"
-            );
-        }
-
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");
         telemetry.update();    }
