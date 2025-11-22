@@ -172,6 +172,18 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
         telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
+
+        // Diagnostic info for each lane
+        for (LauncherLane lane : LauncherLane.values()) {
+            IntakeSubsystem.LaneSample sample = robot.intake.getLaneSample(lane);
+            telemetry.addData(lane.name(),
+                "Color: %s | Dist: %.1fcm | Within: %s",
+                sample.color.name(),
+                sample.distanceCm,
+                sample.withinDistance ? "YES" : "NO"
+            );
+        }
+
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");
         telemetry.update();
