@@ -65,8 +65,8 @@ public static class Waypoints {
 
 
         //Auto Close
-         public double startCloseX = 24.56872037914692;
-        public double startCloseY = 130.18009478672985;
+         public double startCloseX = 26.445;
+        public double startCloseY = 131.374;
         public double startCloseHeading = 144;
 
         public double launchCloseX = 30.19905213270142;
