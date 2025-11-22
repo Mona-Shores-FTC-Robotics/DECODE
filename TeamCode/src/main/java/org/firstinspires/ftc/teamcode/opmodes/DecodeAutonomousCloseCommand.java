@@ -85,6 +85,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     private IntakeCommands intakeCommands;
     private LauncherCommands launcherCommands;
     private LightingSubsystem.InitController lightingInitController;
+    private GamepadEx driverPad = new GamepadEx(() -> gamepad1);
 
     // AprilTag-based start pose detection
     private Pose lastAppliedStartPosePedro;
@@ -118,7 +119,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         // Register init-phase controls
         // Use Alliance.UNKNOWN as default to enable automatic vision detection
         // Manual overrides (D-pad left/right) still work as expected
-        GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
 //        driverPad.y().whenBecomesTrue(() -> applyAlliance(allianceSelector.getSelectedAlliance(), lastAppliedStartPosePedro));
 //        driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
