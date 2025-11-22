@@ -4,6 +4,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.paths.PathChain;
 
 import org.firstinspires.ftc.teamcode.util.FollowerHolder;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.core.commands.Command;
 
@@ -30,12 +31,18 @@ public class CustomFollowPath extends Command {
             throw new IllegalStateException("Follower not initialized in FollowerHolder");
         }
         follower.followPath(path, holdEnd);
+        RobotState.packet.put("Auto/PathFollowing", "Started");
+        RobotState.packet.put("Auto/PathHoldEnd", holdEnd);
+        RobotState.packet.put("Auto/PathMaxPower", maxPower);
     }
 
     @Override
     public void execute() {
         // Follower update is handled by DriveSubsystem.periodic()
-        // Nothing to do here
+        if (follower != null) {
+            RobotState.packet.put("Auto/PathFollowing", "Running");
+            RobotState.packet.put("Auto/FollowerBusy", follower.isBusy());
+        }
     }
 
     @Override
@@ -47,6 +54,9 @@ public class CustomFollowPath extends Command {
     public void end(boolean interrupted) {
         if (interrupted && follower != null) {
             follower.breakFollowing();
+            RobotState.packet.put("Auto/PathFollowing", "Interrupted");
+        } else {
+            RobotState.packet.put("Auto/PathFollowing", "Completed");
         }
     }
 }
