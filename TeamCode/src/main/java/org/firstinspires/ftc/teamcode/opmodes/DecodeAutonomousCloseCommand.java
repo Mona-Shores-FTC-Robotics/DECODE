@@ -60,7 +60,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  * - Driving with intake/launcher positioning (parallel)
  * - Sequential scoring and collection routines
  */
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Decode Auto Close (Command)", group = "Command")
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Auto Close", group = "Command")
 @Configurable
 public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
@@ -250,8 +250,11 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 ),
                 scoreSequence(),
 
+                //preartifactpose
+                followPath(launchClosePose, poseForAlliance(24,112, 270, activeAlliance)),
+
                 // Phase 1: Collect from Gate Close and score
-            collectAndScore(preArtifacts1Pose, artifactsSet1Pose, launchClosePose, poseForAlliance(25.251184834123222,111.41232227488152, 270,activeAlliance )),
+            collectAndScore(poseForAlliance(24,112, 270, activeAlliance), artifactsSet1Pose, launchClosePose),
 
                 followPath(launchClosePose, poseForAlliance(24,90, 270, activeAlliance)),
             // Phase 2: Collect from Gate Far and score
@@ -263,11 +266,11 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 followPath(launchClosePose, poseForAlliance(30,62,270,activeAlliance)),
 
             // Phase 3: Collect from Parking Zone and score
-            collectAndScore(poseForAlliance(26,62,270,activeAlliance),
+            collectAndScore(poseForAlliance(30,62,270,activeAlliance),
                     poseForAlliance(23, 32.5,270,activeAlliance),
-                    launchClosePose),
+                    poseForAlliance(37,128, 270, activeAlliance))
 
-                followPath(launchClosePose, moveToGatePose)
+//                followPath(poseForAlliance(24,112, 270, activeAlliance), moveToGatePose)
         );
     }
 
