@@ -109,24 +109,11 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.telemetry.startSession();
-
         robot.initializeForAuto();
-
         // Initialize command factories
         intakeCommands = new IntakeCommands(robot.intake);
         launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
-
-        // Register init-phase controls
-        // Use Alliance.UNKNOWN as default to enable automatic vision detection
-        // Manual overrides (D-pad left/right) still work as expected
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
-//        driverPad.y().whenBecomesTrue(() -> applyAlliance(allianceSelector.getSelectedAlliance(), lastAppliedStartPosePedro));
-//        driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
-//        driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
-//        driverPad.a().whenBecomesTrue(this::applyLastDetectedStartPose);
-        lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector, robot.lighting);
-        lightingInitController.initialize();
-
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
