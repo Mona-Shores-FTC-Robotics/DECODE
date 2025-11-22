@@ -38,9 +38,9 @@ public class LaunchAllAtPresetRangeCommand extends Command {
         public double midRightRpm = 2400;
 
         /** Long range configuration */
-        public double longLeftRpm = 2925;
-        public double longCenterRpm = 2925; // Center disabled by default
-        public double longRightRpm = 2925;
+        public double longLeftRpm = 2900;
+        public double longCenterRpm = 2900; // Center disabled by default
+        public double longRightRpm = 2900;
 
         /** Timeout in seconds before giving up on spin-up */
         public double timeoutSeconds = 8.0;
