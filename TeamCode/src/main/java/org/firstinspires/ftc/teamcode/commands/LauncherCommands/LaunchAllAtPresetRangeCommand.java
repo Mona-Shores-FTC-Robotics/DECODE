@@ -93,6 +93,9 @@ public class LaunchAllAtPresetRangeCommand extends Command {
         queuedLanes.clear();
         spinDownApplied = false;
 
+        // Clear recovery deadlines from previous firings to allow fresh attempt
+        launcher.clearRecoveryDeadlines();
+
         // Activate prefeed roller in forward direction to help feed
         if (intake != null) {
             intake.setGateAllowArtifacts();
