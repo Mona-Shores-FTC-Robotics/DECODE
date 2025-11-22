@@ -238,14 +238,17 @@ public class LaunchAllAtPresetRangeCommand extends Command {
     }
 
     /**
-     * Queues all remaining enabled lanes (used on timeout).
+     * Queues all remaining enabled lanes that are ready (used on timeout).
+     * Only queues lanes that are actually at target RPM to prevent broken motors
+     * from blocking the shot queue.
      */
     private void queueRemainingLanes() {
         for (LauncherLane lane : LauncherLane.values()) {
             if (queuedLanes.contains(lane)) {
                 continue;
             }
-            if (launcher.getLaunchRpm(lane) > 0.0) {
+            // Only queue enabled lanes that are actually ready to fire
+            if (launcher.getLaunchRpm(lane) > 0.0 && launcher.isLaneReady(lane)) {
                 launcher.queueShot(lane);
                 queuedLanes.add(lane);
             }
