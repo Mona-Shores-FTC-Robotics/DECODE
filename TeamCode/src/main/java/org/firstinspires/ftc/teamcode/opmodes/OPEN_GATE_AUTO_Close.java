@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
-import static org.firstinspires.ftc.teamcode.opmodes.DecodeAutonomousFarCommand.buildPath;
 import static org.firstinspires.ftc.teamcode.util.AutoField.poseForAlliance;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -40,10 +39,8 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.core.units.Angle;
 import dev.nextftc.extensions.pedro.FollowPath;
 import dev.nextftc.extensions.pedro.PedroComponent;
-import dev.nextftc.extensions.pedro.TurnTo;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -60,9 +57,9 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  * - Driving with intake/launcher positioning (parallel)
  * - Sequential scoring and collection routines
  */
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Fixed Auto Close (Command)", group = "Command")
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "OPEN GATE Auto - Close", group = "Command")
 @Configurable
-public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
+public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
@@ -79,7 +76,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     }
 
     // Public static instance for FTC Dashboard Config tab
-    public static DecodeAutonomousCloseCommand.AutoMotionConfig config = new DecodeAutonomousCloseCommand.AutoMotionConfig();
+    public static OPEN_GATE_AUTO_Close.AutoMotionConfig config = new OPEN_GATE_AUTO_Close.AutoMotionConfig();
 
     private Robot robot;
     private AllianceSelector allianceSelector;
@@ -123,12 +120,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         // Manual overrides (D-pad left/right) still work as expected
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
-//        driverPad.y().whenBecomesTrue(() -> applyAlliance(allianceSelector.getSelectedAlliance(), lastAppliedStartPosePedro));
-//        driverPad.leftBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.BLUE));
-//        driverPad.rightBumper().whenBecomesTrue(() -> drawPreviewForAlliance(Alliance.RED));
-//        driverPad.a().whenBecomesTrue(this::applyLastDetectedStartPose);
-//        lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector, robot.lighting);
-//        lightingInitController.initialize();
 
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
@@ -254,7 +245,10 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 followPath(launchClosePose, poseForAlliance(24,112, 270, activeAlliance)),
 
                 // Phase 1: Collect from Gate Close and score
-            collectAndScore(poseForAlliance(24,112, 270, activeAlliance), artifactsSet1Pose, launchClosePose),
+                collectAndScore(poseForAlliance(24,112, 270, activeAlliance), artifactsSet1Pose, poseForAlliance(19,78, 180, activeAlliance)),
+
+                new Delay(1.0),
+                followPath(poseForAlliance(19,78, 180, activeAlliance), launchClosePose),
 
                 followPath(launchClosePose, poseForAlliance(24,90, 270, activeAlliance)),
             // Phase 2: Collect from Gate Far and score
@@ -336,7 +330,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
      * Phase 1: Uses position-specific tunable RPM from LaunchAtPositionCommand.PositionRpmConfig
      */
     private Command spinUpLauncher() {
-        return launcherCommands.spinUpForPosition(AutoField.FieldPoint.LAUNCH_CLOSE);
+        return launcherCommands.spinUpForPosition(FieldPoint.LAUNCH_CLOSE);
     }
 
     /**
