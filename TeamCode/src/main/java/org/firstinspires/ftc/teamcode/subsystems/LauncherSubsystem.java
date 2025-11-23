@@ -11,6 +11,13 @@ import com.qualcomm.robotcore.util.Range;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig.FlywheelControlMode;
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherReverseIntakeConfig;
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherTimingConfig;
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherVoltageCompensationConfig;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 
@@ -36,12 +43,6 @@ public class LauncherSubsystem implements Subsystem {
         FULL
     }
 
-    public enum FlywheelControlMode {
-        HYBRID,
-        BANG_BANG_HOLD,
-        PURE_BANG_BANG
-    }
-
     private enum ControlPhase {
         BANG,
         HYBRID,
@@ -57,334 +58,15 @@ public class LauncherSubsystem implements Subsystem {
         RECOVERING
     }
 
-    @Configurable
-    public static class Timing {
-        /** Minimum time the wheel should be commanded at launch speed before trusting fallback readiness. */
-        public double minimalSpinUpMs = 500;
-        /** If encoders are unavailable, treat the wheel as ready after this many milliseconds at full power. */
-        public double fallbackReadyMs = 500;
-        /** Time to keep flywheel at launch speed after firing to ensure artifact clears (ms). */
-        public double launchHoldAfterFireMs = 500;
-        /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-        public double recoveryMs = 350;
-        /** Delay between sequential shots when bursting all three lanes (ms). */
-        public double burstSpacingMs = 120.0;
-    }
-
-    @Configurable
-    public static class VoltageCompensationConfig {
-        /** Enable battery voltage compensation for consistent motor performance */
-        public boolean enabled = true;
-        /** Nominal battery voltage for calibration (typically 12.5V for full charge) */
-        public double nominalVoltage = 12.5;
-        /** Minimum voltage threshold - below this, compensation is clamped for safety */
-        public double minVoltage = 9.0;
-    }
-
-    @Configurable
-    public static class FlywheelConfig {
-        public FlywheelParameters parameters = new FlywheelParameters();
-        public FlywheelModeConfig modeConfig = new FlywheelModeConfig();
-
-        @Configurable
-        public static class FlywheelParameters {
-            /** Encoder ticks per motor revolution (adjust for the selected motor). */
-            public double ticksPerRev = 28;
-            /** Output wheel revolutions per motor revolution. */
-            public double gearRatio = 1.0;
-            /** Acceptable RPM error when considering a lane ready to fire. */
-            public double rpmTolerance = 50;
-        }
-
-        @Configurable
-        public static class FlywheelModeConfig {
-            public FlywheelControlMode mode = FlywheelControlMode.HYBRID;
-            public BangBangConfig bangBang = new BangBangConfig();
-            public HybridPidConfig hybridPid = new HybridPidConfig();
-            public HoldConfig hold = new HoldConfig();
-            public PhaseSwitchConfig phaseSwitch = new PhaseSwitchConfig();
-            @Configurable
-            public static class BangBangConfig {
-                public double highPower = 1.0;
-                public double lowPower = 0.2;
-                public double enterBangThresholdRpm = 800;
-                public double exitBangThresholdRpm = 600;
-            }
-
-            @Configurable
-            public static class HybridPidConfig {
-                public double kP = .0065;
-                public double kF = .22; // Why was 6 afraid of 7? Because 7 ate 9!
-                public double maxPower = 1.0;
-            }
-
-            @Configurable
-            public static class HoldConfig {
-                public double baseHoldPower = 0.6;
-                public double rpmPowerGain = 0.00012;
-                public double minHoldPower = 0.2;
-                public double maxHoldPower = 1.0;
-            }
-
-            @Configurable
-            public static class PhaseSwitchConfig {
-                public int bangToHybridConfirmCycles = 1;
-                public int bangToHoldConfirmCycles = 3;
-                public int hybridToBangConfirmCycles = 3;
-                public int holdToBangConfirmCycles = 3;
-            }
-
-        }
-
-        public LeftFlywheelConfig flywheelLeft = new LeftFlywheelConfig();
-        public CenterFlywheelConfig flywheelCenter = new CenterFlywheelConfig();
-        public RightFlywheelConfig flywheelRight = new RightFlywheelConfig();
-
-        @Configurable
-        public static class LeftFlywheelConfig {
-            public String motorName = "launcher_left";
-            public boolean reversed = true; ///19429 has to be true.
-            public double idleRpm = 1100;
-        }
-
-        @Configurable
-        public static class CenterFlywheelConfig {
-            public String motorName = "launcher_center";
-            public boolean reversed = false;
-            public double idleRpm = 1100;
-        }
-
-        @Configurable
-        public static class RightFlywheelConfig { //actually left
-            public String motorName = "launcher_right";
-            public boolean reversed = true;
-            public double idleRpm = 1100;
-        }
-    }
-
-    @Configurable
-    public static class FeederConfig {
-        public LeftFeederConfig left = new LeftFeederConfig();
-        public CenterFeederConfig center = new CenterFeederConfig();
-        public RightFeederConfig right = new RightFeederConfig();
-
-        @Configurable
-        public static class LeftFeederConfig {
-            public String servoName = "feeder_left";
-            public boolean reversed = false;
-            public double loadPosition = .8;
-            public double firePosition = .61; //toward 0 moves toward fire position
-            public double holdMs = 1000;
-        }
-
-        @Configurable
-        public static class CenterFeederConfig {
-            public String servoName = "feeder_center";
-            public boolean reversed = false;
-            public double loadPosition = .93;
-            public double firePosition = .75; //toward 0 moves toward fire position
-            public double holdMs = 1000;
-        }
-
-        @Configurable
-        public static class RightFeederConfig {
-            public String servoName = "feeder_right";
-            public boolean reversed = false;
-            public double loadPosition = .75;
-            public double firePosition = .56; //toward 0 moves toward fire position
-            public double holdMs = 1000;
-        }
-    }
-
-    @Configurable
-    public static class HoodConfig {
-        public double retractedPosition = 1;
-        public double extendedPosition = 0;
-
-        public LeftHoodConfig hoodLeft = new LeftHoodConfig();
-        public CenterHoodConfig hoodCenter = new CenterHoodConfig();
-        public RightHoodConfig hoodRight = new RightHoodConfig();
-
-        @Configurable
-        public static class LeftHoodConfig {
-            public String servoName = "hood_left";
-
-            /**
-             * Hood position for short range shots
-             */
-            public double shortPosition = .3;
-            /**
-             * Hood position for mid range shots
-             */
-            public double midPosition = .05;
-            /**
-             * Hood position for long range shots
-             */
-            public double longPosition = 0;
-        }
-
-        @Configurable
-        public static class CenterHoodConfig {
-            public String servoName = "hood_center";
-            /**
-             * Hood position for short range shots
-             */
-            public double shortPosition = .3;
-            /**
-             * Hood position for mid range shots
-             */
-            public double midPosition = .05;
-            /**
-             * Hood position for long range shots
-             */
-            public double longPosition = 0;
-        }
-
-        @Configurable
-        public static class RightHoodConfig {
-            public String servoName = "hood_right";
-            /**
-             * Hood position for short range shots
-             */
-            public double shortPosition =.3;
-            //TODO consider idle position and weirdness if idle is above the short shot.
-            /**
-             * Hood position for mid range shots
-             */
-            public double midPosition = .05;
-            /**
-             * Hood position for long range shots
-             */
-            public double longPosition = 0;
-        }
-    }
-
-    @Configurable
-    public static class ReverseFlywheelForHumanLoadingConfig {
-        /** Power level for reverse intake (negative runs motors backward) */
-        public double reversePower = -0.7;
-    }
-
-    public static VoltageCompensationConfig voltageCompensationConfig = new VoltageCompensationConfig();
-
-    // Robot-specific Timing instances - visible in Panels for tuning
-    public static Timing timing19429 = createTiming19429();
-    public static Timing timing20245 = createTiming20245();
-
-    // Robot-specific FlywheelConfig instances - visible in Panels for tuning
-    public static FlywheelConfig flywheelConfig19429 = createFlywheelConfig19429();
-    public static FlywheelConfig flywheelConfig20245 = createFlywheelConfig20245();
-
-    // Robot-specific FeederConfig instances - visible in Panels for tuning
-    public static FeederConfig feederConfig19429 = createFeederConfig19429();
-    public static FeederConfig feederConfig20245 = createFeederConfig20245();
-
-    // Robot-specific HoodConfig instances - visible in Paflynels for tuning
-    public static HoodConfig hoodConfig19429 = createHoodConfig19429();
-    public static HoodConfig hoodConfig20245 = createHoodConfig20245();
-
-    // Helper to create 19429-specific timing config
-    private static Timing createTiming19429() {
-        Timing timing = new Timing();
-        timing.recoveryMs = 350;  // 19429 uses longer recovery time
-        return timing;
-    }
-
-    // Helper to create 20245-specific timing config
-    private static Timing createTiming20245() {
-        Timing timing = new Timing();
-        timing.recoveryMs = 150;  // 20245 uses shorter recovery time
-        return timing;
-    }
-
-    // Helper to create 19429-specific flywheel config
-    private static FlywheelConfig createFlywheelConfig19429() {
-        FlywheelConfig config = new FlywheelConfig();
-        config.parameters.rpmTolerance = 50;  // Tighter tolerance
-        config.modeConfig.hybridPid.kP = 0.008;  // Different PID gain
-        config.flywheelLeft.reversed = true;  // 19429 has left motor reversed
-        config.flywheelLeft.idleRpm = 1500;
-        config.flywheelCenter.idleRpm = 1500;
-        config.flywheelRight.idleRpm = 1500;
-        return config;
-    }
-
-    // Helper to create 20245-specific flywheel config
-    private static FlywheelConfig createFlywheelConfig20245() {
-        FlywheelConfig config = new FlywheelConfig();
-        config.parameters.rpmTolerance = 50;  // Looser tolerance
-        config.modeConfig.hybridPid.kP = 0.008;
-        config.flywheelLeft.reversed = false;  // 20245 has left motor forward
-        config.flywheelLeft.idleRpm = 1500;
-        config.flywheelCenter.idleRpm = 1500;
-        config.flywheelRight.idleRpm = 1500;
-        return config;
-    }
-
-    // Helper to create 19429-specific feeder config
-    private static FeederConfig createFeederConfig19429() {
-        return new FeederConfig(); // Uses default values
-    }
-
-    // Helper to create 20245-specific feeder config
-    private static FeederConfig createFeederConfig20245() {
-        FeederConfig config = new FeederConfig();
-        // Apply 20245-specific values
-        config.center.loadPosition = .18;
-        config.center.firePosition = .03;
-
-        config.right.loadPosition = .78;
-        config.right.firePosition = .58;
-
-        config.left.loadPosition = .33;
-        config.left.firePosition = .18;
-        return config;
-    }
-
-    // Helper to create 19429-specific hood config
-    private static HoodConfig createHoodConfig19429() {
-        HoodConfig config = new HoodConfig();
-        config.hoodRight.midPosition = 0.05;
-        config.hoodRight.longPosition = 0;
-        config.hoodRight.shortPosition = .3;
-
-        config.hoodCenter.midPosition = 0.05;
-        config.hoodCenter.longPosition = 0;
-        config.hoodCenter.shortPosition = .3;
-
-        config.hoodLeft.midPosition = 0.05;
-        config.hoodLeft.longPosition = 0;
-        config.hoodLeft.shortPosition = .3;
-        // Apply 20245-specific values if needed
-        // (currently using default values - customize as needed)
-        return config;
-
-    }
-
-    // Helper to create 20245-specific hood config
-    private static HoodConfig createHoodConfig20245() {
-        HoodConfig config = new HoodConfig();
-        config.hoodRight.midPosition = 0.05;
-        config.hoodRight.longPosition = 0;
-        config.hoodRight.shortPosition = .3;
-
-        config.hoodCenter.midPosition = 0.05;
-        config.hoodCenter.longPosition = 0;
-        config.hoodCenter.shortPosition = .3;
-
-        config.hoodLeft.midPosition = 0.05;
-        config.hoodLeft.longPosition = 0;
-        config.hoodLeft.shortPosition = .3;
-        // Apply 20245-specific values if needed
-        // (currently using default values - customize as needed)
-        return config;
-    }
+    // Global configuration instances
+    public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
+    public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
 
     /**
      * Gets the robot-specific Timing based on RobotState.getRobotName().
      * @return timing19429 or timing20245
      */
-    public static Timing timing() {
+    public static LauncherTimingConfig timing() {
         return RobotConfigs.getTiming();
     }
 
@@ -392,7 +74,7 @@ public class LauncherSubsystem implements Subsystem {
      * Gets the robot-specific FlywheelConfig based on RobotState.getRobotName().
      * @return flywheelConfig19429 or flywheelConfig20245
      */
-    public static FlywheelConfig flywheelConfig() {
+    public static LauncherFlywheelConfig flywheelConfig() {
         return RobotConfigs.getFlywheelConfig();
     }
 
@@ -400,7 +82,7 @@ public class LauncherSubsystem implements Subsystem {
      * Gets the robot-specific FeederConfig based on RobotState.getRobotName().
      * @return feederConfig19429 or feederConfig20245
      */
-    public static FeederConfig feederConfig() {
+    public static LauncherFeederConfig feederConfig() {
         return RobotConfigs.getFeederConfig();
     }
 
@@ -408,11 +90,9 @@ public class LauncherSubsystem implements Subsystem {
      * Gets the robot-specific HoodConfig based on RobotState.getRobotName().
      * @return hoodConfig19429 or hoodConfig20245
      */
-    public static HoodConfig hoodConfig() {
+    public static LauncherHoodConfig hoodConfig() {
         return RobotConfigs.getHoodConfig();
     }
-
-    public static ReverseFlywheelForHumanLoadingConfig reverseFlywheelForHumanLoadingConfig = new ReverseFlywheelForHumanLoadingConfig();
 
     private final HardwareMap hardwareMap;
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
