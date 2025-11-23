@@ -15,7 +15,7 @@ public class LauncherTimingConfig {
     /** Time to keep flywheel at launch speed after firing to ensure artifact clears (ms). */
     public double launchHoldAfterFireMs = 500;
     /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
-    public double recoveryMs = 350;
+    public double recoveryMs = 150;
     /** Delay between sequential shots when bursting all three lanes (ms). */
     public double burstSpacingMs = 120.0;
 
@@ -28,7 +28,6 @@ public class LauncherTimingConfig {
      */
     private static LauncherTimingConfig createTiming19429() {
         LauncherTimingConfig timing = new LauncherTimingConfig();
-        timing.recoveryMs = 350;  // 19429 uses longer recovery time
         return timing;
     }
 
@@ -37,7 +36,6 @@ public class LauncherTimingConfig {
      */
     private static LauncherTimingConfig createTiming20245() {
         LauncherTimingConfig timing = new LauncherTimingConfig();
-        timing.recoveryMs = 150;  // 20245 uses shorter recovery time
         return timing;
     }
 }

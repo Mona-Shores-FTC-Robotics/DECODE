@@ -46,8 +46,8 @@ public class LauncherFlywheelConfig {
 
         @Configurable
         public static class HybridPidConfig {
-            public double kP = .0065;
-            public double kF = .22; // Why was 6 afraid of 7? Because 7 ate 9!
+            public double kP = .008;
+            public double kF = .22;
             public double maxPower = 1.0;
         }
 
@@ -75,39 +75,31 @@ public class LauncherFlywheelConfig {
     @Configurable
     public static class LeftFlywheelConfig {
         public String motorName = "launcher_left";
-        public boolean reversed = true; ///19429 has to be true.
-        public double idleRpm = 1100;
+        public boolean reversed; //TODO Is this really reversed depending on robot?
+        public double idleRpm = 1500;
     }
 
     @Configurable
     public static class CenterFlywheelConfig {
         public String motorName = "launcher_center";
         public boolean reversed = false;
-        public double idleRpm = 1100;
+        public double idleRpm = 1500;
     }
 
     @Configurable
     public static class RightFlywheelConfig { //actually left
         public String motorName = "launcher_right";
         public boolean reversed = true;
-        public double idleRpm = 1100;
+        public double idleRpm = 1500;
     }
 
     // Robot-specific instances
     public static LauncherFlywheelConfig flywheelConfig19429 = createFlywheelConfig19429();
     public static LauncherFlywheelConfig flywheelConfig20245 = createFlywheelConfig20245();
 
-    /**
-     * Creates flywheel configuration for robot 19429.
-     */
     private static LauncherFlywheelConfig createFlywheelConfig19429() {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
-        config.parameters.rpmTolerance = 50;  // Tighter tolerance
-        config.modeConfig.hybridPid.kP = 0.008;  // Different PID gain
         config.flywheelLeft.reversed = true;  // 19429 has left motor reversed
-        config.flywheelLeft.idleRpm = 1500;
-        config.flywheelCenter.idleRpm = 1500;
-        config.flywheelRight.idleRpm = 1500;
         return config;
     }
 
@@ -116,12 +108,8 @@ public class LauncherFlywheelConfig {
      */
     private static LauncherFlywheelConfig createFlywheelConfig20245() {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
-        config.parameters.rpmTolerance = 50;  // Looser tolerance
-        config.modeConfig.hybridPid.kP = 0.008;
-        config.flywheelLeft.reversed = false;  // 20245 has left motor forward
-        config.flywheelLeft.idleRpm = 1500;
-        config.flywheelCenter.idleRpm = 1500;
-        config.flywheelRight.idleRpm = 1500;
+        config.flywheelLeft.reversed = false;
+
         return config;
     }
 }

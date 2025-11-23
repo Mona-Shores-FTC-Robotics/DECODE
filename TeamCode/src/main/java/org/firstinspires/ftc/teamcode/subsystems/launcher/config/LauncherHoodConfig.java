@@ -18,53 +18,24 @@ public class LauncherHoodConfig {
     @Configurable
     public static class LeftHoodConfig {
         public String servoName = "hood_left";
-
-        /**
-         * Hood position for short range shots
-         */
         public double shortPosition = .3;
-        /**
-         * Hood position for mid range shots
-         */
         public double midPosition = .05;
-        /**
-         * Hood position for long range shots
-         */
         public double longPosition = 0;
     }
 
     @Configurable
     public static class CenterHoodConfig {
         public String servoName = "hood_center";
-        /**
-         * Hood position for short range shots
-         */
         public double shortPosition = .3;
-        /**
-         * Hood position for mid range shots
-         */
         public double midPosition = .05;
-        /**
-         * Hood position for long range shots
-         */
         public double longPosition = 0;
     }
 
     @Configurable
     public static class RightHoodConfig {
         public String servoName = "hood_right";
-        /**
-         * Hood position for short range shots
-         */
         public double shortPosition =.3;
-        //TODO consider idle position and weirdness if idle is above the short shot.
-        /**
-         * Hood position for mid range shots
-         */
         public double midPosition = .05;
-        /**
-         * Hood position for long range shots
-         */
         public double longPosition = 0;
     }
 
@@ -72,9 +43,6 @@ public class LauncherHoodConfig {
     public static LauncherHoodConfig hoodConfig19429 = createHoodConfig19429();
     public static LauncherHoodConfig hoodConfig20245 = createHoodConfig20245();
 
-    /**
-     * Creates hood configuration for robot 19429.
-     */
     private static LauncherHoodConfig createHoodConfig19429() {
         LauncherHoodConfig config = new LauncherHoodConfig();
         config.hoodRight.midPosition = 0.05;
@@ -88,14 +56,9 @@ public class LauncherHoodConfig {
         config.hoodLeft.midPosition = 0.05;
         config.hoodLeft.longPosition = 0;
         config.hoodLeft.shortPosition = .3;
-        // Apply 20245-specific values if needed
-        // (currently using default values - customize as needed)
         return config;
     }
 
-    /**
-     * Creates hood configuration for robot 20245.
-     */
     private static LauncherHoodConfig createHoodConfig20245() {
         LauncherHoodConfig config = new LauncherHoodConfig();
         config.hoodRight.midPosition = 0.05;
@@ -109,8 +72,6 @@ public class LauncherHoodConfig {
         config.hoodLeft.midPosition = 0.05;
         config.hoodLeft.longPosition = 0;
         config.hoodLeft.shortPosition = .3;
-        // Apply 20245-specific values if needed
-        // (currently using default values - customize as needed)
         return config;
     }
 }

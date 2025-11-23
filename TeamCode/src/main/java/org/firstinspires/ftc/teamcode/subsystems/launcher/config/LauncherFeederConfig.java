@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 import com.bylazar.configurables.annotations.Configurable;
 
 /**
- * Feeder (bootkicker) configuration for launcher servos.
+ * Feeder (kicker) configuration for launcher servos.
  * Contains base configuration and robot-specific instances.
  */
 @Configurable
@@ -13,30 +13,34 @@ public class LauncherFeederConfig {
     public RightFeederConfig right = new RightFeederConfig();
 
     @Configurable
-    public static class LeftFeederConfig {
-        public String servoName = "feeder_left";
-        public boolean reversed = false;
-        public double loadPosition = .8;
-        public double firePosition = .61; //toward 0 moves toward fire position
-        public double holdMs = 1000;
-    }
-
-    @Configurable
     public static class CenterFeederConfig {
         public String servoName = "feeder_center";
         public boolean reversed = false;
-        public double loadPosition = .93;
-        public double firePosition = .75; //toward 0 moves toward fire position
         public double holdMs = 1000;
+
+        public double loadPosition;
+        public double firePosition;
+    }
+
+
+    @Configurable
+    public static class LeftFeederConfig {
+        public String servoName = "feeder_left";
+        public boolean reversed = false;
+        public double holdMs = 1000;
+
+        public double loadPosition;
+        public double firePosition;
     }
 
     @Configurable
     public static class RightFeederConfig {
         public String servoName = "feeder_right";
         public boolean reversed = false;
-        public double loadPosition = .75;
-        public double firePosition = .56; //toward 0 moves toward fire position
         public double holdMs = 1000;
+
+        public double loadPosition;
+        public double firePosition;
     }
 
     // Robot-specific instances
@@ -47,12 +51,20 @@ public class LauncherFeederConfig {
      * Creates feeder configuration for robot 19429.
      */
     private static LauncherFeederConfig createFeederConfig19429() {
-        return new LauncherFeederConfig(); // Uses default values
+        LauncherFeederConfig config = new LauncherFeederConfig();
+        // Apply 19429-specific values
+        config.center.loadPosition = .93;
+        config.center.firePosition = .75;
+
+        config.left.loadPosition = .8;
+        config.left.firePosition = .61;
+
+        config.right.loadPosition = .75;
+        config.right.firePosition = .56;
+
+        return config;
     }
 
-    /**
-     * Creates feeder configuration for robot 20245.
-     */
     private static LauncherFeederConfig createFeederConfig20245() {
         LauncherFeederConfig config = new LauncherFeederConfig();
         // Apply 20245-specific values
