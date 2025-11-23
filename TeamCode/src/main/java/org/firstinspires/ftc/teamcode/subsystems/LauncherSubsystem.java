@@ -173,6 +173,7 @@ public class LauncherSubsystem implements Subsystem {
             public String servoName = "feeder_left";
             public boolean reversed = false;
             public double loadPosition = .8;
+            public double pinchPosition = .7; // Position to pinch artifact against gate
             public double firePosition = .61; //toward 0 moves toward fire position
             public double holdMs = 1000;
         }
@@ -182,6 +183,7 @@ public class LauncherSubsystem implements Subsystem {
             public String servoName = "feeder_center";
             public boolean reversed = false;
             public double loadPosition = .93;
+            public double pinchPosition = .84; // Position to pinch artifact against gate
             public double firePosition = .75; //toward 0 moves toward fire position
             public double holdMs = 1000;
         }
@@ -191,6 +193,7 @@ public class LauncherSubsystem implements Subsystem {
             public String servoName = "feeder_right";
             public boolean reversed = false;
             public double loadPosition = .75;
+            public double pinchPosition = .655; // Position to pinch artifact against gate
             public double firePosition = .56; //toward 0 moves toward fire position
             public double holdMs = 1000;
         }
@@ -323,7 +326,13 @@ public class LauncherSubsystem implements Subsystem {
 
     // Helper to create 19429-specific feeder config
     private static FeederConfig createFeederConfig19429() {
-        return new FeederConfig(); // Uses default values
+        FeederConfig config = new FeederConfig();
+        // Robot 19429 uses default load/fire positions
+        // Set pinch positions between load and fire for each lane
+        config.left.pinchPosition = .7;
+        config.center.pinchPosition = .84;
+        config.right.pinchPosition = .655;
+        return config;
     }
 
     // Helper to create 20245-specific feeder config
@@ -331,12 +340,15 @@ public class LauncherSubsystem implements Subsystem {
         FeederConfig config = new FeederConfig();
         // Apply 20245-specific values
         config.center.loadPosition = .18;
+        config.center.pinchPosition = .105; // Between load (.18) and fire (.03)
         config.center.firePosition = .03;
 
         config.right.loadPosition = .78;
+        config.right.pinchPosition = .68; // Between load (.78) and fire (.58)
         config.right.firePosition = .58;
 
         config.left.loadPosition = .33;
+        config.left.pinchPosition = .255; // Between load (.33) and fire (.18)
         config.left.firePosition = .18;
         return config;
     }
@@ -651,9 +663,22 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    public void moveFeederToPinch(LauncherLane lane) {
+        Feeder feeder = feeders.get(lane);
+        if (feeder != null) {
+            feeder.toPinchPosition();
+        }
+    }
+
     public void homeAllFeeders() {
         for (Feeder feeder : feeders.values()) {
             feeder.toLoadPosition();
+        }
+    }
+
+    public void pinchAllFeeders() {
+        for (Feeder feeder : feeders.values()) {
+            feeder.toPinchPosition();
         }
     }
 
@@ -1137,6 +1162,18 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    private static double feederPinchPositionFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return clampServo(feederConfig().left.pinchPosition);
+            case CENTER:
+                return clampServo(feederConfig().center.pinchPosition);
+            case RIGHT:
+            default:
+                return clampServo(feederConfig().right.pinchPosition);
+        }
+    }
+
     private static boolean feederReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
@@ -1573,6 +1610,13 @@ public class LauncherSubsystem implements Subsystem {
         void toLoadPosition() {
             if (servo != null) {
                 servo.setPosition(feederLoadPositionFor(lane));
+            }
+            busy = false;
+        }
+
+        void toPinchPosition() {
+            if (servo != null) {
+                servo.setPosition(feederPinchPositionFor(lane));
             }
             busy = false;
         }
