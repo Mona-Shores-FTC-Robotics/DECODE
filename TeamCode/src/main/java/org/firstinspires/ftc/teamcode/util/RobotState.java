@@ -21,7 +21,7 @@ public class RobotState {
 
     public static void setAlliance(Alliance value) { alliance.set(value == null ? Alliance.UNKNOWN : value); }
 
-    public static void setRobotName(String value) { robotName.set(value == null ? "UNKNOWN" : value); }
+    public static void setRobotName(String value) { robotName.set(value == null ? "DECODE_20245" : value); }
     public static String getRobotName() { return robotName.get(); }
 
 

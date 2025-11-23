@@ -24,11 +24,11 @@ public class RobotConfigs {
      */
     public static LauncherSubsystem.FeederConfig getFeederConfig() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return LauncherSubsystem.feederConfig20245;
+        if ("DECODE_19429".equals(robotName)) {
+            return LauncherSubsystem.feederConfig19429;
         } else {
             // Default to 19429 config if robot name is unknown or is 19429
-            return LauncherSubsystem.feederConfig19429;
+            return LauncherSubsystem.feederConfig20245;
         }
     }
 
@@ -39,11 +39,11 @@ public class RobotConfigs {
      */
     public static LauncherSubsystem.HoodConfig getHoodConfig() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return LauncherSubsystem.hoodConfig20245;
+        if ("DECODE_19429".equals(robotName)) {
+            return LauncherSubsystem.hoodConfig19429;
         } else {
             // Default to 19429 config if robot name is unknown or is 19429
-            return LauncherSubsystem.hoodConfig19429;
+            return LauncherSubsystem.hoodConfig20245;
         }
     }
 
@@ -54,31 +54,31 @@ public class RobotConfigs {
      */
     public static PinpointConstants getPinpointConstants() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return Constants.pinpointConstants20245;
+        if ("DECODE_19429".equals(robotName)) {
+            return Constants.pinpointConstants19429;
         } else {
             // Default to 19429 config if robot name is unknown or is 19429
-            return Constants.pinpointConstants19429;
+            return Constants.pinpointConstants20245;
         }
     }
 
     public static FollowerConstants getFollowerConstants() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return Constants.followerConstants20245;
+        if ("DECODE_19429".equals(robotName)) {
+            return Constants.followerConstants19429;
         } else {
             // Default to 19429 config if robot name is unknown or is 19429
-            return Constants.followerConstants19429;
+            return Constants.followerConstants20245;
         }
     }
 
     public static MecanumConstants getDriveConstants() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return Constants.driveConstants20245;
+        if ("DECODE_19429".equals(robotName)) {
+            return Constants.driveConstants19429;
         } else {
             // Default to 19429 config if robot name is unknown or is 19429
-            return Constants.driveConstants19429;
+            return Constants.driveConstants20245;
         }
     }
 
@@ -89,10 +89,10 @@ public class RobotConfigs {
      */
     public static DriveSubsystem.FixedAngleAimConfig getFixedAngleAimConfig() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return DriveSubsystem.fixedAngleAimConfig20245;
-        } else {
+        if ("DECODE_19429".equals(robotName)) {
             return DriveSubsystem.fixedAngleAimConfig19429;
+        } else {
+            return DriveSubsystem.fixedAngleAimConfig20245;
         }
     }
 
@@ -103,10 +103,10 @@ public class RobotConfigs {
      */
     public static DriveSubsystem.InitialPoseConfig getInitialPoseConfig() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return DriveSubsystem.initialPoseConfig20245;
-        } else {
+        if ("DECODE_19429".equals(robotName)) {
             return DriveSubsystem.initialPoseConfig19429;
+        } else {
+            return DriveSubsystem.initialPoseConfig20245;
         }
     }
 
@@ -117,10 +117,10 @@ public class RobotConfigs {
      */
     public static LauncherSubsystem.Timing getTiming() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return LauncherSubsystem.timing20245;
-        } else {
+        if ("DECODE_19429".equals(robotName)) {
             return LauncherSubsystem.timing19429;
+        } else {
+            return LauncherSubsystem.timing20245;
         }
     }
 
@@ -131,10 +131,10 @@ public class RobotConfigs {
      */
     public static LauncherSubsystem.FlywheelConfig getFlywheelConfig() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return LauncherSubsystem.flywheelConfig20245;
-        } else {
+        if ("DECODE_19429".equals(robotName)) {
             return LauncherSubsystem.flywheelConfig19429;
+        } else {
+            return LauncherSubsystem.flywheelConfig20245;
         }
     }
 
@@ -145,10 +145,10 @@ public class RobotConfigs {
      */
     public static IntakeSubsystem.GateConfig getGateConfig() {
         String robotName = RobotState.getRobotName();
-        if ("DECODE_20245".equals(robotName)) {
-            return IntakeSubsystem.gateConfig20245;
-        } else {
+        if ("DECODE_19429".equals(robotName)) {
             return IntakeSubsystem.gateConfig19429;
+        } else {
+            return IntakeSubsystem.gateConfig20245;
         }
     }
 
@@ -163,7 +163,7 @@ public class RobotConfigs {
         } else if ("DECODE_19429".equals(robotName)) {
             return "19429";
         } else {
-            return "19429 (default)";
+            return "20245 (default)";
         }
     }
 }

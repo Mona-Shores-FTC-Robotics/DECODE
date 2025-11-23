@@ -55,7 +55,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  * - Driving with intake/launcher positioning (parallel)
  * - Sequential scoring and collection routines
  */
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Auto Far", group = "Command")
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Fixed Auto Far (Command)", group = "Command")
 @Configurable
 public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
