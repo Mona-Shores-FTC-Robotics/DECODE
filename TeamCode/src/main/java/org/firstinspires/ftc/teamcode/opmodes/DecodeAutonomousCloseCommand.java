@@ -251,24 +251,24 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 scoreSequence(),
 
                 //preartifactpose
-                followPath(launchClosePose, poseForAlliance(24,112, 270, activeAlliance)),
+                followPath(launchClosePose, poseForAlliance(28,112, 270, activeAlliance)),
 
                 // Phase 1: Collect from Gate Close and score
-            collectAndScore(poseForAlliance(24,112, 270, activeAlliance), artifactsSet1Pose, launchClosePose),
+            collectAndScore(poseForAlliance(28,112, 270, activeAlliance), artifactsSet1Pose, launchClosePose),
 
-                followPath(launchClosePose, poseForAlliance(24,90, 270, activeAlliance)),
+                followPath(launchClosePose, poseForAlliance(40,90, 270, activeAlliance)),
             // Phase 2: Collect from Gate Far and score
             collectAndScore(
-                    poseForAlliance(24,90, 270, activeAlliance),
-                    poseForAlliance(22,70, 270, activeAlliance),
+                    poseForAlliance(40,90, 270, activeAlliance),
+                    poseForAlliance(34,70, 270, activeAlliance),
                     launchClosePose),
 
-                followPath(launchClosePose, poseForAlliance(30,62,270,activeAlliance)),
+                followPath(launchClosePose, poseForAlliance(40,62,270,activeAlliance)),
 
             // Phase 3: Collect from Parking Zone and score
-            collectAndScore(poseForAlliance(30,62,270,activeAlliance),
-                    poseForAlliance(23, 32.5,270,activeAlliance),
-                    poseForAlliance(37,128, 270, activeAlliance))
+            collectAndScore(poseForAlliance(40,62,270,activeAlliance),
+                    poseForAlliance(40, 32.5,270,activeAlliance),
+                    poseForAlliance(37,128, 142, activeAlliance))
 
 //                followPath(poseForAlliance(24,112, 270, activeAlliance), moveToGatePose)
         );
