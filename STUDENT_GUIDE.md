@@ -230,14 +230,20 @@ class LauncherConfig {
 
 ### 3. IntakeSubsystem - The Collection Expert
 
-**Responsibility:** Collect game pieces and detect their color
+**Responsibility:** Collect game pieces, detect their color, and manage intake gate
 
 **Key Features:**
-- **Motor Control**: Forward to intake, reverse to eject
-- **Roller Gate**: Servo controls whether pieces enter
-- **Color Detection**: Three sensors read artifact colors
+- **Intake Motor**: Rubber-driven intake that pulls pieces into robot (forward to collect, reverse to eject)
+- **Roller Servo**: Continuously variable servo that can roll forward, roll reverse, or be inactive
+- **Gate Servo**: Controls three-position gate:
+  - **DOWN**: Prevents artifacts from entering flywheel (protects launcher)
+  - **ALLOW**: Permits artifact to move toward launcher
+  - **REVERSE**: Allows artifacts during human loading, also prevents them from leaving robot
+- **Color Detection**: Three sensors read artifact colors in each lane
 - **Lane Tracking**: Knows which lane has which color
 - **Automatic Updates**: Color sensors polled every loop
+
+**⚠️ Calibration Note:** Color and distance sensor logic has not yet been calibrated for field conditions
 
 **Lane States:**
 For each of the 3 lanes:
@@ -579,6 +585,28 @@ DONE or next shot
 3. Update intake lane states
 4. Notify listeners (e.g., lighting subsystem) of color changes
 
+#### Aiming Commands
+
+**AimAndDriveFixedAngleCommand ✅ WORKING**
+
+Rotates robot to a fixed heading (alliance-specific angle for goal approach).
+
+**How it works:**
+1. Calculates target heading based on alliance (e.g., 45° for RED, 135° for BLUE)
+2. Continuously measures current heading from IMU
+3. Applies rotation power to face target heading
+4. Allows driver to move forward/strafe while auto-rotating
+
+**Best for:** Reliable goal approach where you know the exact angle needed
+
+**AimAndDriveVisionCenteredCommand ⚠️ NOT YET WORKING**
+
+Intended to aim by centering the AprilTag in camera view. Currently under development.
+
+**CaptureAndAimCommand ⚠️ NOT YET WORKING**
+
+Intended to snap-turn to calculated aim angle from vision. Currently under development.
+
 ---
 
 ## OPModes: Different Robot Modes
@@ -693,6 +721,42 @@ Similar to Close, but for far-side starting position.
 
 ---
 
+## Key Utilities and Support Systems
+
+### Pose Fusion 🔬 EXPERIMENTAL
+**Purpose:** Blend Pinpoint odometry with AprilTag vision for robust localization
+
+**Current Status:** ⚠️ Data collection mode only
+- Collecting fusion data for analysis
+- **NOT YET USED** for actual robot control
+- Needs accuracy validation before deployment
+- Analysis pending from collected data
+
+**How it works:**
+- Combines two position sources: odometry (wheels) and vision (AprilTags)
+- Applies trust weighting based on vision range and measurement confidence
+- Rejects outliers that don't make sense
+- Logs diagnostic data to AdvantageScope for analysis
+
+**When it becomes useful:**
+Once accuracy analysis is complete, this will provide the most reliable robot positioning by using both sensors together.
+
+### Distance and Color Sensor Calibration ⚠️ INCOMPLETE
+**Status:** Not yet calibrated for field conditions
+
+**Distance Sensors:**
+- Used for range-based launcher control (adjusting flywheel speed based on distance to goal)
+- **Needs:** Field conditions calibration with actual lighting
+- **Diagnostic Mode:** `ArtifactColorCalibration` OpMode available for testing
+
+**Color Sensors:**
+- Detect GREEN vs PURPLE artifacts in intake lanes
+- Current detection logic implemented but **not validated**
+- RGB thresholds in code may need adjustment for actual game field lighting
+- **How to calibrate:** Use `ArtifactColorCalibration` OpMode to test and adjust threshold values
+
+---
+
 ## Key Methods and Patterns
 
 ### The "Requires" Pattern
@@ -801,9 +865,10 @@ intake.setIntakeMode(IntakeMode.ACTIVE_FORWARD);  // Can't typo an enum
 3. Study Pedro Pathing path following
 
 ### Week 4: Advanced
-1. Study `CaptureAndAimCommand` - aiming logic
-2. Read `PoseFusion` - vision + odometry blending
-3. Understand `LauncherSubsystem` state machine
+1. Understand `LauncherSubsystem` state machine
+2. Study how `AimAndDriveFixedAngleCommand` uses IMU for heading control
+3. Review `PoseFusion` code and understand the blending algorithm
+4. ⚠️ Note: `CaptureAndAimCommand` and vision-centered aiming are under development
 
 ---
 
@@ -839,19 +904,26 @@ if (centerColor == ArtifactColor.GREEN) {
 
 ### "How do I aim at the goal?"
 
+**Current working method: Fixed Angle Aiming**
+
 ```java
-// Use vision-based aiming
-new AimAndDriveVisionCenteredCommand(
+// Use fixed angle aiming (currently working)
+new AimAndDriveFixedAngleCommand(
     driver inputs,
     drive subsystem,
-    vision subsystem
+    alliance  // Determines target angle
 ).schedule();
 ```
 
 This continuously:
-1. Gets aim angle from Limelight
-2. Rotates robot to face goal
-3. Drives in requested direction
+1. Calculates target heading based on alliance (RED or BLUE)
+2. Measures current heading from IMU
+3. Rotates robot to face correct heading
+4. Allows driver to move forward/strafe while auto-rotating
+
+**Vision-centered aiming** using `AimAndDriveVisionCenteredCommand` is under development and not yet available.
+
+**Best practice:** Use `AimAndDriveFixedAngleCommand` for reliable goal approach during matches until vision-based aiming is complete.
 
 ---
 
@@ -899,10 +971,23 @@ Change via FTC Dashboard **Config** tab, no recompile needed!
 
 ### Color Sensors Not Detecting
 
+⚠️ **Note:** Color sensor logic has NOT been calibrated yet for field conditions.
+
 1. Check sensor names in `Constants.java`
-2. Verify sensors calibrated under field lighting
-3. Check color threshold values in `LaneSensorConfig`
-4. Use `ArtifactColorCalibration` OpMode to test
+2. Use `ArtifactColorCalibration` OpMode to test under actual field lighting
+3. Adjust RGB threshold values in code based on calibration results
+4. Current thresholds are educated guesses - expect inaccuracy until calibrated
+5. Verify sensor I2C connections are secure
+
+### Distance Sensor Reading Looks Wrong
+
+⚠️ **Note:** Distance sensor logic for launcher control has NOT been calibrated yet.
+
+1. Check sensor name in `Constants.java`
+2. Verify sensor facing correct direction toward goal
+3. Test distance readings at known distances
+4. **Expect inaccuracy** - not yet calibrated for field conditions
+5. Use diagnostics to verify raw sensor values are reasonable
 
 ### Path Following Inaccurate
 
@@ -910,6 +995,13 @@ Change via FTC Dashboard **Config** tab, no recompile needed!
 2. Check wheel diameter and gear ratio in `Constants.java`
 3. Review Pedro Pathing PIDF tuning values
 4. Test with `Tuning.java` OpMode
+
+### Aiming Commands Not Working
+
+**AimAndDriveVisionCenteredCommand** and **CaptureAndAimCommand** are under development:
+- Use `AimAndDriveFixedAngleCommand` instead - it's working and reliable
+- Don't use the under-development aiming commands in matches yet
+- Check test branches if vision-based aiming has been completed
 
 ---
 
