@@ -63,14 +63,16 @@ dependencies {
 }
 
 // ===== CUSTOM TASK: Generate Autonomous Command from .pp file =====
-tasks.register('generateAuto', JavaExec) {
-    description = 'Generate autonomous command from .pp file'
-    group = 'Code Generation'
+afterEvaluate {
+    tasks.register('generateAuto', JavaExec) {
+        description = 'Generate autonomous command from .pp file'
+        group = 'Code Generation'
 
-    classpath = sourceSets.main.runtimeClasspath
-    mainClass = 'org.firstinspires.ftc.teamcode.util.GenerateAutoCommand'
+        classpath = sourceSets.main.runtimeClasspath
+        mainClass = 'org.firstinspires.ftc.teamcode.util.GenerateAutoCommand'
 
-    // Optional: Pass arguments
-    // args 'trajectory.pp', 'TrajectoryAuto'
+        // Optional: Pass arguments
+        // args 'trajectory.pp', 'TrajectoryAuto'
+    }
 }
 
