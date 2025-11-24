@@ -71,10 +71,10 @@ afterEvaluate {
         // Ensure the code is compiled first
         dependsOn 'compileDebugJavaWithJavac'
 
-        // Use Android build outputs for classpath
+        // Minimal classpath - just our compiled classes + Android SDK (includes org.json)
         classpath = files(
             "${buildDir}/intermediates/javac/debug/compileDebugJavaWithJavac/classes",
-            configurations.debugRuntimeClasspath
+            android.bootClasspath
         )
         mainClass = 'org.firstinspires.ftc.teamcode.util.GenerateAutoCommand'
 
