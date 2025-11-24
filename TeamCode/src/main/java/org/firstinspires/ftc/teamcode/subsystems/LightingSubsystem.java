@@ -7,6 +7,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.subsystems.lighting.config.LightingColorPositionConfig;
+import org.firstinspires.ftc.teamcode.subsystems.lighting.config.LightingIndicatorConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
@@ -32,42 +34,9 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         BUSY
     }
 
-    @Configurable
-    public static class IndicatorConfig {
-        public LeftIndicatorConfig left = new LeftIndicatorConfig();
-        public CenterIndicatorConfig center = new CenterIndicatorConfig();
-        public RightIndicatorConfig right = new RightIndicatorConfig();
-
-        @Configurable
-        public static class LeftIndicatorConfig {
-            public String servoName = "indicator_left";
-        }
-
-        @Configurable
-        public static class CenterIndicatorConfig {
-            public String servoName = "indicator_center";
-        }
-
-        @Configurable
-        public static class RightIndicatorConfig {
-            public String servoName = "indicator_right";
-        }
-    }
-
-    @Configurable
-    public static class ColorPositionConfig {
-        public double greenPosition = 0.500;
-        public double purplePosition = 0.722;
-        public double redPosition = 0.281;
-        public double bluePosition = 0.611;
-        public double offPosition = 0.000;
-        public double whitePosition = 0.944;
-        public double yellowPosition = 0.167;
-        public double busyPosition = 0.722;
-    }
-
-    public static IndicatorConfig indicatorConfig = new IndicatorConfig();
-    public static ColorPositionConfig colorPositionConfig = new ColorPositionConfig();
+    // Global configuration instances
+    public static LightingIndicatorConfig indicatorConfig = new LightingIndicatorConfig();
+    public static LightingColorPositionConfig colorPositionConfig = new LightingColorPositionConfig();
 
     private final EnumMap<LauncherLane, LaneIndicator> laneIndicators = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
