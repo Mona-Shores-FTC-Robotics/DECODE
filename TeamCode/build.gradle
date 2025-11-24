@@ -63,11 +63,11 @@ dependencies {
 }
 
 // ===== CUSTOM TASK: Generate Autonomous Command from .pp file =====
-task generateAuto(type: JavaExec) {
+tasks.register('generateAuto', JavaExec) {
     description = 'Generate autonomous command from .pp file'
     group = 'Code Generation'
 
-    classpath sourceSets.main.runtimeClasspath
+    classpath = sourceSets.main.runtimeClasspath
     mainClass = 'org.firstinspires.ftc.teamcode.util.GenerateAutoCommand'
 
     // Optional: Pass arguments
