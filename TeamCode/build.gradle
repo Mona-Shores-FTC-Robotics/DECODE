@@ -61,3 +61,16 @@ dependencies {
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
 
 }
+
+// ===== CUSTOM TASK: Generate Autonomous Command from .pp file =====
+task generateAuto(type: JavaExec) {
+    description = 'Generate autonomous command from .pp file'
+    group = 'Code Generation'
+
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'org.firstinspires.ftc.teamcode.util.GenerateAutoCommand'
+
+    // Optional: Pass arguments
+    // args 'trajectory.pp', 'TrajectoryAuto'
+}
+
