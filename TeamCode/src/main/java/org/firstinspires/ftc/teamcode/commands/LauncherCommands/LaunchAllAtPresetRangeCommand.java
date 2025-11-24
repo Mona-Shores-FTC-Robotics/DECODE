@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import dev.nextftc.core.commands.Command;
 
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchAllAtPresetRangeConfig;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
@@ -25,28 +26,7 @@ import java.util.Objects;
 @Configurable
 public class LaunchAllAtPresetRangeCommand extends Command {
 
-    @Configurable
-    public static class RangeRpmConfig {
-        /** Short range configuration */
-        public double shortLeftRpm = 2000;
-        public double shortCenterRpm = 2000; // Center disabled by default
-        public double shortRightRpm = 2000;
-
-        /** Mid range configuration (default/current values) */
-        public double midLeftRpm = 2400;
-        public double midCenterRpm = 2400; // Center disabled by default
-        public double midRightRpm = 2400;
-
-        /** Long range configuration */
-        public double longLeftRpm = 2725;
-        public double longCenterRpm = 2725; // Center disabled by default
-        public double longRightRpm = 2725; //2850 before but we had low battery and maked a bunch
-
-        /** Timeout in seconds before giving up on spin-up */
-        public double timeoutSeconds = 3.5;
-    }
-
-    public static RangeRpmConfig rangeRpmConfig = new RangeRpmConfig();
+    public static LaunchAllAtPresetRangeConfig rangeRpmConfig = new LaunchAllAtPresetRangeConfig();
 
     private enum Stage {
         SPINNING_UP,
