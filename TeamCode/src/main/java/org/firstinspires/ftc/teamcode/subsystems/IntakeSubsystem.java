@@ -35,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 
 /**
  * Hardware-facing intake wrapper. Handles motor power, roller servo, and lane sensor sampling
@@ -60,7 +61,7 @@ public class IntakeSubsystem implements Subsystem {
      * @return gateConfig19429 or gateConfig20245
      */
     public static IntakeGateConfig gateConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getGateConfig();
+        return RobotConfigs.getGateConfig();
     }
 
     public static final class LaneSample {
@@ -184,6 +185,7 @@ public class IntakeSubsystem implements Subsystem {
             rollerServo.setPosition(rollerConfig.inactivePosition);
         }
         rollerEnabled = false;
+
         gateServo = tryGetServo(hardwareMap, gateConfig().servoName);
         if (gateServo != null) {
             gateServo.setPosition(gateConfig().allowArtifacts);

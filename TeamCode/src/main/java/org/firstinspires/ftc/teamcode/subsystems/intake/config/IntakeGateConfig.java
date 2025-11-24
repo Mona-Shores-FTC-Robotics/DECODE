@@ -10,11 +10,9 @@ import com.bylazar.configurables.annotations.Configurable;
 @Configurable
 public class IntakeGateConfig {
     public String servoName = "gate";
-    /** Reverse speed (default) - prevents accidental feeding (continuous servo: 0.0 = full reverse) */
-    public double preventArtifacts = .5;
-    /** Forward speed - helps feed artifacts when firing (continuous servo: 1.0 = full forward) */
-    public double allowArtifacts = .1;
-    public double reverseConfig = .8;
+    public double preventArtifacts;
+    public double allowArtifacts;
+    public double reverseConfig;
 
     // Robot-specific instances
     public static IntakeGateConfig gateConfig19429 = createGateConfig19429();

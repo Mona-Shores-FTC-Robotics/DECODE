@@ -6,6 +6,7 @@ import com.pedropathing.ftc.localization.constants.PinpointConstants;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
@@ -146,12 +147,12 @@ public class RobotConfigs {
      * Returns the static instance from IntakeSubsystem so Dashboard edits are applied.
      * @return gateConfig19429 or gateConfig20245 based on robot name
      */
-    public static IntakeSubsystem.GateConfig getGateConfig() {
+    public static IntakeGateConfig getGateConfig() {
         String robotName = RobotState.getRobotName();
         if ("DECODE_19429".equals(robotName)) {
-            return IntakeSubsystem.gateConfig19429;
+            return IntakeGateConfig.gateConfig19429;
         } else {
-            return IntakeSubsystem.gateConfig20245;
+            return IntakeGateConfig.gateConfig20245;
         }
     }
 
