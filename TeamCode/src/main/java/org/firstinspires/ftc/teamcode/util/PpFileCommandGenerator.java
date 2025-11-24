@@ -255,6 +255,7 @@ public class PpFileCommandGenerator {
         sb.append("import org.firstinspires.ftc.teamcode.Robot;\n");
         sb.append("import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;\n");
         sb.append("import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;\n\n");
+        sb.append("import dev.nextftc.core.commands.Command;\n");
         sb.append("import dev.nextftc.core.commands.groups.ParallelGroup;\n");
         sb.append("import dev.nextftc.core.commands.groups.SequentialGroup;\n");
         sb.append("import dev.nextftc.extensions.pedro.FollowPath;\n\n");
@@ -264,12 +265,13 @@ public class PpFileCommandGenerator {
         sb.append(" * Add robot actions where indicated.\n");
         sb.append(" * Waypoints are in ").append(commandName).append("Config.java\n");
         sb.append(" */\n");
-        sb.append("public class ").append(commandName).append("Command extends SequentialGroup {\n\n");
+        sb.append("public class ").append(commandName).append("Command extends Command {\n\n");
+        sb.append("    private final SequentialGroup sequence;\n\n");
         sb.append("    public ").append(commandName).append("Command(\n");
         sb.append("            Robot robot,\n");
         sb.append("            IntakeCommands intakeCommands,\n");
         sb.append("            LauncherCommands launcherCommands) {\n\n");
-        sb.append("        super(\n");
+        sb.append("        sequence = new SequentialGroup(\n");
 
         // Generate path following commands
         for (int i = 0; i < paths.size(); i++) {
@@ -336,6 +338,22 @@ public class PpFileCommandGenerator {
         }
 
         sb.append("        );\n");
+        sb.append("    }\n\n");
+        sb.append("    @Override\n");
+        sb.append("    public void start() {\n");
+        sb.append("        sequence.start();\n");
+        sb.append("    }\n\n");
+        sb.append("    @Override\n");
+        sb.append("    public void update() {\n");
+        sb.append("        sequence.update();\n");
+        sb.append("    }\n\n");
+        sb.append("    @Override\n");
+        sb.append("    public boolean isDone() {\n");
+        sb.append("        return sequence.isDone();\n");
+        sb.append("    }\n\n");
+        sb.append("    @Override\n");
+        sb.append("    public void end(boolean interrupted) {\n");
+        sb.append("        sequence.end(interrupted);\n");
         sb.append("    }\n");
         sb.append("}\n");
 

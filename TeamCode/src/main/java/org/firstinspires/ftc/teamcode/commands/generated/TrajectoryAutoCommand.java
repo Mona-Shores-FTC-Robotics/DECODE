@@ -3,11 +3,14 @@ package org.firstinspires.ftc.teamcode.commands.generated;
 import static org.firstinspires.ftc.teamcode.commands.generated.TrajectoryAutoConfig.*;
 
 import com.pedropathing.geometry.BezierLine;
+import com.pedropathing.geometry.BezierCurve;
+import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 
+import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.extensions.pedro.FollowPath;
@@ -18,14 +21,16 @@ import dev.nextftc.extensions.pedro.FollowPath;
  * Add robot actions where indicated.
  * Waypoints are in TrajectoryAutoConfig.java
  */
-public class TrajectoryAutoCommand extends SequentialGroup {
+public class TrajectoryAutoCommand extends Command {
+
+    private final SequentialGroup sequence;
 
     public TrajectoryAutoCommand(
             Robot robot,
             IntakeCommands intakeCommands,
             LauncherCommands launcherCommands) {
 
-        super(
+        sequence = new SequentialGroup(
             // ======================================
             // SEGMENT 1: path1
             // start → path1 (linear heading)
@@ -115,5 +120,25 @@ public class TrajectoryAutoCommand extends SequentialGroup {
             )
             // TODO: Add actions after reaching path4
         );
+    }
+
+    @Override
+    public void start() {
+        sequence.start();
+    }
+
+    @Override
+    public void update() {
+        sequence.update();
+    }
+
+    @Override
+    public boolean isDone() {
+        return sequence.isDone();
+    }
+
+    @Override
+    public void end(boolean interrupted) {
+        sequence.end(interrupted);
     }
 }
