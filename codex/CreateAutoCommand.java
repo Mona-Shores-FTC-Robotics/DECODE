@@ -15,7 +15,7 @@ import java.io.FileWriter;
  *   java -cp codex CreateAutoCommand my_auto.pp MyCustomAuto
  *
  * Generates a Command class you can use in any OpMode:
- *   Command auto = new MyCustomAutoCommand(robot, activeAlliance);
+ *   Command auto = MyCustomAutoCommand.create(robot, activeAlliance);
  *   CommandManager.INSTANCE.scheduleCommand(auto);
  */
 public class CreateAutoCommand {
@@ -28,7 +28,7 @@ public class CreateAutoCommand {
             System.err.println("Example: java CreateAutoCommand my_auto.pp MyCustomAuto");
             System.err.println();
             System.err.println("This generates a Command class you can use in any OpMode:");
-            System.err.println("  Command auto = new MyCustomAutoCommand(robot, activeAlliance);");
+            System.err.println("  Command auto = MyCustomAutoCommand.create(robot, activeAlliance);");
             System.exit(1);
         }
 
@@ -42,7 +42,8 @@ public class CreateAutoCommand {
             className += "Command";
         }
 
-        String outputFile = "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/commands/" + className + ".java";
+        // Generate in current directory for easy copying
+        String outputFile = className + ".java";
 
         try {
             String json = new String(Files.readAllBytes(Paths.get(ppFile)));
@@ -58,12 +59,12 @@ public class CreateAutoCommand {
             System.out.println("Generated: " + outputFile);
             System.out.println();
             System.out.println("Usage in your OpMode:");
-            System.out.println("  Command autoRoutine = new " + className + "(robot, activeAlliance);");
+            System.out.println("  Command autoRoutine = " + className + ".create(robot, activeAlliance);");
             System.out.println("  CommandManager.INSTANCE.scheduleCommand(autoRoutine);");
             System.out.println();
             System.out.println("Next steps:");
-            System.out.println("1. Edit TODO comments to customize robot actions");
-            System.out.println("2. Use in any autonomous OpMode");
+            System.out.println("1. Move " + outputFile + " to TeamCode/src/main/java/org/firstinspires/ftc/teamcode/commands/");
+            System.out.println("2. Edit TODO comments to customize robot actions");
             System.out.println("3. Build and deploy");
 
         } catch (IOException e) {
@@ -106,13 +107,13 @@ public class CreateAutoCommand {
         code.append(" * Generated autonomous command from Pedro Pathing .pp file\n");
         code.append(" * \n");
         code.append(" * Usage in OpMode:\n");
-        code.append(" *   Command auto = new ").append(className).append("(robot, activeAlliance);\n");
+        code.append(" *   Command auto = ").append(className).append(".create(robot, activeAlliance);\n");
         code.append(" *   CommandManager.INSTANCE.scheduleCommand(auto);\n");
         code.append(" * \n");
         code.append(" * TODO: Fill in robot actions at each segment (search for TODO comments)\n");
         code.append(" */\n");
         code.append("@Configurable\n");
-        code.append("public class ").append(className).append(" extends SequentialGroup {\n\n");
+        code.append("public class ").append(className).append(" {\n\n");
 
         // Config class
         code.append("    @Configurable\n");
@@ -130,25 +131,29 @@ public class CreateAutoCommand {
 
         for (int i = 0; i < segments.size(); i++) {
             PathSegment seg = segments.get(i);
+            String varName = toVariableName(seg.name);
             code.append("        // ").append(seg.name).append("\n");
-            code.append("        public double waypoint").append(i).append("X = ").append(seg.end.x).append(";\n");
-            code.append("        public double waypoint").append(i).append("Y = ").append(seg.end.y).append(";\n");
-            code.append("        public double waypoint").append(i).append("Heading = ").append(seg.end.heading).append(";\n\n");
+            code.append("        public double ").append(varName).append("X = ").append(seg.end.x).append(";\n");
+            code.append("        public double ").append(varName).append("Y = ").append(seg.end.y).append(";\n");
+            code.append("        public double ").append(varName).append("Heading = ").append(seg.end.heading).append(";\n\n");
         }
         code.append("    }\n\n");
 
         code.append("    public static Config config = new Config();\n");
         code.append("    public static Waypoints waypoints = new Waypoints();\n\n");
 
-        // Constructor
-        code.append("    public ").append(className).append("(Robot robot, Alliance alliance) {\n");
-        code.append("        super(\n");
+        // Private constructor to prevent instantiation
+        code.append("    private ").append(className).append("() {}\n\n");
+
+        // Factory method
+        code.append("    public static Command create(Robot robot, Alliance alliance) {\n");
+        code.append("        return new SequentialGroup(\n");
 
         // Build command sequence
         for (int i = 0; i < segments.size(); i++) {
             PathSegment seg = segments.get(i);
-            String startIdx = i == 0 ? "start" : ("waypoint" + (i - 1));
-            String endIdx = "waypoint" + i;
+            String startIdx = i == 0 ? "start" : toVariableName(segments.get(i - 1).name);
+            String endIdx = toVariableName(seg.name);
 
             code.append("                // ").append(seg.name).append("\n");
 
@@ -194,8 +199,10 @@ public class CreateAutoCommand {
         code.append("    }\n\n");
 
         for (int i = 0; i < segments.size(); i++) {
-            code.append("    private static Pose waypoint").append(i).append("() {\n");
-            code.append("        return new Pose(waypoints.waypoint").append(i).append("X, waypoints.waypoint").append(i).append("Y, Math.toRadians(waypoints.waypoint").append(i).append("Heading));\n");
+            PathSegment seg = segments.get(i);
+            String varName = toVariableName(seg.name);
+            code.append("    private static Pose ").append(varName).append("() {\n");
+            code.append("        return new Pose(waypoints.").append(varName).append("X, waypoints.").append(varName).append("Y, Math.toRadians(waypoints.").append(varName).append("Heading));\n");
             code.append("    }\n\n");
         }
 
@@ -299,13 +306,49 @@ public class CreateAutoCommand {
     }
 
     static void writeFile(String filename, String content) throws IOException {
-        // Create parent directories if needed
-        java.io.File file = new java.io.File(filename);
-        file.getParentFile().mkdirs();
-
         try (FileWriter writer = new FileWriter(filename)) {
             writer.write(content);
         }
+    }
+
+    /**
+     * Converts a path name from Pedro into a valid Java variable name.
+     * Examples:
+     *   "Launch Close" -> "launchClose"
+     *   "Pre-Artifacts" -> "preArtifacts"
+     *   "Gate Artifacts" -> "gateArtifacts"
+     */
+    static String toVariableName(String pathName) {
+        // Remove special characters and split on spaces/hyphens/underscores
+        String[] words = pathName.split("[\\s\\-_]+");
+
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i].replaceAll("[^a-zA-Z0-9]", "");
+            if (word.isEmpty()) continue;
+
+            if (i == 0) {
+                // First word: lowercase first letter
+                result.append(Character.toLowerCase(word.charAt(0)));
+                if (word.length() > 1) {
+                    result.append(word.substring(1));
+                }
+            } else {
+                // Subsequent words: uppercase first letter (camelCase)
+                result.append(Character.toUpperCase(word.charAt(0)));
+                if (word.length() > 1) {
+                    result.append(word.substring(1));
+                }
+            }
+        }
+
+        // If result is empty or starts with number, prefix with 'waypoint'
+        String varName = result.toString();
+        if (varName.isEmpty() || Character.isDigit(varName.charAt(0))) {
+            varName = "waypoint" + varName;
+        }
+
+        return varName;
     }
 
     static class Pose {
