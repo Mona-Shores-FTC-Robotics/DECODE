@@ -61,3 +61,23 @@ dependencies {
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
 
 }
+
+/**
+ * Task to export autonomous paths as .pp files for Pedro Pathing visualizer.
+ * Usage: ./gradlew :TeamCode:exportPaths
+ * Optional: ./gradlew :TeamCode:exportPaths -PoutputDir=/path/to/output
+ */
+tasks.register('exportPaths', JavaExec) {
+    group = 'FTC Utilities'
+    description = 'Exports autonomous paths as .pp files for Pedro Pathing visualizer'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'org.firstinspires.ftc.teamcode.util.ExportAutoPaths'
+
+    // Allow output directory to be specified via project property
+    if (project.hasProperty('outputDir')) {
+        args project.property('outputDir')
+    } else {
+        // Default to project root directory
+        args projectDir.parent
+    }
+}

@@ -8,44 +8,53 @@ The autonomous routines can export their paths as `.pp` files that are compatibl
 - Visualize your complete autonomous routine
 - Verify path geometry before testing on the robot
 - Identify potential collisions or issues
+- Quickly iterate on path adjustments
 - Share paths with team members
 - Document your autonomous strategy
 
 ## Quick Start
 
-### Method 1: Export via OpMode (Recommended)
+### Method 1: Command Line (Recommended)
+
+**Export paths directly from your development machine without needing the robot:**
+
+```bash
+# From project root directory
+./gradlew :TeamCode:exportPaths
+```
+
+This generates:
+- `autonomous_close_blue.pp`
+- `autonomous_close_red.pp`
+
+**Files are saved to the project root directory** (where you can immediately load them in the visualizer).
+
+**Load in Pedro Visualizer:**
+1. Open [Pedro Path Generator](https://pedro-path-generator.vercel.app/)
+2. Click **File → Load**
+3. Select your `.pp` file
+4. View your complete autonomous routine!
+
+**Custom Output Directory:**
+```bash
+./gradlew :TeamCode:exportPaths -PoutputDir=/path/to/output
+```
+
+### Method 2: Export via Robot OpMode
+
+If you need to export from the robot (e.g., to capture Dashboard-adjusted waypoints):
 
 1. **Run the Export OpMode**
    - Deploy code to robot
    - Select `Export Close Auto Paths` from TeleOp menu
    - Press START
-   - Wait for success message
 
 2. **Retrieve Files**
-   - Connect robot to computer via USB
+   - Connect robot via USB
    - Navigate to `/sdcard/FIRST/` on robot
-   - Copy the generated files:
-     - `autonomous_close_blue.pp`
-     - `autonomous_close_red.pp`
+   - Copy generated files
 
-3. **Load in Pedro Visualizer**
-   - Open [Pedro Path Generator](https://pedro-path-generator.vercel.app/)
-   - Click **File → Load**
-   - Select your `.pp` file
-   - View your complete autonomous routine!
-
-### Method 2: Generate Locally
-
-If you need to generate the files without deploying to the robot:
-
-```java
-// In any test or utility class
-String blueJson = DecodeAutonomousCloseCommand.exportToPedroPathFile(Alliance.BLUE);
-System.out.println(blueJson);
-
-// Save to file
-Files.write(Paths.get("autonomous_close_blue.pp"), blueJson.getBytes());
-```
+3. **Load in visualizer** (same as Method 1)
 
 ## File Format
 
@@ -103,18 +112,25 @@ The exporter automatically mirrors paths for red alliance:
 
 ## Updating Paths
 
-After adjusting waypoints in `CloseAutoWaypoints`:
+### Quick Iteration Workflow (Development)
 
-1. **Via FTC Dashboard** (preferred during competition):
-   - Adjust waypoints in Config tab
-   - Re-run Export OpMode
-   - Reload .pp file in visualizer
+1. **Edit waypoints** in `CloseAutoWaypoints` class (`DecodeAutonomousCloseCommand.java`)
+2. **Re-export**: `./gradlew :TeamCode:exportPaths`
+3. **Reload** .pp file in visualizer (File → Load)
+4. **Repeat** until paths look good
 
-2. **Via Code Edit** (for permanent changes):
-   - Edit `CloseAutoWaypoints` in `DecodeAutonomousCloseCommand.java`
-   - Rebuild and deploy
-   - Run Export OpMode
-   - Reload .pp file in visualizer
+**No robot needed!** This workflow lets you rapidly iterate on path design from your laptop.
+
+### Competition Field Adjustments
+
+If you adjusted waypoints via FTC Dashboard during competition:
+
+1. **Note the values** from Dashboard Config tab
+2. **Update** `CloseAutoWaypoints` in code with competition-tuned values
+3. **Re-export**: `./gradlew :TeamCode:exportPaths`
+4. **Verify** in visualizer before next match
+
+Alternatively, export directly from robot using `Export Close Auto Paths` OpMode to capture Dashboard values.
 
 ## Troubleshooting
 
