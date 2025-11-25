@@ -70,7 +70,17 @@ dependencies {
 tasks.register('exportPaths', JavaExec) {
     group = 'FTC Utilities'
     description = 'Exports autonomous paths as .pp files for Pedro Pathing visualizer'
-    classpath = sourceSets.main.runtimeClasspath
+
+    // Depend on compilation
+    dependsOn 'compileDebugJavaWithJavac'
+
+    // Set up classpath for Android project
+    classpath = files(
+        android.sourceSets.main.java.srcDirs,
+        "${buildDir}/intermediates/javac/debug/classes",
+        configurations.runtimeClasspath
+    )
+
     mainClass = 'org.firstinspires.ftc.teamcode.util.ExportAutoPaths'
 
     // Allow output directory to be specified via project property
