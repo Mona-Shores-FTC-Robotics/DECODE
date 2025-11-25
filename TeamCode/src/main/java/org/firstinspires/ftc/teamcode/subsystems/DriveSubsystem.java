@@ -229,7 +229,7 @@ public class DriveSubsystem implements Subsystem {
         Pose pedroFollowerSeed = RobotState.takeHandoffPose();
 
         if (pedroFollowerSeed == null) {
-            InitialPoseConfig poseConfig = initialPoseConfig();
+            DriveInitialPoseConfig poseConfig = initialPoseConfig();
             pedroFollowerSeed = new Pose(poseConfig.startX, poseConfig.startY, Math.toRadians(poseConfig.startHeadingDeg));
 
 //            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
@@ -587,7 +587,7 @@ public class DriveSubsystem implements Subsystem {
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
         // Get fixed target heading based on alliance
-        FixedAngleAimConfig aimConfig = fixedAngleAimConfig();
+        DriveFixedAngleAimConfig aimConfig = fixedAngleAimConfig();
         double targetHeadingDeg = (alliance == Alliance.RED)
             ? aimConfig.redHeadingDeg
             : aimConfig.blueHeadingDeg;
