@@ -7,6 +7,7 @@ import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ContinuousDistanceBasedSpinCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
@@ -89,11 +90,11 @@ public class OperatorBindings {
         fireDistanceBased.whenBecomesFalse(fireAllCommand);
 
         // Intake control commands
-        SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
+        SmartIntakeCommand smartIntakeCommand = new SmartIntakeCommand(robot.intake, rawGamepad);
         SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
 
-        // Intake control
-        runIntake.whenBecomesTrue(intakeForwardCommand);
+        // Intake control - auto-reverses when full
+        runIntake.whenBecomesTrue(smartIntakeCommand);
         runIntake.whenBecomesFalse(intakeReverseCommand);
 
         // Human Loading
