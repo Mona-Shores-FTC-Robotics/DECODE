@@ -1125,16 +1125,25 @@ public class LauncherSubsystem implements Subsystem {
 
         private void setTargetRpm(double rpm) {
             double sanitized = Math.max(0.0, rpm);
+
+            // Only reset phase and counters if target RPM actually changed
+            // This allows phase transitions to complete over multiple cycles
+            boolean targetChanged = Math.abs(sanitized - commandedRpm) > 1.0;
+
             commandedRpm = sanitized;
             launchCommandActive = sanitized > 0.0;
             if (launchCommandActive) {
                 launchTimer.reset();
             }
-            phase = ControlPhase.BANG;
-            bangToHybridCounter = 0;
-            hybridToBangCounter = 0;
-            bangToHoldCounter = 0;
-            holdToBangCounter = 0;
+
+            // Reset to BANG mode only when target changes significantly
+            if (targetChanged) {
+                phase = ControlPhase.BANG;
+                bangToHybridCounter = 0;
+                hybridToBangCounter = 0;
+                bangToHoldCounter = 0;
+                holdToBangCounter = 0;
+            }
         }
 
         private void applyBangBangControl(double error) {
