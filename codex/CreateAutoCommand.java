@@ -131,10 +131,11 @@ public class CreateAutoCommand {
 
         for (int i = 0; i < segments.size(); i++) {
             PathSegment seg = segments.get(i);
+            String varName = toVariableName(seg.name);
             code.append("        // ").append(seg.name).append("\n");
-            code.append("        public double waypoint").append(i).append("X = ").append(seg.end.x).append(";\n");
-            code.append("        public double waypoint").append(i).append("Y = ").append(seg.end.y).append(";\n");
-            code.append("        public double waypoint").append(i).append("Heading = ").append(seg.end.heading).append(";\n\n");
+            code.append("        public double ").append(varName).append("X = ").append(seg.end.x).append(";\n");
+            code.append("        public double ").append(varName).append("Y = ").append(seg.end.y).append(";\n");
+            code.append("        public double ").append(varName).append("Heading = ").append(seg.end.heading).append(";\n\n");
         }
         code.append("    }\n\n");
 
@@ -151,8 +152,8 @@ public class CreateAutoCommand {
         // Build command sequence
         for (int i = 0; i < segments.size(); i++) {
             PathSegment seg = segments.get(i);
-            String startIdx = i == 0 ? "start" : ("waypoint" + (i - 1));
-            String endIdx = "waypoint" + i;
+            String startIdx = i == 0 ? "start" : toVariableName(segments.get(i - 1).name);
+            String endIdx = toVariableName(seg.name);
 
             code.append("                // ").append(seg.name).append("\n");
 
@@ -198,8 +199,10 @@ public class CreateAutoCommand {
         code.append("    }\n\n");
 
         for (int i = 0; i < segments.size(); i++) {
-            code.append("    private static Pose waypoint").append(i).append("() {\n");
-            code.append("        return new Pose(waypoints.waypoint").append(i).append("X, waypoints.waypoint").append(i).append("Y, Math.toRadians(waypoints.waypoint").append(i).append("Heading));\n");
+            PathSegment seg = segments.get(i);
+            String varName = toVariableName(seg.name);
+            code.append("    private static Pose ").append(varName).append("() {\n");
+            code.append("        return new Pose(waypoints.").append(varName).append("X, waypoints.").append(varName).append("Y, Math.toRadians(waypoints.").append(varName).append("Heading));\n");
             code.append("    }\n\n");
         }
 
@@ -306,6 +309,46 @@ public class CreateAutoCommand {
         try (FileWriter writer = new FileWriter(filename)) {
             writer.write(content);
         }
+    }
+
+    /**
+     * Converts a path name from Pedro into a valid Java variable name.
+     * Examples:
+     *   "Launch Close" -> "launchClose"
+     *   "Pre-Artifacts" -> "preArtifacts"
+     *   "Gate Artifacts" -> "gateArtifacts"
+     */
+    static String toVariableName(String pathName) {
+        // Remove special characters and split on spaces/hyphens/underscores
+        String[] words = pathName.split("[\\s\\-_]+");
+
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i].replaceAll("[^a-zA-Z0-9]", "");
+            if (word.isEmpty()) continue;
+
+            if (i == 0) {
+                // First word: lowercase first letter
+                result.append(Character.toLowerCase(word.charAt(0)));
+                if (word.length() > 1) {
+                    result.append(word.substring(1));
+                }
+            } else {
+                // Subsequent words: uppercase first letter (camelCase)
+                result.append(Character.toUpperCase(word.charAt(0)));
+                if (word.length() > 1) {
+                    result.append(word.substring(1));
+                }
+            }
+        }
+
+        // If result is empty or starts with number, prefix with 'waypoint'
+        String varName = result.toString();
+        if (varName.isEmpty() || Character.isDigit(varName.charAt(0))) {
+            varName = "waypoint" + varName;
+        }
+
+        return varName;
     }
 
     static class Pose {
