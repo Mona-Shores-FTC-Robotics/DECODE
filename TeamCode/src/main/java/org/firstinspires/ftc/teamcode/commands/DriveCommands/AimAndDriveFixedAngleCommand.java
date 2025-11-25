@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.commands;
+package org.firstinspires.ftc.teamcode.commands.DriveCommands;
 
 import dev.nextftc.core.commands.Command;
 
@@ -9,24 +9,21 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 /**
- * Geometry-based aiming command that calculates angle from robot pose to basket centroid.
- * This uses DriveSubsystem.aimAndDrive() which:
- * - Calculates target angle using atan2(dy, dx) from robot pose to basket coordinates
- * - Uses odometry pose and tunable basket target coordinates
- * - Continuously tracks target (updates every loop)
- * - Allows driver to translate (left stick) while aiming
- * - Falls back to vision-based angle if available
+ * Fixed-angle aiming command that rotates to a predetermined heading based on alliance.
+ * Simple and predictable - works well from specific field positions (e.g., launch line).
  *
  * INTENDED USAGE:
- * - **TeleOp match play**: B button (hold) - geometry-based aiming
- * - Allows driver to strafe/move while staying aimed at basket centroid
- * - Requires accurate odometry and field coordinates
+ * - Simple aiming from known field positions (e.g., launch line)
+ * - No dependency on vision or precise pose
+ * - Driver just needs to be in the right general area
+ * - Tunable angles via FTC Dashboard (e.g., 60° blue, 120° red)
  *
- * Alternative aiming methods (for comparison):
- * - AimAndDriveVisionCenteredCommand: Uses camera tx to center AprilTag
- * - AimAndDriveFixedAngleCommand: Rotates to fixed angle (e.g., 60° blue, 120° red)
+ * Contrast with other aiming methods:
+ * - Geometry: Uses pose + coordinates (complex, requires accurate odometry)
+ * - Vision-centered: Uses camera tx (requires tag visibility)
+ * - This: Simple fixed angle (no vision or pose needed)
  */
-public class AimAndDriveCommand extends Command {
+public class AimAndDriveFixedAngleCommand extends Command {
 
     private final DriveSubsystem drive;
     private final DoubleSupplier fieldXSupplier;
@@ -35,17 +32,17 @@ public class AimAndDriveCommand extends Command {
     private static final double TRANSLATION_IDLE_THRESHOLD = 0.05;
 
     /**
-     * Creates an aim-and-drive command.
+     * Creates a fixed-angle aim-and-drive command.
      *
      * @param fieldXSupplier Supplier for field X input (strafe, usually left stick X)
      * @param fieldYSupplier Supplier for field Y input (forward, usually left stick Y)
      * @param slowModeSupplier Supplier for slow mode (usually right bumper)
      * @param drive Drive subsystem
      */
-    public AimAndDriveCommand(DoubleSupplier fieldXSupplier,
-                              DoubleSupplier fieldYSupplier,
-                              BooleanSupplier slowModeSupplier,
-                              DriveSubsystem drive) {
+    public AimAndDriveFixedAngleCommand(DoubleSupplier fieldXSupplier,
+                                        DoubleSupplier fieldYSupplier,
+                                        BooleanSupplier slowModeSupplier,
+                                        DriveSubsystem drive) {
         this.fieldXSupplier = Objects.requireNonNull(fieldXSupplier, "fieldXSupplier required");
         this.fieldYSupplier = Objects.requireNonNull(fieldYSupplier, "fieldYSupplier required");
         this.slowModeSupplier = Objects.requireNonNull(slowModeSupplier, "slowModeSupplier required");
@@ -69,8 +66,8 @@ public class AimAndDriveCommand extends Command {
         fieldX = applyTranslationDeadband(fieldX);
         fieldY = applyTranslationDeadband(fieldY);
 
-        // Aim and drive - rotation is overridden by vision/odometry targeting
-        drive.aimAndDrive(fieldX, fieldY, slowMode);
+        // Fixed-angle aim and drive - rotation to fixed heading based on alliance
+        drive.aimAndDriveFixedAngle(fieldX, fieldY, slowMode);
     }
 
     @Override

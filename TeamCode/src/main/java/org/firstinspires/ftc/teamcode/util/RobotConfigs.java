@@ -6,6 +6,8 @@ import com.pedropathing.ftc.localization.constants.PinpointConstants;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
@@ -91,7 +93,7 @@ public class RobotConfigs {
      * Returns the static instance from DriveSubsystem so Dashboard edits are applied.
      * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245 based on robot name
      */
-    public static DriveSubsystem.FixedAngleAimConfig getFixedAngleAimConfig() {
+    public static DriveFixedAngleAimConfig getFixedAngleAimConfig() {
         String robotName = RobotState.getRobotName();
         if ("DECODE_19429".equals(robotName)) {
             return DriveSubsystem.fixedAngleAimConfig19429;
@@ -105,7 +107,7 @@ public class RobotConfigs {
      * Returns the static instance from DriveSubsystem so Dashboard edits are applied.
      * @return initialPoseConfig19429 or initialPoseConfig20245 based on robot name
      */
-    public static DriveSubsystem.InitialPoseConfig getInitialPoseConfig() {
+    public static DriveInitialPoseConfig getInitialPoseConfig() {
         String robotName = RobotState.getRobotName();
         if ("DECODE_19429".equals(robotName)) {
             return DriveSubsystem.initialPoseConfig19429;

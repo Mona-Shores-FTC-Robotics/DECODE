@@ -4,6 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 
 import dev.nextftc.core.commands.Command;
 
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchAtPositionConfig;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
@@ -19,22 +20,7 @@ import java.util.Objects;
 @Configurable
 public class LaunchAtPositionCommand extends Command {
 
-    @Configurable
-    public static class PositionRpmConfig {
-        /** RPM for shots from LAUNCH_FAR position */
-        public double farLaunchRpm = 2925;
-
-        /** RPM for shots from LAUNCH_CLOSE position */
-        public double closeLaunchRpm = 2150;
-
-        /** Default RPM if position unknown */
-        public double defaultLaunchRpm = 2550;
-
-        /** Timeout in seconds before giving up */
-        public double timeoutSeconds = 3.0;
-    }
-
-    public static PositionRpmConfig positionRpmConfig = new PositionRpmConfig();
+    public static LaunchAtPositionConfig positionRpmConfig = new LaunchAtPositionConfig();
 
     private final LauncherSubsystem launcher;
     private final FieldPoint position;

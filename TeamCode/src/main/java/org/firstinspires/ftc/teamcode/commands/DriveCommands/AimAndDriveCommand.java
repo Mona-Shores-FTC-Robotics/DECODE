@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.commands;
+package org.firstinspires.ftc.teamcode.commands.DriveCommands;
 
 import dev.nextftc.core.commands.Command;
 
@@ -9,20 +9,24 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 /**
- * Vision-centered aiming command that uses Limelight tx (horizontal offset) to center the AprilTag.
- * This approach directly uses the camera's measurement without coordinate calculations,
- * similar to the original FTC RobotAutoDriveToAprilTagOmni example.
+ * Geometry-based aiming command that calculates angle from robot pose to basket centroid.
+ * This uses DriveSubsystem.aimAndDrive() which:
+ * - Calculates target angle using atan2(dy, dx) from robot pose to basket coordinates
+ * - Uses odometry pose and tunable basket target coordinates
+ * - Continuously tracks target (updates every loop)
+ * - Allows driver to translate (left stick) while aiming
+ * - Falls back to vision-based angle if available
  *
  * INTENDED USAGE:
- * - Alternative aiming method for testing and comparison
- * - Uses direct camera feedback to center the target
- * - No dependency on odometry pose or field coordinates
+ * - **TeleOp match play**: B button (hold) - geometry-based aiming
+ * - Allows driver to strafe/move while staying aimed at basket centroid
+ * - Requires accurate odometry and field coordinates
  *
- * Contrast with AimAndDriveCommand (geometry-based):
- * - This: Uses tx angle from camera, centers tag in view
- * - Geometry: Uses atan2 from robot pose to basket centroid
+ * Alternative aiming methods (for comparison):
+ * - AimAndDriveVisionCenteredCommand: Uses camera tx to center AprilTag
+ * - AimAndDriveFixedAngleCommand: Rotates to fixed angle (e.g., 60° blue, 120° red)
  */
-public class AimAndDriveVisionCenteredCommand extends Command {
+public class AimAndDriveCommand extends Command {
 
     private final DriveSubsystem drive;
     private final DoubleSupplier fieldXSupplier;
@@ -31,17 +35,17 @@ public class AimAndDriveVisionCenteredCommand extends Command {
     private static final double TRANSLATION_IDLE_THRESHOLD = 0.05;
 
     /**
-     * Creates a vision-centered aim-and-drive command.
+     * Creates an aim-and-drive command.
      *
      * @param fieldXSupplier Supplier for field X input (strafe, usually left stick X)
      * @param fieldYSupplier Supplier for field Y input (forward, usually left stick Y)
      * @param slowModeSupplier Supplier for slow mode (usually right bumper)
      * @param drive Drive subsystem
      */
-    public AimAndDriveVisionCenteredCommand(DoubleSupplier fieldXSupplier,
-                                            DoubleSupplier fieldYSupplier,
-                                            BooleanSupplier slowModeSupplier,
-                                            DriveSubsystem drive) {
+    public AimAndDriveCommand(DoubleSupplier fieldXSupplier,
+                              DoubleSupplier fieldYSupplier,
+                              BooleanSupplier slowModeSupplier,
+                              DriveSubsystem drive) {
         this.fieldXSupplier = Objects.requireNonNull(fieldXSupplier, "fieldXSupplier required");
         this.fieldYSupplier = Objects.requireNonNull(fieldYSupplier, "fieldYSupplier required");
         this.slowModeSupplier = Objects.requireNonNull(slowModeSupplier, "slowModeSupplier required");
@@ -65,8 +69,8 @@ public class AimAndDriveVisionCenteredCommand extends Command {
         fieldX = applyTranslationDeadband(fieldX);
         fieldY = applyTranslationDeadband(fieldY);
 
-        // Vision-centered aim and drive - rotation uses Limelight tx to center tag
-        drive.aimAndDriveVisionCentered(fieldX, fieldY, slowMode);
+        // Aim and drive - rotation is overridden by vision/odometry targeting
+        drive.aimAndDrive(fieldX, fieldY, slowMode);
     }
 
     @Override
