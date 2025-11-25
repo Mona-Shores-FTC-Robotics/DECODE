@@ -2,7 +2,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.FileWriter;
@@ -130,23 +132,31 @@ public class CreateAutoCommand {
         code.append("        public double startY = ").append(start.y).append(";\n");
         code.append("        public double startHeading = ").append(start.heading).append(";\n\n");
 
+        // Track generated waypoints to avoid duplicates
+        Set<String> generatedWaypoints = new HashSet<>();
+
         for (int i = 0; i < segments.size(); i++) {
             PathSegment seg = segments.get(i);
             String varName = toVariableName(seg.name);
-            code.append("        // ").append(seg.name).append("\n");
-            code.append("        public double ").append(varName).append("X = ").append(seg.end.x).append(";\n");
-            code.append("        public double ").append(varName).append("Y = ").append(seg.end.y).append(";\n");
-            code.append("        public double ").append(varName).append("Heading = ").append(seg.end.heading).append(";\n");
 
-            // Add control points if they exist
-            if (!seg.controlPoints.isEmpty()) {
-                for (int j = 0; j < seg.controlPoints.size(); j++) {
-                    Pose cp = seg.controlPoints.get(j);
-                    code.append("        public double ").append(varName).append("Control").append(j).append("X = ").append(cp.x).append(";\n");
-                    code.append("        public double ").append(varName).append("Control").append(j).append("Y = ").append(cp.y).append(";\n");
+            // Only generate if not already generated
+            if (!generatedWaypoints.contains(varName)) {
+                generatedWaypoints.add(varName);
+                code.append("        // ").append(seg.name).append("\n");
+                code.append("        public double ").append(varName).append("X = ").append(seg.end.x).append(";\n");
+                code.append("        public double ").append(varName).append("Y = ").append(seg.end.y).append(";\n");
+                code.append("        public double ").append(varName).append("Heading = ").append(seg.end.heading).append(";\n");
+
+                // Add control points if they exist
+                if (!seg.controlPoints.isEmpty()) {
+                    for (int j = 0; j < seg.controlPoints.size(); j++) {
+                        Pose cp = seg.controlPoints.get(j);
+                        code.append("        public double ").append(varName).append("Control").append(j).append("X = ").append(cp.x).append(";\n");
+                        code.append("        public double ").append(varName).append("Control").append(j).append("Y = ").append(cp.y).append(";\n");
+                    }
                 }
+                code.append("\n");
             }
-            code.append("\n");
         }
         code.append("    }\n\n");
 
@@ -221,18 +231,26 @@ public class CreateAutoCommand {
         code.append("        return new Pose(waypoints.startX, waypoints.startY, Math.toRadians(waypoints.startHeading));\n");
         code.append("    }\n\n");
 
+        // Reuse the same set to track generated helpers (avoid duplicate method declarations)
+        generatedWaypoints.clear();
+
         for (int i = 0; i < segments.size(); i++) {
             PathSegment seg = segments.get(i);
             String varName = toVariableName(seg.name);
-            code.append("    private static Pose ").append(varName).append("() {\n");
-            code.append("        return new Pose(waypoints.").append(varName).append("X, waypoints.").append(varName).append("Y, Math.toRadians(waypoints.").append(varName).append("Heading));\n");
-            code.append("    }\n\n");
 
-            // Generate control point helper methods
-            for (int j = 0; j < seg.controlPoints.size(); j++) {
-                code.append("    private static Pose ").append(varName).append("Control").append(j).append("() {\n");
-                code.append("        return new Pose(waypoints.").append(varName).append("Control").append(j).append("X, waypoints.").append(varName).append("Control").append(j).append("Y, 0);\n");
+            // Only generate helper if not already generated
+            if (!generatedWaypoints.contains(varName)) {
+                generatedWaypoints.add(varName);
+                code.append("    private static Pose ").append(varName).append("() {\n");
+                code.append("        return new Pose(waypoints.").append(varName).append("X, waypoints.").append(varName).append("Y, Math.toRadians(waypoints.").append(varName).append("Heading));\n");
                 code.append("    }\n\n");
+
+                // Generate control point helper methods
+                for (int j = 0; j < seg.controlPoints.size(); j++) {
+                    code.append("    private static Pose ").append(varName).append("Control").append(j).append("() {\n");
+                    code.append("        return new Pose(waypoints.").append(varName).append("Control").append(j).append("X, waypoints.").append(varName).append("Control").append(j).append("Y, 0);\n");
+                    code.append("    }\n\n");
+                }
             }
         }
 
