@@ -168,6 +168,11 @@ public class LauncherSubsystem implements Subsystem {
         public CenterFeederConfig center = new CenterFeederConfig();
         public RightFeederConfig right = new RightFeederConfig();
 
+        /**
+         * Base feeder configuration for left lane.
+         * WARNING: Do not rely on these default values. Use robot-specific configs
+         * (feederConfig19429 or feederConfig20245) which explicitly set all values.
+         */
         @Configurable
         public static class LeftFeederConfig {
             public String servoName = "feeder_left";
@@ -178,6 +183,11 @@ public class LauncherSubsystem implements Subsystem {
             public double holdMs = 1000;
         }
 
+        /**
+         * Base feeder configuration for center lane.
+         * WARNING: Do not rely on these default values. Use robot-specific configs
+         * (feederConfig19429 or feederConfig20245) which explicitly set all values.
+         */
         @Configurable
         public static class CenterFeederConfig {
             public String servoName = "feeder_center";
@@ -188,6 +198,11 @@ public class LauncherSubsystem implements Subsystem {
             public double holdMs = 1000;
         }
 
+        /**
+         * Base feeder configuration for right lane.
+         * WARNING: Do not rely on these default values. Use robot-specific configs
+         * (feederConfig19429 or feederConfig20245) which explicitly set all values.
+         */
         @Configurable
         public static class RightFeederConfig {
             public String servoName = "feeder_right";
@@ -327,29 +342,62 @@ public class LauncherSubsystem implements Subsystem {
     // Helper to create 19429-specific feeder config
     private static FeederConfig createFeederConfig19429() {
         FeederConfig config = new FeederConfig();
-        // Robot 19429 uses default load/fire positions
-        // Set pinch positions between load and fire for each lane
+
+        // Left lane - explicit values for robot 19429
+        config.left.servoName = "feeder_left";
+        config.left.reversed = false;
+        config.left.loadPosition = .8;
         config.left.pinchPosition = .7;
+        config.left.firePosition = .61;
+        config.left.holdMs = 1000;
+
+        // Center lane - explicit values for robot 19429
+        config.center.servoName = "feeder_center";
+        config.center.reversed = false;
+        config.center.loadPosition = .93;
         config.center.pinchPosition = .84;
+        config.center.firePosition = .75;
+        config.center.holdMs = 1000;
+
+        // Right lane - explicit values for robot 19429
+        config.right.servoName = "feeder_right";
+        config.right.reversed = false;
+        config.right.loadPosition = .75;
         config.right.pinchPosition = .655;
+        config.right.firePosition = .56;
+        config.right.holdMs = 1000;
+
         return config;
     }
 
     // Helper to create 20245-specific feeder config
     private static FeederConfig createFeederConfig20245() {
         FeederConfig config = new FeederConfig();
-        // Apply 20245-specific values
-        config.center.loadPosition = .18;
-        config.center.pinchPosition = .105; // Between load (.18) and fire (.03)
-        config.center.firePosition = .03;
 
-        config.right.loadPosition = .78;
-        config.right.pinchPosition = .68; // Between load (.78) and fire (.58)
-        config.right.firePosition = .58;
-
+        // Left lane - explicit values for robot 20245
+        config.left.servoName = "feeder_left";
+        config.left.reversed = false;
         config.left.loadPosition = .33;
-        config.left.pinchPosition = .255; // Between load (.33) and fire (.18)
+        config.left.pinchPosition = .255;
         config.left.firePosition = .18;
+        config.left.holdMs = 1000;
+
+        // Center lane - explicit values for robot 20245
+        config.center.servoName = "feeder_center";
+        config.center.reversed = false;
+        config.center.loadPosition = .18;
+        config.center.pinchPosition = .105;
+        config.center.firePosition = .03;
+        config.center.holdMs = 1000;
+
+        // Right lane - explicit values for robot 20245
+        config.right.servoName = "feeder_right";
+        config.right.reversed = false;
+        config.right.loadPosition = .78;
+        config.right.pinchPosition = .68;
+        config.right.firePosition = .58;
+        config.right.holdMs = 1000;
+
         return config;
     }
 
