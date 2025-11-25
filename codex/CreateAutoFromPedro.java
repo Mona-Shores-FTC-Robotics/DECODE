@@ -8,13 +8,15 @@ import java.util.regex.Pattern;
 import java.io.FileWriter;
 
 /**
- * Creates a complete, ready-to-use autonomous OpMode from a Pedro .pp file.
+ * Creates a Command class from a Pedro .pp file for easy autonomous integration.
  *
  * Usage:
  *   javac codex/CreateAutoFromPedro.java
- *   java -cp codex CreateAutoFromPedro my_auto.pp "My Awesome Auto"
+ *   java -cp codex CreateAutoFromPedro my_auto.pp "MyCustomAuto"
  *
- * Generates a complete Java file ready to deploy!
+ * Generates a Command class you can use in any OpMode:
+ *   Command auto = new MyCustomAutoCommand(robot);
+ *   CommandManager.INSTANCE.scheduleCommand(auto);
  */
 public class CreateAutoFromPedro {
 
@@ -22,24 +24,31 @@ public class CreateAutoFromPedro {
 
     public static void main(String[] args) {
         if (args.length < 2) {
-            System.err.println("Usage: java CreateAutoFromPedro <pp-file> <auto-name>");
-            System.err.println("Example: java CreateAutoFromPedro my_auto.pp \"Custom Auto Close\"");
+            System.err.println("Usage: java CreateAutoFromPedro <pp-file> <command-name>");
+            System.err.println("Example: java CreateAutoFromPedro my_auto.pp MyCustomAuto");
+            System.err.println();
+            System.err.println("This generates a Command class you can use in any OpMode:");
+            System.err.println("  Command auto = new MyCustomAutoCommand(robot, activeAlliance);");
             System.exit(1);
         }
 
         String ppFile = args[0];
-        String autoName = args[1];
+        String commandName = args[1];
         boolean isRed = ppFile.toLowerCase().contains("red");
 
-        // Generate class name from auto name
-        String className = autoName.replaceAll("[^a-zA-Z0-9]", "");
-        String outputFile = "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/opmodes/" + className + ".java";
+        // Generate class name (add "Command" suffix if not present)
+        String className = commandName.replaceAll("[^a-zA-Z0-9]", "");
+        if (!className.endsWith("Command")) {
+            className += "Command";
+        }
+
+        String outputFile = "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/commands/" + className + ".java";
 
         try {
             String json = new String(Files.readAllBytes(Paths.get(ppFile)));
             List<PathSegment> segments = extractAllSegments(json, isRed);
 
-            String javaCode = generateCompleteOpMode(className, autoName, segments, json, isRed);
+            String javaCode = generateCommandClass(className, segments, json, isRed);
 
             // Write to file
             writeFile(outputFile, javaCode);
@@ -48,16 +57,14 @@ public class CreateAutoFromPedro {
             System.out.println();
             System.out.println("Generated: " + outputFile);
             System.out.println();
-            System.out.println("Next steps:");
-            System.out.println("1. Edit the TODO comments in the file to add your robot actions");
-            System.out.println("2. Build and deploy: ./gradlew :TeamCode:assembleDebug");
-            System.out.println("3. Select '" + autoName + "' from the Autonomous menu");
+            System.out.println("Usage in your OpMode:");
+            System.out.println("  Command autoRoutine = new " + className + "(robot, activeAlliance);");
+            System.out.println("  CommandManager.INSTANCE.scheduleCommand(autoRoutine);");
             System.out.println();
-            System.out.println("The file includes:");
-            System.out.println("  - All waypoint coordinates");
-            System.out.println("  - Complete buildAutonomousRoutine() method");
-            System.out.println("  - Smart action detection (intake/launcher based on path names)");
-            System.out.println("  - Ready to customize and deploy!");
+            System.out.println("Next steps:");
+            System.out.println("1. Edit TODO comments to customize robot actions");
+            System.out.println("2. Use in any autonomous OpMode");
+            System.out.println("3. Build and deploy");
 
         } catch (IOException e) {
             System.err.println("ERROR: " + e.getMessage());
@@ -65,7 +72,7 @@ public class CreateAutoFromPedro {
         }
     }
 
-    static String generateCompleteOpMode(String className, String autoName, List<PathSegment> segments, String json, boolean isRed) {
+    static String generateCommandClass(String className, List<PathSegment> segments, String json, boolean isRed) {
         Pose start = extractStartPoint(json, isRed);
 
         StringBuilder code = new StringBuilder();
