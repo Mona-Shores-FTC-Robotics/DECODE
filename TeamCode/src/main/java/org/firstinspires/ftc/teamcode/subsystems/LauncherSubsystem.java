@@ -331,9 +331,22 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    public void moveFeederToPinch(LauncherLane lane) {
+        Feeder feeder = feeders.get(lane);
+        if (feeder != null) {
+            feeder.toPinchPosition();
+        }
+    }
+
     public void homeAllFeeders() {
         for (Feeder feeder : feeders.values()) {
             feeder.toLoadPosition();
+        }
+    }
+
+    public void pinchAllFeeders() {
+        for (Feeder feeder : feeders.values()) {
+            feeder.toPinchPosition();
         }
     }
 
@@ -817,6 +830,18 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    private static double feederPinchPositionFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return clampServo(feederConfig().left.pinchPosition);
+            case CENTER:
+                return clampServo(feederConfig().center.pinchPosition);
+            case RIGHT:
+            default:
+                return clampServo(feederConfig().right.pinchPosition);
+        }
+    }
+
     private static boolean feederReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
@@ -1253,6 +1278,13 @@ public class LauncherSubsystem implements Subsystem {
         void toLoadPosition() {
             if (servo != null) {
                 servo.setPosition(feederLoadPositionFor(lane));
+            }
+            busy = false;
+        }
+
+        void toPinchPosition() {
+            if (servo != null) {
+                servo.setPosition(feederPinchPositionFor(lane));
             }
             busy = false;
         }
