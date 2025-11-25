@@ -134,28 +134,34 @@ public class CreateAutoCommand {
 
         // Track generated waypoints to avoid duplicates
         Set<String> generatedWaypoints = new HashSet<>();
+        Set<String> generatedControlPoints = new HashSet<>();
 
         for (int i = 0; i < segments.size(); i++) {
             PathSegment seg = segments.get(i);
             String varName = toVariableName(seg.name);
 
-            // Only generate if not already generated
+            // Only generate waypoint if not already generated
             if (!generatedWaypoints.contains(varName)) {
                 generatedWaypoints.add(varName);
                 code.append("        // ").append(seg.name).append("\n");
                 code.append("        public double ").append(varName).append("X = ").append(seg.end.x).append(";\n");
                 code.append("        public double ").append(varName).append("Y = ").append(seg.end.y).append(";\n");
-                code.append("        public double ").append(varName).append("Heading = ").append(seg.end.heading).append(";\n");
+                code.append("        public double ").append(varName).append("Heading = ").append(seg.end.heading).append(";\n\n");
+            }
 
-                // Add control points if they exist
-                if (!seg.controlPoints.isEmpty()) {
-                    for (int j = 0; j < seg.controlPoints.size(); j++) {
+            // Generate control points even if waypoint was already generated
+            // (different segments can have different control points to same endpoint)
+            if (!seg.controlPoints.isEmpty()) {
+                for (int j = 0; j < seg.controlPoints.size(); j++) {
+                    String controlPointName = varName + "Control" + j;
+                    if (!generatedControlPoints.contains(controlPointName)) {
+                        generatedControlPoints.add(controlPointName);
                         Pose cp = seg.controlPoints.get(j);
-                        code.append("        public double ").append(varName).append("Control").append(j).append("X = ").append(cp.x).append(";\n");
-                        code.append("        public double ").append(varName).append("Control").append(j).append("Y = ").append(cp.y).append(";\n");
+                        code.append("        // Control point for segment: ").append(seg.name).append("\n");
+                        code.append("        public double ").append(controlPointName).append("X = ").append(cp.x).append(";\n");
+                        code.append("        public double ").append(controlPointName).append("Y = ").append(cp.y).append(";\n\n");
                     }
                 }
-                code.append("\n");
             }
         }
         code.append("    }\n\n");
@@ -214,13 +220,20 @@ public class CreateAutoCommand {
                 code.append("                scoreSequence(robot)");
             } else {
                 code.append("                ").append(followPathCall);
-                code.append("\n                // TODO: Add commands for ").append(seg.name);
+                if (i < segments.size() - 1) {
+                    code.append(",\n");
+                } else {
+                    code.append("\n");
+                }
+                code.append("                // TODO: Add commands for ").append(seg.name).append("\n");
             }
 
-            if (i < segments.size() - 1) {
+            // For collecting and scoring, add comma if not last
+            if ((isCollecting || isScoring) && i < segments.size() - 1) {
                 code.append(",\n");
+            } else if (isCollecting || isScoring) {
+                code.append("\n");
             }
-            code.append("\n");
         }
 
         code.append("        );\n");
@@ -231,25 +244,32 @@ public class CreateAutoCommand {
         code.append("        return new Pose(waypoints.startX, waypoints.startY, Math.toRadians(waypoints.startHeading));\n");
         code.append("    }\n\n");
 
-        // Reuse the same set to track generated helpers (avoid duplicate method declarations)
+        // Reuse the same sets to track generated helpers (avoid duplicate method declarations)
         generatedWaypoints.clear();
+        generatedControlPoints.clear();
 
         for (int i = 0; i < segments.size(); i++) {
             PathSegment seg = segments.get(i);
             String varName = toVariableName(seg.name);
 
-            // Only generate helper if not already generated
+            // Only generate waypoint helper if not already generated
             if (!generatedWaypoints.contains(varName)) {
                 generatedWaypoints.add(varName);
                 code.append("    private static Pose ").append(varName).append("() {\n");
                 code.append("        return new Pose(waypoints.").append(varName).append("X, waypoints.").append(varName).append("Y, Math.toRadians(waypoints.").append(varName).append("Heading));\n");
                 code.append("    }\n\n");
+            }
 
-                // Generate control point helper methods
+            // Generate control point helper methods even if waypoint was already generated
+            if (!seg.controlPoints.isEmpty()) {
                 for (int j = 0; j < seg.controlPoints.size(); j++) {
-                    code.append("    private static Pose ").append(varName).append("Control").append(j).append("() {\n");
-                    code.append("        return new Pose(waypoints.").append(varName).append("Control").append(j).append("X, waypoints.").append(varName).append("Control").append(j).append("Y, 0);\n");
-                    code.append("    }\n\n");
+                    String controlPointName = varName + "Control" + j;
+                    if (!generatedControlPoints.contains(controlPointName)) {
+                        generatedControlPoints.add(controlPointName);
+                        code.append("    private static Pose ").append(controlPointName).append("() {\n");
+                        code.append("        return new Pose(waypoints.").append(controlPointName).append("X, waypoints.").append(controlPointName).append("Y, 0);\n");
+                        code.append("    }\n\n");
+                    }
                 }
             }
         }
