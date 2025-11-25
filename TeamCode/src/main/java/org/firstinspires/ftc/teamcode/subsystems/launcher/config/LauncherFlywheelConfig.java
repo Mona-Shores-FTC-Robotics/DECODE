@@ -26,6 +26,8 @@ public class LauncherFlywheelConfig {
         public double gearRatio = 1.0;
         /** Acceptable RPM error when considering a lane ready to fire. */
         public double rpmTolerance = 50;
+        /** Velocity smoothing factor (0-1). Higher = more smoothing, slower response. */
+        public double velocitySmoothingAlpha = 0.3;
     }
 
     @Configurable
@@ -40,14 +42,19 @@ public class LauncherFlywheelConfig {
         public static class BangBangConfig {
             public double highPower = 1.0;
             public double lowPower = 0.2;
-            public double enterBangThresholdRpm = 800;
-            public double exitBangThresholdRpm = 600;
+            /** RPM error threshold to enter BANG mode (widened for stability) */
+            public double enterBangThresholdRpm = 1000;
+            /** RPM error threshold to exit BANG mode (widened for stability) */
+            public double exitBangThresholdRpm = 400;
         }
 
         @Configurable
         public static class HybridPidConfig {
-            public double kP = .008;
-            public double kF = .22;
+            public double kP = 0.008;
+            /** Feedforward gain per RPM (replaces flat kF for RPM-proportional control) */
+            public double kF_perRpm = 0.00008;
+            /** Base feedforward power (minimum power at any RPM) */
+            public double kF_base = 0.05;
             public double maxPower = 1.0;
         }
 
@@ -61,9 +68,13 @@ public class LauncherFlywheelConfig {
 
         @Configurable
         public static class PhaseSwitchConfig {
-            public int bangToHybridConfirmCycles = 1;
+            /** Cycles to confirm before switching BANG→HYBRID (increased for stability) */
+            public int bangToHybridConfirmCycles = 3;
+            /** Cycles to confirm before switching BANG→HOLD */
             public int bangToHoldConfirmCycles = 3;
+            /** Cycles to confirm before switching HYBRID→BANG */
             public int hybridToBangConfirmCycles = 3;
+            /** Cycles to confirm before switching HOLD→BANG */
             public int holdToBangConfirmCycles = 3;
         }
     }
@@ -77,6 +88,8 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_left";
         public boolean reversed; //TODO Is this really reversed depending on robot?
         public double idleRpm = 1500;
+        /** Default launch RPM when no command sets an override. Prevents target=0 issues. */
+        public double defaultLaunchRpm = 2400;
     }
 
     @Configurable
@@ -84,6 +97,8 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_center";
         public boolean reversed = false;
         public double idleRpm = 1500;
+        /** Default launch RPM when no command sets an override. Prevents target=0 issues. */
+        public double defaultLaunchRpm = 2400;
     }
 
     @Configurable
@@ -91,6 +106,8 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_right";
         public boolean reversed = true;
         public double idleRpm = 1500;
+        /** Default launch RPM when no command sets an override. Prevents target=0 issues. */
+        public double defaultLaunchRpm = 2400;
     }
 
     // Robot-specific instances

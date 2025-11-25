@@ -749,20 +749,28 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     /**
-     * Returns the launch RPM for a lane. Launch RPM must be set explicitly by commands
-     * via setLaunchRpm() - there is no default because optimal RPM depends on shot context
-     * (range, distance to target, etc.).
+     * Returns the launch RPM for a lane. Uses command-set override if available,
+     * otherwise falls back to configurable default RPM to prevent target=0 issues.
      *
      * @param lane The launcher lane
-     * @return The launch RPM if set via setLaunchRpm(), otherwise 0.0 (lane disabled)
+     * @return The launch RPM (override if set, otherwise default from config)
      */
     protected double launchRpmFor(LauncherLane lane) {
         Double override = launchRpmOverrides.get(lane);
         if (override != null && override > 0.0) {
             return override;
         }
-        // No default launch RPM - commands must set explicitly via setLaunchRpm()
-        return 0.0;
+        // Fall back to configurable default RPM instead of 0
+        // This prevents the flywheel from targeting 0 RPM when commands don't set an override
+        switch (lane) {
+            case LEFT:
+                return Math.max(0.0, flywheelConfig().flywheelLeft.defaultLaunchRpm);
+            case CENTER:
+                return Math.max(0.0, flywheelConfig().flywheelCenter.defaultLaunchRpm);
+            case RIGHT:
+            default:
+                return Math.max(0.0, flywheelConfig().flywheelRight.defaultLaunchRpm);
+        }
     }
 
     protected double idleRpmFor(LauncherLane lane) {
@@ -1147,7 +1155,12 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyHybridControl(double error) {
-            double power = flywheelConfig().modeConfig.hybridPid.kF + flywheelConfig().modeConfig.hybridPid.kP * error;
+            // RPM-proportional feedforward: higher target RPM requires more base power
+            // kF = kF_base + kF_perRpm * targetRPM
+            double kF = flywheelConfig().modeConfig.hybridPid.kF_base
+                      + flywheelConfig().modeConfig.hybridPid.kF_perRpm * commandedRpm;
+
+            double power = kF + flywheelConfig().modeConfig.hybridPid.kP * error;
             power = Range.clip(power, 0.0, Math.max(0.0, flywheelConfig().modeConfig.hybridPid.maxPower));
 
             // Apply voltage compensation
@@ -1198,8 +1211,13 @@ public class LauncherSubsystem implements Subsystem {
                     // Allow 2x safety margin = 5600 ticks/sec max
                     double maxTicksDelta = 5600.0 * deltaMs / 1000.0;
                     if (Math.abs(deltaTicks) < maxTicksDelta) {
-                        double ticksPerSec = deltaTicks * 1000.0 / deltaMs;
-                        estimatedTicksPerSec = Math.abs(ticksPerSec);
+                        double rawTicksPerSec = Math.abs(deltaTicks * 1000.0 / deltaMs);
+
+                        // Apply exponential moving average smoothing to reduce noise
+                        // smoothed = alpha * raw + (1 - alpha) * previous
+                        double alpha = flywheelConfig().parameters.velocitySmoothingAlpha;
+                        alpha = Range.clip(alpha, 0.0, 1.0);
+                        estimatedTicksPerSec = alpha * rawTicksPerSec + (1.0 - alpha) * estimatedTicksPerSec;
                     }
                     // If delta is too large, keep previous estimate (encoder glitch detected)
                 }
