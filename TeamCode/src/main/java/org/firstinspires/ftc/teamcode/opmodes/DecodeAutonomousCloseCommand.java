@@ -603,4 +603,144 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                     .build();
         }
     }
+
+    /**
+     * Exports the current autonomous routine as a .pp file for Pedro Pathing visualizer.
+     * This generates a JSON file that can be loaded in the Pedro Pathing GUI for visualization.
+     *
+     * @param alliance Alliance color to generate paths for
+     * @param outputPath File path to write the .pp file (e.g., "/sdcard/FIRST/autonomous_close_blue.pp")
+     * @return JSON string of the .pp file
+     */
+    public static String exportToPedroPathFile(Alliance alliance) {
+        CloseAutoWaypoints w = waypoints;
+
+        // Helper to create pose
+        java.util.function.BiFunction<Double, Double, Pose> makePose = (x, y) ->
+            new Pose(x, y, 0);
+
+        // Helper to get alliance-mirrored waypoint
+        java.util.function.Function<Waypoint, Pose> getPose = waypoint -> {
+            switch (waypoint) {
+                case START_CLOSE:
+                    return poseForAlliance(w.startX, w.startY, w.startHeading, alliance);
+                case LAUNCH_CLOSE:
+                    return poseForAlliance(w.launchX, w.launchY, w.launchHeading, alliance);
+                case PRE_ARTIFACTS:
+                    return poseForAlliance(w.preArtifactsX, w.preArtifactsY, w.preArtifactsHeading, alliance);
+                case ARTIFACTS_SET_1:
+                    return poseForAlliance(w.artifacts1X, w.artifacts1Y, w.artifacts1Heading, alliance);
+                case TRANSITION_TO_SET_2:
+                    return poseForAlliance(w.transition2X, w.transition2Y, w.transition2Heading, alliance);
+                case ARTIFACTS_SET_2:
+                    return poseForAlliance(w.artifacts2X, w.artifacts2Y, w.artifacts2Heading, alliance);
+                case TRANSITION_TO_SET_3:
+                    return poseForAlliance(w.transition3X, w.transition3Y, w.transition3Heading, alliance);
+                case ARTIFACTS_SET_3:
+                    return poseForAlliance(w.artifacts3X, w.artifacts3Y, w.artifacts3Heading, alliance);
+                case FINAL_POSITION:
+                    return poseForAlliance(w.finalX, w.finalY, w.finalHeading, alliance);
+                default:
+                    throw new IllegalArgumentException("Unknown waypoint: " + waypoint);
+            }
+        };
+
+        // Build path sequence
+        StringBuilder json = new StringBuilder();
+        json.append("{");
+
+        // Start point
+        Pose start = getPose.apply(Waypoint.START_CLOSE);
+        Pose launch = getPose.apply(Waypoint.LAUNCH_CLOSE);
+        json.append("\"startPoint\":{");
+        json.append("\"x\":").append(start.getX()).append(",");
+        json.append("\"y\":").append(start.getY()).append(",");
+        json.append("\"heading\":\"linear\",");
+        json.append("\"startDeg\":").append(Math.toDegrees(start.getHeading())).append(",");
+        json.append("\"endDeg\":").append(Math.toDegrees(launch.getHeading()));
+        json.append("},");
+
+        // Lines (paths)
+        json.append("\"lines\":[");
+
+        // Path 1: Start to Launch
+        appendPath(json, "To Launch", start, launch, null);
+        json.append(",");
+
+        // Path 2: Launch to Pre-Artifacts
+        Pose preArtifacts = getPose.apply(Waypoint.PRE_ARTIFACTS);
+        appendPath(json, "To Pre-Artifacts", launch, preArtifacts, null);
+        json.append(",");
+
+        // Path 3: Pre-Artifacts to Set 1
+        Pose set1 = getPose.apply(Waypoint.ARTIFACTS_SET_1);
+        appendPath(json, "Collect Set 1", preArtifacts, set1, null);
+        json.append(",");
+
+        // Path 4: Set 1 back to Launch
+        appendPath(json, "Score Set 1", set1, launch, null);
+        json.append(",");
+
+        // Path 5: Launch to Transition 2
+        Pose trans2 = getPose.apply(Waypoint.TRANSITION_TO_SET_2);
+        appendPath(json, "To Transition 2", launch, trans2, null);
+        json.append(",");
+
+        // Path 6: Transition 2 to Set 2
+        Pose set2 = getPose.apply(Waypoint.ARTIFACTS_SET_2);
+        appendPath(json, "Collect Set 2", trans2, set2, null);
+        json.append(",");
+
+        // Path 7: Set 2 back to Launch
+        appendPath(json, "Score Set 2", set2, launch, null);
+        json.append(",");
+
+        // Path 8: Launch to Transition 3
+        Pose trans3 = getPose.apply(Waypoint.TRANSITION_TO_SET_3);
+        appendPath(json, "To Transition 3", launch, trans3, null);
+        json.append(",");
+
+        // Path 9: Transition 3 to Set 3
+        Pose set3 = getPose.apply(Waypoint.ARTIFACTS_SET_3);
+        appendPath(json, "Collect Set 3", trans3, set3, null);
+        json.append(",");
+
+        // Path 10: Set 3 to Final
+        Pose finalPos = getPose.apply(Waypoint.FINAL_POSITION);
+        appendPath(json, "To Final", set3, finalPos, null);
+
+        json.append("],");
+        json.append("\"shapes\":[]");
+        json.append("}");
+
+        return json.toString();
+    }
+
+    /**
+     * Helper method to append a path segment to the JSON
+     */
+    private static void appendPath(StringBuilder json, String name, Pose start, Pose end, Pose control) {
+        // Random color generation (deterministic based on name hash)
+        int colorHash = name.hashCode();
+        String color = String.format("#%06X", (colorHash & 0xFFFFFF));
+
+        json.append("{");
+        json.append("\"name\":\"").append(name).append("\",");
+        json.append("\"endPoint\":{");
+        json.append("\"x\":").append(end.getX()).append(",");
+        json.append("\"y\":").append(end.getY()).append(",");
+        json.append("\"heading\":\"linear\",");
+        json.append("\"startDeg\":").append(Math.toDegrees(start.getHeading())).append(",");
+        json.append("\"endDeg\":").append(Math.toDegrees(end.getHeading()));
+        json.append("},");
+
+        json.append("\"controlPoints\":[");
+        if (control != null) {
+            json.append("{\"x\":").append(control.getX()).append(",\"y\":").append(control.getY()).append("}");
+        }
+        json.append("],");
+
+        json.append("\"color\":\"").append(color).append("\"");
+        json.append("}");
+    }
 }
