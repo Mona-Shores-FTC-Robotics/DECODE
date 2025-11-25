@@ -66,10 +66,27 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
+    /**
+     * Named waypoints for the close autonomous routine.
+     * This enum provides type-safe references to all positions used in the routine.
+     */
+    public enum Waypoint {
+        START_CLOSE,
+        LAUNCH_CLOSE,
+        PRE_ARTIFACTS,
+        ARTIFACTS_SET_1,
+        TRANSITION_TO_SET_2,
+        ARTIFACTS_SET_2,
+        TRANSITION_TO_SET_3,
+        ARTIFACTS_SET_3,
+        FINAL_POSITION
+    }
+
     @Configurable
     public static class AutoMotionConfig {
         public double maxPathPower = .79;
         public double intakeDelaySeconds = 2.5;
+        public int relocalizeMaxAttempts = 10;
         /**
          * Starting launcher mode for autonomous.
          * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
@@ -78,8 +95,61 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         public LauncherMode startingLauncherMode = LauncherMode.THROUGHPUT;
     }
 
-    // Public static instance for FTC Dashboard Config tab
-    public static DecodeAutonomousCloseCommand.AutoMotionConfig config = new DecodeAutonomousCloseCommand.AutoMotionConfig();
+    /**
+     * All waypoint coordinates for the close autonomous routine.
+     * Editable via FTC Dashboard for quick field adjustments.
+     */
+    @Configurable
+    public static class CloseAutoWaypoints {
+        // Start position (set by AutoField)
+        public double startX = 26.445;
+        public double startY = 131.374;
+        public double startHeading = 144;
+
+        // Launch position for scoring
+        public double launchX = 30.19905213270142;
+        public double launchY = 112.9478672985782;
+        public double launchHeading = 136;
+
+        // Pre-artifacts waypoint (transition after first score)
+        public double preArtifactsX = 28;
+        public double preArtifactsY = 112;
+        public double preArtifactsHeading = 270;
+
+        // Artifacts Set 1 (gate close)
+        public double artifacts1X = 22;
+        public double artifacts1Y = 87;
+        public double artifacts1Heading = 270;
+
+        // Transition to Set 2
+        public double transition2X = 40;
+        public double transition2Y = 90;
+        public double transition2Heading = 270;
+
+        // Artifacts Set 2 (gate far)
+        public double artifacts2X = 34;
+        public double artifacts2Y = 70;
+        public double artifacts2Heading = 270;
+
+        // Transition to Set 3
+        public double transition3X = 40;
+        public double transition3Y = 62; // Why was 6 afraid of 7? Because 7 ate 9!
+        public double transition3Heading = 270;
+
+        // Artifacts Set 3 (parking zone)
+        public double artifacts3X = 40;
+        public double artifacts3Y = 32.5;
+        public double artifacts3Heading = 270;
+
+        // Final position
+        public double finalX = 37;
+        public double finalY = 128;
+        public double finalHeading = 142;
+    }
+
+    // Public static instances for FTC Dashboard Config tab
+    public static AutoMotionConfig config = new AutoMotionConfig();
+    public static CloseAutoWaypoints waypoints = new CloseAutoWaypoints();
 
     private Robot robot;
     private AllianceSelector allianceSelector;
@@ -223,6 +293,74 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     }
 
     /**
+     * Gets a pose for a waypoint, mirrored for the current alliance.
+     * @param waypoint The waypoint enum value
+     * @return Alliance-mirrored pose for the waypoint
+     */
+    private Pose pose(Waypoint waypoint) {
+        CloseAutoWaypoints w = waypoints;
+        switch (waypoint) {
+            case START_CLOSE:
+                return poseForAlliance(w.startX, w.startY, w.startHeading, activeAlliance);
+            case LAUNCH_CLOSE:
+                return poseForAlliance(w.launchX, w.launchY, w.launchHeading, activeAlliance);
+            case PRE_ARTIFACTS:
+                return poseForAlliance(w.preArtifactsX, w.preArtifactsY, w.preArtifactsHeading, activeAlliance);
+            case ARTIFACTS_SET_1:
+                return poseForAlliance(w.artifacts1X, w.artifacts1Y, w.artifacts1Heading, activeAlliance);
+            case TRANSITION_TO_SET_2:
+                return poseForAlliance(w.transition2X, w.transition2Y, w.transition2Heading, activeAlliance);
+            case ARTIFACTS_SET_2:
+                return poseForAlliance(w.artifacts2X, w.artifacts2Y, w.artifacts2Heading, activeAlliance);
+            case TRANSITION_TO_SET_3:
+                return poseForAlliance(w.transition3X, w.transition3Y, w.transition3Heading, activeAlliance);
+            case ARTIFACTS_SET_3:
+                return poseForAlliance(w.artifacts3X, w.artifacts3Y, w.artifacts3Heading, activeAlliance);
+            case FINAL_POSITION:
+                return poseForAlliance(w.finalX, w.finalY, w.finalHeading, activeAlliance);
+            default:
+                throw new IllegalArgumentException("Unknown waypoint: " + waypoint);
+        }
+    }
+
+    /**
+     * Creates a relocalization command that uses AprilTag vision to correct odometry drift.
+     * This command attempts to update the robot's pose using vision for a configured number of attempts.
+     * It's designed to run at the launch position where AprilTags are visible.
+     *
+     * @return Command that relocalizes using vision
+     */
+    private Command relocalize() {
+        return new Command() {
+            private int attempts = 0;
+            private boolean success = false;
+
+            @Override
+            public void start() {
+                attempts = 0;
+                success = false;
+            }
+
+            @Override
+            public void update() {
+                if (robot.vision.hasValidTag()) {
+                    success = robot.drive.forceRelocalizeFromVision();
+                    if (success) {
+                        // Exit early on success
+                        attempts = config.relocalizeMaxAttempts;
+                    }
+                }
+                attempts++;
+            }
+
+            @Override
+            public boolean isDone() {
+                return attempts >= config.relocalizeMaxAttempts || success;
+            }
+        };
+    }
+
+    /**
      * Builds the complete autonomous routine using command groups
      */
     private Command buildAutonomousRoutine() {
@@ -230,47 +368,48 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return new Delay(0.01);
         }
 
-        Pose startClosePose = currentLayout.pose(FieldPoint.START_CLOSE);
-        Pose launchClosePose = currentLayout.pose(FieldPoint.LAUNCH_CLOSE);
-        Pose preArtifacts1Pose = currentLayout.pose(FieldPoint.PRE_GATE_ARTIFACTS_PICKUP_270_DEG);
-        Pose artifactsSet1Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_1_270);
-
-        Pose artifactsSet2Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_2_270);
-        Pose artifactsSet2ControlPoint = AutoField.artifactsSet2ControlPoint(activeAlliance);
-
-        Pose artifactsSet3Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_3_270);
-        Pose artifactsSet3Control = AutoField.artifactSet3ControlPoint(activeAlliance);
-        Pose moveToGatePose = currentLayout.pose(FieldPoint.MOVE_TO_GATE);
-
         return new SequentialGroup(
-            // Start already at LAUNCH_CLOSE, so spin up launcher
+                // Move to launch position and spin up
                 new ParallelGroup(
-                        spinUpLauncher(),
-                        followPath(startClosePose, launchClosePose)
+                        followPath(pose(Waypoint.START_CLOSE), pose(Waypoint.LAUNCH_CLOSE)),
+                        spinUpLauncher()
                 ),
+
+                // Relocalize using AprilTag at launch position
+                relocalize(),
+
+                // Score preloads
                 scoreSequence(),
 
-                //preartifactpose
-                followPath(launchClosePose, poseForAlliance(28,112, 270, activeAlliance)),
+                // Transition to artifact collection zone
+                followPath(pose(Waypoint.LAUNCH_CLOSE), pose(Waypoint.PRE_ARTIFACTS)),
 
                 // Phase 1: Collect from Gate Close and score
-            collectAndScore(poseForAlliance(28,112, 270, activeAlliance), artifactsSet1Pose, launchClosePose),
+                collectAndScore(
+                        pose(Waypoint.PRE_ARTIFACTS),
+                        pose(Waypoint.ARTIFACTS_SET_1),
+                        pose(Waypoint.LAUNCH_CLOSE)
+                ),
 
-                followPath(launchClosePose, poseForAlliance(40,90, 270, activeAlliance)),
-            // Phase 2: Collect from Gate Far and score
-            collectAndScore(
-                    poseForAlliance(40,90, 270, activeAlliance),
-                    poseForAlliance(34,70, 270, activeAlliance),
-                    launchClosePose),
+                // Transition to Set 2
+                followPath(pose(Waypoint.LAUNCH_CLOSE), pose(Waypoint.TRANSITION_TO_SET_2)),
 
-                followPath(launchClosePose, poseForAlliance(40,62,270,activeAlliance)),
+                // Phase 2: Collect from Gate Far and score
+                collectAndScore(
+                        pose(Waypoint.TRANSITION_TO_SET_2),
+                        pose(Waypoint.ARTIFACTS_SET_2),
+                        pose(Waypoint.LAUNCH_CLOSE)
+                ),
 
-            // Phase 3: Collect from Parking Zone and score
-            collectAndScore(poseForAlliance(40,62,270,activeAlliance),
-                    poseForAlliance(40, 32.5,270,activeAlliance),
-                    poseForAlliance(37,128, 142, activeAlliance))
+                // Transition to Set 3
+                followPath(pose(Waypoint.LAUNCH_CLOSE), pose(Waypoint.TRANSITION_TO_SET_3)),
 
-//                followPath(poseForAlliance(24,112, 270, activeAlliance), moveToGatePose)
+                // Phase 3: Collect from Parking Zone and finish
+                collectAndScore(
+                        pose(Waypoint.TRANSITION_TO_SET_3),
+                        pose(Waypoint.ARTIFACTS_SET_3),
+                        pose(Waypoint.FINAL_POSITION)
+                )
         );
     }
 
