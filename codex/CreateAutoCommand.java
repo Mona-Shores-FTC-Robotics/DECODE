@@ -15,7 +15,7 @@ import java.io.FileWriter;
  *   java -cp codex CreateAutoCommand my_auto.pp MyCustomAuto
  *
  * Generates a Command class you can use in any OpMode:
- *   Command auto = new MyCustomAutoCommand(robot, activeAlliance);
+ *   Command auto = MyCustomAutoCommand.create(robot, activeAlliance);
  *   CommandManager.INSTANCE.scheduleCommand(auto);
  */
 public class CreateAutoCommand {
@@ -28,7 +28,7 @@ public class CreateAutoCommand {
             System.err.println("Example: java CreateAutoCommand my_auto.pp MyCustomAuto");
             System.err.println();
             System.err.println("This generates a Command class you can use in any OpMode:");
-            System.err.println("  Command auto = new MyCustomAutoCommand(robot, activeAlliance);");
+            System.err.println("  Command auto = MyCustomAutoCommand.create(robot, activeAlliance);");
             System.exit(1);
         }
 
@@ -42,7 +42,8 @@ public class CreateAutoCommand {
             className += "Command";
         }
 
-        String outputFile = "TeamCode/src/main/java/org/firstinspires/ftc/teamcode/commands/" + className + ".java";
+        // Generate in current directory for easy copying
+        String outputFile = className + ".java";
 
         try {
             String json = new String(Files.readAllBytes(Paths.get(ppFile)));
@@ -58,12 +59,12 @@ public class CreateAutoCommand {
             System.out.println("Generated: " + outputFile);
             System.out.println();
             System.out.println("Usage in your OpMode:");
-            System.out.println("  Command autoRoutine = new " + className + "(robot, activeAlliance);");
+            System.out.println("  Command autoRoutine = " + className + ".create(robot, activeAlliance);");
             System.out.println("  CommandManager.INSTANCE.scheduleCommand(autoRoutine);");
             System.out.println();
             System.out.println("Next steps:");
-            System.out.println("1. Edit TODO comments to customize robot actions");
-            System.out.println("2. Use in any autonomous OpMode");
+            System.out.println("1. Move " + outputFile + " to TeamCode/src/main/java/org/firstinspires/ftc/teamcode/commands/");
+            System.out.println("2. Edit TODO comments to customize robot actions");
             System.out.println("3. Build and deploy");
 
         } catch (IOException e) {
@@ -106,13 +107,13 @@ public class CreateAutoCommand {
         code.append(" * Generated autonomous command from Pedro Pathing .pp file\n");
         code.append(" * \n");
         code.append(" * Usage in OpMode:\n");
-        code.append(" *   Command auto = new ").append(className).append("(robot, activeAlliance);\n");
+        code.append(" *   Command auto = ").append(className).append(".create(robot, activeAlliance);\n");
         code.append(" *   CommandManager.INSTANCE.scheduleCommand(auto);\n");
         code.append(" * \n");
         code.append(" * TODO: Fill in robot actions at each segment (search for TODO comments)\n");
         code.append(" */\n");
         code.append("@Configurable\n");
-        code.append("public class ").append(className).append(" extends SequentialGroup {\n\n");
+        code.append("public class ").append(className).append(" {\n\n");
 
         // Config class
         code.append("    @Configurable\n");
@@ -140,9 +141,12 @@ public class CreateAutoCommand {
         code.append("    public static Config config = new Config();\n");
         code.append("    public static Waypoints waypoints = new Waypoints();\n\n");
 
-        // Constructor
-        code.append("    public ").append(className).append("(Robot robot, Alliance alliance) {\n");
-        code.append("        super(\n");
+        // Private constructor to prevent instantiation
+        code.append("    private ").append(className).append("() {}\n\n");
+
+        // Factory method
+        code.append("    public static Command create(Robot robot, Alliance alliance) {\n");
+        code.append("        return new SequentialGroup(\n");
 
         // Build command sequence
         for (int i = 0; i < segments.size(); i++) {
@@ -299,10 +303,6 @@ public class CreateAutoCommand {
     }
 
     static void writeFile(String filename, String content) throws IOException {
-        // Create parent directories if needed
-        java.io.File file = new java.io.File(filename);
-        file.getParentFile().mkdirs();
-
         try (FileWriter writer = new FileWriter(filename)) {
             writer.write(content);
         }
