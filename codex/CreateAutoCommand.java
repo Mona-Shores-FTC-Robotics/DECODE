@@ -82,6 +82,7 @@ public class CreateAutoCommand {
         // Imports
         code.append("import static org.firstinspires.ftc.teamcode.util.AutoField.poseForAlliance;\n\n");
         code.append("import com.bylazar.configurables.annotations.Configurable;\n");
+        code.append("import com.pedropathing.geometry.BezierCurve;\n");
         code.append("import com.pedropathing.geometry.BezierLine;\n");
         code.append("import com.pedropathing.geometry.Pose;\n");
         code.append("import com.pedropathing.paths.PathChain;\n");
@@ -135,7 +136,17 @@ public class CreateAutoCommand {
             code.append("        // ").append(seg.name).append("\n");
             code.append("        public double ").append(varName).append("X = ").append(seg.end.x).append(";\n");
             code.append("        public double ").append(varName).append("Y = ").append(seg.end.y).append(";\n");
-            code.append("        public double ").append(varName).append("Heading = ").append(seg.end.heading).append(";\n\n");
+            code.append("        public double ").append(varName).append("Heading = ").append(seg.end.heading).append(";\n");
+
+            // Add control points if they exist
+            if (!seg.controlPoints.isEmpty()) {
+                for (int j = 0; j < seg.controlPoints.size(); j++) {
+                    Pose cp = seg.controlPoints.get(j);
+                    code.append("        public double ").append(varName).append("Control").append(j).append("X = ").append(cp.x).append(";\n");
+                    code.append("        public double ").append(varName).append("Control").append(j).append("Y = ").append(cp.y).append(";\n");
+                }
+            }
+            code.append("\n");
         }
         code.append("    }\n\n");
 
@@ -164,23 +175,35 @@ public class CreateAutoCommand {
                                seg.name.toLowerCase().contains("launch") ||
                                seg.name.toLowerCase().contains("basket");
 
+            // Build followPath call with control points if they exist
+            String followPathCall;
+            if (!seg.controlPoints.isEmpty()) {
+                StringBuilder controlArgs = new StringBuilder();
+                for (int j = 0; j < seg.controlPoints.size(); j++) {
+                    controlArgs.append(", ").append(endIdx).append("Control").append(j).append("()");
+                }
+                followPathCall = "followPath(robot, alliance, " + startIdx + "(), " + endIdx + "()" + controlArgs + ")";
+            } else {
+                followPathCall = "followPath(robot, alliance, " + startIdx + "(), " + endIdx + "())";
+            }
+
             if (isCollecting) {
                 code.append("                new ParallelGroup(\n");
-                code.append("                    followPath(robot, alliance, ").append(startIdx).append("(), ").append(endIdx).append("()),\n");
+                code.append("                    ").append(followPathCall).append(",\n");
                 code.append("                    // TODO: Customize intake for ").append(seg.name).append("\n");
                 code.append("                    new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))\n");
                 code.append("                ),\n");
                 code.append("                new Delay(config.intakeDelaySeconds)");
             } else if (isScoring) {
                 code.append("                new ParallelGroup(\n");
-                code.append("                    followPath(robot, alliance, ").append(startIdx).append("(), ").append(endIdx).append("()),\n");
+                code.append("                    ").append(followPathCall).append(",\n");
                 code.append("                    // TODO: Customize launcher for ").append(seg.name).append("\n");
                 code.append("                    spinUpLauncher(robot)\n");
                 code.append("                ),\n");
                 code.append("                // TODO: Customize scoring for ").append(seg.name).append("\n");
                 code.append("                scoreSequence(robot)");
             } else {
-                code.append("                followPath(robot, alliance, ").append(startIdx).append("(), ").append(endIdx).append("())");
+                code.append("                ").append(followPathCall);
                 code.append("\n                // TODO: Add commands for ").append(seg.name);
             }
 
@@ -204,17 +227,35 @@ public class CreateAutoCommand {
             code.append("    private static Pose ").append(varName).append("() {\n");
             code.append("        return new Pose(waypoints.").append(varName).append("X, waypoints.").append(varName).append("Y, Math.toRadians(waypoints.").append(varName).append("Heading));\n");
             code.append("    }\n\n");
+
+            // Generate control point helper methods
+            for (int j = 0; j < seg.controlPoints.size(); j++) {
+                code.append("    private static Pose ").append(varName).append("Control").append(j).append("() {\n");
+                code.append("        return new Pose(waypoints.").append(varName).append("Control").append(j).append("X, waypoints.").append(varName).append("Control").append(j).append("Y, 0);\n");
+                code.append("    }\n\n");
+            }
         }
 
-        // Helper methods
-        code.append("    private static Command followPath(Robot robot, Alliance alliance, Pose startPose, Pose endPose) {\n");
+        // Helper methods - followPath with varargs for control points
+        code.append("    private static Command followPath(Robot robot, Alliance alliance, Pose startPose, Pose endPose, Pose... controlPoses) {\n");
         code.append("        // Mirror for red alliance\n");
         code.append("        Pose start = poseForAlliance(startPose.getX(), startPose.getY(), Math.toDegrees(startPose.getHeading()), alliance);\n");
         code.append("        Pose end = poseForAlliance(endPose.getX(), endPose.getY(), Math.toDegrees(endPose.getHeading()), alliance);\n\n");
-        code.append("        PathChain path = robot.drive.getFollower().pathBuilder()\n");
-        code.append("                .addPath(new BezierLine(start, end))\n");
-        code.append("                .setLinearHeadingInterpolation(start.getHeading(), end.getHeading(), 0.7)\n");
-        code.append("                .build();\n");
+        code.append("        PathChain path;\n");
+        code.append("        if (controlPoses.length > 0) {\n");
+        code.append("            // Use BezierCurve with control points\n");
+        code.append("            Pose control = poseForAlliance(controlPoses[0].getX(), controlPoses[0].getY(), 0, alliance);\n");
+        code.append("            path = robot.drive.getFollower().pathBuilder()\n");
+        code.append("                    .addPath(new com.pedropathing.geometry.BezierCurve(start, control, end))\n");
+        code.append("                    .setLinearHeadingInterpolation(start.getHeading(), end.getHeading(), 0.7)\n");
+        code.append("                    .build();\n");
+        code.append("        } else {\n");
+        code.append("            // Use straight line\n");
+        code.append("            path = robot.drive.getFollower().pathBuilder()\n");
+        code.append("                    .addPath(new BezierLine(start, end))\n");
+        code.append("                    .setLinearHeadingInterpolation(start.getHeading(), end.getHeading(), 0.7)\n");
+        code.append("                    .build();\n");
+        code.append("        }\n");
         code.append("        double maxPower = Range.clip(config.maxPathPower, 0.0, 1.0);\n");
         code.append("        return new FollowPath(path, false, maxPower);\n");
         code.append("    }\n\n");
@@ -240,7 +281,8 @@ public class CreateAutoCommand {
         List<PathSegment> segments = new ArrayList<>();
         Pose start = extractStartPoint(json, isRed);
 
-        Pattern linePattern = Pattern.compile("\\{\"name\":\"([^\"]+)\"[^}]*\"endPoint\":\\{([^}]+)\\}[^}]*\\}");
+        // Updated pattern to capture control points array
+        Pattern linePattern = Pattern.compile("\\{\"name\":\"([^\"]+)\"[^}]*\"endPoint\":\\{([^}]+)\\}[^}]*\"controlPoints\":\\[([^\\]]*)\\]");
         Matcher m = linePattern.matcher(json);
 
         Pose previousEnd = start;
@@ -249,8 +291,12 @@ public class CreateAutoCommand {
         while (m.find()) {
             String name = m.group(1);
             String endPointData = m.group(2);
+            String controlPointsData = m.group(3);
+
             Pose end = parseEndPoint(endPointData, isRed);
-            segments.add(new PathSegment(index, name, previousEnd, end));
+            List<Pose> controlPoints = parseControlPoints(controlPointsData, isRed);
+
+            segments.add(new PathSegment(index, name, previousEnd, end, controlPoints));
             previousEnd = end;
             index++;
         }
@@ -291,6 +337,32 @@ public class CreateAutoCommand {
         }
 
         return new Pose(x, y, heading);
+    }
+
+    static List<Pose> parseControlPoints(String data, boolean isRed) {
+        List<Pose> controlPoints = new ArrayList<>();
+
+        if (data == null || data.trim().isEmpty()) {
+            return controlPoints;
+        }
+
+        // Extract individual control point objects: {"x":29,"y":101}
+        Pattern controlPattern = Pattern.compile("\\{\"x\":([-\\d.]+),\"y\":([-\\d.]+)\\}");
+        Matcher m = controlPattern.matcher(data);
+
+        while (m.find()) {
+            double x = Double.parseDouble(m.group(1));
+            double y = Double.parseDouble(m.group(2));
+
+            if (isRed) {
+                x = FIELD_WIDTH - x;
+            }
+
+            // Control points don't have heading, use 0
+            controlPoints.add(new Pose(x, y, 0));
+        }
+
+        return controlPoints;
     }
 
     static double extractNumber(String data, String key) {
@@ -365,12 +437,14 @@ public class CreateAutoCommand {
         String name;
         Pose start;
         Pose end;
+        List<Pose> controlPoints;
 
-        PathSegment(int index, String name, Pose start, Pose end) {
+        PathSegment(int index, String name, Pose start, Pose end, List<Pose> controlPoints) {
             this.index = index;
             this.name = name;
             this.start = start;
             this.end = end;
+            this.controlPoints = controlPoints;
         }
     }
 }
