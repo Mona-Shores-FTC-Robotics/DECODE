@@ -1022,7 +1022,7 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         void updateControl() {
-//            updateVelocityEstimate();
+            updateVelocityEstimate();
             double velocityTPS = motor.getVelocity();
             double RPS = velocityTPS / 28;
             double RPM = RPS*60;
