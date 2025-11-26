@@ -55,8 +55,10 @@ public class LaunchAllCommand extends Command {
         timer.reset();
         stage = Stage.WAITING_FOR_READY;
         queuedLanes.clear();
-        launcher.spinUpAllLanesToLaunch();
         spinDownApplied = false;
+        // Note: Don't call spinUpAllLanesToLaunch() here - the spin command already did that
+        // and the launch RPMs are already set. Calling it again would override idle commands.
+
         // Activate gate in forward direction to help feed
         if (intake != null) {
             intake.setGateAllowArtifacts();
