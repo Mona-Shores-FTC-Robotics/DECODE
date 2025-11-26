@@ -67,6 +67,7 @@ public class LaunchAllCommand extends Command {
 
     @Override
     public void update() {
+        RobotState.packet.put("Diag/Stage", stage);
         switch (stage) {
             case WAITING_FOR_READY:
                 checkLaneReadiness();

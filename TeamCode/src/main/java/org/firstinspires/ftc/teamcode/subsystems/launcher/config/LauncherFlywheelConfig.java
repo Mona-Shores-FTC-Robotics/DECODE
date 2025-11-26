@@ -102,7 +102,7 @@ public class LauncherFlywheelConfig {
         config.flywheelRight.idleRpm = 1500;
         config.flywheelRight.kS = 0.10;
         config.flywheelRight.kV = 0.0002;
-        config.flywheelRight.kP = 0.0;
+        config.flywheelRight.kP = 0.001;
 
         return config;
     }

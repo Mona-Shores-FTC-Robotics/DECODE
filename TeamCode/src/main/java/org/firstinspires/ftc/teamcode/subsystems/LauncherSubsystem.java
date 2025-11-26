@@ -578,10 +578,10 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     protected boolean isLaneReadyForShot(LauncherLane lane, double now) {
-        Feeder feeder = feeders.get(lane);
-        if (feeder != null && feeder.isBusy()) {
-            return false;
-        }
+//        Feeder feeder = feeders.get(lane);
+//        if (feeder != null && feeder.isBusy()) {
+//            return false;
+//        }
         Flywheel flywheel = flywheels.get(lane);
         return flywheel != null && flywheel.isAtLaunch();
     }
