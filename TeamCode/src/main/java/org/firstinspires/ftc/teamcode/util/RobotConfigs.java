@@ -107,20 +107,6 @@ public class RobotConfigs {
     }
 
     /**
-     * Gets the active InitialPoseConfig for the current robot.
-     * Returns the static instance from DriveSubsystem so Dashboard edits are applied.
-     * @return initialPoseConfig19429 or initialPoseConfig20245 based on robot name
-     */
-    public static DriveInitialPoseConfig getInitialPoseConfig() {
-        String robotName = RobotState.getRobotName();
-        if ("DECODE_19429".equals(robotName)) {
-            return DriveSubsystem.initialPoseConfig19429;
-        } else {
-            return DriveSubsystem.initialPoseConfig20245;
-        }
-    }
-
-    /**
      * Gets the active Timing for the current robot.
      * Returns the static instance from LauncherTimingConfig so Dashboard edits are applied.
      * @return timing19429 or timing20245 based on robot name

@@ -54,8 +54,6 @@ public class DriveSubsystem implements Subsystem {
     // Robot-specific configs - visible in Panels for tuning
     public static DriveFixedAngleAimConfig fixedAngleAimConfig19429 = createFixedAngleAimConfig19429();
     public static DriveFixedAngleAimConfig fixedAngleAimConfig20245 = createFixedAngleAimConfig20245();
-    public static DriveInitialPoseConfig initialPoseConfig19429 = createInitialPoseConfig19429();
-    public static DriveInitialPoseConfig initialPoseConfig20245 = createInitialPoseConfig20245();
 
     /**
      * Helper to create 19429-specific fixed angle aim configuration.
@@ -82,28 +80,6 @@ public class DriveSubsystem implements Subsystem {
     }
 
     /**
-     * Helper to create 19429-specific initial pose configuration.
-     */
-    private static DriveInitialPoseConfig createInitialPoseConfig19429() {
-        DriveInitialPoseConfig config = new DriveInitialPoseConfig();
-        config.startX = 56;
-        config.startY = 9;
-        config.startHeadingDeg = 90;
-        return config;
-    }
-
-    /**
-     * Helper to create 20245-specific initial pose configuration.
-     */
-    private static DriveInitialPoseConfig createInitialPoseConfig20245() {
-        DriveInitialPoseConfig config = new DriveInitialPoseConfig();
-        config.startX = 0;
-        config.startY = 0;
-        config.startHeadingDeg = 90;
-        return config;
-    }
-
-    /**
      * Gets the robot-specific FixedAngleAimConfig based on RobotState.getRobotName().
      * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245
      */
@@ -115,9 +91,7 @@ public class DriveSubsystem implements Subsystem {
      * Gets the robot-specific InitialPoseConfig based on RobotState.getRobotName().
      * @return initialPoseConfig19429 or initialPoseConfig20245
      */
-    public static DriveInitialPoseConfig initialPoseConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getInitialPoseConfig();
-    }
+    public static DriveInitialPoseConfig initialPoseConfig = new DriveInitialPoseConfig();
 
     public String visionRelocalizeStatus = "Press A to re-localize";
     public long visionRelocalizeStatusMs = 0L;
@@ -236,7 +210,7 @@ public class DriveSubsystem implements Subsystem {
         Pose pedroFollowerSeed = RobotState.takeHandoffPose();
 
         if (pedroFollowerSeed == null) {
-            DriveInitialPoseConfig poseConfig = initialPoseConfig();
+            DriveInitialPoseConfig poseConfig = initialPoseConfig;
             pedroFollowerSeed = new Pose(poseConfig.startX, poseConfig.startY, Math.toRadians(poseConfig.startHeadingDeg));
 
 //            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
@@ -480,8 +454,7 @@ public class DriveSubsystem implements Subsystem {
 
         double headingError = normalizeAngle(targetHeading - follower.getHeading());
         lastAimErrorRad = headingError;
-        RobotState.packet.put("Aim Error", Math.toDegrees(headingError));
-
+        RobotState.packet.put("DriveSubsystem/Heading Error", Math.toDegrees(headingError));
 
         // Simple P controller
         double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
@@ -775,30 +748,38 @@ public class DriveSubsystem implements Subsystem {
     }
 
     private void maybeAutoRelocalizeDuringAim() {
+        RobotState.packet.put("/vision/Relocalize/enabled", visionRelocalizationEnabled);
         if (! visionRelocalizationEnabled) {
             return;
         }
+        RobotState.packet.put("/vision/Relocalize/shouldUpdateOdom ", vision.shouldUpdateOdometry());
         if (! vision.shouldUpdateOdometry()) {
             return;
         }
+        RobotState.packet.put("/vision/Relocalize/hasValidTag ", vision.hasValidTag());
         if (! vision.hasValidTag()) {
             return;
         }
 
+        RobotState.packet.put("/vision/Relocalize/robotSpeed ",getRobotSpeedInchesPerSecond());
         if (getRobotSpeedInchesPerSecond() > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
             return;
         }
 
+
         Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
+        RobotState.packet.put("/vision/Relocalize/snapPresent ",snapOpt.isPresent());
         if (! snapOpt.isPresent()) {
             return;
         }
 
         VisionSubsystemLimelight.TagSnapshot snapshot = snapOpt.get();
+        RobotState.packet.put("/vision/Relocalize/seeGoal ",isGoalAprilTag(snapshot.tagId));
         if (! isGoalAprilTag(snapshot.tagId)) {
             return;
         }
 
+        RobotState.packet.put("/vision/Relocalize/visionPoseFresh ",isVisionPoseFresh());
         if (! isVisionPoseFresh()) {
             return;
         }
@@ -874,24 +855,25 @@ public class DriveSubsystem implements Subsystem {
         visionRelocalizeStatusMs = System.currentTimeMillis();
     }
 
-    public void resetHeadingTowardBasket() {
+    /**
+     * Re-centers odometry heading to the configured field-forward angle.
+     * Driver should square the robot to the field wall (start-heading direction)
+     * before triggering this for a quick recovery after a bad auto handoff.
+     */
+    public void resetHeadingToFieldForward() {
         Pose currentPose = follower.getPose();
         if (currentPose == null) {
             return;
         }
 
-        Pose targetPose = vision.getAlliance() == Alliance.RED
-                ? FieldConstants.getRedBasketTarget()
-                : FieldConstants.getBlueBasketTarget();
-
-        double targetHeading = FieldConstants.getAimAngleTo(currentPose , targetPose);
+        double targetHeading = Math.toRadians(initialPoseConfig.startHeadingDeg);
         Pose correctedPose = new Pose(currentPose.getX() , currentPose.getY() , targetHeading);
 
         follower.setPose(correctedPose);
         poseFusion.reset(correctedPose , System.currentTimeMillis());
         vision.markOdometryUpdated();
 
-        visionRelocalizeStatus = "Heading reset toward basket";
+        visionRelocalizeStatus = "Heading reset to field-forward (square to wall)";
         visionRelocalizeStatusMs = System.currentTimeMillis();
     }
 

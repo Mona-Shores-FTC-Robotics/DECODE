@@ -133,7 +133,7 @@ public class DriverBindings {
 //                    .whenBecomesFalse(captureAndAimCmd::cancel);
 
             relocalizeRequest.whenBecomesTrue(robot.drive::tryRelocalize);
-            headingResetRequest.whenBecomesTrue(robot.drive::resetHeadingTowardBasket);
+            headingResetRequest.whenBecomesTrue(robot.drive::resetHeadingToFieldForward);
         }
     }
 

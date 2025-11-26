@@ -9,9 +9,9 @@ import com.bylazar.configurables.annotations.Configurable;
 @Configurable
 public class DriveInitialPoseConfig {
     /** Starting X position in Pedro coordinates (inches) */
-    public double startX = 56;
+    public double startX = 72;
     /** Starting Y position in Pedro coordinates (inches) */
-    public double startY = 8;
+    public double startY = 72;
     /** Starting heading in degrees */
     public double startHeadingDeg = 90;
 }
