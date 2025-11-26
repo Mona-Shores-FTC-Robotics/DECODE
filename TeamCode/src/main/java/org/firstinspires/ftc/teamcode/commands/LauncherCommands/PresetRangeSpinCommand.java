@@ -54,7 +54,6 @@ public class PresetRangeSpinCommand extends Command {
 
     @Override
     public void start() {
-        launcher.clearRecoveryDeadlines();
         timer.reset();
         setRpmsForRange();
         launcher.setAllHoodPositions(hoodPositionForRange());

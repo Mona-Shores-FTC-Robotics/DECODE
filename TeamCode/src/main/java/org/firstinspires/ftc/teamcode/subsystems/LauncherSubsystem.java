@@ -56,9 +56,7 @@ public class LauncherSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Hood> hoods = new EnumMap<>(LauncherLane.class);
-    private final EnumMap<LauncherLane, Double> laneRecoveryDeadlineMs = new EnumMap<>(LauncherLane.class);
-    private final EnumMap<LauncherLane, Double> laneLaunchHoldDeadlineMs = new EnumMap<>(LauncherLane.class);
-    private final EnumMap<LauncherLane, Double> launchRpmOverrides = new EnumMap<>(LauncherLane.class);
+     private final EnumMap<LauncherLane, Double> launchRpmOverrides = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Double> idleRpmOverrides = new EnumMap<>(LauncherLane.class);
     private final Deque<ShotRequest> shotQueue = new ArrayDeque<>();
     private final ElapsedTime clock = new ElapsedTime();
@@ -104,8 +102,6 @@ public class LauncherSubsystem implements Subsystem {
             flywheels.put(lane, new Flywheel(lane, hardwareMap));
             feeders.put(lane, new Feeder(lane, hardwareMap));
             hoods.put(lane, new Hood(lane, hardwareMap));
-            laneRecoveryDeadlineMs.put(lane, 0.0);
-            laneLaunchHoldDeadlineMs.put(lane, 0.0);
         }
     }
 
@@ -117,8 +113,6 @@ public class LauncherSubsystem implements Subsystem {
 
         for (Map.Entry<LauncherLane, Flywheel> entry : flywheels.entrySet()) {
             entry.getValue().initialize();
-            laneRecoveryDeadlineMs.put(entry.getKey(), 0.0);
-            laneLaunchHoldDeadlineMs.put(entry.getKey(), 0.0);
         }
         for (Feeder feeder : feeders.values()) {
             feeder.initialize();
@@ -164,7 +158,6 @@ public class LauncherSubsystem implements Subsystem {
             }
         }
         updateStateMachine(now);
-        updateLaneRecovery(now);
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
@@ -240,16 +233,6 @@ public class LauncherSubsystem implements Subsystem {
         if (!shotQueue.isEmpty()) {
             return true;
         }
-        double now = clock.milliseconds();
-        for (LauncherLane lane : LauncherLane.values()) {
-            if (now < laneRecoveryDeadlineMs.getOrDefault(lane, 0.0)) {
-                return true;
-            }
-            Feeder feeder = feeders.get(lane);
-            if (feeder != null && feeder.isBusy()) {
-                return true;
-            }
-        }
         return false;
     }
 
@@ -287,22 +270,11 @@ public class LauncherSubsystem implements Subsystem {
         shotQueue.clear();
     }
 
-    /**
-     * Clears recovery deadlines for all lanes, allowing them to fire immediately.
-     * Use this when starting a new spin-up sequence to ensure lanes can respond to new RPM targets.
-     */
-    public void clearRecoveryDeadlines() {
-        laneRecoveryDeadlineMs.clear();
-        laneLaunchHoldDeadlineMs.clear();
-    }
 
     public void abort() {
         clearQueue();
         reverseFlywheelsActive = false;
-        double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
-            laneLaunchHoldDeadlineMs.put(lane, 0.0);
-            laneRecoveryDeadlineMs.put(lane, now + timingConfig().recoveryMs);
             feeders.get(lane).stop();
             flywheels.get(lane).stop();
         }
@@ -599,39 +571,13 @@ public class LauncherSubsystem implements Subsystem {
                 Feeder feeder = feeders.get(next.lane);
                 if (feeder != null && !feeder.isBusy()) {
                     feeder.fire();
-                    laneLaunchHoldDeadlineMs.put(next.lane, now + timingConfig().launchHoldAfterFireMs);
-                    laneRecoveryDeadlineMs.put(next.lane, now + timingConfig().recoveryMs);
                     iterator.remove();
                 }
             }
         }
     }
 
-    private void updateLaneRecovery(double now) {
-        for (LauncherLane lane : LauncherLane.values()) {
-            // Clear launch hold deadline when it expires
-            double launchHoldDeadline = laneLaunchHoldDeadlineMs.getOrDefault(lane, 0.0);
-            if (launchHoldDeadline > 0.0 && now >= launchHoldDeadline) {
-                laneLaunchHoldDeadlineMs.put(lane, 0.0);
-            }
-
-            // Command to idle when recovery period ends
-            double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
-            if (recoveryDeadline > 0.0 && now >= recoveryDeadline) {
-                Flywheel flywheel = flywheels.get(lane);
-                if (flywheel != null) {
-                    flywheel.commandIdle();
-                }
-                laneRecoveryDeadlineMs.put(lane, 0.0);
-            }
-        }
-    }
-
     protected boolean isLaneReadyForShot(LauncherLane lane, double now) {
-        double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
-        if (now < recoveryDeadline) {
-            return false;
-        }
         Feeder feeder = feeders.get(lane);
         if (feeder != null && feeder.isBusy()) {
             return false;
@@ -661,17 +607,6 @@ public class LauncherSubsystem implements Subsystem {
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel == null) {
-                continue;
-            }
-
-            // Actively hold at launch speed after firing to ensure artifact clears
-            if (now < laneLaunchHoldDeadlineMs.getOrDefault(lane, 0.0)) {
-                flywheel.commandLaunch();
-                continue;
-            }
-
-            // Skip lanes that are currently in recovery (already fired, cleared hold period)
-            if (now < laneRecoveryDeadlineMs.getOrDefault(lane, 0.0)) {
                 continue;
             }
 

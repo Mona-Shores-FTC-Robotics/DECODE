@@ -127,10 +127,6 @@ public class DistanceBasedSpinCommand extends Command {
         lastSmoothedDistanceIn = 0.0;
         feedbackTriggered = false;
 
-        // Clear recovery deadlines so lanes can immediately respond to new RPM targets
-        // Without this, lanes in recovery from previous shots won't update their target RPM
-        launcher.clearRecoveryDeadlines();
-
         // Spin up all lanes to launch RPM
         launcher.spinUpAllLanesToLaunch();
     }
