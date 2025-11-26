@@ -14,7 +14,6 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -242,10 +241,10 @@ public class DecodeAutonomousFarTOGETHERCommand extends NextFTCOpMode {
         return new SequentialGroup(
                 // Phase 1: Drive to launch position and score preload
                 new ParallelGroup(
-                        spinUpLauncher(), //finishes when we are at launch RPM
+                        launcherCommands.presetRangeSpinUp(LauncherRange.LONG, true),
                         followPath(startFarPose, launchFarPose)
                 ),
-                scoreSequence(),
+                launcherCommands.launchAll(false),
                 // Phase 2: Collect from Alliance Wall and score
                 collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
                 // Phase 2: Collect from Alliance Wall and score
@@ -284,11 +283,11 @@ public class DecodeAutonomousFarTOGETHERCommand extends NextFTCOpMode {
             // Drive to score while spinning up launcher
             new ParallelGroup(
                     followPath(pickupPose, scorePose),
-                    spinUpLauncher()
+                    launcherCommands.presetRangeSpinUp(LauncherRange.LONG, true)
             ),
 
             // Score the samples
-            scoreSequence()
+                launcherCommands.launchAll(false)
         );
     }
 
@@ -336,24 +335,6 @@ public class DecodeAutonomousFarTOGETHERCommand extends NextFTCOpMode {
         Pose startPose = currentLayout.pose(FieldPoint.START_FAR);
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
-    }
-
-    /**
-     * Spins up the launcher and waits until all launchers reach target RPM.
-     * Phase 1: Uses position-specific tunable RPM from LaunchAtPositionCommand.PositionRpmConfig
-     */
-    private Command spinUpLauncher() {
-        // LaunchAtPositionCommand sets RPM based on field position AND spins up
-        return launcherCommands.spinUpForPosition(LauncherRange.LONG);
-    }
-
-    /**
-     * Scores samples using the launcher
-     */
-    private Command scoreSequence() {
-        return new SequentialGroup(
-           launcherCommands.launchAllAtRangePreset(LauncherRange.LONG,false)
-        );
     }
 
     /**

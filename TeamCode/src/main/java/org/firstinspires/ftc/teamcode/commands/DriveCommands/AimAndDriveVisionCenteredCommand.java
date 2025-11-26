@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.commands;
+package org.firstinspires.ftc.teamcode.commands.DriveCommands;
 
 import dev.nextftc.core.commands.Command;
 
@@ -9,21 +9,20 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 /**
- * Fixed-angle aiming command that rotates to a predetermined heading based on alliance.
- * Simple and predictable - works well from specific field positions (e.g., launch line).
+ * Vision-centered aiming command that uses Limelight tx (horizontal offset) to center the AprilTag.
+ * This approach directly uses the camera's measurement without coordinate calculations,
+ * similar to the original FTC RobotAutoDriveToAprilTagOmni example.
  *
  * INTENDED USAGE:
- * - Simple aiming from known field positions (e.g., launch line)
- * - No dependency on vision or precise pose
- * - Driver just needs to be in the right general area
- * - Tunable angles via FTC Dashboard (e.g., 60° blue, 120° red)
+ * - Alternative aiming method for testing and comparison
+ * - Uses direct camera feedback to center the target
+ * - No dependency on odometry pose or field coordinates
  *
- * Contrast with other aiming methods:
- * - Geometry: Uses pose + coordinates (complex, requires accurate odometry)
- * - Vision-centered: Uses camera tx (requires tag visibility)
- * - This: Simple fixed angle (no vision or pose needed)
+ * Contrast with AimAndDriveCommand (geometry-based):
+ * - This: Uses tx angle from camera, centers tag in view
+ * - Geometry: Uses atan2 from robot pose to basket centroid
  */
-public class AimAndDriveFixedAngleCommand extends Command {
+public class AimAndDriveVisionCenteredCommand extends Command {
 
     private final DriveSubsystem drive;
     private final DoubleSupplier fieldXSupplier;
@@ -32,17 +31,17 @@ public class AimAndDriveFixedAngleCommand extends Command {
     private static final double TRANSLATION_IDLE_THRESHOLD = 0.05;
 
     /**
-     * Creates a fixed-angle aim-and-drive command.
+     * Creates a vision-centered aim-and-drive command.
      *
      * @param fieldXSupplier Supplier for field X input (strafe, usually left stick X)
      * @param fieldYSupplier Supplier for field Y input (forward, usually left stick Y)
      * @param slowModeSupplier Supplier for slow mode (usually right bumper)
      * @param drive Drive subsystem
      */
-    public AimAndDriveFixedAngleCommand(DoubleSupplier fieldXSupplier,
-                                        DoubleSupplier fieldYSupplier,
-                                        BooleanSupplier slowModeSupplier,
-                                        DriveSubsystem drive) {
+    public AimAndDriveVisionCenteredCommand(DoubleSupplier fieldXSupplier,
+                                            DoubleSupplier fieldYSupplier,
+                                            BooleanSupplier slowModeSupplier,
+                                            DriveSubsystem drive) {
         this.fieldXSupplier = Objects.requireNonNull(fieldXSupplier, "fieldXSupplier required");
         this.fieldYSupplier = Objects.requireNonNull(fieldYSupplier, "fieldYSupplier required");
         this.slowModeSupplier = Objects.requireNonNull(slowModeSupplier, "slowModeSupplier required");
@@ -66,8 +65,8 @@ public class AimAndDriveFixedAngleCommand extends Command {
         fieldX = applyTranslationDeadband(fieldX);
         fieldY = applyTranslationDeadband(fieldY);
 
-        // Fixed-angle aim and drive - rotation to fixed heading based on alliance
-        drive.aimAndDriveFixedAngle(fieldX, fieldY, slowMode);
+        // Vision-centered aim and drive - rotation uses Limelight tx to center tag
+        drive.aimAndDriveVisionCentered(fieldX, fieldY, slowMode);
     }
 
     @Override

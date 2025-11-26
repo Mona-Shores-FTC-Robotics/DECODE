@@ -4,7 +4,6 @@ import com.bylazar.configurables.annotations.Configurable;
 
 import com.qualcomm.robotcore.hardware.Gamepad;
 
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.HumanLoadingCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.testing.LaunchInSequenceCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.testing.LaunchObeliskPatternCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
@@ -37,61 +36,15 @@ public class LauncherCommands {
         this.intake = intake;
     }
 
-    public void spinUpAllLanesToLaunch() {
-        launcher.spinUpAllLanesToLaunch();
+    public PresetRangeSpinCommand presetRangeSpinUp(LauncherRange range, boolean finishWhenReady) {
+        return new PresetRangeSpinCommand(launcher, range, finishWhenReady);
     }
 
-    /**
-     * Spin up to a preset range (SHORT, MID, LONG) using dashboard-tunable RPMs.
-     * @param range The preset range to target
-     */
-    public PresetRangeSpinCommand spinUpForPosition(LauncherRange range) {
-        return new PresetRangeSpinCommand(launcher, range);
-    }
-
-    /**
-     * Fires all lanes at SHORT range (~2700 RPM).
-     * Spins up, fires all three lanes, then spins down to idle.
-     * Activates prefeed roller in forward direction to help feed.
-     *
-     * @return Command that executes a short-range shot
-     */
-    public PresetRangeLaunchAllCommand fireAllShortRange() {
-        return new PresetRangeLaunchAllCommand(launcher, intake, LauncherRange.SHORT, true);
-    }
-
-    /**
-     * Fires all lanes at MID range (~3600 RPM).
-     * Spins up, fires all three lanes, then spins down to idle.
-     * Activates prefeed roller in forward direction to help feed.
-     *
-     * @return Command that executes a mid-range shot
-     */
-    public PresetRangeLaunchAllCommand fireAllMidRange() {
-        return new PresetRangeLaunchAllCommand(launcher, intake, LauncherRange.MID, true);
-    }
-
-    /**
-     * Fires all lanes at LONG range (~4200 RPM).
-     * Spins up, fires all three lanes, then spins down to idle.
-     * Activates prefeed roller in forward direction to help feed.
-     *
-     * @return Command that executes a long-range shot
-     */
-    public PresetRangeLaunchAllCommand fireAllLongRange() {
-        return new PresetRangeLaunchAllCommand(launcher, intake, LauncherRange.LONG, true);
-    }
-
-    /**
-     * Generic range-based firing command.
-     * Activates prefeed roller in forward direction to help feed.
-     *
-     * @param range The shooting range (SHORT, MID, or LONG)
-     * @param spinDownAfterShot Whether to spin down to idle after firing
-     * @return Command that executes the range-based shot
-     */
-    public PresetRangeLaunchAllCommand launchAllAtRangePreset(LauncherRange range, boolean spinDownAfterShot) {
-        return new PresetRangeLaunchAllCommand(launcher, intake, range, spinDownAfterShot);
+    public DistanceBasedSpinCommand distanceBasedSpinUp(VisionSubsystemLimelight vision,
+                                                        DriveSubsystem drive,
+                                                        LightingSubsystem lighting,
+                                                        Gamepad gamepad) {
+        return new DistanceBasedSpinCommand(launcher, vision, drive, lighting, gamepad);
     }
 
     public LaunchAllCommand launchAll(boolean spinDownAfterShot) {
@@ -172,43 +125,9 @@ public class LauncherCommands {
         return new LaunchInSequenceCommand(launcher, intake);
     }
 
-    // ========== Distance-Based Commands ==========
 
-    /**
-     * Continuously calculates distance to goal and updates launcher RPM while held.
-     * Hold X button to spin up at calculated RPM, release to fire all lanes.
-     *
-     * Designed for hold-to-spin, release-to-fire button behavior.
-     * While held: Continuously calculates distance and updates RPM targets
-     * On release: Caller should trigger fire command
-     *
-     * Triggers haptic feedback (controller rumble) and light flash when launcher
-     * reaches 95% of target RPM.
-     *
-     * @param vision The vision subsystem (for AprilTag distance measurement)
-     * @param drive The drive subsystem (for odometry fallback)
-     * @param lighting The lighting subsystem (for ready feedback)
-     * @param gamepad The operator gamepad (for haptic feedback)
-     * @return Command that continuously adjusts RPM based on distance
-     */
-    public DistanceBasedSpinCommand distanceBasedSpin(VisionSubsystemLimelight vision,
-                                                      DriveSubsystem drive,
-                                                      LightingSubsystem lighting,
-                                                      Gamepad gamepad) {
-        return new DistanceBasedSpinCommand(launcher, vision, drive, lighting, gamepad);
-    }
 
-    /**
-     * Toggle command for human loading station.
-     * Press once to start (reverse flywheel + prefeed, retract hoods).
-     * Press again to stop (return to normal).
-     *
-     * @return Command that toggles human loading mode
-     */
-    public HumanLoadingCommand toggleHumanLoading() {
-        return new HumanLoadingCommand(launcher, intake);
-    }
-//
+
 //    /**
 //     * Universal smart shot - the ONE BUTTON SOLUTION!
 //     * Combines distance-based RPM calculation with mode-aware firing strategy.

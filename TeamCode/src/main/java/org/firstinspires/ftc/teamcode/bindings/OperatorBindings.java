@@ -8,38 +8,15 @@ import dev.nextftc.ftc.GamepadEx;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpinCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeLaunchAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
-/**
- * Match-oriented operator bindings. Keeps the intake running in reverse by default,
- * forwards when the operator pulls the trigger, and maps launcher commands to the
- * standard match buttons.
- *
- * Button assignments:
- * - X: Hold to continuously calculate distance and spin up at calculated RPM, release to fire all lanes
- * - A: Fire all lanes at SHORT range (~2700 RPM) - close shots safety net
- * - B: Fire all lanes at LONG range (~4200 RPM)
- * - Y: Toggle human loading (press once to start, press again to stop)
- * - D-Pad Left: Universal smart shot (distance-based RPM + mode-aware firing) - THE ULTIMATE BUTTON!
- * - D-Pad Right: Cycle motif tail (0 → 1 → 2 → 0, visual feedback blinks corresponding lanes orange)
- * - Back: Toggle launcher mode (THROUGHPUT ↔ DECODE)
- * - Right Bumper: Intake forward
- *
- * Removed bindings (simplified controls):
- * - Left Bumper: Removed (was redundant with X button hold-to-spin)
- * - D-Pad Down: Removed (redundant with D-Pad Left UniversalSmartShot)
- * - D-Pad Up: Available for future use
- *
- * Testing: D-Pad Left has UniversalSmartShotCommand for evaluation. If it proves reliable,
- * it could replace X entirely, becoming the single primary fire button.
- */
 public class OperatorBindings {
     private final Button distanceBasedLaunch;
-//    private final Button fireUniversalSmart;
     private final Button runIntake;
     private final Button humanLoading;
 
@@ -53,16 +30,16 @@ public class OperatorBindings {
 
     public OperatorBindings(GamepadEx operator) {
 
-        //Robot Intake
+        //Ground Intake
         runIntake = operator.rightBumper();
 
-        //Human Player Loading
+        //Human Player Intake
         humanLoading = operator.triangle();
 
-        //launch based on range to goal.
+        //Distance Based Launching
         distanceBasedLaunch = operator.cross();
 
-        //launch based on preset RPM and hood values for specific field locations
+        //Preset Range Launching
         launchShort = operator.dpadDown();  // SHORT range for close shots (if vision is broken)
         launchMid = operator.dpadLeft(); // LONG range for far shots (if vision is broken)
 
@@ -91,17 +68,23 @@ public class OperatorBindings {
     }
 
     private void configurePresetRangeLaunchBindings(Robot robot) {
-        PresetRangeLaunchAllCommand launchAllShortCommand = robot.launcherCommands.fireAllShortRange();
-        launchShort.whenBecomesTrue(launchAllShortCommand);
+        LaunchAllCommand launchAllCommand = robot.launcherCommands.launchAll(true);
 
-        PresetRangeLaunchAllCommand launchAllMidCommand = robot.launcherCommands.fireAllMidRange();
-        launchMid.whenBecomesTrue(launchAllMidCommand);
+        PresetRangeSpinCommand spinShortCommand = robot.launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, false);
+        launchShort
+                .whenBecomesTrue(spinShortCommand)
+                .whenBecomesFalse(launchAllCommand);
+
+        PresetRangeSpinCommand spinMidCommand = robot.launcherCommands.presetRangeSpinUp(LauncherRange.MID, false);
+        launchMid
+                .whenBecomesTrue(spinMidCommand)
+                .whenBecomesFalse(launchAllCommand);
     }
 
     private void configureDistanceBasedLaunchBindings(Robot robot) {
 
         // Distance-based launching commands
-        DistanceBasedSpinCommand distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpin(robot.vision, robot.drive, robot.lighting, rawGamepad);
+        DistanceBasedSpinCommand distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, rawGamepad);
         LaunchAllCommand launchAllCommand = robot.launcherCommands.launchAll(true);
 
         // Cross button: Hold to spin up at distance-calculatedRPM, release to fire all lanes

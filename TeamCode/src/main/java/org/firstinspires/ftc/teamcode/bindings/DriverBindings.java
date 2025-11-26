@@ -1,19 +1,14 @@
 package org.firstinspires.ftc.teamcode.bindings;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.AimAndDriveCommand;
-import org.firstinspires.ftc.teamcode.commands.AimAndDriveVisionCenteredCommand;
-import org.firstinspires.ftc.teamcode.commands.AimAndDriveFixedAngleCommand;
-import org.firstinspires.ftc.teamcode.commands.CaptureAndAimCommand;
-import org.firstinspires.ftc.teamcode.commands.DefaultDriveCommand;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveVisionCenteredCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveFixedAngleCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.DefaultDriveCommand;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.bindings.Range;
 import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.commands.delays.Delay;
-import dev.nextftc.core.commands.groups.SequentialGroup;
-import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.ftc.GamepadEx;
 
 

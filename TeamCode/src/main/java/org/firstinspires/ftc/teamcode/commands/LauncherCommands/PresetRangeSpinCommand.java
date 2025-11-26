@@ -5,25 +5,26 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import dev.nextftc.core.commands.Command;
 
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeLaunchAllCommand.RangeRpmConfig;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Objects;
 
 /**
- * Spins up launchers to preset (short/mid/long) RPM targets and waits until ready.
- * Uses the same tunable RPM table as LaunchAllAtPresetRangeCommand so operators can
- * reuse dashboard values for spin-up-only behaviour.
+ * Spins up launchers to preset (short/mid/long) RPM and hood targets and waits until ready.
+ * Uses the shared CommandRangeConfig so dashboard-tuned short/mid/long values carry across
+ * both preset and distance-based flows.
  */
 @Configurable
 public class PresetRangeSpinCommand extends Command {
 
     private final LauncherSubsystem launcher;
     private final LauncherRange range;
-    private final RangeRpmConfig rpmConfig = PresetRangeLaunchAllCommand.rangeRpmConfig;
+    private final CommandRangeConfig rangeConfig = CommandRangeConfig.SHARED;
     private final ElapsedTime timer = new ElapsedTime();
+    private final boolean finishWhenReady;
 
     /**
      * Creates a command that spins up to a preset range (SHORT, MID, LONG).
@@ -31,38 +32,70 @@ public class PresetRangeSpinCommand extends Command {
      * @param range The preset range to use
      */
     public PresetRangeSpinCommand(LauncherSubsystem launcher, LauncherRange range) {
+        this(launcher, range, true);
+    }
+
+    /**
+     * Creates a command that spins up to a preset range (SHORT, MID, LONG).
+     * @param launcher The launcher subsystem
+     * @param range The preset range to use
+     * @param finishWhenReady Whether the command should end automatically once RPMs are reached
+     */
+    public PresetRangeSpinCommand(LauncherSubsystem launcher, LauncherRange range, boolean finishWhenReady) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.range = Objects.requireNonNull(range, "range required");
+        this.finishWhenReady = finishWhenReady;
         requires(launcher);
         setInterruptible(true);
     }
 
     @Override
     public void start() {
+        launcher.clearRecoveryDeadlines();
         timer.reset();
         setRpmsForRange();
-        launcher.setAllHoodsForRange(range);
+        launcher.setAllHoodPositions(hoodPositionForRange());
         launcher.spinUpAllLanesToLaunch();
     }
 
     @Override
     public void update() {
-        // Monitor launcher status
+        boolean allEnabledReady = true;
+        boolean anyEnabled = false;
+
+        for (LauncherLane lane : LauncherLane.values()) {
+            double launchRpm = launcher.getLaunchRpm(lane);
+            boolean enabled = launchRpm > 0.0;
+            boolean ready = enabled && launcher.isLaneReady(lane);
+
+            if (enabled) {
+                anyEnabled = true;
+                allEnabledReady &= ready;
+            }
+
+            RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Enabled", enabled);
+            RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Target RPM", launchRpm);
+            RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Ready", ready);
+            RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Current RPM", launcher.getCurrentRpm(lane));
+        }
+
+        RobotState.packet.put("Preset-Spin/Range", range.name());
+        RobotState.packet.put("Preset-Spin/Finish When Ready", finishWhenReady);
+        RobotState.packet.put("Preset-Spin/All Enabled Ready", anyEnabled && allEnabledReady);
     }
 
     @Override
     public boolean isDone() {
-        if (areEnabledLaunchersReady()) {
-            return true;
+        if (!finishWhenReady) {
+            return false; // Hold-to-spin behaviour; caller interrupts when ready to fire
         }
-        return timer.seconds() >= rpmConfig.timeoutSeconds;
+
+        return areEnabledLaunchersReady() || timer.seconds() >= rangeConfig.timeoutSeconds;
     }
 
     @Override
     public void stop(boolean interrupted) {
-        if (interrupted) {
-            launcher.clearOverrides();
-        }
+        // Preserve RPM/hood overrides so LaunchAllCommand can fire immediately after cancel/interruption.
     }
 
     /**
@@ -89,22 +122,34 @@ public class PresetRangeSpinCommand extends Command {
     private void setRpmsForRange() {
         switch (range) {
             case SHORT:
-                launcher.setLaunchRpm(LauncherLane.LEFT, rpmConfig.shortLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, rpmConfig.shortCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, rpmConfig.shortRightRpm);
+                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig.shortLeftRpm);
+                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig.shortCenterRpm);
+                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig.shortRightRpm);
                 break;
 
             case MID:
-                launcher.setLaunchRpm(LauncherLane.LEFT, rpmConfig.midLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, rpmConfig.midCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, rpmConfig.midRightRpm);
+                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig.midLeftRpm);
+                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig.midCenterRpm);
+                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig.midRightRpm);
                 break;
 
             case LONG:
-                launcher.setLaunchRpm(LauncherLane.LEFT, rpmConfig.longLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, rpmConfig.longCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, rpmConfig.longRightRpm);
+                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig.longLeftRpm);
+                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig.longCenterRpm);
+                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig.longRightRpm);
                 break;
+        }
+    }
+
+    private double hoodPositionForRange() {
+        switch (range) {
+            case SHORT:
+                return rangeConfig.shortHoodPosition;
+            case MID:
+                return rangeConfig.midHoodPosition;
+            case LONG:
+            default:
+                return rangeConfig.longHoodPosition;
         }
     }
 

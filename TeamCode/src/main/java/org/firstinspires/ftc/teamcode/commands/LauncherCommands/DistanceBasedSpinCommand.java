@@ -24,7 +24,7 @@ import java.util.Optional;
  * 1. While held: Continuously calculates distance and updates RPM targets
  * 2. On release: Caller should trigger fire command
  * Uses AprilTag vision for distance measurement, falls back to odometry if unavailable.
- * RPM is interpolated based on configurable distance/RPM calibration points.
+ * RPM is interpolated using the shared preset short/mid/long RPM anchors and configurable distance breakpoints.
  */
 @Configurable
 public class DistanceBasedSpinCommand extends Command {
@@ -58,43 +58,19 @@ public class DistanceBasedSpinCommand extends Command {
     public static DiagnosticData diagnostics = new DiagnosticData();
 
     @Configurable
-    public static class DistanceRpmCalibration {
+    public static class DistanceCalibration {
         /** Distance in inches for short range reference point */
         public double shortRangeDistanceIn = 36.0;
-        /** RPM for left lane at short range */
-        public double shortLeftRpm = 2000;
-        /** RPM for center lane at short range */
-        public double shortCenterRpm = 2000;
-        /** RPM for right lane at short range */
-        public double shortRightRpm = 2000;
 
         /** Distance in inches for mid range reference point */
         public double midRangeDistanceIn = 90.0;
-        /** RPM for left lane at mid range */
-        public double midLeftRpm = 2400;
-        /** RPM for center lane at mid range */
-        public double midCenterRpm = 2400;
-        /** RPM for right lane at mid range */
-        public double midRightRpm = 2400;
 
         /** Distance in inches for long range reference point */
         public double longRangeDistanceIn = 128.0;
-        /** RPM for left lane at long range */
-        public double longLeftRpm = 2850;
-        /** RPM for center lane at long range */
-        public double longCenterRpm = 2850;
-        /** RPM for right lane at long range */
-        public double longRightRpm = 2850;
     }
 
     @Configurable
-    public static class HoodCalibration {
-        /** Hood position for distances below short range threshold */
-        public double shortHoodPosition = .3;
-        /** Hood position for distances in mid range */
-        public double midHoodPosition = 0.05;
-        /** Hood position for distances above long range threshold */
-        public double longHoodPosition = 0.0;
+    public static class HoodThresholds {
         /** Distance threshold (inches) between short and mid range */
         public double shortToMidThresholdIn = 60.0;
         /** Distance threshold (inches) between mid and long range */
@@ -102,14 +78,15 @@ public class DistanceBasedSpinCommand extends Command {
 
     }
 
-    public static DistanceRpmCalibration calibration = new DistanceRpmCalibration();
-    public static HoodCalibration hoodCalibration = new HoodCalibration();
+    public static DistanceCalibration distanceCalibration = new DistanceCalibration();
+    public static HoodThresholds hoodThresholds = new HoodThresholds();
 
     private final LauncherSubsystem launcher;
     private final VisionSubsystemLimelight vision;
     private final DriveSubsystem drive;
     private final LightingSubsystem lighting;
     private final Gamepad gamepad;
+    private final CommandRangeConfig rangeConfig = CommandRangeConfig.SHARED;
 
     private double lastSmoothedDistanceIn = 0.0;
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;  // 0-1: higher = more filtering
@@ -309,23 +286,23 @@ public class DistanceBasedSpinCommand extends Command {
 
     /**
      * Sets RPM targets for all lanes based on distance using linear interpolation.
-     * Uses calibration points from LaunchAllAtPresetRangeCommand.
+     * Uses the shared preset range RPM anchors combined with tunable distance breakpoints.
      */
     private void setRpmsForDistance(double distanceIn) {
         double leftRpm = interpolateRpm(distanceIn,
-            calibration.shortRangeDistanceIn, calibration.shortLeftRpm,
-            calibration.midRangeDistanceIn, calibration.midLeftRpm,
-            calibration.longRangeDistanceIn, calibration.longLeftRpm);
+            distanceCalibration.shortRangeDistanceIn, rangeConfig.shortLeftRpm,
+            distanceCalibration.midRangeDistanceIn, rangeConfig.midLeftRpm,
+            distanceCalibration.longRangeDistanceIn, rangeConfig.longLeftRpm);
 
         double centerRpm = interpolateRpm(distanceIn,
-            calibration.shortRangeDistanceIn, calibration.shortCenterRpm,
-            calibration.midRangeDistanceIn, calibration.midCenterRpm,
-            calibration.longRangeDistanceIn, calibration.longCenterRpm);
+            distanceCalibration.shortRangeDistanceIn, rangeConfig.shortCenterRpm,
+            distanceCalibration.midRangeDistanceIn, rangeConfig.midCenterRpm,
+            distanceCalibration.longRangeDistanceIn, rangeConfig.longCenterRpm);
 
         double rightRpm = interpolateRpm(distanceIn,
-            calibration.shortRangeDistanceIn, calibration.shortRightRpm,
-            calibration.midRangeDistanceIn, calibration.midRightRpm,
-            calibration.longRangeDistanceIn, calibration.longRightRpm);
+            distanceCalibration.shortRangeDistanceIn, rangeConfig.shortRightRpm,
+            distanceCalibration.midRangeDistanceIn, rangeConfig.midRightRpm,
+            distanceCalibration.longRangeDistanceIn, rangeConfig.longRightRpm);
 
         launcher.setLaunchRpm(LauncherLane.LEFT, leftRpm);
         launcher.setLaunchRpm(LauncherLane.CENTER, centerRpm);
@@ -380,12 +357,12 @@ public class DistanceBasedSpinCommand extends Command {
     private void setHoodForDistance(double distanceIn) {
         double hoodPosition;
 
-        if (distanceIn < hoodCalibration.shortToMidThresholdIn) {
-            hoodPosition = hoodCalibration.shortHoodPosition;
-        } else if (distanceIn < hoodCalibration.midToLongThresholdIn) {
-            hoodPosition = hoodCalibration.midHoodPosition;
+        if (distanceIn < hoodThresholds.shortToMidThresholdIn) {
+            hoodPosition = rangeConfig.shortHoodPosition;
+        } else if (distanceIn < hoodThresholds.midToLongThresholdIn) {
+            hoodPosition = rangeConfig.midHoodPosition;
         } else {
-            hoodPosition = hoodCalibration.longHoodPosition;
+            hoodPosition = rangeConfig.longHoodPosition;
         }
 
         launcher.setAllHoodPositions(hoodPosition);

@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
-import static org.firstinspires.ftc.teamcode.opmodes.DecodeAutonomousFarCommand.buildPath;
 import static org.firstinspires.ftc.teamcode.util.AutoField.poseForAlliance;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -18,7 +17,6 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -40,17 +38,14 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.core.units.Angle;
 import dev.nextftc.extensions.pedro.FollowPath;
 import dev.nextftc.extensions.pedro.PedroComponent;
-import dev.nextftc.extensions.pedro.TurnTo;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
 /**
  * Command-based version of DecodeAutonomousClose using Sequential and Parallel Command Groups
- *
  * This autonomous routine:
  * 1. Starts at LAUNCH_CLOSE position
  * 2. Collects samples from Gate Close, Gate Far, and Parking Zone
@@ -245,10 +240,10 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         return new SequentialGroup(
             // Start already at LAUNCH_CLOSE, so spin up launcher
                 new ParallelGroup(
-                        spinUpLauncher(),
+                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true),
                         followPath(startClosePose, launchClosePose)
                 ),
-                scoreSequence(),
+                launcherCommands.launchAll(false),
 
                 //preartifactpose
                 followPath(launchClosePose, poseForAlliance(28,112, 270, activeAlliance)),
@@ -297,11 +292,11 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                                 new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
                         ),
                         followPath(pickupPose, scorePose),
-                        spinUpLauncher()
+                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true)
                 ),
 
                 // Score the samples
-                scoreSequence()
+                launcherCommands.launchAll(false)
         );
     }
 
@@ -332,22 +327,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         };
     }
 
-    /**
-     * Spins up the launcher and waits until all launchers reach target RPM.
-     * Phase 1: Uses position-specific tunable RPM from LaunchAtPositionCommand.PositionRpmConfig
-     */
-    private Command spinUpLauncher() {
-        return launcherCommands.spinUpForPosition(LauncherRange.SHORT);
-    }
-
-    /**
-     * Scores samples using the launcher
-     */
-    private Command scoreSequence() {
-        return new SequentialGroup(
-            launcherCommands.launchAllAtRangePreset(LauncherRange.SHORT, false)  // Fires all enabled lanes at long range
-        );
-    }
 
     private void applyAlliance(Alliance alliance, Pose startOverride) {
         Alliance safeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;

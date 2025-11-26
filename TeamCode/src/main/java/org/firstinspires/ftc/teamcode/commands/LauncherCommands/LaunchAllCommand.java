@@ -18,10 +18,8 @@ import java.util.Objects;
  * IMPORTANT: This command assumes launch RPMs have already been set via setLaunchRpm().
  * If no RPMs are set, lanes will be treated as disabled (RPM = 0) and won't fire.
  *
- * For range-based or vision-based shooting, use LaunchAllAtPresetRangeCommand or a custom command
- * that sets RPMs explicitly.
- *
- * Designed to be triggered when the operator releases the "launch all" button.
+ * Designed to be triggered when the operator releases the "launch all" button after a spin-up
+ * command (distance-based or preset) has already set RPM and hood targets.
  */
 public class LaunchAllCommand extends Command {
 
