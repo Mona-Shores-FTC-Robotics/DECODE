@@ -98,7 +98,7 @@ public class LauncherFlywheelConfig {
         config.flywheelCenter.kV = 0.0002;
         config.flywheelCenter.kP = 0.0;
 
-        config.flywheelRight.reversed = false;
+        config.flywheelRight.reversed = true;
         config.flywheelRight.idleRpm = 1500;
         config.flywheelRight.kS = 0.10;
         config.flywheelRight.kV = 0.0002;

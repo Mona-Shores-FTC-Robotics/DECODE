@@ -121,6 +121,7 @@ public class LaunchAllCommand extends Command {
     @Override
     public void stop(boolean interrupted) {
         // put gate down
+        launcher.setAllLanesToIdle();
         if (intake != null) {
             intake.setGatePreventArtifact();
         }
