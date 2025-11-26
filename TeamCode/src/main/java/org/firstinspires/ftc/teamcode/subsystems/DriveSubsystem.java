@@ -520,14 +520,23 @@ public class DriveSubsystem implements Subsystem {
         double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
-        // Calculate target heading using pinpoint odometry + basket target coordinates
-        Pose pose = follower.getPose();
-        Pose targetPose = (alliance == Alliance.RED)
+        // Calculate target heading using FTC field frame for consistency
+        // Convert robot pose from Pedro to FTC coordinates
+        Pose posePedro = follower.getPose();
+        Pose poseFTC = PoseFrames.pedroToFtc(posePedro);
+
+        // Convert target basket pose from Pedro to FTC coordinates
+        Pose targetPosePedro = (alliance == Alliance.RED)
             ? FieldConstants.getRedBasketTarget()
             : FieldConstants.getBlueBasketTarget();
-        double targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
+        Pose targetPoseFTC = PoseFrames.pedroToFtc(targetPosePedro);
 
-        double headingError = normalizeAngle(targetHeading - follower.getHeading());
+        // Calculate target heading in FTC frame using atan2(dy, dx)
+        double targetHeading = FieldConstants.getAimAngleTo(poseFTC, targetPoseFTC);
+
+        // Convert current heading from Pedro to FTC frame and calculate error
+        double currentHeadingFTC = AngleUnit.normalizeRadians(posePedro.getHeading() + Math.PI / 2);
+        double headingError = normalizeAngle(targetHeading - currentHeadingFTC);
         lastAimErrorRad = headingError;
         RobotState.packet.put("Aim Error", Math.toDegrees(headingError));
 
@@ -643,15 +652,18 @@ public class DriveSubsystem implements Subsystem {
         double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
-        // Get fixed target heading based on alliance
+        // Get fixed target heading based on alliance (in FTC frame)
         FixedAngleAimConfig aimConfig = fixedAngleAimConfig();
         double targetHeadingDeg = (alliance == Alliance.RED)
             ? aimConfig.redHeadingDeg
             : aimConfig.blueHeadingDeg;
         double targetHeadingRad = Math.toRadians(targetHeadingDeg);
 
-        // Calculate heading error
-        double headingError = normalizeAngle(targetHeadingRad - follower.getHeading());
+        // Convert current heading from Pedro to FTC frame
+        double currentHeadingFTC = AngleUnit.normalizeRadians(follower.getHeading() + Math.PI / 2);
+
+        // Calculate heading error in FTC frame
+        double headingError = normalizeAngle(targetHeadingRad - currentHeadingFTC);
         lastAimErrorRad = headingError;
 
         // Simple P controller
