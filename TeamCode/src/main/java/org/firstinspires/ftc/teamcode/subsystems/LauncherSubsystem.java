@@ -201,8 +201,12 @@ public class LauncherSubsystem implements Subsystem {
         applySpinMode(effectiveSpinMode);
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
-            double velocity = flywheel.motor.getVelocity();
-            RobotState.packet.put("velocity" + flywheel.lane.name(), velocity);
+            if (flywheel.motor != null) {
+                double velocityTps = flywheel.motor.getVelocity();  // SDK velocity in ticks/sec
+                double velocityRpm = ticksPerSecondToRpm(Math.abs(velocityTps));  // Converted to RPM
+                RobotState.packet.put("velocity_tps_" + flywheel.lane.name(), velocityTps);
+                RobotState.packet.put("velocity_rpm_" + flywheel.lane.name(), velocityRpm);
+            }
         }
         updateStateMachine(now, effectiveSpinMode);
         updateLaneRecovery(now);
@@ -911,9 +915,6 @@ public class LauncherSubsystem implements Subsystem {
         private int hybridToBangCounter = 0;
         private int bangToHoldCounter = 0;
         private int holdToBangCounter = 0;
-        private int lastPositionTicks = 0;
-        private double lastSampleTimeMs = Double.NaN;
-        private double estimatedTicksPerSec = 0.0;
 
         Flywheel(LauncherLane lane, HardwareMap hardwareMap) {
             this.lane = lane;
@@ -934,10 +935,7 @@ public class LauncherSubsystem implements Subsystem {
             launchTimer.reset();
             if (motor != null) {
                 motor.setPower(0.0);
-                lastPositionTicks = motor.getCurrentPosition();
             }
-            lastSampleTimeMs = clock.milliseconds();
-            estimatedTicksPerSec = 0.0;
         }
 
         void commandLaunch() {
@@ -965,7 +963,12 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         double getCurrentRpm() {
-            return Math.abs(ticksPerSecondToRpm(estimatedTicksPerSec));
+            if (motor == null) {
+                return 0.0;
+            }
+            // Use SDK's built-in velocity (already in ticks/sec)
+            double ticksPerSec = Math.abs(motor.getVelocity());
+            return ticksPerSecondToRpm(ticksPerSec);
         }
 
         double getTargetRpm() {
@@ -1023,10 +1026,6 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         void updateControl() {
-            updateVelocityEstimate();
-
-
-
             if (motor == null) {
                 return;
             }
@@ -1186,31 +1185,6 @@ public class LauncherSubsystem implements Subsystem {
             } else {
                 motor.setDirection(DcMotorSimple.Direction.FORWARD);
             }
-        }
-
-        private void updateVelocityEstimate() {
-            if (motor == null) {
-                return;
-            }
-            double nowMs = clock.milliseconds();
-            int position = motor.getCurrentPosition();
-            if (!Double.isNaN(lastSampleTimeMs)) {
-                double deltaMs = nowMs - lastSampleTimeMs;
-                if (deltaMs > 1.0) {
-                    int deltaTicks = position - lastPositionTicks;
-                    // Validate encoder delta to prevent glitch-induced RPM spikes
-                    // Max physical RPM ~6000, which is ~2800 ticks/sec
-                    // Allow 2x safety margin = 5600 ticks/sec max
-                    double maxTicksDelta = 5600.0 * deltaMs / 1000.0;
-                    if (Math.abs(deltaTicks) < maxTicksDelta) {
-                        double ticksPerSec = deltaTicks * 1000.0 / deltaMs;
-                        estimatedTicksPerSec = Math.abs(ticksPerSec);
-                    }
-                    // If delta is too large, keep previous estimate (encoder glitch detected)
-                }
-            }
-            lastPositionTicks = position;
-            lastSampleTimeMs = nowMs;
         }
     }
 
