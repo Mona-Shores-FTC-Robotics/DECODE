@@ -13,7 +13,6 @@ import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
-import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig.FlywheelControlMode;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherReverseIntakeConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherTimingConfig;
@@ -41,12 +40,6 @@ public class LauncherSubsystem implements Subsystem {
         OFF,
         IDLE,
         FULL
-    }
-
-    private enum ControlPhase {
-        BANG,
-        HYBRID,
-        HOLD
     }
 
     public enum LauncherState {
@@ -141,15 +134,6 @@ public class LauncherSubsystem implements Subsystem {
         } catch (IllegalArgumentException ignored) {
             return null;
         }
-    }
-
-    public static FlywheelControlMode getFlywheelControlMode() {
-        return flywheelConfig().modeConfig.mode;
-    }
-
-     public String getPhaseName(LauncherLane lane) {
-        Flywheel flywheel = flywheels.get(lane);
-        return flywheel == null ? "UNKNOWN" : flywheel.getPhaseName();
     }
 
     private boolean debugOverrideEnabled = false;
@@ -429,11 +413,6 @@ public class LauncherSubsystem implements Subsystem {
     public double getLastPower(LauncherLane lane) {
         Flywheel flywheel = flywheels.get(lane);
         return flywheel == null ? 0.0 : flywheel.getAppliedPower();
-    }
-
-    public int getBangToHoldCount(LauncherLane lane) {
-        Flywheel flywheel = flywheels.get(lane);
-        return flywheel == null ? 0 : flywheel.getBangToHoldCounter();
     }
 
     public SpinMode getRequestedSpinMode() {
@@ -903,14 +882,13 @@ public class LauncherSubsystem implements Subsystem {
 
         private double commandedRpm = 0.0;
         private boolean launchCommandActive = false;
-        private ControlPhase phase = ControlPhase.BANG;
-        private int bangToHybridCounter = 0;
-        private int hybridToBangCounter = 0;
-        private int bangToHoldCounter = 0;
-        private int holdToBangCounter = 0;
         private int lastPositionTicks = 0;
         private double lastSampleTimeMs = Double.NaN;
         private double estimatedTicksPerSec = 0.0;
+
+        // PID state variables
+        private double integralAccumulator = 0.0;
+        private double previousError = 0.0;
 
         Flywheel(LauncherLane lane, HardwareMap hardwareMap) {
             this.lane = lane;
@@ -923,11 +901,8 @@ public class LauncherSubsystem implements Subsystem {
         void initialize() {
             commandedRpm = 0.0;
             launchCommandActive = false;
-            phase = ControlPhase.BANG;
-            bangToHybridCounter = 0;
-            hybridToBangCounter = 0;
-            bangToHoldCounter = 0;
-            holdToBangCounter = 0;
+            integralAccumulator = 0.0;
+            previousError = 0.0;
             launchTimer.reset();
             if (motor != null) {
                 motor.setPower(0.0);
@@ -971,14 +946,6 @@ public class LauncherSubsystem implements Subsystem {
 
         double getAppliedPower() {
             return motor == null ? 0.0 : motor.getPower();
-        }
-
-        String getPhaseName() {
-            return phase.name();
-        }
-
-        int getBangToHoldCounter() {
-            return bangToHoldCounter;
         }
 
         boolean isAtLaunch() {
@@ -1033,144 +1000,69 @@ public class LauncherSubsystem implements Subsystem {
 
             if (commandedRpm <= 0.0) {
                 motor.setPower(0.0);
-                phase = ControlPhase.BANG;
+                integralAccumulator = 0.0;
+                previousError = 0.0;
                 return;
             }
 
+            // Pure PID control - simple and effective
             double error = commandedRpm - getCurrentRpm();
-            double absError = Math.abs(error);
-
-            // Pure bang-bang mode - simple and fast
-            if (getFlywheelControlMode() == FlywheelControlMode.PURE_BANG_BANG) {
-                phase = ControlPhase.BANG;
-                applyBangBangControl(error);
-                return;
-            }
-
-            // Legacy multi-phase control for HYBRID and BANG_BANG_HOLD modes
-            switch (phase) {
-                case BANG:
-                    if (getFlywheelControlMode() == FlywheelControlMode.BANG_BANG_HOLD) {
-                        if (absError <= flywheelConfig().modeConfig.bangBang.exitBangThresholdRpm) {
-                            bangToHoldCounter++;
-                            if (bangToHoldCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.bangToHoldConfirmCycles)) {
-                                phase = ControlPhase.HOLD;
-                                bangToHoldCounter = 0;
-                            }
-                        } else {
-                            bangToHoldCounter = 0;
-                        }
-                        bangToHybridCounter = 0;
-                    } else {
-                        if (absError <= flywheelConfig().modeConfig.bangBang.exitBangThresholdRpm) {
-                            bangToHybridCounter++;
-                            if (bangToHybridCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.bangToHybridConfirmCycles)) {
-                                phase = ControlPhase.HYBRID;
-                                bangToHybridCounter = 0;
-                            }
-                        } else {
-                            bangToHybridCounter = 0;
-                        }
-                        bangToHoldCounter = 0;
-                    }
-                    hybridToBangCounter = 0;
-                    holdToBangCounter = 0;
-                    break;
-                case HYBRID:
-                    if (absError >= flywheelConfig().modeConfig.bangBang.enterBangThresholdRpm) {
-                        hybridToBangCounter++;
-                        if (hybridToBangCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.hybridToBangConfirmCycles)) {
-                            phase = ControlPhase.BANG;
-                            hybridToBangCounter = 0;
-                            bangToHybridCounter = 0;
-                        }
-                    } else {
-                        hybridToBangCounter = 0;
-                    }
-                    bangToHoldCounter = 0;
-                    holdToBangCounter = 0;
-                    break;
-                case HOLD:
-                    if (absError >= flywheelConfig().modeConfig.bangBang.enterBangThresholdRpm) {
-                        holdToBangCounter++;
-                        if (holdToBangCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.holdToBangConfirmCycles)) {
-                            phase = ControlPhase.BANG;
-                            holdToBangCounter = 0;
-                            bangToHoldCounter = 0;
-                        }
-                    } else {
-                        holdToBangCounter = 0;
-                    }
-                    bangToHybridCounter = 0;
-                    hybridToBangCounter = 0;
-                    break;
-            }
-
-            if (phase == ControlPhase.BANG) {
-                applyBangBangControl(error);
-            } else if (phase == ControlPhase.HYBRID) {
-                applyHybridControl(error);
-            } else {
-                applyHoldControl(error);
-            }
+            applyPidControl(error);
         }
 
         private void setTargetRpm(double rpm) {
             double sanitized = Math.max(0.0, rpm);
+
+            // Reset integral accumulator when target changes to prevent windup
+            boolean targetChanged = Math.abs(sanitized - commandedRpm) > 1.0;
+            if (targetChanged) {
+                integralAccumulator = 0.0;
+                previousError = 0.0;
+            }
+
             commandedRpm = sanitized;
             launchCommandActive = sanitized > 0.0;
             if (launchCommandActive) {
                 launchTimer.reset();
             }
-            phase = ControlPhase.BANG;
-            bangToHybridCounter = 0;
-            hybridToBangCounter = 0;
-            bangToHoldCounter = 0;
-            holdToBangCounter = 0;
         }
 
-        private void applyBangBangControl(double error) {
-            double high = Range.clip(flywheelConfig().modeConfig.bangBang.highPower, -1.0, 1.0);
-            double low = Range.clip(flywheelConfig().modeConfig.bangBang.lowPower, -1.0, 1.0);
-
-            // Apply voltage compensation
-            double voltageMultiplier = getVoltageCompensationMultiplier();
-            high = Range.clip(high * voltageMultiplier, -1.0, 1.0);
-            low = Range.clip(low * voltageMultiplier, -1.0, 1.0);
-
-            // Simple bang-bang: high power when below target, low power when at/above target
-            if (error > 0.0) {
-                motor.setPower(high);
-            } else {
-                motor.setPower(low);
+        private void applyPidControl(double error) {
+            // Get the time delta for derivative calculation
+            double now = clock.milliseconds();
+            double dt = (now - lastSampleTimeMs) / 1000.0; // Convert to seconds
+            if (dt <= 0.0) {
+                dt = 0.001; // Prevent division by zero
             }
-        }
 
-        private void applyHybridControl(double error) {
-            double power = flywheelConfig().modeConfig.hybridPid.kF + flywheelConfig().modeConfig.hybridPid.kP * error;
-            power = Range.clip(power, 0.0, Math.max(0.0, flywheelConfig().modeConfig.hybridPid.maxPower));
+            // Feedforward: RPM-proportional baseline power
+            // kF = kF_base + kF_perRpm * targetRPM
+            double kF = flywheelConfig().pidConfig.kF_base
+                      + flywheelConfig().pidConfig.kF_perRpm * commandedRpm;
+
+            // Proportional: correct current error
+            double P = flywheelConfig().pidConfig.kP * error;
+
+            // Integral: accumulate error over time (with anti-windup)
+            integralAccumulator += error * dt;
+            double integralLimit = flywheelConfig().pidConfig.integralLimit;
+            integralAccumulator = Range.clip(integralAccumulator, -integralLimit, integralLimit);
+            double I = flywheelConfig().pidConfig.kI * integralAccumulator;
+
+            // Derivative: rate of change of error (dampens oscillations)
+            double errorDerivative = (error - previousError) / dt;
+            double D = flywheelConfig().pidConfig.kD * errorDerivative;
+            previousError = error;
+
+            // Combine all terms
+            double power = kF + P + I + D;
+            power = Range.clip(power, 0.0, Math.max(0.0, flywheelConfig().pidConfig.maxPower));
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
             power = Range.clip(power * voltageMultiplier, 0.0, 1.0);
 
             motor.setPower(power);
-        }
-
-        private void applyHoldControl(double error) {
-            double holdPower = flywheelConfig().modeConfig.hold.baseHoldPower + flywheelConfig().modeConfig.hold.rpmPowerGain * commandedRpm;
-            holdPower = Range.clip(holdPower, flywheelConfig().modeConfig.hold.minHoldPower, flywheelConfig().modeConfig.hold.maxHoldPower);
-
-            // Apply voltage compensation
-            double voltageMultiplier = getVoltageCompensationMultiplier();
-            holdPower = Range.clip(holdPower * voltageMultiplier, 0.0, 1.0);
-            double lowPower = Range.clip(flywheelConfig().modeConfig.bangBang.lowPower * voltageMultiplier, 0.0, 1.0);
-
-            if (error < 0.0) {
-                motor.setPower(lowPower);
-            } else {
-                motor.setPower(holdPower);
-            }
         }
 
         private void configureMotor() {
@@ -1198,8 +1090,13 @@ public class LauncherSubsystem implements Subsystem {
                     // Allow 2x safety margin = 5600 ticks/sec max
                     double maxTicksDelta = 5600.0 * deltaMs / 1000.0;
                     if (Math.abs(deltaTicks) < maxTicksDelta) {
-                        double ticksPerSec = deltaTicks * 1000.0 / deltaMs;
-                        estimatedTicksPerSec = Math.abs(ticksPerSec);
+                        double rawTicksPerSec = Math.abs(deltaTicks * 1000.0 / deltaMs);
+
+                        // Apply exponential moving average smoothing to reduce noise
+                        // smoothed = alpha * raw + (1 - alpha) * previous
+                        double alpha = flywheelConfig().parameters.velocitySmoothingAlpha;
+                        alpha = Range.clip(alpha, 0.0, 1.0);
+                        estimatedTicksPerSec = alpha * rawTicksPerSec + (1.0 - alpha) * estimatedTicksPerSec;
                     }
                     // If delta is too large, keep previous estimate (encoder glitch detected)
                 }

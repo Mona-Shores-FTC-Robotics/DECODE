@@ -9,14 +9,8 @@ import com.bylazar.configurables.annotations.Configurable;
 @Configurable
 public class LauncherFlywheelConfig {
 
-    public enum FlywheelControlMode {
-        HYBRID,
-        BANG_BANG_HOLD,
-        PURE_BANG_BANG
-    }
-
     public FlywheelParameters parameters = new FlywheelParameters();
-    public FlywheelModeConfig modeConfig = new FlywheelModeConfig();
+    public PidConfig pidConfig = new PidConfig();
 
     @Configurable
     public static class FlywheelParameters {
@@ -26,46 +20,32 @@ public class LauncherFlywheelConfig {
         public double gearRatio = 1.0;
         /** Acceptable RPM error when considering a lane ready to fire. */
         public double rpmTolerance = 50;
+        /** Velocity smoothing factor (0-1). Higher = more smoothing, slower response. */
+        public double velocitySmoothingAlpha = 0.3;
     }
 
     @Configurable
-    public static class FlywheelModeConfig {
-        public FlywheelControlMode mode = FlywheelControlMode.HYBRID;
-        public BangBangConfig bangBang = new BangBangConfig();
-        public HybridPidConfig hybridPid = new HybridPidConfig();
-        public HoldConfig hold = new HoldConfig();
-        public PhaseSwitchConfig phaseSwitch = new PhaseSwitchConfig();
+    public static class PidConfig {
+        /** Proportional gain - corrects current error */
+        public double kP = 0.008;
 
-        @Configurable
-        public static class BangBangConfig {
-            public double highPower = 1.0;
-            public double lowPower = 0.2;
-            public double enterBangThresholdRpm = 800;
-            public double exitBangThresholdRpm = 600;
-        }
+        /** Integral gain - eliminates steady-state error */
+        public double kI = 0.0001;
 
-        @Configurable
-        public static class HybridPidConfig {
-            public double kP = .008;
-            public double kF = .22;
-            public double maxPower = 1.0;
-        }
+        /** Derivative gain - dampens oscillations */
+        public double kD = 0.00002;
 
-        @Configurable
-        public static class HoldConfig {
-            public double baseHoldPower = 0.6;
-            public double rpmPowerGain = 0.00012;
-            public double minHoldPower = 0.2;
-            public double maxHoldPower = 1.0;
-        }
+        /** Feedforward gain per RPM - baseline power for target velocity */
+        public double kF_perRpm = 0.00008;
 
-        @Configurable
-        public static class PhaseSwitchConfig {
-            public int bangToHybridConfirmCycles = 1;
-            public int bangToHoldConfirmCycles = 3;
-            public int hybridToBangConfirmCycles = 3;
-            public int holdToBangConfirmCycles = 3;
-        }
+        /** Base feedforward power - minimum power at any RPM */
+        public double kF_base = 0.05;
+
+        /** Maximum integral accumulator value - prevents windup */
+        public double integralLimit = 0.1;
+
+        /** Maximum output power */
+        public double maxPower = 1.0;
     }
 
     public LeftFlywheelConfig flywheelLeft = new LeftFlywheelConfig();
