@@ -454,26 +454,25 @@ public class DriveSubsystem implements Subsystem {
             : FieldConstants.getBlueBasketTarget();
         double targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
 
-        double headingError = normalizeAngle(targetHeading - follower.getHeading());
-        double headingErrorDeg = Math.toDegrees(headingError);
-        double deadbandRad = Math.toRadians(aimAssistConfig.deadbandDeg);
+        double headingErrorRad = normalizeAngle(targetHeading - follower.getHeading());
+        double headingErrorDeg = Math.toDegrees(headingErrorRad);
+        boolean withinDeadband = Math.abs(headingErrorDeg) <= aimAssistConfig.deadbandDeg;
 
-        // Apply a small deadband to keep the robot still when settled
-        if (Math.abs(headingError) < deadbandRad) {
-            headingError = 0.0;
+        // Apply a small deadband to keep the robot still when settled; telemetry matches what is commanded
+        if (withinDeadband) {
+            headingErrorRad = 0.0;
+            headingErrorDeg = 0.0;
         }
-        lastAimErrorRad = headingError;
-        RobotState.packet.put("DriveSubsystem/Heading Error", Math.toDegrees(headingError));
 
         // Simple P controller with static feedforward to overcome friction near zero
         double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
-        double turn = aimAssistConfig.kP * headingError;
-        if (headingError != 0.0 && Math.abs(turn) < aimAssistConfig.kStatic) {
-            turn = Math.copySign(aimAssistConfig.kStatic, headingError);
+        double turn = aimAssistConfig.kP * headingErrorRad;
+        if (headingErrorRad != 0.0 && Math.abs(turn) < aimAssistConfig.kStatic) {
+            turn = Math.copySign(aimAssistConfig.kStatic, headingErrorRad);
         }
         turn = Range.clip(turn, -maxTurn, maxTurn);
 
-        lastAimErrorRad = headingError;
+        lastAimErrorRad = headingErrorRad;
         RobotState.packet.put("Aim Error (deg)", headingErrorDeg);
         RobotState.packet.put("Aim Target Heading (deg)", Math.toDegrees(targetHeading));
         RobotState.packet.put("Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
