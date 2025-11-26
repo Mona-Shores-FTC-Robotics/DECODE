@@ -5,31 +5,26 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 /**
  * Launcher subsystem telemetry data.
- * Includes per-lane flywheel, hood, and feeder data.
+ * Per-lane design: Each lane is independent. Check individual lane readiness
+ * rather than looking for a global "ready" state.
  */
 public class LauncherTelemetryData {
-    // High-level launcher state
-    public final boolean ready;
-    public final String state;
+    // Global launcher config
     public final String spinMode;
     public final String controlMode;
 
-    // Per-lane data
+    // Per-lane data (each lane independent)
     public final LaneData left;
     public final LaneData center;
     public final LaneData right;
 
     public LauncherTelemetryData(
-            boolean ready,
-            String state,
             String spinMode,
             String controlMode,
             LaneData left,
             LaneData center,
             LaneData right
     ) {
-        this.ready = ready;
-        this.state = state;
         this.spinMode = spinMode;
         this.controlMode = controlMode;
         this.left = left;
@@ -99,8 +94,6 @@ public class LauncherTelemetryData {
 
     public static LauncherTelemetryData capture(LauncherSubsystem launcher) {
         return new LauncherTelemetryData(
-                launcher.allLanesReady(),  // Telemetry status - OK to check all lanes
-                launcher.getState().name(),
                 launcher.getEffectiveSpinMode().name(),
                 LauncherSubsystem.getFlywheelControlMode().name(),
                 LaneData.capture(launcher, LauncherLane.LEFT),

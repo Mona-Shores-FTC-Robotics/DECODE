@@ -50,15 +50,6 @@ public class LauncherSubsystem implements Subsystem {
         HOLD
     }
 
-    public enum LauncherState {
-        DISABLED,
-        IDLE,
-        SPINNING_UP,
-        READY,
-        FEEDING,
-        RECOVERING
-    }
-
     // Global configuration instances
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
@@ -105,10 +96,8 @@ public class LauncherSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, Double> idleRpmOverrides = new EnumMap<>(LauncherLane.class);
     private final Deque<ShotRequest> shotQueue = new ArrayDeque<>();
     private final ElapsedTime clock = new ElapsedTime();
-    private final ElapsedTime stateTimer = new ElapsedTime();
 
     private SpinMode requestedSpinMode = SpinMode.OFF;
-    private LauncherState state = LauncherState.DISABLED;
     private double lastPeriodicMs = 0.0;
     private boolean reverseFlywheelActive = false;
 
@@ -169,7 +158,6 @@ public class LauncherSubsystem implements Subsystem {
     @Override
     public void initialize() {
         clock.reset();
-        stateTimer.reset();
         shotQueue.clear();
         requestedSpinMode = SpinMode.OFF;
         reverseFlywheelActive = false;
@@ -185,7 +173,6 @@ public class LauncherSubsystem implements Subsystem {
         for (Hood hood : hoods.values()) {
             hood.initialize();
         }
-        setState(LauncherState.DISABLED);
     }
 
     @Override
@@ -244,24 +231,6 @@ public class LauncherSubsystem implements Subsystem {
         setSpinMode(SpinMode.IDLE);
     }
 
-    /**
-     * Checks if ALL lanes are at their launch target.
-     *
-     * NOTE: This is for telemetry/status display only. Shot execution does NOT
-     * require all lanes to be ready - each lane fires independently when ready.
-     * Use isLaneReady(lane) for actual shot decisions.
-     *
-     * @return true if all three lanes are at launch speed, false otherwise
-     */
-    public boolean allLanesReady() {
-        for (LauncherLane lane : LauncherLane.values()) {
-            if (!flywheels.get(lane).isAtLaunch()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     public boolean isBusy() {
         if (!shotQueue.isEmpty()) {
             return true;
@@ -277,14 +246,6 @@ public class LauncherSubsystem implements Subsystem {
             }
         }
         return false;
-    }
-
-    public LauncherState getState() {
-        return state;
-    }
-
-    public double getStateElapsedSeconds() {
-        return stateTimer.seconds();
     }
 
     public int getQueuedShots() {
@@ -341,7 +302,6 @@ public class LauncherSubsystem implements Subsystem {
             flywheels.get(lane).stop();
         }
         setSpinMode(SpinMode.OFF);
-        setState(LauncherState.DISABLED);
     }
 
     public void homeFeeder(LauncherLane lane) {
@@ -664,8 +624,6 @@ public class LauncherSubsystem implements Subsystem {
                 }
             }
         }
-
-        reflectSpinState(effectiveSpinMode);
     }
 
     private void updateLaneRecovery(double now) {
@@ -685,31 +643,6 @@ public class LauncherSubsystem implements Subsystem {
                 }
                 laneRecoveryDeadlineMs.put(lane, 0.0);
             }
-        }
-    }
-
-
-    /**
-     * Updates the global launcher state to reflect the current spin mode request.
-     *
-     * NOTE: State reflects the overall intent, not per-lane achievement. Individual
-     * lanes fire independently when ready - they don't wait for global state.
-     * Use isLaneReady(lane) to check if a specific lane can fire.
-     */
-    private void reflectSpinState(SpinMode effectiveSpinMode) {
-        switch (effectiveSpinMode) {
-            case FULL:
-                // When full speed requested, state is SPINNING_UP
-                // Lanes will independently reach readiness and fire when ready
-                setState(LauncherState.SPINNING_UP);
-                break;
-            case IDLE:
-                setState(LauncherState.IDLE);
-                break;
-            case OFF:
-            default:
-                setState(LauncherState.DISABLED);
-                break;
         }
     }
 
@@ -794,13 +727,6 @@ public class LauncherSubsystem implements Subsystem {
             }
         }
         return lanes;
-    }
-
-    private void setState(LauncherState newState) {
-        if (state != newState) {
-            state = newState;
-            stateTimer.reset();
-        }
     }
 
     /**

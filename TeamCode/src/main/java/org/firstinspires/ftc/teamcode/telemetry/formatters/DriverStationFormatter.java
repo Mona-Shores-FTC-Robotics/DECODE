@@ -117,8 +117,11 @@ public class DriverStationFormatter {
             telemetry.addData("Pose", "(unavailable)");
         }
 
-        // Launcher ready status (critical for driver)
-        telemetry.addData("Launcher", data.launcher.ready ? "READY" : "NOT READY");
+        // Launcher per-lane readiness (critical for driver)
+        telemetry.addData("Launcher", "L:%s C:%s R:%s",
+                data.launcher.left.ready ? "✓" : "✗",
+                data.launcher.center.ready ? "✓" : "✗",
+                data.launcher.right.ready ? "✓" : "✗");
 
         // Vision tag detection (helpful for relocalization awareness)
         if (data.vision.hasTag) {
@@ -165,10 +168,11 @@ public class DriverStationFormatter {
                 data.drive.aimMode ? "ON" : "OFF",
                 data.drive.slowMode ? "ON" : "OFF");
 
-        // Launcher state
-        telemetry.addData("Launcher", "%s | ready=%s | mode=%s",
-                data.launcher.state,
-                data.launcher.ready ? "YES" : "NO",
+        // Launcher per-lane readiness
+        telemetry.addData("Launcher", "L:%s C:%s R:%s | mode=%s",
+                data.launcher.left.ready ? "✓" : "✗",
+                data.launcher.center.ready ? "✓" : "✗",
+                data.launcher.right.ready ? "✓" : "✗",
                 data.launcher.spinMode);
 
         // Vision
@@ -296,9 +300,11 @@ public class DriverStationFormatter {
             telemetry.addData("Pose", "(unavailable)");
         }
 
-        // Launcher ready status
-        telemetry.addData("Launcher", "%s | %s",
-                data.launcher.ready ? "READY" : "NOT READY",
+        // Launcher per-lane readiness
+        telemetry.addData("Launcher", "L:%s C:%s R:%s | %s",
+                data.launcher.left.ready ? "✓" : "✗",
+                data.launcher.center.ready ? "✓" : "✗",
+                data.launcher.right.ready ? "✓" : "✗",
                 data.launcher.spinMode);
 
         // Vision tag
@@ -348,10 +354,9 @@ public class DriverStationFormatter {
      * Page 3: Launcher - per-lane detailed info.
      */
     private void publishDebugLauncher(Telemetry telemetry, RobotTelemetryData data) {
-        telemetry.addData("State", "%s | %s | %s",
-                data.launcher.state,
-                data.launcher.ready ? "READY" : "NOT READY",
-                data.launcher.controlMode);
+        telemetry.addData("Config", "%s | spin=%s",
+                data.launcher.controlMode,
+                data.launcher.spinMode);
 
         telemetry.addData("Left",
                 "T=%.0f C=%.0f P=%.2f %s",

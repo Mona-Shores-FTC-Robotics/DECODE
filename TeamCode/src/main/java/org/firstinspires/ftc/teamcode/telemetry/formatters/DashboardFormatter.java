@@ -62,10 +62,9 @@ public class DashboardFormatter {
         packet.put("drive/mode", data.drive.driveMode);
         packet.put("drive/distance_to_goal_in", data.drive.distanceToGoalIn);
 
-        // Launcher high-level
-        packet.put("launcher/ready", data.launcher.ready);
+        // Launcher config (per-lane readiness in lane data)
         packet.put("launcher/spin_mode", data.launcher.spinMode);
-        packet.put("launcher/state", data.launcher.state);
+        packet.put("launcher/control_mode", data.launcher.controlMode);
 
         // Vision essentials
         packet.put("vision/has_tag", data.vision.hasTag);
@@ -127,11 +126,9 @@ public class DashboardFormatter {
         addDebugLaneSamples(packet, data.intake);
 
 
-        // Launcher high-level
+        // Launcher config (per-lane readiness in lane data)
         packet.put("launcher/control_mode", data.launcher.controlMode);
-        packet.put("launcher/ready", data.launcher.ready);
         packet.put("launcher/spin_mode", data.launcher.spinMode);
-        packet.put("launcher/state", data.launcher.state);
 
         // Launcher per-lane (left)
         addLaneData(packet, "launcher/left", data.launcher.left);
