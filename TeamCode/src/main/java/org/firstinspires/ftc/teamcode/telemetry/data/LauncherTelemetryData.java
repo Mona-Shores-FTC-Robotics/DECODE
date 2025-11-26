@@ -99,7 +99,7 @@ public class LauncherTelemetryData {
 
     public static LauncherTelemetryData capture(LauncherSubsystem launcher) {
         return new LauncherTelemetryData(
-                launcher.atTarget(),
+                launcher.allLanesReady(),  // Telemetry status - OK to check all lanes
                 launcher.getState().name(),
                 launcher.getEffectiveSpinMode().name(),
                 LauncherSubsystem.getFlywheelControlMode().name(),

@@ -244,7 +244,16 @@ public class LauncherSubsystem implements Subsystem {
         setSpinMode(SpinMode.IDLE);
     }
 
-    public boolean atTarget() {
+    /**
+     * Checks if ALL lanes are at their launch target.
+     *
+     * NOTE: This is for telemetry/status display only. Shot execution does NOT
+     * require all lanes to be ready - each lane fires independently when ready.
+     * Use isLaneReady(lane) for actual shot decisions.
+     *
+     * @return true if all three lanes are at launch speed, false otherwise
+     */
+    public boolean allLanesReady() {
         for (LauncherLane lane : LauncherLane.values()) {
             if (!flywheels.get(lane).isAtLaunch()) {
                 return false;
@@ -410,6 +419,16 @@ public class LauncherSubsystem implements Subsystem {
         return hood == null ? Double.NaN : hood.getPosition();
     }
 
+    /**
+     * Checks if a specific lane is ready to fire.
+     *
+     * IMPORTANT: Lanes are INDEPENDENT. Each lane can fire as soon as it's ready,
+     * without waiting for other lanes. Use this method for shot decisions, not
+     * allLanesReady() which is only for telemetry/status display.
+     *
+     * @param lane The lane to check
+     * @return true if this lane is at launch speed and can fire
+     */
     public boolean isLaneReady(LauncherLane lane) {
         if (lane == null) {
             return false;
@@ -621,17 +640,19 @@ public class LauncherSubsystem implements Subsystem {
     }
 
     private void updateStateMachine(double now, SpinMode effectiveSpinMode) {
-        // Allow per-lane independent firing
+        // Per-lane independent firing: Each lane fires as soon as it's ready,
+        // without waiting for other lanes. If LEFT is ready but CENTER isn't,
+        // LEFT fires immediately. This maximizes throughput with per-lane tuning.
         if (!shotQueue.isEmpty()) {
             Iterator<ShotRequest> iterator = shotQueue.iterator();
             while (iterator.hasNext()) {
                 ShotRequest next = iterator.next();
 
                 if (now < next.scheduledTimeMs) {
-                    continue;
+                    continue;  // Scheduled for later
                 }
                 if (!isLaneReadyForShot(next.lane, now)) {
-                    continue;
+                    continue;  // This lane not ready - check next shot in queue
                 }
 
                 Feeder feeder = feeders.get(next.lane);
@@ -668,10 +689,19 @@ public class LauncherSubsystem implements Subsystem {
     }
 
 
+    /**
+     * Updates the global launcher state to reflect the current spin mode request.
+     *
+     * NOTE: State reflects the overall intent, not per-lane achievement. Individual
+     * lanes fire independently when ready - they don't wait for global state.
+     * Use isLaneReady(lane) to check if a specific lane can fire.
+     */
     private void reflectSpinState(SpinMode effectiveSpinMode) {
         switch (effectiveSpinMode) {
             case FULL:
-                setState(atTarget() ? LauncherState.READY : LauncherState.SPINNING_UP);
+                // When full speed requested, state is SPINNING_UP
+                // Lanes will independently reach readiness and fire when ready
+                setState(LauncherState.SPINNING_UP);
                 break;
             case IDLE:
                 setState(LauncherState.IDLE);
