@@ -7,6 +7,7 @@ import dev.nextftc.core.commands.Command;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import java.util.Objects;
 
@@ -17,66 +18,37 @@ import java.util.Objects;
  * Phase 3 upgrade path: Can switch to distance-based formula
  */
 @Configurable
-public class LaunchAtPositionCommand extends Command {
-
-    @Configurable
-    public static class PositionRpmConfig {
-        /** RPM for shots from LAUNCH_FAR position */
-        public double farLaunchRpm = 2925;
-
-        /** RPM for shots from LAUNCH_CLOSE position */
-        public double closeLaunchRpm = 2150;
-
-        /** Default RPM if position unknown */
-        public double defaultLaunchRpm = 2550;
-
-        /** Timeout in seconds before giving up */
-        public double timeoutSeconds = 3.0;
-    }
-
-    public static PositionRpmConfig positionRpmConfig = new PositionRpmConfig();
+public class PresetSpinCommand extends Command {
 
     private final LauncherSubsystem launcher;
-    private final FieldPoint position;
+    private final double range;
     private final double targetRpm;
     private double startTime = 0.0;
 
     /**
      * Creates command that spins up to position-specific RPM
      * @param launcher The launcher subsystem
-     * @param position The field position we're launching from
      */
-    public LaunchAtPositionCommand(LauncherSubsystem launcher, FieldPoint position) {
+    public PresetSpinCommand(LauncherSubsystem launcher, LauncherRange range) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
-        this.position = position;
-        this.targetRpm = getRpmForPosition(position);
-        requires(launcher);
-        setInterruptible(true);
-    }
-
-    /**
-     * Creates command with explicit RPM override (for testing/tuning)
-     * @param launcher The launcher subsystem
-     * @param targetRpm Explicit RPM to use
-     */
-    public LaunchAtPositionCommand(LauncherSubsystem launcher, double targetRpm) {
-        this.launcher = Objects.requireNonNull(launcher, "launcher required");
-        this.position = null;
-        this.targetRpm = targetRpm;
+        this.range = range;
+        this.targetRpm = getRpmForPosition(launcher);
+        this.targetHood = get(position);
         requires(launcher);
         setInterruptible(true);
     }
 
     @Override
     public void start() {
-
         launcher.setLaunchRpm(LauncherLane.LEFT, targetRpm);
         launcher.setLaunchRpm(LauncherLane.CENTER, targetRpm);
         launcher.setLaunchRpm(LauncherLane.RIGHT, targetRpm);
-        launcher.setAllHoodsExtended();
+        launcher.setAllHoodsForRange();
 
         // Spin up to target
         launcher.spinUpAllLanesToLaunch();
+
+
         startTime = System.currentTimeMillis();
     }
 
@@ -124,29 +96,4 @@ public class LaunchAtPositionCommand extends Command {
         return true;
     }
 
-    /**
-     * Maps field position to RPM target
-     * Phase 3: Replace with distance-based formula
-     */
-    private static double getRpmForPosition(FieldPoint position) {
-        if (position == null) {
-            return positionRpmConfig.defaultLaunchRpm;
-        }
-
-        switch (position) {
-            case LAUNCH_FAR:
-                return positionRpmConfig.farLaunchRpm;
-            case LAUNCH_CLOSE:
-                return positionRpmConfig.closeLaunchRpm;
-            default:
-                return positionRpmConfig.defaultLaunchRpm;
-        }
-    }
-
-    /**
-     * Gets the RPM this command will use (for logging)
-     */
-    public double getTargetRpm() {
-        return targetRpm;
-    }
 }

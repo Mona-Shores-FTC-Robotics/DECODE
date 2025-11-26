@@ -8,16 +8,7 @@ import com.bylazar.configurables.annotations.Configurable;
  */
 @Configurable
 public class LauncherFlywheelConfig {
-
-    public enum FlywheelControlMode {
-        HYBRID,
-        BANG_BANG_HOLD,
-        PURE_BANG_BANG,
-        FEEDFORWARD
-    }
-
     public FlywheelParameters parameters = new FlywheelParameters();
-    public FlywheelModeConfig modeConfig = new FlywheelModeConfig();
 
     @Configurable
     public static class FlywheelParameters {
@@ -29,76 +20,6 @@ public class LauncherFlywheelConfig {
         public double rpmTolerance = 50;
     }
 
-    @Configurable
-    public static class FlywheelModeConfig {
-        public FlywheelControlMode mode = FlywheelControlMode.FEEDFORWARD;
-        public BangBangConfig bangBang = new BangBangConfig();
-        public HybridPidConfig hybridPid = new HybridPidConfig();
-        public HoldConfig hold = new HoldConfig();
-        public PhaseSwitchConfig phaseSwitch = new PhaseSwitchConfig();
-        public FeedforwardConfig feedforward = new FeedforwardConfig();
-
-        @Configurable
-        public static class BangBangConfig {
-            public double highPower = 1.0;
-            public double lowPower = 0.2;
-            public double enterBangThresholdRpm = 800;
-            public double exitBangThresholdRpm = 600;
-        }
-
-        @Configurable
-        public static class HybridPidConfig {
-            public double kP = .008;
-            public double kF = .22;
-            public double maxPower = 1.0;
-        }
-
-        @Configurable
-        public static class HoldConfig {
-            public double baseHoldPower = 0.6;
-            public double rpmPowerGain = 0.00012;
-            public double minHoldPower = 0.2;
-            public double maxHoldPower = 1.0;
-        }
-
-        @Configurable
-        public static class PhaseSwitchConfig {
-            public int bangToHybridConfirmCycles = 1;
-            public int bangToHoldConfirmCycles = 3;
-            public int hybridToBangConfirmCycles = 3;
-            public int holdToBangConfirmCycles = 3;
-        }
-
-        @Configurable
-        public static class FeedforwardConfig {
-            /**
-             * Static friction coefficient - minimum power needed to overcome friction.
-             * Typical range: 0.05 - 0.15
-             * To tune: Find minimum power where motor just starts spinning.
-             */
-            public double kS = 0.10;
-
-            /**
-             * Velocity gain - power per RPM.
-             * Linear model: power = kS + kV * targetRPM
-             * Typical range: 0.00015 - 0.00025 for FTC motors
-             * To tune: Measure steady-state RPM at different power levels, then:
-             *   kV = (power - kS) / rpm
-             */
-            public double kV = 0.0002;
-
-            /**
-             * Maximum power limit for feedforward control.
-             */
-            public double maxPower = 1.0;
-
-            /**
-             * Minimum power limit (should be >= kS for motor to spin).
-             */
-            public double minPower = 0.0;
-        }
-    }
-
     public LeftFlywheelConfig flywheelLeft = new LeftFlywheelConfig();
     public CenterFlywheelConfig flywheelCenter = new CenterFlywheelConfig();
     public RightFlywheelConfig flywheelRight = new RightFlywheelConfig();
@@ -106,43 +27,31 @@ public class LauncherFlywheelConfig {
     @Configurable
     public static class LeftFlywheelConfig {
         public String motorName = "launcher_left";
-        public boolean reversed; //TODO Is this really reversed depending on robot?
-        public double idleRpm = 1500;
-
-        /** Static friction - minimum power to overcome friction and start spinning */
-        public double kS = 0.10;
-        /** Velocity gain - power per RPM (feedforward term) */
-        public double kV = 0.0002;
-        /** Proportional gain - error correction (0 = pure feedforward, >0 = adds feedback) */
-        public double kP = 0.0;
+        public double idleRpm;
+        public boolean reversed;
+        public double kS;
+        public double kV;
+        public double kP;
     }
 
     @Configurable
     public static class CenterFlywheelConfig {
         public String motorName = "launcher_center";
-        public boolean reversed = false;
-        public double idleRpm = 1500;
-
-        /** Static friction - minimum power to overcome friction and start spinning */
-        public double kS = 0.10;
-        /** Velocity gain - power per RPM (feedforward term) */
-        public double kV = 0.0002;
-        /** Proportional gain - error correction (0 = pure feedforward, >0 = adds feedback) */
-        public double kP = 0.0;
+        public boolean reversed;
+        public double idleRpm;
+        public double kS;
+        public double kV;
+        public double kP;
     }
 
     @Configurable
     public static class RightFlywheelConfig { //actually left
         public String motorName = "launcher_right";
-        public boolean reversed = true;
-        public double idleRpm = 1500;
-
-        /** Static friction - minimum power to overcome friction and start spinning */
-        public double kS = 0.10;
-        /** Velocity gain - power per RPM (feedforward term) */
-        public double kV = 0.0002;
-        /** Proportional gain - error correction (0 = pure feedforward, >0 = adds feedback) */
-        public double kP = 0.0;
+        public boolean reversed;
+        public double idleRpm;
+        public double kS;
+        public double kV;
+        public double kP;
     }
 
     // Robot-specific instances
@@ -151,7 +60,24 @@ public class LauncherFlywheelConfig {
 
     private static LauncherFlywheelConfig createFlywheelConfig19429() {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
-        config.flywheelLeft.reversed = true;  // 19429 has left motor reversed
+        config.flywheelLeft.reversed = true;
+        config.flywheelLeft.idleRpm = 1500;
+        config.flywheelLeft.kS = 0.10;
+        config.flywheelLeft.kV = 0.0002;
+        config.flywheelLeft.kP = 0.0;
+
+        config.flywheelCenter.reversed = false;
+        config.flywheelCenter.idleRpm = 1500;
+        config.flywheelCenter.kS = 0.10;
+        config.flywheelCenter.kV = 0.0002;
+        config.flywheelCenter.kP = 0.0;
+
+        config.flywheelRight.reversed = false;
+        config.flywheelRight.idleRpm = 1500;
+        config.flywheelRight.kS = 0.10;
+        config.flywheelRight.kV = 0.0002;
+        config.flywheelRight.kP = 0.0;
+
         return config;
     }
 
@@ -161,6 +87,22 @@ public class LauncherFlywheelConfig {
     private static LauncherFlywheelConfig createFlywheelConfig20245() {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
         config.flywheelLeft.reversed = false;
+        config.flywheelLeft.idleRpm = 1500;
+        config.flywheelLeft.kS = 0.10;
+        config.flywheelLeft.kV = 0.0002;
+        config.flywheelLeft.kP = 0.0;
+
+        config.flywheelCenter.reversed = false;
+        config.flywheelCenter.idleRpm = 1500;
+        config.flywheelCenter.kS = 0.10;
+        config.flywheelCenter.kV = 0.0002;
+        config.flywheelCenter.kP = 0.0;
+
+        config.flywheelRight.reversed = false;
+        config.flywheelRight.idleRpm = 1500;
+        config.flywheelRight.kS = 0.10;
+        config.flywheelRight.kV = 0.0002;
+        config.flywheelRight.kP = 0.0;
 
         return config;
     }

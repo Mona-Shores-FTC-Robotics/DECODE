@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
+package org.firstinspires.ftc.teamcode.commands.LauncherCommands.testing;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
@@ -7,6 +7,8 @@ import com.qualcomm.robotcore.util.Range;
 
 import dev.nextftc.core.commands.Command;
 
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchInSequenceCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;

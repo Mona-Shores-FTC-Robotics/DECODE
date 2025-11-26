@@ -20,16 +20,14 @@ import java.util.Optional;
 
 /**
  * Continuously calculates distance to goal and updates launcher RPM while held.
- *
  * This command is designed for hold-to-spin, release-to-fire button behavior:
  * 1. While held: Continuously calculates distance and updates RPM targets
  * 2. On release: Caller should trigger fire command
- *
  * Uses AprilTag vision for distance measurement, falls back to odometry if unavailable.
  * RPM is interpolated based on configurable distance/RPM calibration points.
  */
 @Configurable
-public class ContinuousDistanceBasedSpinCommand extends Command {
+public class DistanceBasedSpinCommand extends Command {
 
     @Configurable
     public static class DiagnosticData {
@@ -55,11 +53,6 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         public boolean visionPoseAvailable = false;
         /** Odometry pose available */
         public boolean odometryPoseAvailable = false;
-
-        public double targetRPM = 0.0;
-        public double targetHoodPosition = 0.0;
-
-
     }
 
     public static DiagnosticData diagnostics = new DiagnosticData();
@@ -132,11 +125,11 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
      * @param lighting The lighting subsystem (for ready feedback)
      * @param gamepad The operator gamepad (for haptic feedback)
      */
-    public ContinuousDistanceBasedSpinCommand(LauncherSubsystem launcher,
-                                               VisionSubsystemLimelight vision,
-                                               DriveSubsystem drive,
-                                               LightingSubsystem lighting,
-                                               Gamepad gamepad) {
+    public DistanceBasedSpinCommand(LauncherSubsystem launcher,
+                                    VisionSubsystemLimelight vision,
+                                    DriveSubsystem drive,
+                                    LightingSubsystem lighting,
+                                    Gamepad gamepad) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.vision = Objects.requireNonNull(vision, "vision required");
         this.drive = Objects.requireNonNull(drive, "drive required");
@@ -200,18 +193,18 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         diagnostics.lastCalculatedDistanceIn = smoothedDistance;
 
         // Push diagnostics to telemetry packet
-        RobotState.packet.put("SQUARE Distance-Based/Update Count", diagnostics.updateCount);
-        RobotState.packet.put("SQUARE Distance-Based/Distance (in)", diagnostics.lastCalculatedDistanceIn);
-        RobotState.packet.put("SQUARE Distance-Based/Left Target RPM", diagnostics.lastLeftTargetRpm);
-        RobotState.packet.put("SQUARE Distance-Based/Center Target RPM", diagnostics.lastCenterTargetRpm);
-        RobotState.packet.put("SQUARE Distance-Based/Right Target RPM", diagnostics.lastRightTargetRpm);
-        RobotState.packet.put("SQUARE Distance-Based/Hood Position", diagnostics.lastHoodPosition);
-        RobotState.packet.put("SQUARE Distance-Based/Data Source", diagnostics.lastSource);
-        RobotState.packet.put("SQUARE Distance-Based/Robot Pose Available", diagnostics.robotPoseAvailable);
-        RobotState.packet.put("SQUARE Distance-Based/Goal Pose Available", diagnostics.goalPoseAvailable);
-        RobotState.packet.put("SQUARE Distance-Based/Vision Pose Available", diagnostics.visionPoseAvailable);
-        RobotState.packet.put("SQUARE Distance-Based/Odometry Pose Available", diagnostics.odometryPoseAvailable);
-        RobotState.packet.put("SQUARE Distance-Based/Feedback Triggered", feedbackTriggered);
+        RobotState.packet.put("Distance-Based-Spin/Update Count", diagnostics.updateCount);
+        RobotState.packet.put("Distance-Based-Spin/Distance (in)", diagnostics.lastCalculatedDistanceIn);
+        RobotState.packet.put("Distance-Based-Spin/Left Target RPM", diagnostics.lastLeftTargetRpm);
+        RobotState.packet.put("Distance-Based-Spin/Center Target RPM", diagnostics.lastCenterTargetRpm);
+        RobotState.packet.put("Distance-Based-Spin/Right Target RPM", diagnostics.lastRightTargetRpm);
+        RobotState.packet.put("Distance-Based-Spin/Hood Position", diagnostics.lastHoodPosition);
+        RobotState.packet.put("Distance-Based-Spin/Data Source", diagnostics.lastSource);
+        RobotState.packet.put("Distance-Based-Spin/Robot Pose Available", diagnostics.robotPoseAvailable);
+        RobotState.packet.put("Distance-Based-Spin/Goal Pose Available", diagnostics.goalPoseAvailable);
+        RobotState.packet.put("Distance-Based-Spin/Vision Pose Available", diagnostics.visionPoseAvailable);
+        RobotState.packet.put("Distance-Based-Spin/Odometry Pose Available", diagnostics.odometryPoseAvailable);
+        RobotState.packet.put("Distance-Based-Spin/Feedback Triggered", feedbackTriggered);
 
     }
 
@@ -298,7 +291,7 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         Optional<Pose> goalOpt = vision.getTargetGoalPose();
         diagnostics.goalPoseAvailable = goalOpt.isPresent();
 
-        if (!poseOpt.isPresent() || !goalOpt.isPresent()) {
+        if (!goalOpt.isPresent()) {
             diagnostics.lastSource = "none";
             return 0.0;
         }

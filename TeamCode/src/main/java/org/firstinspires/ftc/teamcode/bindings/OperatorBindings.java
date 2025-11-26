@@ -7,10 +7,9 @@ import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ContinuousDistanceBasedSpinCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpinCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.UniversalSmartShotCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -81,12 +80,12 @@ public class OperatorBindings {
         this.rawGamepad = operatorGamepad; //Need the raw gamepad for rumble features
 
         // Distance-based launching commands
-        ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand =
-                robot.launcherCommands.spinUpAtDistance(robot.vision, robot.drive, robot.lighting, rawGamepad);
-        LaunchAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
+        DistanceBasedSpinCommand distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpin(robot.vision, robot.drive, robot.lighting, rawGamepad);
+        LaunchAllCommand launchAllCommand = robot.launcherCommands.launchAll(true);
+
         // X button: Hold to spin up at distance-calculatedRPM, release to fire all lanes
-        fireDistanceBased.whenBecomesTrue(spinUpAtDistanceCommand);
-        fireDistanceBased.whenBecomesFalse(fireAllCommand);
+        fireDistanceBased.whenBecomesTrue(distanceBasedSpinCommand);
+        fireDistanceBased.whenBecomesFalse(launchAllCommand);
 
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
@@ -109,14 +108,6 @@ public class OperatorBindings {
                 .whenBecomesFalse(robot.intake::setGatePreventArtifact)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended)
                 .whenBecomesFalse(robot.intake::forwardRoller);
-
-
-        // Universal smart shot command (distance-based + mode-aware)
-        UniversalSmartShotCommand universalSmartShotCommand = robot.launcherCommands.fireUniversalSmart(
-                robot.vision, robot.drive, robot.lighting, rawGamepad);
-
-        // Universal smart shot: distance-based RPM + mode-aware firing (TESTING)
-//        fireUniversalSmart.whenBecomesTrue(universalSmartShotCommand);
 
         // Motif tail cycle: single button cycles through 0 → 1 → 2 → 0 with visual feedback
         motifTailCycle.whenBecomesTrue(() -> cycleMotifTailWithFeedback(robot));
