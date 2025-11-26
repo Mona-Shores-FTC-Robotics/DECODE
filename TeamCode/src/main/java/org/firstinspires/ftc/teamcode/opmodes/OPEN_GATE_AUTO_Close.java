@@ -8,6 +8,7 @@ import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -58,6 +59,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  */
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "OPEN GATE Auto - Close", group = "Command")
 @Configurable
+@Disabled
 public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
