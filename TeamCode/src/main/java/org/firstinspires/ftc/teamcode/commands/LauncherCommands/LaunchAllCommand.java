@@ -122,7 +122,10 @@ public class LaunchAllCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-        // put gate down
+        // Clear launch RPM overrides to return system to clean state
+        launcher.clearOverrides();
+
+        // Set to idle and put gate down
         launcher.setAllLanesToIdle();
         if (intake != null) {
             intake.setGatePreventArtifact();
