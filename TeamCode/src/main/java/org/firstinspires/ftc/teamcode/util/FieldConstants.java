@@ -128,7 +128,15 @@ public final class FieldConstants {
         Pose chebyshevGoalFTCPose = PoseFrames.pedroToFtc(chebyshevGoalPedroPose);
         RobotState.putPose("Goal Poses/BLUE_CHEBYSHEV_GOAL", chebyshevGoalFTCPose); //Publish the chebyshev pose for AS
 
-        return chebyshevGoalPedroPose;
+        // Aim at the middle-back of the goal (midpoint between corner and far)
+        double blueMiddleBackX = (BLUE_GOAL_CORNER_PEDRO.getX() + BLUE_GOAL_FAR_PEDRO.getX()) / 2.0;
+        double blueMiddleBackY = BLUE_GOAL_FAR_PEDRO.getY(); // Back edge
+        Pose blueMiddleBackGoal = new Pose(
+                blueMiddleBackX + BasketTargetOffsets.blueDeltaX,
+                blueMiddleBackY + BasketTargetOffsets.blueDeltaY,
+                0.0
+        );
+        return blueMiddleBackGoal;
     }
 
     /**
@@ -150,7 +158,15 @@ public final class FieldConstants {
         Pose chebyshevGoalFTCPose = PoseFrames.pedroToFtc(chebyshevGoalPedroPose);
         RobotState.putPose("Goal Poses/RED_CHEBYSHEV_GOAL", chebyshevGoalFTCPose); //Publish the chebyshev pose for AS
 
-        return chebyshevGoalPedroPose;
+        // Aim at the middle-back of the goal (midpoint between corner and far)
+        double redMiddleBackX = (RED_GOAL_CORNER_PEDRO.getX() + RED_GOAL_FAR_PEDRO.getX()) / 2.0;
+        double redMiddleBackY = RED_GOAL_FAR_PEDRO.getY(); // Back edge
+        Pose redMiddleBackGoal = new Pose(
+                redMiddleBackX + BasketTargetOffsets.redDeltaX,
+                redMiddleBackY + BasketTargetOffsets.redDeltaY,
+                0.0
+        );
+        return redMiddleBackGoal;
     }
 
     /**
