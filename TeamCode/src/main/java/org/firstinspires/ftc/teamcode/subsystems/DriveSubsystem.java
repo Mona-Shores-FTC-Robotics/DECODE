@@ -422,6 +422,8 @@ public class DriveSubsystem implements Subsystem {
      * Geometry-based aiming: Calculates angle from robot pose to basket centroid using atan2.
      * Uses odometry pose and basket target coordinates (tunable via FTC Dashboard).
      * Falls back to vision-based angle if available and relocalization is enabled.
+     * This is an open-loop turn controller (kP + static). It does **not** use Pedro's heading PID
+     * so you can see the raw turn command in telemetry when tuning.
      *
      * @param fieldX Driver's X input (strafe)
      * @param fieldY Driver's Y input (forward)
@@ -453,12 +455,29 @@ public class DriveSubsystem implements Subsystem {
         double targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
 
         double headingError = normalizeAngle(targetHeading - follower.getHeading());
+        double headingErrorDeg = Math.toDegrees(headingError);
+        double deadbandRad = Math.toRadians(aimAssistConfig.deadbandDeg);
+
+        // Apply a small deadband to keep the robot still when settled
+        if (Math.abs(headingError) < deadbandRad) {
+            headingError = 0.0;
+        }
         lastAimErrorRad = headingError;
         RobotState.packet.put("DriveSubsystem/Heading Error", Math.toDegrees(headingError));
 
-        // Simple P controller
+        // Simple P controller with static feedforward to overcome friction near zero
         double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
-        double turn = Range.clip(aimAssistConfig.kP * headingError, -maxTurn, maxTurn);
+        double turn = aimAssistConfig.kP * headingError;
+        if (headingError != 0.0 && Math.abs(turn) < aimAssistConfig.kStatic) {
+            turn = Math.copySign(aimAssistConfig.kStatic, headingError);
+        }
+        turn = Range.clip(turn, -maxTurn, maxTurn);
+
+        lastAimErrorRad = headingError;
+        RobotState.packet.put("Aim Error (deg)", headingErrorDeg);
+        RobotState.packet.put("Aim Target Heading (deg)", Math.toDegrees(targetHeading));
+        RobotState.packet.put("Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
+        RobotState.packet.put("Aim Turn Cmd", turn);
 
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
@@ -748,38 +767,30 @@ public class DriveSubsystem implements Subsystem {
     }
 
     private void maybeAutoRelocalizeDuringAim() {
-        RobotState.packet.put("/vision/Relocalize/enabled", visionRelocalizationEnabled);
         if (! visionRelocalizationEnabled) {
             return;
         }
-        RobotState.packet.put("/vision/Relocalize/shouldUpdateOdom ", vision.shouldUpdateOdometry());
         if (! vision.shouldUpdateOdometry()) {
             return;
         }
-        RobotState.packet.put("/vision/Relocalize/hasValidTag ", vision.hasValidTag());
         if (! vision.hasValidTag()) {
             return;
         }
 
-        RobotState.packet.put("/vision/Relocalize/robotSpeed ",getRobotSpeedInchesPerSecond());
         if (getRobotSpeedInchesPerSecond() > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
             return;
         }
 
-
         Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
-        RobotState.packet.put("/vision/Relocalize/snapPresent ",snapOpt.isPresent());
         if (! snapOpt.isPresent()) {
             return;
         }
 
         VisionSubsystemLimelight.TagSnapshot snapshot = snapOpt.get();
-        RobotState.packet.put("/vision/Relocalize/seeGoal ",isGoalAprilTag(snapshot.tagId));
         if (! isGoalAprilTag(snapshot.tagId)) {
             return;
         }
 
-        RobotState.packet.put("/vision/Relocalize/visionPoseFresh ",isVisionPoseFresh());
         if (! isVisionPoseFresh()) {
             return;
         }

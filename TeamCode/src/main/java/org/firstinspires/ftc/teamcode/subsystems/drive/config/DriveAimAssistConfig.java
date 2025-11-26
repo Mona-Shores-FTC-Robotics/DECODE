@@ -12,6 +12,10 @@ public class DriveAimAssistConfig {
     public double kP = .5;
     /** Max turn speed when aiming (0.0-1.0) */
     public double kMaxTurn = 0.7;
+    /** Minimum turn command to overcome drivetrain static friction */
+    public double kStatic = 0.08;
+    /** Heading deadband (degrees) where aim is considered settled */
+    public double deadbandDeg = 0.5;
     /** Distance threshold for MegaTag2 relocalization (inches) */
     public double MT2DistanceThreshold = 12;
     /** Heading agreement threshold between MT1/MT2 (degrees) */
