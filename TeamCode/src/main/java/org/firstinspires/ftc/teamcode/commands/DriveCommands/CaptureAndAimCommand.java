@@ -5,6 +5,7 @@ import com.pedropathing.geometry.Pose;
 
 import dev.nextftc.core.commands.Command;
 
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.config.CaptureAndAimConfig;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -27,27 +28,7 @@ import java.util.Objects;
 @Configurable
 public class CaptureAndAimCommand extends Command {
 
-    @Configurable
-    public static class Config {
-        /**
-         * Number of frames to average for robustness (1 = no averaging).
-         * Averaging multiple vision samples helps filter out single-frame noise.
-         */
-        public int sampleFrames = 3;
-
-        /**
-         * Time between frame samples (milliseconds).
-         * Spreading samples over time improves robustness to transient vision errors.
-         */
-        public double frameSampleIntervalMs = 50.0;
-
-        /**
-         * Maximum time for sampling phase before giving up (milliseconds).
-         */
-        public double samplingTimeoutMs = 500.0;
-    }
-
-    public static Config config = new Config();
+    public static CaptureAndAimConfig config = new CaptureAndAimConfig();
 
     private final DriveSubsystem drive;
     private final VisionSubsystemLimelight vision;

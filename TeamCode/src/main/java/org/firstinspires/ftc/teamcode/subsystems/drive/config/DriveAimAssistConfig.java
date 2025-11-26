@@ -1,0 +1,17 @@
+package org.firstinspires.ftc.teamcode.subsystems.drive.config;
+
+import com.bylazar.configurables.annotations.Configurable;
+
+/**
+ * Aim assist configuration for geometry-based targeting.
+ * Controls how the robot rotates to face a target based on field position.
+ */
+@Configurable
+public class DriveAimAssistConfig {
+    /** Proportional gain for geometry-based aiming - higher = faster response to error */
+    public double kP = .5;
+    /** Max turn speed when aiming (0.0-1.0) */
+    public double kMaxTurn = 0.7;
+    /** Distance threshold for MegaTag2 relocalization (inches) */
+    public double MT2DistanceThreshold = 12;
+}

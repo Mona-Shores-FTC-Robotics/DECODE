@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands.IntakeCommands;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 import dev.nextftc.core.commands.Command;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -37,6 +38,11 @@ public class IntakeCommands {
     /** Shortcut for default "until full" timeout. */
     public IntakeUntilFullCommand intakeUntilFull() {
         return intakeUntilFull(DEFAULT_INTAKE_TIMEOUT_S);
+    }
+
+    /** Smart intake with automatic reversal when full (for teleop button bindings). */
+    public SmartIntakeCommand smartIntake(Gamepad gamepad) {
+        return new SmartIntakeCommand(intake, gamepad);
     }
 
 }

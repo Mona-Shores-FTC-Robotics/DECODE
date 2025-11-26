@@ -21,6 +21,12 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveAimAssistConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRampConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveTeleOpConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionCenteredAimConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
@@ -38,86 +44,23 @@ public class DriveSubsystem implements Subsystem {
     private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
     private static final String LOG_TAG = "DriveSubsystem";
 
-    @Configurable
-    public static class TeleOpDriveConfig {
-        /** Max power multiplier for normal (non-slow) teleop driving (0.0-1.0) */
-        public double normalMultiplier = 0.7;
-        /** Max power multiplier for slow mode teleop driving (0.0-1.0) */
-        public double slowMultiplier = 0.2;
-        /** Turn multiplier for normal mode */
-        public double normalTurnMultiplier = 0.4;
-        /** Turn multiplier for slow mode */
-        public double slowTurnMultiplier = 0.2;
-        /** Rotation override threshold for aim assist */
-        public double rotationOverrideThreshold = 0.05;
-    }
-
-    @Configurable
-    public static class AimAssistConfig {
-        /** Proportional gain for geometry-based aiming - higher = faster response to error */
-        public double kP = .5;
-        /** Max turn speed when aiming (0.0-1.0) */
-        public double kMaxTurn = 0.7;
-
-        public double MT2DistanceThreshold = 12;
-    }
-
-    @Configurable
-    public static class VisionCenteredAimConfig {
-        /** Proportional gain for vision-centered aiming (motor power per radian) */
-        public double kP = 1.7;  // Equivalent to 0.03 per degree
-        /** Max turn speed when aiming (0.0-1.0) */
-        public double kMaxTurn = 0.7;
-        /** Deadband - stop turning when tx error is below this (degrees) */
-        public double deadbandDeg = 1.0;
-    }
-
-    @Configurable
-    public static class FixedAngleAimConfig {
-        /** Fixed target heading for blue alliance (degrees, 0=forward, 90=left) */
-        public double blueHeadingDeg = 133.9;
-        /** Fixed target heading for red alliance (degrees, 0=forward, 90=left) */
-        public double redHeadingDeg = 45.2;
-        /** Proportional gain for fixed-angle aiming */
-        public double kP = 0.5;
-        /** Max turn speed when aiming (0.0-1.0) */
-        public double kMaxTurn = 0.7;
-    }
-
-    @Configurable
-    public static class InitialPoseConfig {
-        /** Starting X position in Pedro coordinates (inches) */
-        public double startX = 56;
-        /** Starting Y position in Pedro coordinates (inches) */
-        public double startY = 8;
-        /** Starting heading in degrees */
-        public double startHeadingDeg = 90;
-    }
-
-    @Configurable
-    public static class RampConfig {
-        public double forwardRatePerSec = 0.3;
-        public double strafeRatePerSec = 0.3;
-        public double turnRatePerSec = 0.6;
-        public double fallbackDtSeconds = 0.02;
-    }
-
-    public static TeleOpDriveConfig teleOpDriveConfig = new TeleOpDriveConfig();
-    public static AimAssistConfig aimAssistConfig = new AimAssistConfig();
-    public static VisionCenteredAimConfig visionCenteredAimConfig = new VisionCenteredAimConfig();
-    public static RampConfig rampConfig = new RampConfig();
+    // Global configuration instances
+    public static DriveTeleOpConfig teleOpDriveConfig = new DriveTeleOpConfig();
+    public static DriveAimAssistConfig aimAssistConfig = new DriveAimAssistConfig();
+    public static DriveVisionCenteredAimConfig visionCenteredAimConfig = new DriveVisionCenteredAimConfig();
+    public static DriveRampConfig rampConfig = new DriveRampConfig();
 
     // Robot-specific configs - visible in Panels for tuning
-    public static FixedAngleAimConfig fixedAngleAimConfig19429 = createFixedAngleAimConfig19429();
-    public static FixedAngleAimConfig fixedAngleAimConfig20245 = createFixedAngleAimConfig20245();
-    public static InitialPoseConfig initialPoseConfig19429 = createInitialPoseConfig19429();
-    public static InitialPoseConfig initialPoseConfig20245 = createInitialPoseConfig20245();
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig19429 = createFixedAngleAimConfig19429();
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig20245 = createFixedAngleAimConfig20245();
+    public static DriveInitialPoseConfig initialPoseConfig19429 = createInitialPoseConfig19429();
+    public static DriveInitialPoseConfig initialPoseConfig20245 = createInitialPoseConfig20245();
 
     /**
      * Helper to create 19429-specific fixed angle aim configuration.
      */
-    private static FixedAngleAimConfig createFixedAngleAimConfig19429() {
-        FixedAngleAimConfig config = new FixedAngleAimConfig();
+    private static DriveFixedAngleAimConfig createFixedAngleAimConfig19429() {
+        DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
         config.blueHeadingDeg = 133.9;
         config.redHeadingDeg = 45.2;
         config.kP = 0.7;
@@ -128,8 +71,8 @@ public class DriveSubsystem implements Subsystem {
     /**
      * Helper to create 20245-specific fixed angle aim configuration.
      */
-    private static FixedAngleAimConfig createFixedAngleAimConfig20245() {
-        FixedAngleAimConfig config = new FixedAngleAimConfig();
+    private static DriveFixedAngleAimConfig createFixedAngleAimConfig20245() {
+        DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
         config.blueHeadingDeg = 135.2;
         config.redHeadingDeg = 45.2;
         config.kP = 0.5;
@@ -140,8 +83,8 @@ public class DriveSubsystem implements Subsystem {
     /**
      * Helper to create 19429-specific initial pose configuration.
      */
-    private static InitialPoseConfig createInitialPoseConfig19429() {
-        InitialPoseConfig config = new InitialPoseConfig();
+    private static DriveInitialPoseConfig createInitialPoseConfig19429() {
+        DriveInitialPoseConfig config = new DriveInitialPoseConfig();
         config.startX = 56;
         config.startY = 9;
         config.startHeadingDeg = 90;
@@ -151,8 +94,8 @@ public class DriveSubsystem implements Subsystem {
     /**
      * Helper to create 20245-specific initial pose configuration.
      */
-    private static InitialPoseConfig createInitialPoseConfig20245() {
-        InitialPoseConfig config = new InitialPoseConfig();
+    private static DriveInitialPoseConfig createInitialPoseConfig20245() {
+        DriveInitialPoseConfig config = new DriveInitialPoseConfig();
         config.startX = 0;
         config.startY = 0;
         config.startHeadingDeg = 90;
@@ -163,7 +106,7 @@ public class DriveSubsystem implements Subsystem {
      * Gets the robot-specific FixedAngleAimConfig based on RobotState.getRobotName().
      * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245
      */
-    public static FixedAngleAimConfig fixedAngleAimConfig() {
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig() {
         return org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
     }
 
@@ -171,7 +114,7 @@ public class DriveSubsystem implements Subsystem {
      * Gets the robot-specific InitialPoseConfig based on RobotState.getRobotName().
      * @return initialPoseConfig19429 or initialPoseConfig20245
      */
-    public static InitialPoseConfig initialPoseConfig() {
+    public static DriveInitialPoseConfig initialPoseConfig() {
         return org.firstinspires.ftc.teamcode.util.RobotConfigs.getInitialPoseConfig();
     }
 
@@ -286,7 +229,7 @@ public class DriveSubsystem implements Subsystem {
         Pose pedroFollowerSeed = RobotState.takeHandoffPose();
 
         if (pedroFollowerSeed == null) {
-            InitialPoseConfig poseConfig = initialPoseConfig();
+            DriveInitialPoseConfig poseConfig = initialPoseConfig();
             pedroFollowerSeed = new Pose(poseConfig.startX, poseConfig.startY, Math.toRadians(poseConfig.startHeadingDeg));
 
 //            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
@@ -644,7 +587,7 @@ public class DriveSubsystem implements Subsystem {
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
         // Get fixed target heading based on alliance
-        FixedAngleAimConfig aimConfig = fixedAngleAimConfig();
+        DriveFixedAngleAimConfig aimConfig = fixedAngleAimConfig();
         double targetHeadingDeg = (alliance == Alliance.RED)
             ? aimConfig.redHeadingDeg
             : aimConfig.blueHeadingDeg;

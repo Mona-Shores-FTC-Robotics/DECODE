@@ -29,9 +29,8 @@ public class IntakeUntilFullCommand extends IntakeCommand {
 
     @Override
     public void update() {
-        // Auto-manage intake mode based on artifact count
-        int count = getIntake().getArtifactCount();
-        if (count >= 3) {
+        // Auto-manage intake mode based on fullness (presence detection)
+        if (getIntake().isFull()) {
             getIntake().setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
         } else {
             getIntake().setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
@@ -43,7 +42,7 @@ public class IntakeUntilFullCommand extends IntakeCommand {
         if (timer.seconds() >= timeoutSeconds) {
             return true;
         }
-        return getIntake().getArtifactCount() >= 3;
+        return getIntake().isFull();
     }
 
     @Override

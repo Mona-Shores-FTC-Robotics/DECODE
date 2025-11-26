@@ -24,6 +24,7 @@ android {
         abortOnError true
         enable 'FieldName', 'LocalVariableName', 'MethodName', 'ClassName', 'ConstantNaming'
     }
+    buildToolsVersion '35.0.0'
 }
 
 repositories {
@@ -60,4 +61,34 @@ dependencies {
     // AdvantageScope Lite - enables AdvantageScope connection via FTC Dashboard packets
     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
 
+}
+
+/**
+ * Task to export autonomous paths as .pp files for Pedro Pathing visualizer.
+ * Usage: ./gradlew :TeamCode:exportPaths
+ * Optional: ./gradlew :TeamCode:exportPaths -PoutputDir=/path/to/output
+ */
+tasks.register('exportPaths', JavaExec) {
+    group = 'FTC Utilities'
+    description = 'Exports autonomous paths as .pp files for Pedro Pathing visualizer'
+
+    // Depend on compilation
+    dependsOn 'compileDebugJavaWithJavac'
+
+    // Set up classpath for Android project
+    classpath = files(
+        android.sourceSets.main.java.srcDirs,
+        "${buildDir}/intermediates/javac/debug/classes",
+        configurations.runtimeClasspath
+    )
+
+    mainClass = 'org.firstinspires.ftc.teamcode.util.ExportAutoPaths'
+
+    // Allow output directory to be specified via project property
+    if (project.hasProperty('outputDir')) {
+        args project.property('outputDir')
+    } else {
+        // Default to project root directory
+        args projectDir.parent
+    }
 }

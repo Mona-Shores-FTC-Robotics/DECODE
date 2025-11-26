@@ -17,6 +17,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -38,8 +39,10 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
+import dev.nextftc.core.units.Angle;
 import dev.nextftc.extensions.pedro.FollowPath;
 import dev.nextftc.extensions.pedro.PedroComponent;
+import dev.nextftc.extensions.pedro.TurnTo;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -61,10 +64,27 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
+    /**
+     * Named waypoints for the close autonomous routine.
+     * This enum provides type-safe references to all positions used in the routine.
+     */
+    public enum Waypoint {
+        START_CLOSE,
+        LAUNCH_CLOSE,
+        PRE_ARTIFACTS,
+        ARTIFACTS_SET_1,
+        TRANSITION_TO_SET_2,
+        ARTIFACTS_SET_2,
+        TRANSITION_TO_SET_3,
+        ARTIFACTS_SET_3,
+        FINAL_POSITION
+    }
+
     @Configurable
     public static class AutoMotionConfig {
         public double maxPathPower = .79;
         public double intakeDelaySeconds = 2.5;
+        public int relocalizeMaxAttempts = 10;
         /**
          * Starting launcher mode for autonomous.
          * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
@@ -73,8 +93,61 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         public LauncherMode startingLauncherMode = LauncherMode.THROUGHPUT;
     }
 
-    // Public static instance for FTC Dashboard Config tab
-    public static DecodeAutonomousCloseCommand.AutoMotionConfig config = new DecodeAutonomousCloseCommand.AutoMotionConfig();
+    /**
+     * All waypoint coordinates for the close autonomous routine.
+     * Editable via FTC Dashboard for quick field adjustments.
+     */
+    @Configurable
+    public static class CloseAutoWaypoints {
+        // Start position (set by AutoField)
+        public double startX = 26.445;
+        public double startY = 131.374;
+        public double startHeading = 144;
+
+        // Launch position for scoring
+        public double launchX = 30.19905213270142;
+        public double launchY = 112.9478672985782;
+        public double launchHeading = 136;
+
+        // Pre-artifacts waypoint (transition after first score)
+        public double preArtifactsX = 28;
+        public double preArtifactsY = 112;
+        public double preArtifactsHeading = 270;
+
+        // Artifacts Set 1 (gate close)
+        public double artifacts1X = 22;
+        public double artifacts1Y = 87;
+        public double artifacts1Heading = 270;
+
+        // Transition to Set 2
+        public double transition2X = 40;
+        public double transition2Y = 90;
+        public double transition2Heading = 270;
+
+        // Artifacts Set 2 (gate far)
+        public double artifacts2X = 34;
+        public double artifacts2Y = 70;
+        public double artifacts2Heading = 270;
+
+        // Transition to Set 3
+        public double transition3X = 40;
+        public double transition3Y = 62; // Why was 6 afraid of 7? Because 7 ate 9!
+        public double transition3Heading = 270;
+
+        // Artifacts Set 3 (parking zone)
+        public double artifacts3X = 40;
+        public double artifacts3Y = 32.5;
+        public double artifacts3Heading = 270;
+
+        // Final position
+        public double finalX = 37;
+        public double finalY = 128;
+        public double finalHeading = 142;
+    }
+
+    // Public static instances for FTC Dashboard Config tab
+    public static AutoMotionConfig config = new AutoMotionConfig();
+    public static CloseAutoWaypoints waypoints = new CloseAutoWaypoints();
 
     private Robot robot;
     private AllianceSelector allianceSelector;
@@ -218,6 +291,74 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     }
 
     /**
+     * Gets a pose for a waypoint, mirrored for the current alliance.
+     * @param waypoint The waypoint enum value
+     * @return Alliance-mirrored pose for the waypoint
+     */
+    private Pose pose(Waypoint waypoint) {
+        CloseAutoWaypoints w = waypoints;
+        switch (waypoint) {
+            case START_CLOSE:
+                return poseForAlliance(w.startX, w.startY, w.startHeading, activeAlliance);
+            case LAUNCH_CLOSE:
+                return poseForAlliance(w.launchX, w.launchY, w.launchHeading, activeAlliance);
+            case PRE_ARTIFACTS:
+                return poseForAlliance(w.preArtifactsX, w.preArtifactsY, w.preArtifactsHeading, activeAlliance);
+            case ARTIFACTS_SET_1:
+                return poseForAlliance(w.artifacts1X, w.artifacts1Y, w.artifacts1Heading, activeAlliance);
+            case TRANSITION_TO_SET_2:
+                return poseForAlliance(w.transition2X, w.transition2Y, w.transition2Heading, activeAlliance);
+            case ARTIFACTS_SET_2:
+                return poseForAlliance(w.artifacts2X, w.artifacts2Y, w.artifacts2Heading, activeAlliance);
+            case TRANSITION_TO_SET_3:
+                return poseForAlliance(w.transition3X, w.transition3Y, w.transition3Heading, activeAlliance);
+            case ARTIFACTS_SET_3:
+                return poseForAlliance(w.artifacts3X, w.artifacts3Y, w.artifacts3Heading, activeAlliance);
+            case FINAL_POSITION:
+                return poseForAlliance(w.finalX, w.finalY, w.finalHeading, activeAlliance);
+            default:
+                throw new IllegalArgumentException("Unknown waypoint: " + waypoint);
+        }
+    }
+
+    /**
+     * Creates a relocalization command that uses AprilTag vision to correct odometry drift.
+     * This command attempts to update the robot's pose using vision for a configured number of attempts.
+     * It's designed to run at the launch position where AprilTags are visible.
+     *
+     * @return Command that relocalizes using vision
+     */
+    private Command relocalize() {
+        return new Command() {
+            private int attempts = 0;
+            private boolean success = false;
+
+            @Override
+            public void start() {
+                attempts = 0;
+                success = false;
+            }
+
+            @Override
+            public void update() {
+                if (robot.vision.hasValidTag()) {
+                    success = robot.drive.forceRelocalizeFromVision();
+                    if (success) {
+                        // Exit early on success
+                        attempts = config.relocalizeMaxAttempts;
+                    }
+                }
+                attempts++;
+            }
+
+            @Override
+            public boolean isDone() {
+                return attempts >= config.relocalizeMaxAttempts || success;
+            }
+        };
+    }
+
+    /**
      * Builds the complete autonomous routine using command groups
      */
     private Command buildAutonomousRoutine() {
@@ -225,47 +366,46 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return new Delay(0.01);
         }
 
-        Pose startClosePose = currentLayout.pose(FieldPoint.START_CLOSE);
-        Pose launchClosePose = currentLayout.pose(FieldPoint.LAUNCH_CLOSE);
-        Pose preArtifacts1Pose = currentLayout.pose(FieldPoint.PRE_GATE_ARTIFACTS_PICKUP_270_DEG);
-        Pose artifactsSet1Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_1_270);
-
-        Pose artifactsSet2Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_2_270);
-        Pose artifactsSet2ControlPoint = AutoField.artifactsSet2ControlPoint(activeAlliance);
-
-        Pose artifactsSet3Pose = currentLayout.pose(FieldPoint.ARTIFACTS_SET_3_270);
-        Pose artifactsSet3Control = AutoField.artifactSet3ControlPoint(activeAlliance);
-        Pose moveToGatePose = currentLayout.pose(FieldPoint.MOVE_TO_GATE);
-
         return new SequentialGroup(
-            // Start already at LAUNCH_CLOSE, so spin up launcher
+                // Move to launch position and spin up
                 new ParallelGroup(
                         launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true),
-                        followPath(startClosePose, launchClosePose)
+                        followPath(pose(Waypoint.START_CLOSE), pose(Waypoint.LAUNCH_CLOSE)),
                 ),
+                // Relocalize using AprilTag at launch position
+                relocalize(),
+
                 launcherCommands.launchAll(false),
 
-                //preartifactpose
-                followPath(launchClosePose, poseForAlliance(28,112, 270, activeAlliance)),
+                // Transition to artifact collection zone
+                followPath(pose(Waypoint.LAUNCH_CLOSE), pose(Waypoint.PRE_ARTIFACTS)),
 
                 // Phase 1: Collect from Gate Close and score
-            collectAndScore(poseForAlliance(28,112, 270, activeAlliance), artifactsSet1Pose, launchClosePose),
+                collectAndScore(
+                        pose(Waypoint.PRE_ARTIFACTS),
+                        pose(Waypoint.ARTIFACTS_SET_1),
+                        pose(Waypoint.LAUNCH_CLOSE)
+                ),
 
-                followPath(launchClosePose, poseForAlliance(40,90, 270, activeAlliance)),
-            // Phase 2: Collect from Gate Far and score
-            collectAndScore(
-                    poseForAlliance(40,90, 270, activeAlliance),
-                    poseForAlliance(34,70, 270, activeAlliance),
-                    launchClosePose),
+                // Transition to Set 2
+                followPath(pose(Waypoint.LAUNCH_CLOSE), pose(Waypoint.TRANSITION_TO_SET_2)),
 
-                followPath(launchClosePose, poseForAlliance(40,62,270,activeAlliance)),
+                // Phase 2: Collect from Gate Far and score
+                collectAndScore(
+                        pose(Waypoint.TRANSITION_TO_SET_2),
+                        pose(Waypoint.ARTIFACTS_SET_2),
+                        pose(Waypoint.LAUNCH_CLOSE)
+                ),
 
-            // Phase 3: Collect from Parking Zone and score
-            collectAndScore(poseForAlliance(40,62,270,activeAlliance),
-                    poseForAlliance(40, 32.5,270,activeAlliance),
-                    poseForAlliance(37,128, 142, activeAlliance))
+                // Transition to Set 3
+                followPath(pose(Waypoint.LAUNCH_CLOSE), pose(Waypoint.TRANSITION_TO_SET_3)),
 
-//                followPath(poseForAlliance(24,112, 270, activeAlliance), moveToGatePose)
+                // Phase 3: Collect from Parking Zone and finish
+                collectAndScore(
+                        pose(Waypoint.TRANSITION_TO_SET_3),
+                        pose(Waypoint.ARTIFACTS_SET_3),
+                        pose(Waypoint.FINAL_POSITION)
+                )
         );
     }
 
@@ -442,5 +582,145 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                     .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), .7)
                     .build();
         }
+    }
+
+    /**
+     * Exports the current autonomous routine as a .pp file for Pedro Pathing visualizer.
+     * This generates a JSON file that can be loaded in the Pedro Pathing GUI for visualization.
+     *
+     * @param alliance Alliance color to generate paths for
+     * @param outputPath File path to write the .pp file (e.g., "/sdcard/FIRST/autonomous_close_blue.pp")
+     * @return JSON string of the .pp file
+     */
+    public static String exportToPedroPathFile(Alliance alliance) {
+        CloseAutoWaypoints w = waypoints;
+
+        // Helper to create pose
+        java.util.function.BiFunction<Double, Double, Pose> makePose = (x, y) ->
+            new Pose(x, y, 0);
+
+        // Helper to get alliance-mirrored waypoint
+        java.util.function.Function<Waypoint, Pose> getPose = waypoint -> {
+            switch (waypoint) {
+                case START_CLOSE:
+                    return poseForAlliance(w.startX, w.startY, w.startHeading, alliance);
+                case LAUNCH_CLOSE:
+                    return poseForAlliance(w.launchX, w.launchY, w.launchHeading, alliance);
+                case PRE_ARTIFACTS:
+                    return poseForAlliance(w.preArtifactsX, w.preArtifactsY, w.preArtifactsHeading, alliance);
+                case ARTIFACTS_SET_1:
+                    return poseForAlliance(w.artifacts1X, w.artifacts1Y, w.artifacts1Heading, alliance);
+                case TRANSITION_TO_SET_2:
+                    return poseForAlliance(w.transition2X, w.transition2Y, w.transition2Heading, alliance);
+                case ARTIFACTS_SET_2:
+                    return poseForAlliance(w.artifacts2X, w.artifacts2Y, w.artifacts2Heading, alliance);
+                case TRANSITION_TO_SET_3:
+                    return poseForAlliance(w.transition3X, w.transition3Y, w.transition3Heading, alliance);
+                case ARTIFACTS_SET_3:
+                    return poseForAlliance(w.artifacts3X, w.artifacts3Y, w.artifacts3Heading, alliance);
+                case FINAL_POSITION:
+                    return poseForAlliance(w.finalX, w.finalY, w.finalHeading, alliance);
+                default:
+                    throw new IllegalArgumentException("Unknown waypoint: " + waypoint);
+            }
+        };
+
+        // Build path sequence
+        StringBuilder json = new StringBuilder();
+        json.append("{");
+
+        // Start point
+        Pose start = getPose.apply(Waypoint.START_CLOSE);
+        Pose launch = getPose.apply(Waypoint.LAUNCH_CLOSE);
+        json.append("\"startPoint\":{");
+        json.append("\"x\":").append(start.getX()).append(",");
+        json.append("\"y\":").append(start.getY()).append(",");
+        json.append("\"heading\":\"linear\",");
+        json.append("\"startDeg\":").append(Math.toDegrees(start.getHeading())).append(",");
+        json.append("\"endDeg\":").append(Math.toDegrees(launch.getHeading()));
+        json.append("},");
+
+        // Lines (paths)
+        json.append("\"lines\":[");
+
+        // Path 1: Start to Launch
+        appendPath(json, "To Launch", start, launch, null);
+        json.append(",");
+
+        // Path 2: Launch to Pre-Artifacts
+        Pose preArtifacts = getPose.apply(Waypoint.PRE_ARTIFACTS);
+        appendPath(json, "To Pre-Artifacts", launch, preArtifacts, null);
+        json.append(",");
+
+        // Path 3: Pre-Artifacts to Set 1
+        Pose set1 = getPose.apply(Waypoint.ARTIFACTS_SET_1);
+        appendPath(json, "Collect Set 1", preArtifacts, set1, null);
+        json.append(",");
+
+        // Path 4: Set 1 back to Launch
+        appendPath(json, "Score Set 1", set1, launch, null);
+        json.append(",");
+
+        // Path 5: Launch to Transition 2
+        Pose trans2 = getPose.apply(Waypoint.TRANSITION_TO_SET_2);
+        appendPath(json, "To Transition 2", launch, trans2, null);
+        json.append(",");
+
+        // Path 6: Transition 2 to Set 2
+        Pose set2 = getPose.apply(Waypoint.ARTIFACTS_SET_2);
+        appendPath(json, "Collect Set 2", trans2, set2, null);
+        json.append(",");
+
+        // Path 7: Set 2 back to Launch
+        appendPath(json, "Score Set 2", set2, launch, null);
+        json.append(",");
+
+        // Path 8: Launch to Transition 3
+        Pose trans3 = getPose.apply(Waypoint.TRANSITION_TO_SET_3);
+        appendPath(json, "To Transition 3", launch, trans3, null);
+        json.append(",");
+
+        // Path 9: Transition 3 to Set 3
+        Pose set3 = getPose.apply(Waypoint.ARTIFACTS_SET_3);
+        appendPath(json, "Collect Set 3", trans3, set3, null);
+        json.append(",");
+
+        // Path 10: Set 3 to Final
+        Pose finalPos = getPose.apply(Waypoint.FINAL_POSITION);
+        appendPath(json, "To Final", set3, finalPos, null);
+
+        json.append("],");
+        json.append("\"shapes\":[]");
+        json.append("}");
+
+        return json.toString();
+    }
+
+    /**
+     * Helper method to append a path segment to the JSON
+     */
+    private static void appendPath(StringBuilder json, String name, Pose start, Pose end, Pose control) {
+        // Random color generation (deterministic based on name hash)
+        int colorHash = name.hashCode();
+        String color = String.format("#%06X", (colorHash & 0xFFFFFF));
+
+        json.append("{");
+        json.append("\"name\":\"").append(name).append("\",");
+        json.append("\"endPoint\":{");
+        json.append("\"x\":").append(end.getX()).append(",");
+        json.append("\"y\":").append(end.getY()).append(",");
+        json.append("\"heading\":\"linear\",");
+        json.append("\"startDeg\":").append(Math.toDegrees(start.getHeading())).append(",");
+        json.append("\"endDeg\":").append(Math.toDegrees(end.getHeading()));
+        json.append("},");
+
+        json.append("\"controlPoints\":[");
+        if (control != null) {
+            json.append("{\"x\":").append(control.getX()).append(",\"y\":").append(control.getY()).append("}");
+        }
+        json.append("],");
+
+        json.append("\"color\":\"").append(color).append("\"");
+        json.append("}");
     }
 }

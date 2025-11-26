@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import dev.nextftc.core.commands.Command;
 
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchInSequenceConfig;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
@@ -53,25 +54,7 @@ import java.util.Objects;
 @Configurable
 public class LaunchInSequenceCommand extends Command {
 
-    @Configurable
-    public static class SequenceConfig {
-        /** Milliseconds between shots in sequence */
-        public double shotSpacingMs = 1000;
-
-        /** RPM for left lane in sequence mode */
-        public double sequenceLeftRpm = 2550;
-
-        /** RPM for center lane in sequence mode */
-        public double sequenceCenterRpm = 2550;
-
-        /** RPM for right lane in sequence mode */
-        public double sequenceRightRpm = 2550;
-
-        /** Timeout in seconds before giving up on spin-up */
-        public double timeoutSeconds = 8.0;
-    }
-
-    public static SequenceConfig sequenceConfig = new SequenceConfig();
+    public static LaunchInSequenceConfig sequenceConfig = new LaunchInSequenceConfig();
 
     private enum Stage {
         SPINNING_UP,
