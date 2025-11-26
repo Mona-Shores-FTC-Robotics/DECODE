@@ -1051,6 +1051,13 @@ public class LauncherSubsystem implements Subsystem {
                 return;
             }
 
+            // Feedforward mode - direct velocity-to-power mapping
+            if (getFlywheelControlMode() == FlywheelControlMode.FEEDFORWARD) {
+                phase = ControlPhase.BANG;  // Phase doesn't matter for feedforward
+                applyFeedforwardControl(commandedRpm);
+                return;
+            }
+
             // Legacy multi-phase control for HYBRID and BANG_BANG_HOLD modes
             switch (phase) {
                 case BANG:
@@ -1175,6 +1182,27 @@ public class LauncherSubsystem implements Subsystem {
             } else {
                 motor.setPower(holdPower);
             }
+        }
+
+        private void applyFeedforwardControl(double targetRpm) {
+            // Linear feedforward model: power = kS + kV * rpm
+            // kS: static friction (minimum power to overcome friction)
+            // kV: velocity gain (power per RPM)
+            double kS = flywheelConfig().modeConfig.feedforward.kS;
+            double kV = flywheelConfig().modeConfig.feedforward.kV;
+
+            double power = kS + kV * targetRpm;
+
+            // Apply power limits
+            power = Range.clip(power,
+                flywheelConfig().modeConfig.feedforward.minPower,
+                flywheelConfig().modeConfig.feedforward.maxPower);
+
+            // Apply voltage compensation
+            double voltageMultiplier = getVoltageCompensationMultiplier();
+            power = Range.clip(power * voltageMultiplier, 0.0, 1.0);
+
+            motor.setPower(power);
         }
 
         private void configureMotor() {

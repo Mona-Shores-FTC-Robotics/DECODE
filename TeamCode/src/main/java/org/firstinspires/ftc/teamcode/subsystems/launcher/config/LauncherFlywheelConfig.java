@@ -12,7 +12,8 @@ public class LauncherFlywheelConfig {
     public enum FlywheelControlMode {
         HYBRID,
         BANG_BANG_HOLD,
-        PURE_BANG_BANG
+        PURE_BANG_BANG,
+        FEEDFORWARD
     }
 
     public FlywheelParameters parameters = new FlywheelParameters();
@@ -35,6 +36,7 @@ public class LauncherFlywheelConfig {
         public HybridPidConfig hybridPid = new HybridPidConfig();
         public HoldConfig hold = new HoldConfig();
         public PhaseSwitchConfig phaseSwitch = new PhaseSwitchConfig();
+        public FeedforwardConfig feedforward = new FeedforwardConfig();
 
         @Configurable
         public static class BangBangConfig {
@@ -65,6 +67,35 @@ public class LauncherFlywheelConfig {
             public int bangToHoldConfirmCycles = 3;
             public int hybridToBangConfirmCycles = 3;
             public int holdToBangConfirmCycles = 3;
+        }
+
+        @Configurable
+        public static class FeedforwardConfig {
+            /**
+             * Static friction coefficient - minimum power needed to overcome friction.
+             * Typical range: 0.05 - 0.15
+             * To tune: Find minimum power where motor just starts spinning.
+             */
+            public double kS = 0.10;
+
+            /**
+             * Velocity gain - power per RPM.
+             * Linear model: power = kS + kV * targetRPM
+             * Typical range: 0.00015 - 0.00025 for FTC motors
+             * To tune: Measure steady-state RPM at different power levels, then:
+             *   kV = (power - kS) / rpm
+             */
+            public double kV = 0.0002;
+
+            /**
+             * Maximum power limit for feedforward control.
+             */
+            public double maxPower = 1.0;
+
+            /**
+             * Minimum power limit (should be >= kS for motor to spin).
+             */
+            public double minPower = 0.0;
         }
     }
 
