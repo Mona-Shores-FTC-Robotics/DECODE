@@ -64,19 +64,19 @@ public class LauncherFlywheelConfig {
         config.flywheelLeft.idleRpm = 1500;
         config.flywheelLeft.kS = 0.10;
         config.flywheelLeft.kV = 0.0002;
-        config.flywheelLeft.kP = 0.0;
+        config.flywheelLeft.kP = .001;
 
         config.flywheelCenter.reversed = false;
         config.flywheelCenter.idleRpm = 1500;
         config.flywheelCenter.kS = 0.10;
         config.flywheelCenter.kV = 0.0002;
-        config.flywheelCenter.kP = 0.0;
+        config.flywheelCenter.kP = .001;
 
         config.flywheelRight.reversed = false;
         config.flywheelRight.idleRpm = 1500;
         config.flywheelRight.kS = 0.10;
         config.flywheelRight.kV = 0.0002;
-        config.flywheelRight.kP = 0.0;
+        config.flywheelRight.kP = .001;
 
         return config;
     }
@@ -90,19 +90,19 @@ public class LauncherFlywheelConfig {
         config.flywheelLeft.idleRpm = 1500;
         config.flywheelLeft.kS = 0.10;
         config.flywheelLeft.kV = 0.0002;
-        config.flywheelLeft.kP = 0.0;
+        config.flywheelLeft.kP = .001;
 
         config.flywheelCenter.reversed = false;
         config.flywheelCenter.idleRpm = 1500;
         config.flywheelCenter.kS = 0.10;
         config.flywheelCenter.kV = 0.0002;
-        config.flywheelCenter.kP = 0.0;
+        config.flywheelCenter.kP = .001;
 
-        config.flywheelRight.reversed = false;
+        config.flywheelRight.reversed = true;
         config.flywheelRight.idleRpm = 1500;
         config.flywheelRight.kS = 0.10;
         config.flywheelRight.kV = 0.0002;
-        config.flywheelRight.kP = 0.0;
+        config.flywheelRight.kP = .001;
 
         return config;
     }
