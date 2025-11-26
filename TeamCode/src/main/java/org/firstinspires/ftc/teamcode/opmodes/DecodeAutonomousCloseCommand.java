@@ -337,7 +337,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
      * Phase 1: Uses position-specific tunable RPM from LaunchAtPositionCommand.PositionRpmConfig
      */
     private Command spinUpLauncher() {
-        return launcherCommands.spinUpForPosition(AutoField.FieldPoint.LAUNCH_CLOSE);
+        return launcherCommands.spinUpForPosition(LauncherRange.SHORT);
     }
 
     /**

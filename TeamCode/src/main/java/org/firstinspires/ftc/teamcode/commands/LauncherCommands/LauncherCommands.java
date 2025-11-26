@@ -4,13 +4,15 @@ import com.bylazar.configurables.annotations.Configurable;
 
 import com.qualcomm.robotcore.hardware.Gamepad;
 
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.HumanLoadingCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.testing.LaunchInSequenceCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.testing.LaunchObeliskPatternCommand;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
-import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import java.util.Arrays;
@@ -35,66 +37,16 @@ public class LauncherCommands {
         this.intake = intake;
     }
 
-    public LaunchLaneCommand launchLane(LauncherLane lane) {
-        return new LaunchLaneCommand(launcher , lane);
-    }
-
-    public LaunchLaneCommand launchLeft() {
-        return launchLane(LauncherLane.LEFT);
-    }
-
-    public LaunchLaneCommand launchCenter() {
-        return launchLane(LauncherLane.CENTER);
-    }
-
-    public LaunchLaneCommand launchRight() {
-        return launchLane(LauncherLane.RIGHT);
-    }
-
-    /**
-     * Immediate helper used by bindings that still trigger launcher actions imperatively.
-     */
-    public void queueLane(LauncherLane lane) {
-        if (lane == null) {
-            return;
-        }
-        launcher.queueShot(lane);
-    }
-
-    public void queueDetectedBurst(double spacingMs) {
-        launcher.queueBurstAll();
-    }
-
-    public void cancelAll() {
-        launcher.clearQueue();
-    }
-
     public void spinUpAllLanesToLaunch() {
         launcher.spinUpAllLanesToLaunch();
     }
 
-    public void setAllLanesToIdle() {
-        launcher.setAllLanesToIdle();
-    }
-
-    public void stopAllLanes() {
-        launcher.stopAllLanes();
-    }
-
-    public SetFeederPositionCommand setLeftFeederToLoad() {
-        return new SetFeederPositionCommand(launcher, LauncherLane.LEFT, true);
-    }
-
-    public SetFeederPositionCommand setLeftFeederToFire() {
-        return new SetFeederPositionCommand(launcher, LauncherLane.LEFT, false);
-    }
-
     /**
-     * Phase 1: Spin up to position-specific RPM (tunable in Dashboard)
-     * @param position Field position we're launching from
+     * Spin up to a preset range (SHORT, MID, LONG) using dashboard-tunable RPMs.
+     * @param range The preset range to target
      */
-    public PresetSpinCommand spinUpForPosition(org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint position) {
-        return new PresetSpinCommand(launcher, position);
+    public PresetRangeSpinCommand spinUpForPosition(LauncherRange range) {
+        return new PresetRangeSpinCommand(launcher, range);
     }
 
     /**
@@ -104,8 +56,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a short-range shot
      */
-    public LaunchAllAtPresetRangeCommand fireAllShortRange() {
-        return new LaunchAllAtPresetRangeCommand(launcher, intake, LauncherRange.SHORT, true);
+    public PresetRangeLaunchAllCommand fireAllShortRange() {
+        return new PresetRangeLaunchAllCommand(launcher, intake, LauncherRange.SHORT, true);
     }
 
     /**
@@ -115,8 +67,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a mid-range shot
      */
-    public LaunchAllAtPresetRangeCommand fireAllMidRange() {
-        return new LaunchAllAtPresetRangeCommand(launcher, intake, LauncherRange.MID, true);
+    public PresetRangeLaunchAllCommand fireAllMidRange() {
+        return new PresetRangeLaunchAllCommand(launcher, intake, LauncherRange.MID, true);
     }
 
     /**
@@ -126,8 +78,8 @@ public class LauncherCommands {
      *
      * @return Command that executes a long-range shot
      */
-    public LaunchAllAtPresetRangeCommand fireAllLongRange() {
-        return new LaunchAllAtPresetRangeCommand(launcher, intake, LauncherRange.LONG, true);
+    public PresetRangeLaunchAllCommand fireAllLongRange() {
+        return new PresetRangeLaunchAllCommand(launcher, intake, LauncherRange.LONG, true);
     }
 
     /**
@@ -138,17 +90,10 @@ public class LauncherCommands {
      * @param spinDownAfterShot Whether to spin down to idle after firing
      * @return Command that executes the range-based shot
      */
-    public LaunchAllAtPresetRangeCommand launchAllAtRangePreset(LauncherRange range, boolean spinDownAfterShot) {
-        return new LaunchAllAtPresetRangeCommand(launcher, intake, range, spinDownAfterShot);
+    public PresetRangeLaunchAllCommand launchAllAtRangePreset(LauncherRange range, boolean spinDownAfterShot) {
+        return new PresetRangeLaunchAllCommand(launcher, intake, range, spinDownAfterShot);
     }
 
-    /**
-     * Fires all lanes at SHORT range (~2700 RPM).
-     * Spins up, fires all three lanes, then spins down to idle.
-     * Activates prefeed roller in forward direction to help feed.
-     *
-     * @return Command that executes a short-range shot
-     */
     public LaunchAllCommand launchAll(boolean spinDownAfterShot) {
         return new LaunchAllCommand(launcher, intake, spinDownAfterShot);
     }

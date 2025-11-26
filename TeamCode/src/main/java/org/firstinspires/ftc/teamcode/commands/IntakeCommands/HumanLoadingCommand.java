@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
+package org.firstinspires.ftc.teamcode.commands.IntakeCommands;
 
 import dev.nextftc.core.commands.Command;
 

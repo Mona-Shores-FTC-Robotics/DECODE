@@ -23,7 +23,7 @@ import java.util.Objects;
  * Each lane's hood can have different servo values to account for mounting differences.
  */
 @Configurable
-public class LaunchAllAtPresetRangeCommand extends Command {
+public class PresetRangeLaunchAllCommand extends Command {
 
     @Configurable
     public static class RangeRpmConfig {
@@ -74,10 +74,10 @@ public class LaunchAllAtPresetRangeCommand extends Command {
      * @param range The shooting range (SHORT, MID, or LONG)
      * @param spinDownAfterShot Whether to spin down to idle after firing
      */
-    public LaunchAllAtPresetRangeCommand(LauncherSubsystem launcher,
-                                          IntakeSubsystem intake,
-                                          LauncherRange range,
-                                          boolean spinDownAfterShot) {
+    public PresetRangeLaunchAllCommand(LauncherSubsystem launcher,
+                                       IntakeSubsystem intake,
+                                       LauncherRange range,
+                                       boolean spinDownAfterShot) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = intake; // Nullable - robot may not have prefeed roller
         this.range = Objects.requireNonNull(range, "range required");

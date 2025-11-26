@@ -8,7 +8,7 @@ import dev.nextftc.ftc.GamepadEx;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpinCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeLaunchAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
@@ -38,14 +38,13 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * it could replace X entirely, becoming the single primary fire button.
  */
 public class OperatorBindings {
-    private final Button fireDistanceBased;
+    private final Button distanceBasedLaunch;
 //    private final Button fireUniversalSmart;
     private final Button runIntake;
     private final Button humanLoading;
 
-    private final Button fireShort;
-    private final Button fireMid;
-
+    private final Button launchShort;
+    private final Button launchMid;
 
     private final Button motifTailCycle;
     private final Button toggleLauncherMode;
@@ -60,8 +59,12 @@ public class OperatorBindings {
         //Human Player Loading
         humanLoading = operator.triangle();
 
-        //launch based on range to april tag.
-        fireDistanceBased = operator.cross();
+        //launch based on range to goal.
+        distanceBasedLaunch = operator.cross();
+
+        //launch based on preset RPM and hood values for specific field locations
+        launchShort = operator.dpadDown();  // SHORT range for close shots (if vision is broken)
+        launchMid = operator.dpadLeft(); // LONG range for far shots (if vision is broken)
 
         //launch based on range to april tag - simultaneous or sequential (Obelisk Pattern) depending on launcher mode
 //        fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
@@ -69,32 +72,46 @@ public class OperatorBindings {
         toggleLauncherMode = operator.back();
         motifTailCycle = operator.dpadRight();  // Cycle through 0 → 1 → 2 → 0
 
-        //launch based on preset RPM and hood values for specific field locations
-        fireShort = operator.dpadDown();  // SHORT range for close shots (if vision is broken)
-        fireMid = operator.dpadLeft(); // LONG range for far shots (if vision is broken)
-
-
     }
 
     public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
         this.rawGamepad = operatorGamepad; //Need the raw gamepad for rumble features
 
+        configureGroundIntakeBindings(robot);
+        configureHumanIntakeBindings(robot);
+        configureDistanceBasedLaunchBindings(robot);
+        configurePresetRangeLaunchBindings(robot);
+
+        // Motif tail cycle: single button cycles through 0 → 1 → 2 → 0 with visual feedback
+        motifTailCycle.whenBecomesTrue(() -> cycleMotifTailWithFeedback(robot));
+
+        // Mode toggle: manually switch between THROUGHPUT and DECODE
+        toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
+
+    }
+
+    private void configurePresetRangeLaunchBindings(Robot robot) {
+        PresetRangeLaunchAllCommand launchAllShortCommand = robot.launcherCommands.fireAllShortRange();
+        launchShort.whenBecomesTrue(launchAllShortCommand);
+
+        PresetRangeLaunchAllCommand launchAllMidCommand = robot.launcherCommands.fireAllMidRange();
+        launchMid.whenBecomesTrue(launchAllMidCommand);
+    }
+
+    private void configureDistanceBasedLaunchBindings(Robot robot) {
+
         // Distance-based launching commands
         DistanceBasedSpinCommand distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpin(robot.vision, robot.drive, robot.lighting, rawGamepad);
         LaunchAllCommand launchAllCommand = robot.launcherCommands.launchAll(true);
 
-        // X button: Hold to spin up at distance-calculatedRPM, release to fire all lanes
-        fireDistanceBased.whenBecomesTrue(distanceBasedSpinCommand);
-        fireDistanceBased.whenBecomesFalse(launchAllCommand);
+        // Cross button: Hold to spin up at distance-calculatedRPM, release to fire all lanes
+        distanceBasedLaunch
+                .whenBecomesTrue(distanceBasedSpinCommand)
+                .whenBecomesFalse(launchAllCommand);
 
-        // Intake control commands
-        SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
-        SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+    }
 
-        // Intake control
-        runIntake.whenBecomesTrue(intakeForwardCommand);
-        runIntake.whenBecomesFalse(intakeReverseCommand);
-
+    private void configureHumanIntakeBindings(Robot robot) {
         // Human Loading
         humanLoading
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
@@ -108,19 +125,16 @@ public class OperatorBindings {
                 .whenBecomesFalse(robot.intake::setGatePreventArtifact)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended)
                 .whenBecomesFalse(robot.intake::forwardRoller);
+    }
 
-        // Motif tail cycle: single button cycles through 0 → 1 → 2 → 0 with visual feedback
-        motifTailCycle.whenBecomesTrue(() -> cycleMotifTailWithFeedback(robot));
+    private void configureGroundIntakeBindings(Robot robot) {
+        // Intake control commands
+        SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
+        SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
 
-        // Mode toggle: manually switch between THROUGHPUT and DECODE
-        toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
-
-        LaunchAllAtPresetRangeCommand launchAllShortCommand = robot.launcherCommands.fireAllShortRange();
-        fireShort.whenBecomesTrue(launchAllShortCommand);
-
-        LaunchAllAtPresetRangeCommand launchAllMidCommand = robot.launcherCommands.fireAllMidRange();
-        fireMid.whenBecomesTrue(launchAllMidCommand);
-
+        // Intake control
+        runIntake.whenBecomesTrue(intakeForwardCommand);
+        runIntake.whenBecomesFalse(intakeReverseCommand);
     }
 
     /**

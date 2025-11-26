@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
+package org.firstinspires.ftc.teamcode.commands.LauncherCommands.testing;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.util.ElapsedTime;

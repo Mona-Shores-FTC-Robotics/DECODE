@@ -344,7 +344,7 @@ public class DecodeAutonomousFarTOGETHERCommand extends NextFTCOpMode {
      */
     private Command spinUpLauncher() {
         // LaunchAtPositionCommand sets RPM based on field position AND spins up
-        return launcherCommands.spinUpForPosition(FieldPoint.LAUNCH_FAR);
+        return launcherCommands.spinUpForPosition(LauncherRange.LONG);
     }
 
     /**
