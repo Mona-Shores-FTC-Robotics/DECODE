@@ -13,6 +13,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Objects;
@@ -86,7 +87,9 @@ public class DistanceBasedSpinCommand extends Command {
     private final DriveSubsystem drive;
     private final LightingSubsystem lighting;
     private final Gamepad gamepad;
-    private final CommandRangeConfig rangeConfig = CommandRangeConfig.SHARED;
+    public static CommandRangeConfig rangeConfig() {
+        return RobotConfigs.getCommandRangeConfig();
+    }
 
     private double lastSmoothedDistanceIn = 0.0;
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;  // 0-1: higher = more filtering
@@ -290,19 +293,19 @@ public class DistanceBasedSpinCommand extends Command {
      */
     private void setRpmsForDistance(double distanceIn) {
         double leftRpm = interpolateRpm(distanceIn,
-            distanceCalibration.shortRangeDistanceIn, rangeConfig.shortLeftRpm,
-            distanceCalibration.midRangeDistanceIn, rangeConfig.midLeftRpm,
-            distanceCalibration.longRangeDistanceIn, rangeConfig.longLeftRpm);
+            distanceCalibration.shortRangeDistanceIn, rangeConfig().shortLeftRpm,
+            distanceCalibration.midRangeDistanceIn, rangeConfig().midLeftRpm,
+            distanceCalibration.longRangeDistanceIn, rangeConfig().longLeftRpm);
 
         double centerRpm = interpolateRpm(distanceIn,
-            distanceCalibration.shortRangeDistanceIn, rangeConfig.shortCenterRpm,
-            distanceCalibration.midRangeDistanceIn, rangeConfig.midCenterRpm,
-            distanceCalibration.longRangeDistanceIn, rangeConfig.longCenterRpm);
+            distanceCalibration.shortRangeDistanceIn, rangeConfig().shortCenterRpm,
+            distanceCalibration.midRangeDistanceIn, rangeConfig().midCenterRpm,
+            distanceCalibration.longRangeDistanceIn, rangeConfig().longCenterRpm);
 
         double rightRpm = interpolateRpm(distanceIn,
-            distanceCalibration.shortRangeDistanceIn, rangeConfig.shortRightRpm,
-            distanceCalibration.midRangeDistanceIn, rangeConfig.midRightRpm,
-            distanceCalibration.longRangeDistanceIn, rangeConfig.longRightRpm);
+            distanceCalibration.shortRangeDistanceIn, rangeConfig().shortRightRpm,
+            distanceCalibration.midRangeDistanceIn, rangeConfig().midRightRpm,
+            distanceCalibration.longRangeDistanceIn, rangeConfig().longRightRpm);
 
         launcher.setLaunchRpm(LauncherLane.LEFT, leftRpm);
         launcher.setLaunchRpm(LauncherLane.CENTER, centerRpm);
@@ -358,11 +361,11 @@ public class DistanceBasedSpinCommand extends Command {
         double hoodPosition;
 
         if (distanceIn < hoodThresholds.shortToMidThresholdIn) {
-            hoodPosition = rangeConfig.shortHoodPosition;
+            hoodPosition = rangeConfig().shortHoodPosition;
         } else if (distanceIn < hoodThresholds.midToLongThresholdIn) {
-            hoodPosition = rangeConfig.midHoodPosition;
+            hoodPosition = rangeConfig().midHoodPosition;
         } else {
-            hoodPosition = rangeConfig.longHoodPosition;
+            hoodPosition = rangeConfig().longHoodPosition;
         }
 
         launcher.setAllHoodPositions(hoodPosition);

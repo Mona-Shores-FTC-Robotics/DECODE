@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.util;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.constants.PinpointConstants;
+
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.CommandRangeConfig;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -11,6 +13,8 @@ import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederC
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherTimingConfig;
+
+import dev.nextftc.core.commands.Command;
 
 /**
  * Centralized robot-specific configuration selector.
@@ -168,6 +172,16 @@ public class RobotConfigs {
             return "19429";
         } else {
             return "20245 (default)";
+        }
+    }
+
+    public static CommandRangeConfig getCommandRangeConfig() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_19429".equals(robotName)) {
+            return CommandRangeConfig.commandRangeConfig19429;
+        } else {
+            // Default to 20245 config if robot name is unknown or is 20245
+            return CommandRangeConfig.commandRangeConfig20245;
         }
     }
 }

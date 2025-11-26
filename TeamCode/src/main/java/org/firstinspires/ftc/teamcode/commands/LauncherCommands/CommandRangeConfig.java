@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
 import com.bylazar.configurables.annotations.Configurable;
 
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
+
 /**
  * Shared tunable RPM and hood positions for SHORT/MID/LONG ranges.
  * Both distance-based and preset-based commands should reference this single
@@ -9,30 +11,92 @@ import com.bylazar.configurables.annotations.Configurable;
  */
 @Configurable
 public class CommandRangeConfig {
-
-    /** Shared config instance used by all launcher commands to keep tuning in sync. */
-    public static final CommandRangeConfig SHARED = new CommandRangeConfig();
-
     /** Short range RPMs */
-    public double shortLeftRpm = 2000;
-    public double shortCenterRpm = 2000; // Center disabled by default
-    public double shortRightRpm = 2000;
+    public double shortLeftRpm;
+    public double shortCenterRpm; // Center disabled by default
+    public double shortRightRpm;
 
     /** Mid range RPMs */
-    public double midLeftRpm = 2400;
-    public double midCenterRpm = 2400; // Center disabled by default
-    public double midRightRpm = 2400;
+    public double midLeftRpm;
+    public double midCenterRpm; // Center disabled by default
+    public double midRightRpm;
 
     /** Long range RPMs */
-    public double longLeftRpm = 2725;
-    public double longCenterRpm = 2725; // Center disabled by default
-    public double longRightRpm = 2725;
+    public double longLeftRpm;
+    public double longCenterRpm; // Center disabled by default
+    public double longRightRpm;
 
     /** Per-range hood positions (applied uniformly to all lanes) */
-    public double shortHoodPosition = 0.3;
-    public double midHoodPosition = 0.05;
-    public double longHoodPosition = 0.0;
+    public double shortHoodPosition;
+    public double midHoodPosition;
+    public double longHoodPosition;
 
     /** Timeout in seconds before giving up on spin-up */
-    public double timeoutSeconds = 3.5;
+    public double timeoutSeconds;
+
+
+
+    // Robot-specific instances
+    public static CommandRangeConfig commandRangeConfig19429 = createCommandRangeConfig19429();
+    public static CommandRangeConfig commandRangeConfig20245 = createCommandRangeConfig20245();
+
+    /**
+     * Creates feeder configuration for robot 19429.
+     */
+    private static CommandRangeConfig createCommandRangeConfig19429() {
+        CommandRangeConfig config = new CommandRangeConfig();
+        // Apply 19429-specific values
+        /** Short range RPMs */
+        config.shortLeftRpm = 2000;
+        config.shortCenterRpm = 2000; // Center disabled by default
+        config.shortRightRpm = 2000;
+
+        /** Mid range RPMs */
+        config.midLeftRpm = 2400;
+        config.midCenterRpm = 2400; // Center disabled by default
+        config.midRightRpm = 2400;
+
+        /** Long range RPMs */
+        config.longLeftRpm = 2725;
+        config.longCenterRpm = 2725; // Center disabled by default
+        config.longRightRpm = 2725;
+
+        /** Per-range hood positions (applied uniformly to all lanes) */
+        config.shortHoodPosition = 0.3;
+        config.midHoodPosition = 0.05;
+        config.longHoodPosition = 0.0;
+
+        /** Timeout in seconds before giving up on spin-up */
+        config.timeoutSeconds = 3.5;
+
+        return config;
+    }
+
+    private static CommandRangeConfig createCommandRangeConfig20245() {
+        CommandRangeConfig config = new CommandRangeConfig();
+        // Apply 20245-specific values
+        /** Short range RPMs */
+        config.shortLeftRpm = 2000;
+        config.shortCenterRpm = 2000; // Center disabled by default
+        config.shortRightRpm = 2000;
+
+        /** Mid range RPMs */
+        config.midLeftRpm = 2400;
+        config.midCenterRpm = 2400; // Center disabled by default
+        config.midRightRpm = 2400;
+
+        /** Long range RPMs */
+        config.longLeftRpm = 2725;
+        config.longCenterRpm = 2725; // Center disabled by default
+        config.longRightRpm = 2725;
+
+        /** Per-range hood positions (applied uniformly to all lanes) */
+        config.shortHoodPosition = 0.3;
+        config.midHoodPosition = 0.05;
+        config.longHoodPosition = 0.0;
+
+        /** Timeout in seconds before giving up on spin-up */
+        config.timeoutSeconds = 3.5;
+        return config;
+    }
 }

@@ -8,6 +8,7 @@ import dev.nextftc.core.commands.Command;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
+import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Objects;
@@ -22,7 +23,9 @@ public class PresetRangeSpinCommand extends Command {
 
     private final LauncherSubsystem launcher;
     private final LauncherRange range;
-    private final CommandRangeConfig rangeConfig = CommandRangeConfig.SHARED;
+    public static CommandRangeConfig rangeConfig() {
+        return RobotConfigs.getCommandRangeConfig();
+    }
     private final ElapsedTime timer = new ElapsedTime();
     private final boolean finishWhenReady;
 
@@ -90,7 +93,7 @@ public class PresetRangeSpinCommand extends Command {
             return false; // Hold-to-spin behaviour; caller interrupts when ready to fire
         }
 
-        return areEnabledLaunchersReady() || timer.seconds() >= rangeConfig.timeoutSeconds;
+        return areEnabledLaunchersReady() || timer.seconds() >= rangeConfig().timeoutSeconds;
     }
 
     @Override
@@ -122,21 +125,21 @@ public class PresetRangeSpinCommand extends Command {
     private void setRpmsForRange() {
         switch (range) {
             case SHORT:
-                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig.shortLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig.shortCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig.shortRightRpm);
+                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().shortLeftRpm);
+                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().shortCenterRpm);
+                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().shortRightRpm);
                 break;
 
             case MID:
-                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig.midLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig.midCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig.midRightRpm);
+                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().midLeftRpm);
+                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().midCenterRpm);
+                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().midRightRpm);
                 break;
 
             case LONG:
-                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig.longLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig.longCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig.longRightRpm);
+                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().longLeftRpm);
+                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().longCenterRpm);
+                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().longRightRpm);
                 break;
         }
     }
@@ -144,12 +147,12 @@ public class PresetRangeSpinCommand extends Command {
     private double hoodPositionForRange() {
         switch (range) {
             case SHORT:
-                return rangeConfig.shortHoodPosition;
+                return rangeConfig().shortHoodPosition;
             case MID:
-                return rangeConfig.midHoodPosition;
+                return rangeConfig().midHoodPosition;
             case LONG:
             default:
-                return rangeConfig.longHoodPosition;
+                return rangeConfig().longHoodPosition;
         }
     }
 
