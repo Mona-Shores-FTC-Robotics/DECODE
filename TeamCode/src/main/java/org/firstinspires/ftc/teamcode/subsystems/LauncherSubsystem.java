@@ -110,6 +110,7 @@ public class LauncherSubsystem implements Subsystem {
     private LauncherState state = LauncherState.DISABLED;
     private double lastPeriodicMs = 0.0;
     private boolean reverseFlywheelActive = false;
+    private boolean readyLatchActive = false;
 
     /**
      * Safely retrieves a motor from the hardware map. Returns null if the motor
@@ -172,6 +173,7 @@ public class LauncherSubsystem implements Subsystem {
         shotQueue.clear();
         requestedSpinMode = SpinMode.OFF;
         reverseFlywheelActive = false;
+        readyLatchActive = false;
 
         for (Map.Entry<LauncherLane, Flywheel> entry : flywheels.entrySet()) {
             entry.getValue().initialize();
@@ -226,6 +228,27 @@ public class LauncherSubsystem implements Subsystem {
             }
         }
         return true;
+    }
+
+    /**
+     * Sets the ready latch. Once latched, the launcher is considered ready until explicitly cleared.
+     */
+    public void setReadyLatch() {
+        readyLatchActive = true;
+    }
+
+    /**
+     * Clears the ready latch.
+     */
+    public void clearReadyLatch() {
+        readyLatchActive = false;
+    }
+
+    /**
+     * Returns whether the ready latch is currently active.
+     */
+    public boolean isReadyLatched() {
+        return readyLatchActive;
     }
 
     public boolean isBusy() {
@@ -865,6 +888,18 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    private static LauncherFlywheelConfig.FlywheelModeConfig getFlywheelModeConfigFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return flywheelConfig().flywheelLeft.modeConfig;
+            case CENTER:
+                return flywheelConfig().flywheelCenter.modeConfig;
+            case RIGHT:
+            default:
+                return flywheelConfig().flywheelRight.modeConfig;
+        }
+    }
+
     private static double rpmToTicksPerSecond(double rpm) {
         if (rpm <= 0.0) {
             return 0.0;
@@ -1040,8 +1075,10 @@ public class LauncherSubsystem implements Subsystem {
             double error = commandedRpm - getCurrentRpm();
             double absError = Math.abs(error);
 
+            LauncherFlywheelConfig.FlywheelModeConfig laneConfig = getFlywheelModeConfigFor(lane);
+
             // Pure bang-bang mode - simple and fast
-            if (getFlywheelControlMode() == FlywheelControlMode.PURE_BANG_BANG) {
+            if (laneConfig.mode == FlywheelControlMode.PURE_BANG_BANG) {
                 phase = ControlPhase.BANG;
                 applyBangBangControl(error);
                 return;
@@ -1050,10 +1087,10 @@ public class LauncherSubsystem implements Subsystem {
             // Legacy multi-phase control for HYBRID and BANG_BANG_HOLD modes
             switch (phase) {
                 case BANG:
-                    if (getFlywheelControlMode() == FlywheelControlMode.BANG_BANG_HOLD) {
-                        if (absError <= flywheelConfig().modeConfig.bangBang.exitBangThresholdRpm) {
+                    if (laneConfig.mode == FlywheelControlMode.BANG_BANG_HOLD) {
+                        if (absError <= laneConfig.bangBang.exitBangThresholdRpm) {
                             bangToHoldCounter++;
-                            if (bangToHoldCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.bangToHoldConfirmCycles)) {
+                            if (bangToHoldCounter >= Math.max(1, laneConfig.phaseSwitch.bangToHoldConfirmCycles)) {
                                 phase = ControlPhase.HOLD;
                                 bangToHoldCounter = 0;
                             }
@@ -1062,9 +1099,9 @@ public class LauncherSubsystem implements Subsystem {
                         }
                         bangToHybridCounter = 0;
                     } else {
-                        if (absError <= flywheelConfig().modeConfig.bangBang.exitBangThresholdRpm) {
+                        if (absError <= laneConfig.bangBang.exitBangThresholdRpm) {
                             bangToHybridCounter++;
-                            if (bangToHybridCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.bangToHybridConfirmCycles)) {
+                            if (bangToHybridCounter >= Math.max(1, laneConfig.phaseSwitch.bangToHybridConfirmCycles)) {
                                 phase = ControlPhase.HYBRID;
                                 bangToHybridCounter = 0;
                             }
@@ -1077,9 +1114,9 @@ public class LauncherSubsystem implements Subsystem {
                     holdToBangCounter = 0;
                     break;
                 case HYBRID:
-                    if (absError >= flywheelConfig().modeConfig.bangBang.enterBangThresholdRpm) {
+                    if (absError >= laneConfig.bangBang.enterBangThresholdRpm) {
                         hybridToBangCounter++;
-                        if (hybridToBangCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.hybridToBangConfirmCycles)) {
+                        if (hybridToBangCounter >= Math.max(1, laneConfig.phaseSwitch.hybridToBangConfirmCycles)) {
                             phase = ControlPhase.BANG;
                             hybridToBangCounter = 0;
                             bangToHybridCounter = 0;
@@ -1091,9 +1128,9 @@ public class LauncherSubsystem implements Subsystem {
                     holdToBangCounter = 0;
                     break;
                 case HOLD:
-                    if (absError >= flywheelConfig().modeConfig.bangBang.enterBangThresholdRpm) {
+                    if (absError >= laneConfig.bangBang.enterBangThresholdRpm) {
                         holdToBangCounter++;
-                        if (holdToBangCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.holdToBangConfirmCycles)) {
+                        if (holdToBangCounter >= Math.max(1, laneConfig.phaseSwitch.holdToBangConfirmCycles)) {
                             phase = ControlPhase.BANG;
                             holdToBangCounter = 0;
                             bangToHoldCounter = 0;
@@ -1130,8 +1167,9 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyBangBangControl(double error) {
-            double high = Range.clip(flywheelConfig().modeConfig.bangBang.highPower, -1.0, 1.0);
-            double low = Range.clip(flywheelConfig().modeConfig.bangBang.lowPower, -1.0, 1.0);
+            LauncherFlywheelConfig.FlywheelModeConfig laneConfig = getFlywheelModeConfigFor(lane);
+            double high = Range.clip(laneConfig.bangBang.highPower, -1.0, 1.0);
+            double low = Range.clip(laneConfig.bangBang.lowPower, -1.0, 1.0);
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
@@ -1147,8 +1185,9 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyHybridControl(double error) {
-            double power = flywheelConfig().modeConfig.hybridPid.kF + flywheelConfig().modeConfig.hybridPid.kP * error;
-            power = Range.clip(power, 0.0, Math.max(0.0, flywheelConfig().modeConfig.hybridPid.maxPower));
+            LauncherFlywheelConfig.FlywheelModeConfig laneConfig = getFlywheelModeConfigFor(lane);
+            double power = laneConfig.hybridPid.kF + laneConfig.hybridPid.kP * error;
+            power = Range.clip(power, 0.0, Math.max(0.0, laneConfig.hybridPid.maxPower));
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
@@ -1158,13 +1197,14 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyHoldControl(double error) {
-            double holdPower = flywheelConfig().modeConfig.hold.baseHoldPower + flywheelConfig().modeConfig.hold.rpmPowerGain * commandedRpm;
-            holdPower = Range.clip(holdPower, flywheelConfig().modeConfig.hold.minHoldPower, flywheelConfig().modeConfig.hold.maxHoldPower);
+            LauncherFlywheelConfig.FlywheelModeConfig laneConfig = getFlywheelModeConfigFor(lane);
+            double holdPower = laneConfig.hold.baseHoldPower + laneConfig.hold.rpmPowerGain * commandedRpm;
+            holdPower = Range.clip(holdPower, laneConfig.hold.minHoldPower, laneConfig.hold.maxHoldPower);
 
             // Apply voltage compensation
             double voltageMultiplier = getVoltageCompensationMultiplier();
             holdPower = Range.clip(holdPower * voltageMultiplier, 0.0, 1.0);
-            double lowPower = Range.clip(flywheelConfig().modeConfig.bangBang.lowPower * voltageMultiplier, 0.0, 1.0);
+            double lowPower = Range.clip(laneConfig.bangBang.lowPower * voltageMultiplier, 0.0, 1.0);
 
             if (error < 0.0) {
                 motor.setPower(lowPower);

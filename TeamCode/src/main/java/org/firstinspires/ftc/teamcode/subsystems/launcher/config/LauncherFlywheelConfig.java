@@ -77,6 +77,7 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_left";
         public boolean reversed; //TODO Is this really reversed depending on robot?
         public double idleRpm = 1500;
+        public FlywheelModeConfig modeConfig = new FlywheelModeConfig();
     }
 
     @Configurable
@@ -84,6 +85,7 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_center";
         public boolean reversed = false;
         public double idleRpm = 1500;
+        public FlywheelModeConfig modeConfig = new FlywheelModeConfig();
     }
 
     @Configurable
@@ -91,6 +93,7 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_right";
         public boolean reversed = true;
         public double idleRpm = 1500;
+        public FlywheelModeConfig modeConfig = new FlywheelModeConfig();
     }
 
     // Robot-specific instances
