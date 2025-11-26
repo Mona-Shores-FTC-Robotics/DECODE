@@ -610,10 +610,14 @@ public class LauncherSubsystem implements Subsystem {
                 continue;
             }
 
-            // Spin up lanes with non-zero launch RPM only when queue is active
-            // This ensures lanes spin up during firing, but allows idle commands when queue is empty
+            // When queue is active and lane has launch RPM set, spin to launch
             if (!shotQueue.isEmpty() && launchRpmFor(lane) > 0.0) {
                 flywheel.commandLaunch();
+            }
+            // When queue is empty and no launch RPM override, actively maintain idle
+            // This prevents unwanted jumps back to launch RPM
+            else if (shotQueue.isEmpty() && launchRpmFor(lane) <= 0.0) {
+                flywheel.commandIdle();
             }
         }
     }
