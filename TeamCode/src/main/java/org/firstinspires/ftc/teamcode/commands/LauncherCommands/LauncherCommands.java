@@ -69,16 +69,16 @@ public class LauncherCommands {
         launcher.clearQueue();
     }
 
-    public void setSpinModeToFull() {
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+    public void spinUpAllLanesToLaunch() {
+        launcher.spinUpAllLanesToLaunch();
     }
 
-    public void setSpinModeToIdle() {
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+    public void setAllLanesToIdle() {
+        launcher.setAllLanesToIdle();
     }
 
-    public void setSpinModeToOff() {
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.OFF);
+    public void stopAllLanes() {
+        launcher.stopAllLanes();
     }
 
     public SetFeederPositionCommand setLeftFeederToLoad() {

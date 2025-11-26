@@ -169,11 +169,10 @@ public class DriverStationFormatter {
                 data.drive.slowMode ? "ON" : "OFF");
 
         // Launcher per-lane readiness
-        telemetry.addData("Launcher", "L:%s C:%s R:%s | mode=%s",
+        telemetry.addData("Launcher", "L:%s C:%s R:%s",
                 data.launcher.left.ready ? "✓" : "✗",
                 data.launcher.center.ready ? "✓" : "✗",
-                data.launcher.right.ready ? "✓" : "✗",
-                data.launcher.spinMode);
+                data.launcher.right.ready ? "✓" : "✗");
 
         // Vision
         if (data.vision.hasTag) {
@@ -301,11 +300,10 @@ public class DriverStationFormatter {
         }
 
         // Launcher per-lane readiness
-        telemetry.addData("Launcher", "L:%s C:%s R:%s | %s",
+        telemetry.addData("Launcher", "L:%s C:%s R:%s",
                 data.launcher.left.ready ? "✓" : "✗",
                 data.launcher.center.ready ? "✓" : "✗",
-                data.launcher.right.ready ? "✓" : "✗",
-                data.launcher.spinMode);
+                data.launcher.right.ready ? "✓" : "✗");
 
         // Vision tag
         if (data.vision.hasTag) {
@@ -354,16 +352,14 @@ public class DriverStationFormatter {
      * Page 3: Launcher - per-lane detailed info.
      */
     private void publishDebugLauncher(Telemetry telemetry, RobotTelemetryData data) {
-        telemetry.addData("Config", "%s | spin=%s",
-                data.launcher.controlMode,
-                data.launcher.spinMode);
+        telemetry.addData("Control", "Feedforward + Proportional");
 
         telemetry.addData("Left",
                 "T=%.0f C=%.0f P=%.2f %s",
                 data.launcher.left.targetRpm,
                 data.launcher.left.currentRpm,
                 data.launcher.left.power,
-                data.launcher.left.phase);
+                data.launcher.left.ready ? "✓" : "✗");
         telemetry.addData("  H/F", "%.2f / %.2f",
                 data.launcher.left.hoodPosition,
                 data.launcher.left.feederPosition);
@@ -373,7 +369,7 @@ public class DriverStationFormatter {
                 data.launcher.center.targetRpm,
                 data.launcher.center.currentRpm,
                 data.launcher.center.power,
-                data.launcher.center.phase);
+                data.launcher.center.ready ? "✓" : "✗");
         telemetry.addData("  H/F", "%.2f / %.2f",
                 data.launcher.center.hoodPosition,
                 data.launcher.center.feederPosition);
@@ -383,7 +379,7 @@ public class DriverStationFormatter {
                 data.launcher.right.targetRpm,
                 data.launcher.right.currentRpm,
                 data.launcher.right.power,
-                data.launcher.right.phase);
+                data.launcher.right.ready ? "✓" : "✗");
         telemetry.addData("  H/F", "%.2f / %.2f",
                 data.launcher.right.hoodPosition,
                 data.launcher.right.feederPosition);

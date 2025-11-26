@@ -62,9 +62,7 @@ public class DashboardFormatter {
         packet.put("drive/mode", data.drive.driveMode);
         packet.put("drive/distance_to_goal_in", data.drive.distanceToGoalIn);
 
-        // Launcher config (per-lane readiness in lane data)
-        packet.put("launcher/spin_mode", data.launcher.spinMode);
-        packet.put("launcher/control_mode", data.launcher.controlMode);
+        // Launcher control (feedforward + proportional per lane)
 
         // Vision essentials
         packet.put("vision/has_tag", data.vision.hasTag);
@@ -126,9 +124,7 @@ public class DashboardFormatter {
         addDebugLaneSamples(packet, data.intake);
 
 
-        // Launcher config (per-lane readiness in lane data)
-        packet.put("launcher/control_mode", data.launcher.controlMode);
-        packet.put("launcher/spin_mode", data.launcher.spinMode);
+        // Launcher control (feedforward + proportional per lane)
 
         // Launcher per-lane (left)
         addLaneData(packet, "launcher/left", data.launcher.left);
@@ -250,14 +246,9 @@ public class DashboardFormatter {
      * Add per-lane launcher data with underscores for alphabetical grouping.
      */
     private void addLaneData(TelemetryPacket packet, String prefix, LauncherTelemetryData.LaneData lane) {
-        packet.put(prefix + "/bang_to_hold_count", lane.bangToHoldCount);
         packet.put(prefix + "/current_rpm", lane.currentRpm);
         packet.put(prefix + "/feeder_position", lane.feederPosition);
         packet.put(prefix + "/hood_position", lane.hoodPosition);
-        packet.put(prefix + "/phase", lane.phase);
-        packet.put(prefix + "/phase_bang", lane.phaseBang);
-        packet.put(prefix + "/phase_hold", lane.phaseHold);
-        packet.put(prefix + "/phase_hybrid", lane.phaseHybrid);
         packet.put(prefix + "/power", lane.power);
         packet.put(prefix + "/ready", lane.ready);
         packet.put(prefix + "/target_rpm", lane.targetRpm);

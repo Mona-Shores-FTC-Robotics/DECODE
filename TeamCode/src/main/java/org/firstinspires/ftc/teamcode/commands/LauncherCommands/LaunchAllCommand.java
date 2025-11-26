@@ -57,7 +57,7 @@ public class LaunchAllCommand extends Command {
         timer.reset();
         stage = Stage.WAITING_FOR_READY;
         queuedLanes.clear();
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        launcher.spinUpAllLanesToLaunch();
         spinDownApplied = false;
         // Activate gate in forward direction to help feed
         if (intake != null) {
@@ -78,7 +78,7 @@ public class LaunchAllCommand extends Command {
                 if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
                     stage = Stage.COMPLETED;
                     if (spinDownAfterShot && !spinDownApplied) {
-                        launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+                        launcher.setAllLanesToIdle();
                         spinDownApplied = true;
                     }
                 }
@@ -130,7 +130,7 @@ public class LaunchAllCommand extends Command {
             launcher.clearQueue();
         }
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+            launcher.setAllLanesToIdle();
             spinDownApplied = true;
         }
     }
