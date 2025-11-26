@@ -76,8 +76,7 @@ public class LaunchAllCommand extends Command {
                 if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
                     stage = Stage.COMPLETED;
                     if (spinDownAfterShot && !spinDownApplied) {
-                        launcher.clearOverrides();  // Clear launch RPM overrides
-                        launcher.setAllLanesToIdle();
+                        launcher.clearOverrides();  // Clear overrides; subsystem will auto-idle after hold expires
                         spinDownApplied = true;
                     }
                 }
@@ -129,8 +128,7 @@ public class LaunchAllCommand extends Command {
             launcher.clearQueue();
         }
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
-            launcher.clearOverrides();  // Clear launch RPM overrides
-            launcher.setAllLanesToIdle();
+            launcher.clearOverrides();  // Clear overrides; subsystem will auto-idle after hold expires
             spinDownApplied = true;
         }
     }

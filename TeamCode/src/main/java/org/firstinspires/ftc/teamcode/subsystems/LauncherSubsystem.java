@@ -609,10 +609,19 @@ public class LauncherSubsystem implements Subsystem {
 
     private void updateLaneRecovery(double now) {
         for (LauncherLane lane : LauncherLane.values()) {
-            // Clear launch hold deadline when it expires
+            // Command to idle when launch hold deadline expires (only if overrides cleared)
+            // This ensures launcher returns to idle after artifact clears when spinDownAfterShot=true
+            // If spinDownAfterShot=false, overrides remain set and launcher stays at launch speed
             double launchHoldDeadline = laneLaunchHoldDeadlineMs.getOrDefault(lane, 0.0);
             if (launchHoldDeadline > 0.0 && now >= launchHoldDeadline) {
                 laneLaunchHoldDeadlineMs.put(lane, 0.0);
+                // Only command idle if launch RPM override has been cleared
+                if (launchRpmFor(lane) <= 0.0) {
+                    Flywheel flywheel = flywheels.get(lane);
+                    if (flywheel != null) {
+                        flywheel.commandIdle();
+                    }
+                }
             }
 
             // Command to idle when recovery period ends
