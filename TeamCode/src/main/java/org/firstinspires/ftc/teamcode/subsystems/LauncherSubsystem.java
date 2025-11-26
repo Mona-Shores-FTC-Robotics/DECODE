@@ -202,10 +202,28 @@ public class LauncherSubsystem implements Subsystem {
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
             if (flywheel.motor != null) {
+                // Log velocity measurements
                 double velocityTps = flywheel.motor.getVelocity();  // SDK velocity in ticks/sec
                 double velocityRpm = ticksPerSecondToRpm(Math.abs(velocityTps));  // Converted to RPM
                 RobotState.packet.put("velocity_tps_" + flywheel.lane.name(), velocityTps);
                 RobotState.packet.put("velocity_rpm_" + flywheel.lane.name(), velocityRpm);
+
+                // Log control diagnostics for feedforward tuning
+                if (getFlywheelControlMode() == FlywheelControlMode.FEEDFORWARD) {
+                    double targetRpm = flywheel.getTargetRpm();
+                    double error = targetRpm - velocityRpm;
+                    double kS = kSFor(flywheel.lane);
+                    double kV = kVFor(flywheel.lane);
+                    double kP = kPFor(flywheel.lane);
+                    double feedforward = kS + kV * targetRpm;
+                    double feedback = kP * error;
+                    double totalPower = flywheel.getAppliedPower();
+
+                    RobotState.packet.put("ff_error_" + flywheel.lane.name(), error);
+                    RobotState.packet.put("ff_feedforward_" + flywheel.lane.name(), feedforward);
+                    RobotState.packet.put("ff_feedback_" + flywheel.lane.name(), feedback);
+                    RobotState.packet.put("ff_power_" + flywheel.lane.name(), totalPower);
+                }
             }
         }
         updateStateMachine(now, effectiveSpinMode);
@@ -883,6 +901,55 @@ public class LauncherSubsystem implements Subsystem {
         return ticksPerSecond * 60.0 / (flywheelConfig().parameters.ticksPerRev * flywheelConfig().parameters.gearRatio);
     }
 
+    /**
+     * Gets the per-lane static friction coefficient (kS).
+     * This is the minimum power needed to overcome friction and start the motor spinning.
+     */
+    private static double kSFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return flywheelConfig().flywheelLeft.kS;
+            case CENTER:
+                return flywheelConfig().flywheelCenter.kS;
+            case RIGHT:
+            default:
+                return flywheelConfig().flywheelRight.kS;
+        }
+    }
+
+    /**
+     * Gets the per-lane velocity gain (kV).
+     * This maps target RPM to required power: power = kS + kV * rpm
+     */
+    private static double kVFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return flywheelConfig().flywheelLeft.kV;
+            case CENTER:
+                return flywheelConfig().flywheelCenter.kV;
+            case RIGHT:
+            default:
+                return flywheelConfig().flywheelRight.kV;
+        }
+    }
+
+    /**
+     * Gets the per-lane proportional gain (kP).
+     * This adds feedback correction: power += kP * (target - actual)
+     * Set to 0 for pure feedforward, >0 to add error correction.
+     */
+    private static double kPFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return flywheelConfig().flywheelLeft.kP;
+            case CENTER:
+                return flywheelConfig().flywheelCenter.kP;
+            case RIGHT:
+            default:
+                return flywheelConfig().flywheelRight.kP;
+        }
+    }
+
     private static double clampServo(double position) {
         if (position < 0.0) {
             return 0.0;
@@ -1035,6 +1102,7 @@ public class LauncherSubsystem implements Subsystem {
                 return;
             }
 
+            // Stop motor if no velocity commanded
             if (commandedRpm <= 0.0) {
                 motor.setPower(0.0);
                 phase = ControlPhase.BANG;
@@ -1044,17 +1112,23 @@ public class LauncherSubsystem implements Subsystem {
             double error = commandedRpm - getCurrentRpm();
             double absError = Math.abs(error);
 
-            // Pure bang-bang mode - simple and fast
-            if (getFlywheelControlMode() == FlywheelControlMode.PURE_BANG_BANG) {
-                phase = ControlPhase.BANG;
-                applyBangBangControl(error);
+            // ==================== RECOMMENDED: FEEDFORWARD MODE ====================
+            // Direct velocity-to-power mapping with optional proportional feedback.
+            // - Simple, predictable, easy to tune per-lane
+            // - Feedforward (kS + kV*rpm) predicts required power
+            // - Proportional feedback (kP*error) corrects for disturbances
+            // - Set kP=0 for pure feedforward, kP>0 to add error correction
+            if (getFlywheelControlMode() == FlywheelControlMode.FEEDFORWARD) {
+                applyFeedforwardControl(commandedRpm);
                 return;
             }
 
-            // Feedforward mode - direct velocity-to-power mapping
-            if (getFlywheelControlMode() == FlywheelControlMode.FEEDFORWARD) {
-                phase = ControlPhase.BANG;  // Phase doesn't matter for feedforward
-                applyFeedforwardControl(commandedRpm);
+            // ==================== ALTERNATIVE: PURE BANG-BANG ====================
+            // Simple on/off control - fast spin-up but oscillates at target.
+            // Good for quick testing or as a fallback mode.
+            if (getFlywheelControlMode() == FlywheelControlMode.PURE_BANG_BANG) {
+                phase = ControlPhase.BANG;
+                applyBangBangControl(error);
                 return;
             }
 
@@ -1185,20 +1259,39 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         private void applyFeedforwardControl(double targetRpm) {
-            // Linear feedforward model: power = kS + kV * rpm
-            // kS: static friction (minimum power to overcome friction)
-            // kV: velocity gain (power per RPM)
-            double kS = flywheelConfig().modeConfig.feedforward.kS;
-            double kV = flywheelConfig().modeConfig.feedforward.kV;
+            // Feedforward + Proportional control model:
+            //   Feedforward: Predicts power needed based on target velocity
+            //   Feedback: Corrects for errors based on actual velocity
+            //
+            // Formula: power = (kS + kV * targetRpm) + kP * error
+            //   kS: Static friction - minimum power to start spinning
+            //   kV: Velocity gain - additional power per RPM
+            //   kP: Proportional gain - error correction (0 = pure feedforward)
+            //
+            // Tuning per lane allows each flywheel to be independently optimized.
 
-            double power = kS + kV * targetRpm;
+            // Get per-lane gains
+            double kS = kSFor(lane);
+            double kV = kVFor(lane);
+            double kP = kPFor(lane);
 
-            // Apply power limits
+            // Feedforward term: predicts power based on target velocity
+            double feedforward = kS + kV * targetRpm;
+
+            // Feedback term: corrects for velocity error (optional, disabled if kP=0)
+            double currentRpm = getCurrentRpm();
+            double error = targetRpm - currentRpm;
+            double feedback = kP * error;
+
+            // Combined control output
+            double power = feedforward + feedback;
+
+            // Apply power limits (use global limits from config)
             power = Range.clip(power,
                 flywheelConfig().modeConfig.feedforward.minPower,
                 flywheelConfig().modeConfig.feedforward.maxPower);
 
-            // Apply voltage compensation
+            // Apply voltage compensation to maintain consistent performance across battery voltages
             double voltageMultiplier = getVoltageCompensationMultiplier();
             power = Range.clip(power * voltageMultiplier, 0.0, 1.0);
 

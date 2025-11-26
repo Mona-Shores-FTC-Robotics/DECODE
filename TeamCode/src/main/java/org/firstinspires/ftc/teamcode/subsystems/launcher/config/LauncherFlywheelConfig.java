@@ -108,6 +108,13 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_left";
         public boolean reversed; //TODO Is this really reversed depending on robot?
         public double idleRpm = 1500;
+
+        /** Static friction - minimum power to overcome friction and start spinning */
+        public double kS = 0.10;
+        /** Velocity gain - power per RPM (feedforward term) */
+        public double kV = 0.0002;
+        /** Proportional gain - error correction (0 = pure feedforward, >0 = adds feedback) */
+        public double kP = 0.0;
     }
 
     @Configurable
@@ -115,6 +122,13 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_center";
         public boolean reversed = false;
         public double idleRpm = 1500;
+
+        /** Static friction - minimum power to overcome friction and start spinning */
+        public double kS = 0.10;
+        /** Velocity gain - power per RPM (feedforward term) */
+        public double kV = 0.0002;
+        /** Proportional gain - error correction (0 = pure feedforward, >0 = adds feedback) */
+        public double kP = 0.0;
     }
 
     @Configurable
@@ -122,6 +136,13 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_right";
         public boolean reversed = true;
         public double idleRpm = 1500;
+
+        /** Static friction - minimum power to overcome friction and start spinning */
+        public double kS = 0.10;
+        /** Velocity gain - power per RPM (feedforward term) */
+        public double kV = 0.0002;
+        /** Proportional gain - error correction (0 = pure feedforward, >0 = adds feedback) */
+        public double kP = 0.0;
     }
 
     // Robot-specific instances
