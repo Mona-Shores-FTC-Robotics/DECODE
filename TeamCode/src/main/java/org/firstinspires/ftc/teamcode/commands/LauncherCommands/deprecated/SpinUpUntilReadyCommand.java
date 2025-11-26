@@ -38,7 +38,7 @@ public class SpinUpUntilReadyCommand extends Command {
 
     @Override
     public void start() {
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        launcher.spinUpAllLanesToLaunch();
         startTime = System.currentTimeMillis();
     }
 
@@ -64,7 +64,7 @@ public class SpinUpUntilReadyCommand extends Command {
         // Keep launchers spinning - the fire command will manage them
         // Only stop if interrupted
         if (interrupted) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+            launcher.setAllLanesToIdle();
         }
     }
 

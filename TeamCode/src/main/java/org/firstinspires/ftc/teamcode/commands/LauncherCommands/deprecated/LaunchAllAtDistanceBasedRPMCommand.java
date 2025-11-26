@@ -186,7 +186,7 @@ public class LaunchAllAtDistanceBasedRPMCommand extends Command {
                     setHoodForDistance(calculatedDistance);
 
                     // Spin up to target
-                    launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+                    launcher.spinUpAllLanesToLaunch();
 
                     stage = Stage.SPINNING_UP;
                 } else {
@@ -219,7 +219,7 @@ public class LaunchAllAtDistanceBasedRPMCommand extends Command {
                 if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
                     stage = Stage.COMPLETED;
                     if (spinDownAfterShot && !spinDownApplied) {
-                        launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+                        launcher.setAllLanesToIdle();
                         spinDownApplied = true;
                     }
                 }
@@ -254,7 +254,7 @@ public class LaunchAllAtDistanceBasedRPMCommand extends Command {
 
         // Spin down if configured and not already done
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+            launcher.setAllLanesToIdle();
             spinDownApplied = true;
         }
     }

@@ -126,7 +126,7 @@ public class LaunchInSequenceCommand extends Command {
         launcher.setAllHoodsForRange(LauncherRange.MID);
 
         // Spin up to target
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        launcher.spinUpAllLanesToLaunch();
     }
 
     @Override
@@ -161,7 +161,7 @@ public class LaunchInSequenceCommand extends Command {
                 if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
                     stage = Stage.COMPLETED;
                     if (!spinDownApplied) {
-                        launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+                        launcher.setAllLanesToIdle();
                         spinDownApplied = true;
                     }
                 }
@@ -195,7 +195,7 @@ public class LaunchInSequenceCommand extends Command {
 
         // Spin down if not already done
         if (interrupted && !spinDownApplied) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+            launcher.setAllLanesToIdle();
             spinDownApplied = true;
         }
     }

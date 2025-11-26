@@ -106,7 +106,7 @@ public class LaunchAllAtPresetRangeCommand extends Command {
         launcher.setAllHoodsForRange(range);
 
         // Spin up to target
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        launcher.spinUpAllLanesToLaunch();
     }
 
     @Override
@@ -136,7 +136,7 @@ public class LaunchAllAtPresetRangeCommand extends Command {
                 if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
                     stage = Stage.COMPLETED;
                     if (spinDownAfterShot && !spinDownApplied) {
-                        launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+                        launcher.setAllLanesToIdle();
                         spinDownApplied = true;
                     }
                 }
@@ -170,7 +170,7 @@ public class LaunchAllAtPresetRangeCommand extends Command {
 
         // Spin down if configured and not already done
         if (interrupted && spinDownAfterShot && !spinDownApplied) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+            launcher.setAllLanesToIdle();
             spinDownApplied = true;
         }
     }

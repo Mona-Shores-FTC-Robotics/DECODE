@@ -76,7 +76,7 @@ public class LaunchAtPositionCommand extends Command {
         launcher.setAllHoodsExtended();
 
         // Spin up to target
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        launcher.spinUpAllLanesToLaunch();
         startTime = System.currentTimeMillis();
     }
 
@@ -101,7 +101,7 @@ public class LaunchAtPositionCommand extends Command {
     public void stop(boolean interrupted) {
         // Keep launchers spinning unless interrupted
         if (interrupted) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+            launcher.spinUpAllLanesToLaunch();
             launcher.clearOverrides(); // Reset to default RPMs
         }
     }

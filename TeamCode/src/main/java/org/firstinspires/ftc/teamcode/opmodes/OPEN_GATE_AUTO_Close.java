@@ -183,7 +183,7 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
         RobotState.setLauncherMode(config.startingLauncherMode);
         RobotState.resetMotifTail(); // Start with fresh motif tail (0)
 
-        robot.launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        robot.launcher.spinUpAllLanesToLaunch();
 
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();

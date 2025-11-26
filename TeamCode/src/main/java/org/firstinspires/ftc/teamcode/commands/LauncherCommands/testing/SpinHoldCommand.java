@@ -21,7 +21,7 @@ public class SpinHoldCommand extends Command {
 
     @Override
     public void start() {
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        launcher.spinUpAllLanesToLaunch();
     }
 
     @Override
@@ -36,6 +36,6 @@ public class SpinHoldCommand extends Command {
 
     @Override
     public void stop(boolean interrupted) {
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+        launcher.setAllLanesToIdle();
     }
 }

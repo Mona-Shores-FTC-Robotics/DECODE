@@ -188,7 +188,7 @@ public class UniversalSmartShotCommand extends Command {
             }
 
             // Spin up to target
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+            launcher.spinUpAllLanesToLaunch();
 
             stage = Stage.SPINNING_UP;
         } else {
@@ -235,7 +235,7 @@ public class UniversalSmartShotCommand extends Command {
                     if (delegateFireCommand.isDone()) {
                         stage = Stage.COMPLETED;
                         if (!spinDownApplied) {
-                            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+                            launcher.setAllLanesToIdle();
                             spinDownApplied = true;
                         }
                     }
@@ -271,7 +271,7 @@ public class UniversalSmartShotCommand extends Command {
 
         // Spin down if not already done
         if (interrupted && !spinDownApplied) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+            launcher.setAllLanesToIdle();
             spinDownApplied = true;
         }
     }

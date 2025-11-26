@@ -18,7 +18,6 @@ abstract class LauncherCommand extends Command {
     private final LauncherSubsystem launcher;
     private final boolean manageSpinMode;
 
-    private LauncherSubsystem.SpinMode previousSpinMode = LauncherSubsystem.SpinMode.OFF;
     private boolean queuedAnyShot = false;
 
     protected LauncherCommand(LauncherSubsystem launcher ,
@@ -43,9 +42,8 @@ abstract class LauncherCommand extends Command {
 
     @Override
     public void start() {
-        previousSpinMode = launcher.getRequestedSpinMode();
-        if (manageSpinMode && previousSpinMode != LauncherSubsystem.SpinMode.FULL) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        if (manageSpinMode) {
+            launcher.spinUpAllLanesToLaunch();
         }
         queuedAnyShot = queueShots();
     }
@@ -68,8 +66,8 @@ abstract class LauncherCommand extends Command {
         if (interrupted && queuedAnyShot) {
             launcher.clearQueue();
         }
-        if (manageSpinMode && previousSpinMode != LauncherSubsystem.SpinMode.FULL) {
-            launcher.setSpinMode(LauncherSubsystem.SpinMode.IDLE);
+        if (manageSpinMode) {
+            launcher.setAllLanesToIdle();
         }
     }
 

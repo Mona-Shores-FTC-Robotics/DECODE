@@ -158,8 +158,8 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         // Without this, lanes in recovery from previous shots won't update their target RPM
         launcher.clearRecoveryDeadlines();
 
-        // Set spin mode to FULL to start spinning up
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        // Spin up all lanes to launch RPM
+        launcher.spinUpAllLanesToLaunch();
     }
 
     @Override
