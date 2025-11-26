@@ -20,6 +20,7 @@ import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherTimingC
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherVoltageCompensationConfig;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -200,6 +201,8 @@ public class LauncherSubsystem implements Subsystem {
         applySpinMode(effectiveSpinMode);
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
+            double velocity = flywheel.motor.getVelocity();
+            RobotState.packet.put("velocity" + flywheel.lane.name(), velocity);
         }
         updateStateMachine(now, effectiveSpinMode);
         updateLaneRecovery(now);
@@ -1021,6 +1024,8 @@ public class LauncherSubsystem implements Subsystem {
 
         void updateControl() {
             updateVelocityEstimate();
+
+
 
             if (motor == null) {
                 return;
