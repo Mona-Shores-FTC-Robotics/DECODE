@@ -9,7 +9,7 @@ import com.bylazar.configurables.annotations.Configurable;
 @Configurable
 public class IntakeRollerConfig {
     public String servoName = "intake_roller";
-    public double forward = 0;
+    public double forward = .5;
     public double inactivePosition = 0.5;
     public double reverse = 1;
 }

@@ -88,14 +88,14 @@ public class LauncherFlywheelConfig {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
         config.flywheelLeft.reversed = false;
         config.flywheelLeft.idleRpm = 1500;
-        config.flywheelLeft.kS = 0.10;
-        config.flywheelLeft.kV = 0.0002;
+        config.flywheelLeft.kS = 0;
+        config.flywheelLeft.kV = 0;
         config.flywheelLeft.kP = 0.0;
 
         config.flywheelCenter.reversed = false;
         config.flywheelCenter.idleRpm = 1500;
-        config.flywheelCenter.kS = 0.10;
-        config.flywheelCenter.kV = 0.0002;
+        config.flywheelCenter.kS = 0;
+        config.flywheelCenter.kV = 0;
         config.flywheelCenter.kP = 0.0;
 
         config.flywheelRight.reversed = true;

@@ -10,7 +10,7 @@ import com.bylazar.configurables.annotations.Configurable;
 public class IntakeMotorConfig {
     public String motorName = "intake";
     public double defaultForwardPower = -1;
-    public double defaultReversePower = .3;
+    public double defaultReversePower = 0;
     public boolean brakeOnZero = true;
     public boolean reverseDirection = true;
 }
