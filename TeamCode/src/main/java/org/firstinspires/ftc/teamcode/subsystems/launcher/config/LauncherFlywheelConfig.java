@@ -31,7 +31,7 @@ public class LauncherFlywheelConfig {
 
     @Configurable
     public static class FlywheelModeConfig {
-        public FlywheelControlMode mode = FlywheelControlMode.HYBRID;
+        public FlywheelControlMode mode = FlywheelControlMode.FEEDFORWARD;
         public BangBangConfig bangBang = new BangBangConfig();
         public HybridPidConfig hybridPid = new HybridPidConfig();
         public HoldConfig hold = new HoldConfig();
