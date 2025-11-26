@@ -201,8 +201,7 @@ public class LauncherSubsystem implements Subsystem {
         applySpinMode(effectiveSpinMode);
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
-            double velocity = flywheel.motor.getVelocity();
-            RobotState.packet.put("velocity" + flywheel.lane.name(), velocity);
+
         }
         updateStateMachine(now, effectiveSpinMode);
         updateLaneRecovery(now);
@@ -1023,9 +1022,11 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         void updateControl() {
-            updateVelocityEstimate();
-
-
+//            updateVelocityEstimate();
+            double velocityTPS = motor.getVelocity();
+            double RPS = velocityTPS / 28;
+            double RPM = RPS*60;
+            RobotState.packet.put("velocity" + lane.name(), RPM);
 
             if (motor == null) {
                 return;
