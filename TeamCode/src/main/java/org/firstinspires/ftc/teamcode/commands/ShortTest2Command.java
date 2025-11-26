@@ -239,12 +239,12 @@ public class ShortTest2Command {
     private static Command spinUpLauncher(Robot robot) {
         // TODO: Customize launcher spin-up
         LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
-        return launcherCommands.spinUpForPosition(AutoField.FieldPoint.LAUNCH_CLOSE);
+        return launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true);
     }
 
     private static Command scoreSequence(Robot robot) {
         // TODO: Customize scoring sequence
         LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
-        return launcherCommands.launchAllAtRangePreset(LauncherRange.SHORT, false);
+        return launcherCommands.launchAll(true);
     }
 }
