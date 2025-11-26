@@ -27,6 +27,7 @@ import dev.nextftc.ftc.GamepadEx;
  *
  * Vision Relocalization:
  * - A button: MANUAL vision relocalization (instant, no movement)
+ * - Square: Reset heading toward basket (for recovering after bad auto handoff)
  * - Robot starts with known pose during init (set before match)
  * - Odometry tracks from initial pose
  * - Manual relocalization available when drift is noticeable
@@ -43,6 +44,7 @@ public class DriverBindings {
     private final Button slowHold;
     private final Button aimHold;
     private final Button relocalizeRequest;
+    private final Button headingResetRequest;
 
     // D-pad buttons for testing different aiming methods
     private final Button aimVisionCentered;
@@ -64,6 +66,7 @@ public class DriverBindings {
 
         //Test Buttons
         relocalizeRequest = driver.cross();
+        headingResetRequest = driver.square();
 
         // D-pad for testing different aiming methods
         aimVisionCentered = driver.dpadUp();
@@ -130,6 +133,7 @@ public class DriverBindings {
 //                    .whenBecomesFalse(captureAndAimCmd::cancel);
 
             relocalizeRequest.whenBecomesTrue(robot.drive::tryRelocalize);
+            headingResetRequest.whenBecomesTrue(robot.drive::resetHeadingTowardBasket);
         }
     }
 

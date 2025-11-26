@@ -41,6 +41,8 @@ public class Robot {
         intake = new IntakeSubsystem(hardwareMap);
         lighting = new LightingSubsystem(hardwareMap);
 
+        drive.setLightingSubsystem(lighting);
+
         launcherCommands = new LauncherCommands(launcher, intake);
         intakeCommands = new IntakeCommands(intake);
 

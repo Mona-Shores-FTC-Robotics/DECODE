@@ -14,4 +14,6 @@ public class DriveAimAssistConfig {
     public double kMaxTurn = 0.7;
     /** Distance threshold for MegaTag2 relocalization (inches) */
     public double MT2DistanceThreshold = 12;
+    /** Heading agreement threshold between MT1/MT2 (degrees) */
+    public double MT2HeadingThresholdDeg = 15.0;
 }

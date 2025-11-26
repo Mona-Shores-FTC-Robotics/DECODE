@@ -24,7 +24,6 @@ android {
         abortOnError true
         enable 'FieldName', 'LocalVariableName', 'MethodName', 'ClassName', 'ConstantNaming'
     }
-    buildToolsVersion '35.0.0'
 }
 
 repositories {

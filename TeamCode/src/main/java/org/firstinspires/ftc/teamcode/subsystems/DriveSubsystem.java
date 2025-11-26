@@ -42,6 +42,7 @@ public class DriveSubsystem implements Subsystem {
     private static final double VISION_TIMEOUT_MS = 100;
     private static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.5;
     private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
+    private static final long MAX_VISION_AGE_MS = 250L;
     private static final String LOG_TAG = "DriveSubsystem";
 
     // Global configuration instances
@@ -135,6 +136,7 @@ public class DriveSubsystem implements Subsystem {
     private final DcMotorEx motorLb;
     private final DcMotorEx motorRb;
     private final VisionSubsystemLimelight vision;
+    private LightingSubsystem lighting;
     private final PoseFusion poseFusion = new PoseFusion();
     private final ElapsedTime clock = new ElapsedTime();
 
@@ -167,6 +169,7 @@ public class DriveSubsystem implements Subsystem {
     private long lastRampUpdateNs = 0L;
     private boolean teleOpControlEnabled = false;
     private boolean visionRelocalizationEnabled = false;
+    private long lastAutoRelocalizeMs = 0L;
 
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
 //        follower = Constants.createFollower(hardwareMap);
@@ -178,6 +181,10 @@ public class DriveSubsystem implements Subsystem {
         motorLb = driveMotors.lb;
         motorRb = driveMotors.rb;
         this.vision = vision;
+    }
+
+    public void setLightingSubsystem(LightingSubsystem lighting) {
+        this.lighting = lighting;
     }
 
     public void attachFollower() {
@@ -254,6 +261,7 @@ public class DriveSubsystem implements Subsystem {
 
         poseFusion.reset(pedroFollowerSeed, System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
+        visionRelocalizationEnabled = true;
     }
 
     /**
@@ -485,6 +493,8 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = turn;
 
         follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
+
+        maybeAutoRelocalizeDuringAim();
     }
 
     /**
@@ -726,6 +736,101 @@ public class DriveSubsystem implements Subsystem {
         };
     }
 
+    private boolean isGoalAprilTag(int tagId) {
+        return tagId == FieldConstants.BLUE_GOAL_TAG_ID || tagId == FieldConstants.RED_GOAL_TAG_ID;
+    }
+
+    private boolean isVisionPoseFresh() {
+        long ageMs = System.currentTimeMillis() - vision.getLastPoseTimestampMs();
+        return ageMs <= MAX_VISION_AGE_MS;
+    }
+
+    private double mt2DistanceThresholdInches() {
+        return aimAssistConfig.MT2DistanceThreshold;
+    }
+
+    private double headingErrorDegrees(Pose mt1 , Pose mt2) {
+        double headingErrorRad = normalizeAngle(mt1.getHeading() - mt2.getHeading());
+        return Math.abs(Math.toDegrees(headingErrorRad));
+    }
+
+    private boolean posesAgreeForMt2(Pose mt1 , Pose mt2) {
+        double distanceInches = distanceBetween(mt1 , mt2);
+        double headingErrorDeg = headingErrorDegrees(mt1 , mt2);
+
+        return distanceInches < mt2DistanceThresholdInches()
+                && headingErrorDeg < aimAssistConfig.MT2HeadingThresholdDeg;
+    }
+
+    private void recordVisionAgreementTelemetry(double distance , double headingErrorDeg , boolean mt2Safe) {
+        RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distance);
+        RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
+        RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
+    }
+
+    private void flashRelocalizeFeedback() {
+        if (lighting != null) {
+            lighting.flashAimAligned();
+        }
+    }
+
+    private void maybeAutoRelocalizeDuringAim() {
+        if (! visionRelocalizationEnabled) {
+            return;
+        }
+        if (! vision.shouldUpdateOdometry()) {
+            return;
+        }
+        if (! vision.hasValidTag()) {
+            return;
+        }
+
+        if (getRobotSpeedInchesPerSecond() > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
+            return;
+        }
+
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
+        if (! snapOpt.isPresent()) {
+            return;
+        }
+
+        VisionSubsystemLimelight.TagSnapshot snapshot = snapOpt.get();
+        if (! isGoalAprilTag(snapshot.tagId)) {
+            return;
+        }
+
+        if (! isVisionPoseFresh()) {
+            return;
+        }
+
+        Pose pedroPoseMT1 = snapshot.pedroPoseMT1;
+        Pose pedroPoseMT2 = snapshot.pedroPoseMT2;
+
+        if (pedroPoseMT1 == null || pedroPoseMT2 == null) {
+            return;
+        }
+
+        double distanceInches = distanceBetween(pedroPoseMT1 , pedroPoseMT2);
+        double headingErrorDeg = headingErrorDegrees(pedroPoseMT1 , pedroPoseMT2);
+        boolean mt2Safe = posesAgreeForMt2(pedroPoseMT1 , pedroPoseMT2);
+
+        recordVisionAgreementTelemetry(distanceInches , headingErrorDeg , mt2Safe);
+
+        long nowMs = System.currentTimeMillis();
+        if (! mt2Safe) {
+            visionRelocalizeStatus = "Vision mismatch - manual re-localize";
+            visionRelocalizeStatusMs = nowMs;
+            return;
+        }
+
+        if (forceRelocalizeFromVision()) {
+            lastAutoRelocalizeMs = nowMs;
+            visionRelocalizeStatus = "Auto re-localized while aiming";
+            visionRelocalizeStatusMs = nowMs;
+            flashRelocalizeFeedback();
+        }
+    }
+
     private void maybeRelocalizeFromVision() {
         if (! visionRelocalizationEnabled) {
             return;
@@ -769,6 +874,27 @@ public class DriveSubsystem implements Subsystem {
         visionRelocalizeStatusMs = System.currentTimeMillis();
     }
 
+    public void resetHeadingTowardBasket() {
+        Pose currentPose = follower.getPose();
+        if (currentPose == null) {
+            return;
+        }
+
+        Pose targetPose = vision.getAlliance() == Alliance.RED
+                ? FieldConstants.getRedBasketTarget()
+                : FieldConstants.getBlueBasketTarget();
+
+        double targetHeading = FieldConstants.getAimAngleTo(currentPose , targetPose);
+        Pose correctedPose = new Pose(currentPose.getX() , currentPose.getY() , targetHeading);
+
+        follower.setPose(correctedPose);
+        poseFusion.reset(correctedPose , System.currentTimeMillis());
+        vision.markOdometryUpdated();
+
+        visionRelocalizeStatus = "Heading reset toward basket";
+        visionRelocalizeStatusMs = System.currentTimeMillis();
+    }
+
     public boolean forceRelocalizeFromVision() {
         Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
         if (!snapOpt.isPresent()) return false;
@@ -776,27 +902,23 @@ public class DriveSubsystem implements Subsystem {
         VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
 
         long ageMs = System.currentTimeMillis() - vision.getLastPoseTimestampMs();
-        if (ageMs > 250) {
+        if (ageMs > MAX_VISION_AGE_MS) {
             // Stale data, do not relocalize
             return false;
         }
         Pose pedroPoseMT1 = snap.pedroPoseMT1; //only use MT1 for relocalization
         Pose pedroPoseMT2 = snap.pedroPoseMT2; //only use MT1 for relocalization
 
-        // MT1 and MT2 positions are in meters in Pedro space
-        double dx = pedroPoseMT1.getX() - pedroPoseMT2.getX();
-        double dy = pedroPoseMT1.getY() - pedroPoseMT2.getY();
-
-        // Euclidean distance between the two poses
-        double distanceMeters = Math.hypot(dx, dy);
-        boolean relocalizeWithMT2 = distanceMeters < aimAssistConfig.MT2DistanceThreshold;
-        Pose pedroPose = pedroPoseMT1;
-
-        if (relocalizeWithMT2) {
-            pedroPose = pedroPoseMT2;
+        if (pedroPoseMT1 == null || pedroPoseMT2 == null) {
+            return false;
         }
-        RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distanceMeters);
-        RobotState.packet.put("/vision/Poses/relocalizeWithMT2", relocalizeWithMT2);
+
+        double distanceInches = distanceBetween(pedroPoseMT1 , pedroPoseMT2);
+        double headingErrorDeg = headingErrorDegrees(pedroPoseMT1 , pedroPoseMT2);
+        boolean relocalizeWithMT2 = posesAgreeForMt2(pedroPoseMT1 , pedroPoseMT2);
+        Pose pedroPose = relocalizeWithMT2 ? pedroPoseMT2 : pedroPoseMT1;
+
+        recordVisionAgreementTelemetry(distanceInches , headingErrorDeg , relocalizeWithMT2);
         RobotState.packet.put("/vision/Poses/RelocalizePedro",pedroPose);
         RobotState.putPose("/vision/Poses/Relocalize", PoseFrames.pedroToFtc(pedroPose));
 
