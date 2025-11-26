@@ -348,37 +348,33 @@ public class DriverStationFormatter {
      * Page 3: Launcher - per-lane detailed info.
      */
     private void publishDebugLauncher(Telemetry telemetry, RobotTelemetryData data) {
-        telemetry.addData("State", "%s | %s | %s",
+        telemetry.addData("State", "%s | %s",
                 data.launcher.state,
-                data.launcher.ready ? "READY" : "NOT READY",
-                data.launcher.controlMode);
+                data.launcher.ready ? "READY" : "NOT READY");
 
         telemetry.addData("Left",
-                "T=%.0f C=%.0f P=%.2f %s",
+                "T=%.0f C=%.0f P=%.2f",
                 data.launcher.left.targetRpm,
                 data.launcher.left.currentRpm,
-                data.launcher.left.power,
-                data.launcher.left.phase);
+                data.launcher.left.power);
         telemetry.addData("  H/F", "%.2f / %.2f",
                 data.launcher.left.hoodPosition,
                 data.launcher.left.feederPosition);
 
         telemetry.addData("Center",
-                "T=%.0f C=%.0f P=%.2f %s",
+                "T=%.0f C=%.0f P=%.2f",
                 data.launcher.center.targetRpm,
                 data.launcher.center.currentRpm,
-                data.launcher.center.power,
-                data.launcher.center.phase);
+                data.launcher.center.power);
         telemetry.addData("  H/F", "%.2f / %.2f",
                 data.launcher.center.hoodPosition,
                 data.launcher.center.feederPosition);
 
         telemetry.addData("Right",
-                "T=%.0f C=%.0f P=%.2f %s",
+                "T=%.0f C=%.0f P=%.2f",
                 data.launcher.right.targetRpm,
                 data.launcher.right.currentRpm,
-                data.launcher.right.power,
-                data.launcher.right.phase);
+                data.launcher.right.power);
         telemetry.addData("  H/F", "%.2f / %.2f",
                 data.launcher.right.hoodPosition,
                 data.launcher.right.feederPosition);

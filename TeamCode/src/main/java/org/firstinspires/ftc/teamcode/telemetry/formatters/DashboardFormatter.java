@@ -128,7 +128,6 @@ public class DashboardFormatter {
 
 
         // Launcher high-level
-        packet.put("launcher/control_mode", data.launcher.controlMode);
         packet.put("launcher/ready", data.launcher.ready);
         packet.put("launcher/spin_mode", data.launcher.spinMode);
         packet.put("launcher/state", data.launcher.state);
@@ -253,14 +252,9 @@ public class DashboardFormatter {
      * Add per-lane launcher data with underscores for alphabetical grouping.
      */
     private void addLaneData(TelemetryPacket packet, String prefix, LauncherTelemetryData.LaneData lane) {
-        packet.put(prefix + "/bang_to_hold_count", lane.bangToHoldCount);
         packet.put(prefix + "/current_rpm", lane.currentRpm);
         packet.put(prefix + "/feeder_position", lane.feederPosition);
         packet.put(prefix + "/hood_position", lane.hoodPosition);
-        packet.put(prefix + "/phase", lane.phase);
-        packet.put(prefix + "/phase_bang", lane.phaseBang);
-        packet.put(prefix + "/phase_hold", lane.phaseHold);
-        packet.put(prefix + "/phase_hybrid", lane.phaseHybrid);
         packet.put(prefix + "/power", lane.power);
         packet.put(prefix + "/ready", lane.ready);
         packet.put(prefix + "/target_rpm", lane.targetRpm);

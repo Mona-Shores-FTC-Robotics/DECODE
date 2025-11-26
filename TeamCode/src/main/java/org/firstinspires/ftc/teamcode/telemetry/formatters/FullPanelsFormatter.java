@@ -95,9 +95,6 @@ public class FullPanelsFormatter {
         panels.debug("vision/tag/yawDeg", data.vision.yawDeg);
         panels.debug("vision/odometryPending", data.vision.odometryPending);
 
-        // Launcher high-level
-        panels.debug("launcher/control/mode", data.launcher.controlMode);
-
         // Launcher per-lane (left)
         publishLaneData(panels, "launcher/lanes/left", data.launcher.left);
 
@@ -130,8 +127,6 @@ public class FullPanelsFormatter {
         panels.debug(prefix + "/currentRpm", lane.currentRpm);
         panels.debug(prefix + "/power", lane.power);
         panels.debug(prefix + "/ready", lane.ready);
-        panels.debug(prefix + "/phase", lane.phase);
-        panels.debug(prefix + "/bangToHoldCount", lane.bangToHoldCount);
         panels.debug(prefix + "/hoodPosition", lane.hoodPosition);
         panels.debug(prefix + "/feederPosition", lane.feederPosition);
     }
