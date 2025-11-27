@@ -34,6 +34,7 @@ import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.commands.delays.Delay;
+import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
 import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
 import dev.nextftc.core.commands.utility.InstantCommand;
@@ -105,37 +106,37 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         public double startHeading = 144;
 
         // Launch position for scoring
-        public double launchX = 30.19905213270142;
-        public double launchY = 112.9478672985782;
+        public double launchX = 45; // 30.19905213270142;
+        public double launchY = 99.5; //112.9478672985782;
         public double launchHeading = 136;
 
         // Pre-artifacts waypoint (transition after first score)
-        public double preArtifactsX = 28;
+        public double preArtifactsX = 23;
         public double preArtifactsY = 112;
         public double preArtifactsHeading = 270;
 
         // Artifacts Set 1 (gate close)
-        public double artifacts1X = 22;
+        public double artifacts1X = 23;
         public double artifacts1Y = 87;
         public double artifacts1Heading = 270;
 
         // Transition to Set 2
-        public double transition2X = 40;
+        public double transition2X = 23;
         public double transition2Y = 90;
         public double transition2Heading = 270;
 
         // Artifacts Set 2 (gate far)
-        public double artifacts2X = 34;
+        public double artifacts2X = 23;
         public double artifacts2Y = 70;
         public double artifacts2Heading = 270;
 
         // Transition to Set 3
-        public double transition3X = 40;
+        public double transition3X = 23;
         public double transition3Y = 62; // Why was 6 afraid of 7? Because 7 ate 9!
         public double transition3Heading = 270;
 
         // Artifacts Set 3 (parking zone)
-        public double artifacts3X = 40;
+        public double artifacts3X = 23;
         public double artifacts3Y = 32.5;
         public double artifacts3Heading = 270;
 
@@ -348,6 +349,8 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                         attempts = config.relocalizeMaxAttempts;
                     }
                 }
+                RobotState.packet.put("Auto/Relocalized", success);
+
                 attempts++;
             }
 
@@ -368,9 +371,9 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
         return new SequentialGroup(
                 // Move to launch position and spin up
-                new ParallelGroup(
-                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true),
-                        followPath(pose(Waypoint.START_CLOSE), pose(Waypoint.LAUNCH_CLOSE))
+                new ParallelDeadlineGroup(
+                        followPath(pose(Waypoint.START_CLOSE), pose(Waypoint.LAUNCH_CLOSE)),
+                        launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, gamepad1)
                 ),
                 // Relocalize using AprilTag at launch position
                 relocalize(),
