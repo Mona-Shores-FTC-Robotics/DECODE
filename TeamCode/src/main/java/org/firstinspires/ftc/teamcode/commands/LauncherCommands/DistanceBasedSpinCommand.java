@@ -134,7 +134,14 @@ public class DistanceBasedSpinCommand extends Command {
         // Without this, lanes in recovery from previous shots won't update their target RPM
         launcher.clearRecoveryDeadlines();
 
-        // Spin up all lanes to launch RPM
+        // Set initial RPMs to mid-range values so launcher starts spinning immediately
+        // update() will refine these based on actual distance calculations
+        launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().midLeftRpm);
+        launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().midCenterRpm);
+        launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().midRightRpm);
+        launcher.setAllHoodPositions(rangeConfig().midHoodPosition);
+
+        // Spin up all lanes to launch RPM (now that RPMs are set)
         launcher.spinUpAllLanesToLaunch();
     }
 
