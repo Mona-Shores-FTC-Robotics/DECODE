@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.util;
 
+import com.pedropathing.geometry.Pose;
+
 import dev.nextftc.bindings.Button;
 import dev.nextftc.ftc.GamepadEx;
 
@@ -56,26 +58,36 @@ public final class AllianceSelector {
      * @return snapshot data when a valid detection was found.
      */
     public Optional<VisionSubsystemLimelight.TagSnapshot> updateFromVision(VisionSubsystemLimelight vision) {
+        // Once selection is locked (after Start), do not change alliance via vision
+        if (selectionLocked) {
+            return getLastSnapshot();
+        }
+
         if (vision == null) {
             clearDetection();
+            refreshSelectedAlliance();
             return Optional.empty();
         }
 
         Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.findAllianceSnapshot(null);
         if (!snapshotOpt.isPresent()) {
             clearDetection();
-        } else {
-            VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-            detectedAlliance = snapshot.getAlliance();
-            detectedTagId = snapshot.getTagId();
-            detectedRange = snapshot.getFtcRange();
-            detectedYaw = snapshot.getFtcBearing();
-            lastSnapshot = snapshot;
+            refreshSelectedAlliance();
+            return Optional.empty();
         }
 
+        VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
+        lastSnapshot = snapshot;
+
+        // Use pose based inference only
+        Alliance poseAlliance = snapshot.inferAllianceFromPose();
+        detectedAlliance = poseAlliance;
+
+        // Merge with manual override and default alliance
         refreshSelectedAlliance();
         return snapshotOpt;
     }
+
 
     /**
      * Applies the current selected alliance to the robot containers and lighting.
@@ -225,4 +237,5 @@ public final class AllianceSelector {
     public boolean isVisionPreferred() {
         return visionPreferred;
     }
+
 }

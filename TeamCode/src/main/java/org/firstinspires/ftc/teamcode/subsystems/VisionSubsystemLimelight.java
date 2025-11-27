@@ -262,12 +262,7 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     public Optional<TagSnapshot> findAllianceSnapshot(Alliance preferredAlliance) {
         TagSnapshot snapshot = selectSnapshot(preferredAlliance);
-        if (snapshot == null) {
-            clearSnapshot();
-            return Optional.empty();
-        }
-        onSnapshotUpdated(snapshot);
-        return Optional.of(snapshot);
+        return Optional.ofNullable(snapshot);
     }
 
     public Optional<Integer> findMotifTagId() {
@@ -337,7 +332,8 @@ public class VisionSubsystemLimelight implements Subsystem {
         return lastPeriodicMs;
     }
 
-    private TagSnapshot selectSnapshot(Alliance preferredAlliance) {
+
+    private TagSnapshot selectSnapshot(Alliance preferredAllianceIgnored) {
         if (!limelightAvailable || limelight == null) {
             return null;
         }
@@ -352,40 +348,37 @@ public class VisionSubsystemLimelight implements Subsystem {
             return null;
         }
 
-        // MegaTag2: Find best valid basket tag and use MT2 fused pose
+        // MegaTag2: find best valid basket tag (either alliance)
         TagSnapshot bestSnapshot = null;
         double bestScore = Double.NEGATIVE_INFINITY;
+
         for (LLResultTypes.FiducialResult fiducial : fiducials) {
             int tagId = fiducial.getFiducialId();
 
-            // MegaTag2: Only use basket AprilTags (ID 20 for blue, 24 for red)
-            // Ignore all other tags to eliminate false positives and improve accuracy
-            if (tagId != FieldConstants.BLUE_GOAL_TAG_ID && tagId != FieldConstants.RED_GOAL_TAG_ID) {
+            // Only use basket AprilTags (for example BLUE_GOAL_TAG_ID and RED_GOAL_TAG_ID)
+            if (tagId != FieldConstants.BLUE_GOAL_TAG_ID
+                    && tagId != FieldConstants.RED_GOAL_TAG_ID) {
                 continue;
             }
 
-            Alliance detectionAlliance = mapTagToAlliance(tagId);
-            if (preferredAlliance != null && preferredAlliance != Alliance.UNKNOWN
-                    && detectionAlliance != preferredAlliance) {
-                continue;
-            }
-            if (detectionAlliance == Alliance.UNKNOWN && preferredAlliance != Alliance.UNKNOWN) {
-                continue;
-            }
-
-            // Check if this is the best tag candidate
+            // Score the tag to pick the best one
             double score = getTagScore(fiducial);
             if (score > bestScore) {
                 bestScore = score;
-                // Use MegaTag2 fused pose instead of individual tag pose
-                bestSnapshot = new TagSnapshot(detectionAlliance, tagId, result, result.getTx(), result.getTy(), result.getTa());
+
+                Alliance detectionAlliance = mapTagToAlliance(tagId); // This is just meta, not used to decide robot alliance
+
+                bestSnapshot = new TagSnapshot(
+                        detectionAlliance,
+                        tagId,
+                        result,
+                        result.getTx(),
+                        result.getTy(),
+                        result.getTa()
+                );
             }
         }
 
-        if (bestSnapshot == null && preferredAlliance != null && preferredAlliance != Alliance.UNKNOWN) {
-            // Retry without alliance filtering so we still capture pose data.
-            return selectSnapshot(Alliance.UNKNOWN);
-        }
         return bestSnapshot;
     }
 
@@ -755,6 +748,26 @@ public class VisionSubsystemLimelight implements Subsystem {
         public double getTargetAreaPercent() {
             return targetAreaPercent;
         }
+
+        public Alliance inferAllianceFromPose() {
+            java.util.Optional<com.pedropathing.geometry.Pose> poseOpt = getRobotPosePedroMT1();
+            if (!poseOpt.isPresent()) {
+                return Alliance.UNKNOWN;
+            }
+
+            com.pedropathing.geometry.Pose pose = poseOpt.get();
+            double x = pose.getX();
+
+            // Field width is 144 inches, midpoint at X = 72
+            // X < 72 means robot is physically on blue side
+            // X > 72 means robot is physically on red side
+            if (x < 72.0) {
+                return Alliance.BLUE;
+            } else {
+                return Alliance.RED;
+            }
+        }
+
     }
 
     // ========================================================================
@@ -794,5 +807,29 @@ public class VisionSubsystemLimelight implements Subsystem {
             return Double.NaN;
         }
     }
+
+    public Optional<Alliance> detectAllianceUsingPoseOrMetadata() {
+        Optional<TagSnapshot> opt = findAllianceSnapshot(null);
+        if (!opt.isPresent()) {
+            return Optional.empty();
+        }
+
+        TagSnapshot snap = opt.get();
+
+        // First priority: Tag metadata (for Far auto)
+        Alliance meta = snap.getAlliance();
+        if (meta != Alliance.UNKNOWN) {
+            return Optional.of(meta);
+        }
+
+        // Otherwise: Pose-based inference (for Close auto)
+        Alliance inferred = snap.inferAllianceFromPose();
+        if (inferred != Alliance.UNKNOWN) {
+            return Optional.of(inferred);
+        }
+
+        return Optional.empty();
+    }
+
 
 }

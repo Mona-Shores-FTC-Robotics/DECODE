@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_KNOWN;
+import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_UNKNOWN;
+
 import androidx.annotation.NonNull;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -44,6 +47,12 @@ public class DriveSubsystem implements Subsystem {
     private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
     private static final long MAX_VISION_AGE_MS = 250L;
     private static final String LOG_TAG = "DriveSubsystem";
+
+    private enum VisionCalibrationState {
+        HEADING_UNKNOWN,
+        HEADING_KNOWN
+    }
+    private VisionCalibrationState visionState = HEADING_UNKNOWN;
 
     // Global configuration instances
     public static DriveTeleOpConfig teleOpDriveConfig = new DriveTeleOpConfig();
@@ -886,39 +895,45 @@ public class DriveSubsystem implements Subsystem {
         visionRelocalizeStatus = "Heading reset to field-forward (square to wall)";
         visionRelocalizeStatusMs = System.currentTimeMillis();
     }
-
     public boolean forceRelocalizeFromVision() {
         Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
         if (!snapOpt.isPresent()) return false;
 
         VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
 
-        long ageMs = System.currentTimeMillis() - vision.getLastPoseTimestampMs();
-        if (ageMs > MAX_VISION_AGE_MS) {
-            // Stale data, do not relocalize
-            return false;
+        // 1. Use MT1 whenever heading is unknown
+        Pose pedroPoseMT1 = snap.pedroPoseMT1;
+        Pose pedroPoseMT2 = snap.pedroPoseMT2;
+
+        if (visionState == HEADING_UNKNOWN) {
+            if (pedroPoseMT1 == null) return false;
+
+            follower.setPose(pedroPoseMT1);
+            poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
+            vision.markOdometryUpdated();
+
+            // Now heading is calibrated
+            visionState = HEADING_KNOWN;
+            return true;
         }
-        Pose pedroPoseMT1 = snap.pedroPoseMT1; //only use MT1 for relocalization
-        Pose pedroPoseMT2 = snap.pedroPoseMT2; //only use MT1 for relocalization
 
-        if (pedroPoseMT1 == null || pedroPoseMT2 == null) {
-            return false;
+        // 2. If heading is known, use MT2 primarily
+        if (pedroPoseMT2 != null) {
+            follower.setPose(pedroPoseMT2);
+            poseFusion.reset(pedroPoseMT2, System.currentTimeMillis());
+            vision.markOdometryUpdated();
+            return true;
         }
 
-        double distanceInches = distanceBetween(pedroPoseMT1 , pedroPoseMT2);
-        double headingErrorDeg = headingErrorDegrees(pedroPoseMT1 , pedroPoseMT2);
-        boolean relocalizeWithMT2 = posesAgreeForMt2(pedroPoseMT1 , pedroPoseMT2);
-        Pose pedroPose = relocalizeWithMT2 ? pedroPoseMT2 : pedroPoseMT1;
+        // 3. Fallback to MT1 if MT2 unavailable
+        if (pedroPoseMT1 != null) {
+            follower.setPose(pedroPoseMT1);
+            poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
+            vision.markOdometryUpdated();
+            return true;
+        }
 
-        recordVisionAgreementTelemetry(distanceInches , headingErrorDeg , relocalizeWithMT2);
-        RobotState.packet.put("/vision/Poses/RelocalizePedro",pedroPose);
-        RobotState.putPose("/vision/Poses/Relocalize", PoseFrames.pedroToFtc(pedroPose));
-
-        follower.setPose(pedroPose);
-        poseFusion.reset(pedroPose, System.currentTimeMillis());
-        vision.markOdometryUpdated();
-
-        return true;
+        return false;
     }
 
     private void updatePoseFusion() {
