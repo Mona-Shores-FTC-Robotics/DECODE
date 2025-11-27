@@ -223,7 +223,7 @@ public class DriveSubsystem implements Subsystem {
     private double rampTurn = 0.0;
     private long lastRampUpdateNs = 0L;
     private boolean teleOpControlEnabled = false;
-    private boolean visionRelocalizationEnabled = false;
+    private boolean visionRelocalizationEnabled = true; // Enable auto-relocalize during aiming
 
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
 //        follower = Constants.createFollower(hardwareMap);
@@ -496,7 +496,7 @@ public class DriveSubsystem implements Subsystem {
     /**
      * Geometry-based aiming: Calculates angle from robot pose to basket centroid using atan2.
      * Uses odometry pose and basket target coordinates (tunable via FTC Dashboard).
-     * Falls back to vision-based angle if available and relocalization is enabled.
+     * Automatically relocalizes when seeing basket AprilTag with good confidence (MT1/MT2 agreement).
      *
      * @param fieldX Driver's X input (strafe)
      * @param fieldY Driver's Y input (forward)
@@ -542,6 +542,12 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = turn;
 
         follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
+
+        // Auto-relocalize when aiming at basket with reliable vision
+        // Uses MT1/MT2 agreement as safety check (falls back to MT1 if heading is bad)
+        if (vision.hasValidTag() && isBasketTag(vision.getCurrentTagId())) {
+            maybeRelocalizeFromVision();
+        }
     }
 
     /**
@@ -797,8 +803,17 @@ public class DriveSubsystem implements Subsystem {
         }
 
         if (forceRelocalizeFromVision()) {
-            // Successful re-localization already recorded inside the helper.
+            // Successful re-localization - update status for telemetry
+            visionRelocalizeStatus = "Auto-relocated (aiming)";
+            visionRelocalizeStatusMs = System.currentTimeMillis();
         }
+    }
+
+    /**
+     * Helper to check if a tag ID is a basket AprilTag (safe for relocalization).
+     */
+    private boolean isBasketTag(int tagId) {
+        return tagId == FieldConstants.BLUE_GOAL_TAG_ID || tagId == FieldConstants.RED_GOAL_TAG_ID;
     }
 
     /**
