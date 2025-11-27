@@ -77,23 +77,23 @@ public class CommandRangeConfig {
         // Apply 20245-specific values
         /** Short range RPMs */
         config.shortLeftRpm = 2000;
-        config.shortCenterRpm = 2000; // Center disabled by default
-        config.shortRightRpm = 2000;
+        config.shortCenterRpm = 1875; // Center disabled by default
+        config.shortRightRpm = 1875;
 
         /** Mid range RPMs */
         config.midLeftRpm = 2400;
-        config.midCenterRpm = 2400; // Center disabled by default
-        config.midRightRpm = 2400;
+        config.midCenterRpm = 2300; // Center disabled by default
+        config.midRightRpm = 2300;
 
         /** Long range RPMs */
-        config.longLeftRpm = 2725;
-        config.longCenterRpm = 2725; // Center disabled by default
-        config.longRightRpm = 2725;
+        config.longLeftRpm = 2828;
+        config.longCenterRpm = 2828; // Center disabled by default
+        config.longRightRpm = 2828;
 
         /** Per-range hood positions (applied uniformly to all lanes) */
-        config.shortHoodPosition = 0.3;
+        config.shortHoodPosition = .42;
         config.midHoodPosition = 0.05;
-        config.longHoodPosition = 0.0;
+        config.longHoodPosition = .05;
 
         /** Timeout in seconds before giving up on spin-up */
         config.timeoutSeconds = 3.5;
