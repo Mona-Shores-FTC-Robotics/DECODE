@@ -1,6 +1,4 @@
-package org.firstinspires.ftc.teamcode.opmodes;
-
-import static org.firstinspires.ftc.teamcode.util.LauncherRange.LONG;
+package org.firstinspires.ftc.teamcode.opmodes.Autos;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
@@ -26,6 +24,7 @@ import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
+import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
@@ -55,9 +54,9 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  * - Driving with intake/launcher positioning (parallel)
  * - Sequential scoring and collection routines
  */
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Fixed Auto Far (Command)", group = "Command")
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "TOGETHER Auto Far", group = "Command")
 @Configurable
-public class DecodeAutonomousFarCommand extends NextFTCOpMode {
+public class DecodeAutonomousFarTOGETHERCommand extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
@@ -74,7 +73,7 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         public LauncherMode startingLauncherMode = LauncherMode.THROUGHPUT;
     }
 
-    public static DecodeAutonomousFarCommand.AutoMotionConfig config = new DecodeAutonomousFarCommand.AutoMotionConfig();
+    public static DecodeAutonomousFarTOGETHERCommand.AutoMotionConfig config = new DecodeAutonomousFarTOGETHERCommand.AutoMotionConfig();
 
     private Robot robot;
     private AllianceSelector allianceSelector;
@@ -242,18 +241,20 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
         return new SequentialGroup(
                 // Phase 1: Drive to launch position and score preload
                 new ParallelGroup(
-                        launcherCommands.presetRangeSpinUp(LONG , true),
+                        launcherCommands.presetRangeSpinUp(LauncherRange.LONG, true),
                         followPath(startFarPose, launchFarPose)
                 ),
                 launcherCommands.launchAll(false),
                 // Phase 2: Collect from Alliance Wall and score
                 collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
-
-                // Phase 3: Collect from Parking Zone and score
-                collectAndScore(launchFarPose, parking90DegPose, launchFarPose, parkingControlPoint),
-
-                // Phase 4: Collect from Gate Far and score
-                collectAndScore(launchFarPose, gateFar90DegPose, launchFarPose, gateFarControlPoint),
+                // Phase 2: Collect from Alliance Wall and score
+                collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
+                // Phase 2: Collect from Alliance Wall and score
+                collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
+                // Phase 2: Collect from Alliance Wall and score
+                collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
+                // Phase 2: Collect from Alliance Wall and score
+                collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
 
                 followPath(launchFarPose, moveOffLineFar)
 
@@ -282,8 +283,9 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             // Drive to score while spinning up launcher
             new ParallelGroup(
                     followPath(pickupPose, scorePose),
-                    launcherCommands.presetRangeSpinUp(LONG , true)
+                    launcherCommands.presetRangeSpinUp(LauncherRange.LONG, true)
             ),
+
             // Score the samples
                 launcherCommands.launchAll(false)
         );

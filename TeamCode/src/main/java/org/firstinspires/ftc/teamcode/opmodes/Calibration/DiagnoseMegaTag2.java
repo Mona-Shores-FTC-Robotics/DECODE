@@ -1,9 +1,8 @@
-package org.firstinspires.ftc.teamcode.opmodes;
+package org.firstinspires.ftc.teamcode.opmodes.Calibration;
 
 import static org.firstinspires.ftc.teamcode.util.RobotState.packet;
 
 import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.config.Config;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
@@ -19,12 +18,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import org.firstinspires.ftc.teamcode.util.Alliance;
-import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
-import org.firstinspires.ftc.teamcode.util.RobotState;
 
 /**
  * Diagnostic OpMode to verify MegaTag2 localization accuracy.
