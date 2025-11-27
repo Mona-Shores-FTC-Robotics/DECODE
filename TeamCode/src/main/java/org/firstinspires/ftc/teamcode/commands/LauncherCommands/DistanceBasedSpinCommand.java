@@ -73,9 +73,12 @@ public class DistanceBasedSpinCommand extends Command {
     @Configurable
     public static class HoodThresholds {
         /** Distance threshold (inches) between short and mid range */
-        public double shortToMidThresholdIn = 60.0;
+        public double shortRangeDistanceIn = 0;
         /** Distance threshold (inches) between mid and long range */
-        public double midToLongThresholdIn = 100.0;
+        public double midRangeDistanceIn = 90;
+
+        public double longRangeDistanceIn = 128.0;
+
 
     }
 
@@ -354,23 +357,52 @@ public class DistanceBasedSpinCommand extends Command {
         }
     }
 
-    /**
-     * Sets hood position for all lanes based on distance thresholds.
-     */
     private void setHoodForDistance(double distanceIn) {
-        double hoodPosition;
-
-        if (distanceIn < hoodThresholds.shortToMidThresholdIn) {
-            hoodPosition = rangeConfig().shortHoodPosition;
-        } else if (distanceIn < hoodThresholds.midToLongThresholdIn) {
-            hoodPosition = rangeConfig().midHoodPosition;
-        } else {
-            hoodPosition = rangeConfig().longHoodPosition;
-        }
+        double hoodPosition = interpolateHood(
+                distanceIn,
+                hoodThresholds.shortRangeDistanceIn,
+                rangeConfig().shortHoodPosition,
+                hoodThresholds.midRangeDistanceIn,
+                rangeConfig().midHoodPosition,
+                rangeConfig().longHoodPosition
+        );
 
         launcher.setAllHoodPositions(hoodPosition);
 
-        // Update diagnostics
         diagnostics.lastHoodPosition = hoodPosition;
     }
+
+    /**
+     * Interpolates hood position based on distance using a single linear segment
+     * between the short and mid calibration points.
+     *
+     * @param distance Current distance to goal (inches)
+     * @param shortDist Distance at which the short hood position is used
+     * @param shortPos Hood position for short range
+     * @param midDist Distance at which the mid hood position is used
+     * @param midPos Hood position for mid range
+     * @param longPos Hood position to use for distances beyond midDist
+     * @return Interpolated hood position
+     */
+    private double interpolateHood(double distance,
+                                   double shortDist, double shortPos,
+                                   double midDist,   double midPos,
+                                   double longPos) {
+
+        // Clamp distance to a reasonable range
+        distance = Range.clip(distance, shortDist * 0.5, midDist * 1.5);
+
+        if (distance <= shortDist) {
+            return shortPos;
+
+        } else if (distance <= midDist) {
+            double t = (distance - shortDist) / (midDist - shortDist);
+            return shortPos + t * (midPos - shortPos);
+
+        } else {
+            return longPos;
+        }
+    }
+
+
 }
