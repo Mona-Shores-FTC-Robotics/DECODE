@@ -76,10 +76,6 @@ public class DistanceBasedSpinCommand extends Command {
         public double shortRangeDistanceIn = 0;
         /** Distance threshold (inches) between mid and long range */
         public double midRangeDistanceIn = 90;
-
-        public double longRangeDistanceIn = 128.0;
-
-
     }
 
     public static DistanceCalibration distanceCalibration = new DistanceCalibration();
@@ -134,7 +130,12 @@ public class DistanceBasedSpinCommand extends Command {
         // Without this, lanes in recovery from previous shots won't update their target RPM
         launcher.clearRecoveryDeadlines();
 
-        // Spin up all lanes to launch RPM
+        // Set initial RPMs to mid-range values so launcher starts spinning immediately
+        // update() will refine these based on actual distance calculations
+        launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().midLeftRpm);
+        launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().midCenterRpm);
+        launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().midRightRpm);
+        launcher.setAllHoodPositions(rangeConfig().midHoodPosition);
         launcher.spinUpAllLanesToLaunch();
     }
 
@@ -185,10 +186,8 @@ public class DistanceBasedSpinCommand extends Command {
         RobotState.packet.put("Distance-Based-Spin/Data Source", diagnostics.lastSource);
         RobotState.packet.put("Distance-Based-Spin/Robot Pose Available", diagnostics.robotPoseAvailable);
         RobotState.packet.put("Distance-Based-Spin/Goal Pose Available", diagnostics.goalPoseAvailable);
-        RobotState.packet.put("Distance-Based-Spin/Vision Pose Available", diagnostics.visionPoseAvailable);
         RobotState.packet.put("Distance-Based-Spin/Odometry Pose Available", diagnostics.odometryPoseAvailable);
         RobotState.packet.put("Distance-Based-Spin/Feedback Triggered", feedbackTriggered);
-
     }
 
     @Override
@@ -253,7 +252,6 @@ public class DistanceBasedSpinCommand extends Command {
         // Reset diagnostic flags
         diagnostics.robotPoseAvailable = false;
         diagnostics.goalPoseAvailable = false;
-        diagnostics.visionPoseAvailable = false;
         diagnostics.odometryPoseAvailable = false;
 
         // Use odometry pose only
