@@ -158,6 +158,15 @@ public class ContinuousDistanceBasedSpinCommand extends Command {
         // Without this, lanes in recovery from previous shots won't update their target RPM
         launcher.clearRecoveryDeadlines();
 
+        // Set initial RPMs immediately so launcher starts spinning without delay
+        // Use mid-range values as a reasonable default until update() refines based on distance
+        launcher.setLaunchRpm(LauncherLane.LEFT, calibration.midLeftRpm);
+        launcher.setLaunchRpm(LauncherLane.CENTER, calibration.midCenterRpm);
+        launcher.setLaunchRpm(LauncherLane.RIGHT, calibration.midRightRpm);
+
+        // Set initial hood position to mid-range as well
+        launcher.setAllHoodPositions(hoodCalibration.midHoodPosition);
+
         // Set spin mode to FULL to start spinning up
         launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
     }
