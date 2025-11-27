@@ -263,7 +263,10 @@ public class DriverStationFormatter {
      * Shows timing breakdown from previous loop iteration (N-1).
      */
     private void publishDebugTiming(Telemetry telemetry, RobotTelemetryData data) {
-        double totalTelemetryMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - data.timing.telemetryStartNs);
+        // Calculate telemetry time, but guard against initial 0 value
+        double totalTelemetryMs = (data.timing.telemetryStartNs > 0)
+                ? TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - data.timing.telemetryStartNs)
+                : 0.0;
         // Total loop time
         telemetry.addData("Total Loop", "%.1f ms", data.timing.totalLoopMs(totalTelemetryMs));
 
@@ -319,7 +322,10 @@ public class DriverStationFormatter {
                 data.intake.mode,
                 data.intake.artifactCount);
 
-        double totalTelemetryMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - data.timing.telemetryStartNs);
+        // Calculate telemetry time, but guard against initial 0 value
+        double totalTelemetryMs = (data.timing.telemetryStartNs > 0)
+                ? TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - data.timing.telemetryStartNs)
+                : 0.0;
         telemetry.addData("Total Loop Time", "%.1f ms", data.timing.totalLoopMs(totalTelemetryMs));
     }
 
