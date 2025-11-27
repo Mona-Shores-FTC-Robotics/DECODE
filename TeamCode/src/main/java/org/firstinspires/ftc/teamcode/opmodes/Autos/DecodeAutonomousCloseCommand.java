@@ -97,7 +97,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     }
 
     @Override
-    @Override
     public void onWaitForStart() {
 
         // One call that:

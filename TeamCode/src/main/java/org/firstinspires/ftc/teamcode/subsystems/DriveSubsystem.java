@@ -48,7 +48,7 @@ public class DriveSubsystem implements Subsystem {
     private static final long MAX_VISION_AGE_MS = 250L;
     private static final String LOG_TAG = "DriveSubsystem";
 
-    private enum VisionCalibrationState {
+    enum VisionCalibrationState {
         HEADING_UNKNOWN,
         HEADING_KNOWN
     }
