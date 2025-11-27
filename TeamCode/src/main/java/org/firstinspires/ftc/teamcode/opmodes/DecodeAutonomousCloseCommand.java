@@ -169,6 +169,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         // Robot should be placed facing OPPOSITE alliance's basket tag
         String visionStatus = "No AprilTag visible";
         boolean visionInitialized = false;
+        double proximityDistance = Double.POSITIVE_INFINITY;
 
         if (snapshotOpt.isPresent()) {
             VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
@@ -186,6 +187,12 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 if (detectedPose.isPresent()) {
                     Pose candidate = detectedPose.get();
                     lastDetectedStartPosePedro = copyPose(candidate);
+
+                    // Calculate distance from expected start pose for proximity feedback
+                    Pose expectedPose = currentLayout.pose(FieldPoint.START_CLOSE);
+                    double dx = candidate.getX() - expectedPose.getX();
+                    double dy = candidate.getY() - expectedPose.getY();
+                    proximityDistance = Math.hypot(dx, dy);
 
                     // Safety check: pose should be reasonable
                     if (shouldUpdateStartPose(candidate)) {
@@ -209,6 +216,14 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             }
         }
 
+        // Provide proximity feedback via blinking lights (faster = closer to target)
+        if (visionInitialized && !Double.isInfinite(proximityDistance)) {
+            robot.lighting.showProximityFeedback(proximityDistance, 18.0);
+        } else {
+            // No vision or invalid - stop proximity feedback
+            robot.lighting.stopProximityFeedback();
+        }
+
         // Display initialization status
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
@@ -219,6 +234,19 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 lastDetectedStartPosePedro.getX(),
                 lastDetectedStartPosePedro.getY(),
                 Math.toDegrees(lastDetectedStartPosePedro.getHeading()));
+
+            // Show proximity distance with visual indicator
+            String proximityIndicator;
+            if (proximityDistance < 3.0) {
+                proximityIndicator = "✓ PERFECT (lights: very fast blink)";
+            } else if (proximityDistance < 6.0) {
+                proximityIndicator = "✓ Good (lights: fast blink)";
+            } else if (proximityDistance < 12.0) {
+                proximityIndicator = "⚠ OK (lights: medium blink)";
+            } else {
+                proximityIndicator = "⚠ Adjust position (lights: slow blink)";
+            }
+            telemetry.addData("Proximity", "%.1f in - %s", proximityDistance, proximityIndicator);
         } else {
             Pose manualPose = currentLayout.pose(FieldPoint.START_CLOSE);
             telemetry.addData("Start Pose", "Manual: X=%.1f Y=%.1f θ=%.0f°",
@@ -238,6 +266,9 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     public void onStartButtonPressed() {
         BindingManager.reset();
         allianceSelector.lockSelection();
+
+        // Stop proximity feedback when match starts
+        robot.lighting.stopProximityFeedback();
         if (lightingInitController != null) {
             lightingInitController.onStart();
         }

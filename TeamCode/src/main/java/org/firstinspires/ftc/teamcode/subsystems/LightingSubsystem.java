@@ -83,6 +83,8 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private long motifTailFlashUntilMs = 0L;
     private boolean motifTailRestoreSensorFollow = true;
     private long decodeModeSwitchFlashUntilMs = 0L;
+    private boolean proximityFeedbackActive = false;
+    private double proximityBlinkPeriodMs = 1000.0; // Current blink period
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(tryGetServo(hardwareMap, indicatorConfig.left.servoName)));
@@ -105,6 +107,24 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     public void periodic() {
         long start = System.nanoTime();
         long nowMs = System.currentTimeMillis();
+
+        // Handle proximity feedback (highest priority during init)
+        if (proximityFeedbackActive) {
+            // Blink based on period (closer = faster blink)
+            long blinkCycle = (long) proximityBlinkPeriodMs;
+            boolean brightPhase = ((nowMs / blinkCycle) % 2) == 0;
+
+            if (brightPhase) {
+                state = LightingState.ALLIANCE;
+                resetLaneColors();
+                updateLaneOutputs();
+            } else {
+                applySolidPosition(colorPositionConfig.offPosition);
+            }
+            // Don't process other patterns while in proximity mode
+            lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+            return;
+        }
 
         // Show rainbow pattern during DECODE mode switch notification
         if (decodeModeSwitchFlashUntilMs > 0) {
@@ -364,6 +384,44 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         setFollowSensorColors(false);
         // Start rainbow alert that will cycle during periodic()
         decodeModeSwitchFlashUntilMs = System.currentTimeMillis() + 2000L;
+    }
+
+    /**
+     * Shows proximity feedback for auto initialization positioning.
+     * Lights blink faster as robot gets closer to target position.
+     *
+     * Blink rates:
+     * - Far (18+ inches): Slow blink (2000ms period) - need to move
+     * - Medium (6-18 inches): Medium blink (700-2000ms) - getting closer
+     * - Close (3-6 inches): Fast blink (200-700ms) - almost there
+     * - Very close (0-3 inches): Very fast blink (50-200ms) - perfect!
+     *
+     * @param distanceInches Distance from target pose (0 = perfect alignment)
+     * @param maxDistanceInches Maximum expected distance for normalization (typically 18.0)
+     */
+    public void showProximityFeedback(double distanceInches, double maxDistanceInches) {
+        setFollowSensorColors(false);
+        proximityFeedbackActive = true;
+
+        // Calculate blink rate based on distance (closer = faster)
+        // Normalize distance to [0, 1] range
+        double normalizedDistance = Math.min(Math.max(distanceInches / maxDistanceInches, 0.0), 1.0);
+
+        // Map to blink period: 50ms (very fast) to 2000ms (slow)
+        // Use exponential curve for better feedback in close range
+        proximityBlinkPeriodMs = 50.0 + Math.pow(normalizedDistance, 0.5) * 1950.0;
+    }
+
+    /**
+     * Stops proximity feedback and returns to normal lighting mode.
+     * Call this when exiting auto init phase.
+     */
+    public void stopProximityFeedback() {
+        if (proximityFeedbackActive) {
+            proximityFeedbackActive = false;
+            setFollowSensorColors(true);
+            indicateAllianceInit();
+        }
     }
 
     private void updateLaneOutputs() {

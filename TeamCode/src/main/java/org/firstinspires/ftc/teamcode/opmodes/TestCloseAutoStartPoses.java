@@ -163,6 +163,9 @@ public class TestCloseAutoStartPoses extends LinearOpMode {
                                    distance < 6.0 ? "✓ GOOD" :
                                    distance < 12.0 ? "⚠ OK" : "✗ POOR";
                     telemetry.addData("Quality", quality);
+
+                    // Provide proximity feedback via lights (faster blink = closer to target)
+                    robot.lighting.showProximityFeedback(distance, 18.0);
                 }
 
                 if (visionPoseMT2.isPresent()) {
@@ -193,6 +196,9 @@ public class TestCloseAutoStartPoses extends LinearOpMode {
                 telemetry.addLine();
                 telemetry.addLine("⚠ Adjust robot position/angle");
                 telemetry.addLine("⚠ Check Limelight connection");
+
+                // Stop proximity feedback when no tag visible
+                robot.lighting.stopProximityFeedback();
             }
 
             telemetry.addLine();
