@@ -151,23 +151,105 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
                 allianceSelector.updateFromVision(robot.vision);
         allianceSelector.applySelection(robot, robot.lighting);
 
-        // Extract detected start pose from vision
-        if (snapshotOpt.isPresent()) {
-            VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-            java.util.Optional<Pose> detectedPose = snapshot.getRobotPosePedroMT1();
-            detectedPose.ifPresent(pose -> lastDetectedStartPosePedro = copyPose(pose));
-        }
-
         Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
         if (selectedAlliance != activeAlliance) {
             activeAlliance = selectedAlliance;
             applyAlliance(activeAlliance, null);
         }
 
+        // Vision-based start pose initialization for Close Auto
+        // Robot should be placed facing OPPOSITE alliance's basket tag
+        String visionStatus = "No AprilTag visible";
+        boolean visionInitialized = false;
+        double proximityDistance = Double.POSITIVE_INFINITY;
+
+        if (snapshotOpt.isPresent()) {
+            VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
+            int detectedTagId = snapshot.getTagId();
+
+            // Check if we're seeing the expected opposite alliance tag
+            int expectedOppositeTag = (activeAlliance == Alliance.BLUE)
+                ? FieldConstants.RED_GOAL_TAG_ID   // Blue close auto sees red basket (tag 24)
+                : FieldConstants.BLUE_GOAL_TAG_ID; // Red close auto sees blue basket (tag 20)
+
+            if (detectedTagId == expectedOppositeTag) {
+                // Use MT1 for initial pose (more robust when heading might be approximate)
+                java.util.Optional<Pose> detectedPose = snapshot.getRobotPosePedroMT1();
+
+                if (detectedPose.isPresent()) {
+                    Pose candidate = detectedPose.get();
+                    lastDetectedStartPosePedro = copyPose(candidate);
+
+                    // Calculate distance from expected start pose for proximity feedback
+                    Pose expectedPose = currentLayout.pose(FieldPoint.START_CLOSE);
+                    double dx = candidate.getX() - expectedPose.getX();
+                    double dy = candidate.getY() - expectedPose.getY();
+                    proximityDistance = Math.hypot(dx, dy);
+
+                    // Safety check: pose should be reasonable
+                    if (shouldUpdateStartPose(candidate)) {
+                        // Apply vision-detected pose as starting position
+                        applyAlliance(activeAlliance, candidate);
+                        visionInitialized = true;
+                        visionStatus = String.format("✓ Vision initialized (Tag %d)", detectedTagId);
+                    } else {
+                        visionStatus = String.format("⚠ Tag %d pose invalid - using manual", detectedTagId);
+                    }
+                } else {
+                    visionStatus = String.format("⚠ Tag %d pose unavailable", detectedTagId);
+                }
+            } else if (detectedTagId == FieldConstants.BLUE_GOAL_TAG_ID ||
+                       detectedTagId == FieldConstants.RED_GOAL_TAG_ID) {
+                // Seeing wrong alliance tag
+                visionStatus = String.format("⚠ Wrong tag (saw %d, expected %d)",
+                    detectedTagId, expectedOppositeTag);
+            } else {
+                visionStatus = String.format("⚠ Unexpected tag %d", detectedTagId);
+            }
+        }
+
+        // Provide proximity feedback via blinking lights (faster = closer to target)
+        if (visionInitialized && !Double.isInfinite(proximityDistance)) {
+            robot.lighting.showProximityFeedback(proximityDistance, 18.0);
+        } else {
+            // No vision or invalid - stop proximity feedback
+            robot.lighting.stopProximityFeedback();
+        }
+
+        // Display initialization status
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
+        telemetry.addData("Vision Init", visionStatus);
+
+        if (visionInitialized && lastDetectedStartPosePedro != null) {
+            telemetry.addData("Start Pose", "X=%.1f Y=%.1f θ=%.0f°",
+                lastDetectedStartPosePedro.getX(),
+                lastDetectedStartPosePedro.getY(),
+                Math.toDegrees(lastDetectedStartPosePedro.getHeading()));
+
+            // Show proximity distance with visual indicator
+            String proximityIndicator;
+            if (proximityDistance < 3.0) {
+                proximityIndicator = "✓ PERFECT (lights: very fast blink)";
+            } else if (proximityDistance < 6.0) {
+                proximityIndicator = "✓ Good (lights: fast blink)";
+            } else if (proximityDistance < 12.0) {
+                proximityIndicator = "⚠ OK (lights: medium blink)";
+            } else {
+                proximityIndicator = "⚠ Adjust position (lights: slow blink)";
+            }
+            telemetry.addData("Proximity", "%.1f in - %s", proximityDistance, proximityIndicator);
+        } else {
+            Pose manualPose = currentLayout.pose(FieldPoint.START_CLOSE);
+            telemetry.addData("Start Pose", "Manual: X=%.1f Y=%.1f θ=%.0f°",
+                manualPose.getX(),
+                manualPose.getY(),
+                Math.toDegrees(manualPose.getHeading()));
+        }
+
         telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
-        telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
+        telemetry.addLine();
+        telemetry.addLine("D-pad Left/Right override alliance");
         telemetry.addLine("Press START when ready");
         telemetry.update();
     }
@@ -176,6 +258,9 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
     public void onStartButtonPressed() {
         BindingManager.reset();
         allianceSelector.lockSelection();
+
+        // Stop proximity feedback when match starts
+        robot.lighting.stopProximityFeedback();
         if (lightingInitController != null) {
             lightingInitController.onStart();
         }
@@ -362,7 +447,10 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
     }
 
     /**
-     * Validates that a detected pose is reasonable before applying it
+     * Validates that a detected pose is reasonable before applying it for Close Auto.
+     *
+     * Close Auto starts near center field (X~26, Y~131) facing opposite basket at 144°.
+     * We validate that vision-detected pose is within reasonable bounds.
      */
     private boolean shouldUpdateStartPose(Pose candidate) {
         if (candidate == null) {
@@ -370,21 +458,35 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
         }
 
         // Sanity check: pose should be on the field
-        double fieldWidthIn = FieldConstants.FIELD_WIDTH_INCHES ;
+        double fieldWidthIn = FieldConstants.FIELD_WIDTH_INCHES;
         if (candidate.getX() < 0 || candidate.getX() > fieldWidthIn ||
             candidate.getY() < 0 || candidate.getY() > fieldWidthIn) {
             return false;
         }
 
-        // Additional check: if we have an applied pose, the detected pose shouldn't be wildly different
-        if (lastAppliedStartPosePedro != null) {
-            double deltaX = Math.abs(candidate.getX() - lastAppliedStartPosePedro.getX());
-            double deltaY = Math.abs(candidate.getY() - lastAppliedStartPosePedro.getY());
-            double maxDelta = 12.0; // 12 inches tolerance
+        // For close auto, expect to be in center-field area
+        // Rough bounds: X between 15-40, Y between 115-135 (blue side)
+        // These are loose bounds to allow for manual placement variation
+        Pose expectedPose = currentLayout.pose(FieldPoint.START_CLOSE);
+        double maxPositionDelta = 18.0; // Allow 18 inches deviation from expected
+        double maxHeadingDeltaDeg = 30.0; // Allow 30° heading deviation
 
-            if (deltaX > maxDelta || deltaY > maxDelta) {
-                return false; // Detected pose too different from expected
-            }
+        double deltaX = Math.abs(candidate.getX() - expectedPose.getX());
+        double deltaY = Math.abs(candidate.getY() - expectedPose.getY());
+        double deltaHeadingDeg = Math.abs(
+            Math.toDegrees(candidate.getHeading()) - Math.toDegrees(expectedPose.getHeading())
+        );
+
+        // Normalize heading delta to [-180, 180]
+        while (deltaHeadingDeg > 180) deltaHeadingDeg -= 360;
+        deltaHeadingDeg = Math.abs(deltaHeadingDeg);
+
+        if (deltaX > maxPositionDelta || deltaY > maxPositionDelta) {
+            return false; // Position too far from expected
+        }
+
+        if (deltaHeadingDeg > maxHeadingDeltaDeg) {
+            return false; // Heading too far from expected
         }
 
         return true;

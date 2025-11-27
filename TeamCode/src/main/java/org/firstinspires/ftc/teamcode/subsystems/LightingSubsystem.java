@@ -34,15 +34,16 @@ import java.util.Random;
 public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorListener {
 
     /**
-     * Simplified lighting patterns.
-     * LANE_TRACKING is the default - shows artifact colors (white/green/purple).
-     * AIM_ALIGNED temporarily overrides for driver feedback.
+     * Lighting patterns with priority-based control.
+     * Higher priority patterns can override lower ones.
+     * PROXIMITY_FEEDBACK gets highest priority for auto init positioning.
      */
     public enum LightingPattern {
         OFF(0),                      // Disabled/off state
         ALLIANCE(1),                 // Alliance color (used during init)
         LANE_TRACKING(2),            // Default - show artifact presence/colors
-        AIM_ALIGNED(3);              // Yellow flash when aim-aligned (8 seconds)
+        AIM_ALIGNED(3),              // Yellow flash when aim-aligned (8 seconds)
+        PROXIMITY_FEEDBACK(4);       // Blink rate indicates proximity to target (auto init)
 
         public final int priority;
         LightingPattern(int priority) {
@@ -78,6 +79,9 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private Alliance alliance = Alliance.UNKNOWN;
     private double lastPeriodicMs = 0.0;
     private boolean followSensorColors = true;
+
+    // Proximity feedback state
+    private double proximityBlinkPeriodMs = 1000.0; // Current blink period for proximity feedback
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(tryGetServo(hardwareMap, indicatorConfig.left.servoName)));
@@ -143,6 +147,10 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
      */
     private void renderCurrentPattern(long nowMs) {
         switch (currentPattern) {
+            case PROXIMITY_FEEDBACK:
+                renderProximityFeedback(nowMs);
+                break;
+
             case AIM_ALIGNED:
                 renderAimAligned();
                 break;
@@ -299,11 +307,54 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     /**
      * Requests aim-aligned visual feedback (yellow flash).
-     * Priority: HIGH - will override most patterns except rainbow alert.
+     * Priority: HIGH - will override most patterns.
      * Duration: 8 seconds
      */
     public void flashAimAligned() {
         requestPattern(LightingPattern.AIM_ALIGNED, 8000L);
+    }
+
+    /**
+     * Shows proximity feedback for auto initialization positioning.
+     * Lights blink faster as robot gets closer to target position.
+     *
+     * Blink rates:
+     * - Far (18+ inches): Slow blink (2000ms period) - need to move
+     * - Medium (6-18 inches): Medium blink (700-2000ms) - getting closer
+     * - Close (3-6 inches): Fast blink (200-700ms) - almost there
+     * - Very close (0-3 inches): Very fast blink (50-200ms) - perfect!
+     *
+     * Priority: HIGHEST - overrides all other patterns during auto init.
+     * Duration: Permanent until stopProximityFeedback() is called.
+     *
+     * @param distanceInches Distance from target pose (0 = perfect alignment)
+     * @param maxDistanceInches Maximum expected distance for normalization (typically 18.0)
+     */
+    public void showProximityFeedback(double distanceInches, double maxDistanceInches) {
+        // Calculate blink rate based on distance (closer = faster)
+        // Normalize distance to [0, 1] range
+        double normalizedDistance = Math.min(Math.max(distanceInches / maxDistanceInches, 0.0), 1.0);
+
+        // Map to blink period: 50ms (very fast) to 2000ms (slow)
+        // Use exponential curve for better feedback in close range
+        proximityBlinkPeriodMs = 50.0 + Math.pow(normalizedDistance, 0.5) * 1950.0;
+
+        // Request pattern with no expiration (permanent until stopped)
+        requestPattern(LightingPattern.PROXIMITY_FEEDBACK, 0L);
+    }
+
+    /**
+     * Stops proximity feedback and returns to normal lighting mode.
+     * Call this when exiting auto init phase.
+     */
+    public void stopProximityFeedback() {
+        if (currentPattern == LightingPattern.PROXIMITY_FEEDBACK) {
+            // Clear proximity pattern and revert to lane tracking
+            currentPattern = LightingPattern.LANE_TRACKING;
+            goalPattern = LightingPattern.LANE_TRACKING;
+            patternExpirationMs = 0L;
+            followSensorColors = true;
+        }
     }
 
     /**
@@ -338,6 +389,22 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     // ========== RENDER METHODS ==========
     // Each method renders a specific pattern to the physical LEDs
+
+    private void renderProximityFeedback(long nowMs) {
+        // Blink alliance color based on proximity distance
+        // Closer to target = faster blink rate
+        long blinkCycle = (long) proximityBlinkPeriodMs;
+        boolean brightPhase = ((nowMs / blinkCycle) % 2) == 0;
+
+        if (brightPhase) {
+            // Show alliance color (bright phase)
+            resetLaneColors();
+            updateLaneOutputs();
+        } else {
+            // Turn off (dark phase)
+            applySolidPosition(clamp01(colorPositionConfig.offPosition));
+        }
+    }
 
     private void renderAimAligned() {
         // Yellow flash for aim-aligned feedback
