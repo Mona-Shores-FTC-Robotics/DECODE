@@ -23,15 +23,40 @@ import java.util.Random;
 
 /**
  * goBILDA RGB Indicator Light wrapper.
- * Manages three lane-linked indicator servos.
+ * Manages three lane-linked indicator servos with priority-based pattern control.
+ *
+ * Architecture follows FRC-style priority pattern:
+ * - Goal pattern: What the lights SHOULD show based on robot state
+ * - Current pattern: What's actively being displayed (may differ temporarily)
+ * - Priority resolution: Higher priority patterns override lower ones
  */
 @Configurable
 public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorListener {
 
+    /**
+     * Simplified lighting patterns.
+     * LANE_TRACKING is the default - shows artifact colors (white/green/purple).
+     * AIM_ALIGNED temporarily overrides for driver feedback.
+     */
+    public enum LightingPattern {
+        OFF(0),                      // Disabled/off state
+        ALLIANCE(1),                 // Alliance color (used during init)
+        LANE_TRACKING(2),            // Default - show artifact presence/colors
+        AIM_ALIGNED(3);              // Yellow flash when aim-aligned (8 seconds)
+
+        public final int priority;
+        LightingPattern(int priority) {
+            this.priority = priority;
+        }
+
+        public boolean hasHigherPriorityThan(LightingPattern other) {
+            return this.priority > other.priority;
+        }
+    }
+
     public enum LightingState {
         OFF,
-        ALLIANCE,
-        BUSY
+        ALLIANCE
     }
 
     // Global configuration instances
@@ -43,15 +68,16 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private final EnumMap<LauncherLane, ArtifactColor> sensorLaneColors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Double> laneOutputs = new EnumMap<>(LauncherLane.class);
 
+    // Priority-based pattern management
+    private LightingPattern currentPattern = LightingPattern.OFF;
+    private LightingPattern goalPattern = LightingPattern.OFF;
+    private long patternExpirationMs = 0L;  // When current pattern expires (0 = permanent)
+
+    // State tracking
     private LightingState state = LightingState.OFF;
     private Alliance alliance = Alliance.UNKNOWN;
     private double lastPeriodicMs = 0.0;
     private boolean followSensorColors = true;
-    private long aimFlashUntilMs = 0L;
-    private boolean aimFlashRestoreSensorFollow = true;
-    private long motifTailFlashUntilMs = 0L;
-    private boolean motifTailRestoreSensorFollow = true;
-    private long decodeModeSwitchFlashUntilMs = 0L;
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(tryGetServo(hardwareMap, indicatorConfig.left.servoName)));
@@ -75,36 +101,65 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         long start = System.nanoTime();
         long nowMs = System.currentTimeMillis();
 
-        // Show rainbow pattern during DECODE mode switch notification
-        if (decodeModeSwitchFlashUntilMs > 0) {
-            if (nowMs >= decodeModeSwitchFlashUntilMs) {
-                decodeModeSwitchFlashUntilMs = 0L;
-                setFollowSensorColors(true); // Restore normal tracking
-            } else {
-                // Continue showing rainbow pattern
-                showRainbowAlert(nowMs);
-            }
+        // Check if current pattern has expired
+        if (patternExpirationMs > 0 && nowMs >= patternExpirationMs) {
+            patternExpirationMs = 0L;
+            currentPattern = LightingPattern.LANE_TRACKING; // Revert to normal operation
+            followSensorColors = true;
         }
 
-        // Handle aim flash timeout
+        // Update goal pattern based on robot state
+        updateGoalPattern();
 
-        if (aimFlashUntilMs > 0 && nowMs >= aimFlashUntilMs) {
-            aimFlashUntilMs = 0L;
-            if (aimFlashRestoreSensorFollow) {
-                setFollowSensorColors(true);
-            }
+        // Apply priority resolution: only allow higher-priority patterns to interrupt
+        if (goalPattern.hasHigherPriorityThan(currentPattern) || patternExpirationMs == 0L) {
+            currentPattern = goalPattern;
         }
 
-
-        // Handle motif tail feedback timeout
-        if (motifTailFlashUntilMs > 0 && nowMs >= motifTailFlashUntilMs) {
-            motifTailFlashUntilMs = 0L;
-            if (motifTailRestoreSensorFollow) {
-                setFollowSensorColors(true);
-            }
-        }
+        // Render the current pattern
+        renderCurrentPattern(nowMs);
 
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    /**
+     * Updates the goal pattern based on current robot state.
+     * Does NOT directly change what's displayed - priority resolution handles that.
+     */
+    private void updateGoalPattern() {
+        // Default to lane tracking (showing artifact colors)
+        if (followSensorColors) {
+            goalPattern = LightingPattern.LANE_TRACKING;
+        } else if (state == LightingState.ALLIANCE) {
+            goalPattern = LightingPattern.ALLIANCE;
+        } else {
+            goalPattern = LightingPattern.OFF;
+        }
+    }
+
+    /**
+     * Renders the current pattern to the physical LEDs.
+     * Called every periodic() cycle.
+     */
+    private void renderCurrentPattern(long nowMs) {
+        switch (currentPattern) {
+            case AIM_ALIGNED:
+                renderAimAligned();
+                break;
+
+            case LANE_TRACKING:
+                renderLaneTracking();
+                break;
+
+            case ALLIANCE:
+                renderAlliance();
+                break;
+
+            case OFF:
+            default:
+                renderOff();
+                break;
+        }
     }
 
     public double getLastPeriodicMs() { return lastPeriodicMs; }
@@ -117,13 +172,14 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     public void indicateBusy() {
-        state = LightingState.BUSY;
-        updateLaneOutputs();
+        // Simplified: just keep showing lane colors
+        state = LightingState.ALLIANCE;
+        followSensorColors = true;
     }
 
     public void indicateIdle() {
         state = LightingState.ALLIANCE;
-        updateLaneOutputs();
+        followSensorColors = true;
     }
 
     public void disable() {
@@ -205,135 +261,113 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     public void showMotifPattern(ArtifactColor[] pattern) {
-        setFollowSensorColors(false);
-        showDecodePattern(pattern);
+        // Disabled - just continue showing lane colors
     }
 
     public void showRainbowAlert(long nowMs) {
-        setFollowSensorColors(false);
-        int phase = (int) ((nowMs / 300L) % 3);
-
-        switch (phase) {
-            case 0:  applyPattern(ArtifactColor.PURPLE, ArtifactColor.GREEN, ArtifactColor.UNKNOWN); break;
-            case 1:  applyPattern(ArtifactColor.GREEN, ArtifactColor.UNKNOWN, ArtifactColor.PURPLE); break;
-            default: applyPattern(ArtifactColor.UNKNOWN, ArtifactColor.PURPLE, ArtifactColor.GREEN); break;
-        }
+        // Disabled - just continue showing lane colors
     }
 
     public void showAlliancePulse(Alliance alliance, boolean brightPhase) {
+        // Simplified - just show solid alliance color
         setAlliance(alliance);
-        setFollowSensorColors(false);
-
-        if (brightPhase) {
-            state = LightingState.ALLIANCE;
-            resetLaneColors();
-        } else {
-            state = LightingState.OFF;
-        }
-
-        updateLaneOutputs();
+        state = LightingState.ALLIANCE;
+        followSensorColors = false;
     }
 
     public void showWhiteBlink(boolean on) {
-        setFollowSensorColors(false);
-        double position = on ? clamp01(colorPositionConfig.whitePosition)
-                : clamp01(colorPositionConfig.offPosition);
-        applySolidPosition(position);
+        // Disabled - just show alliance color
+        state = LightingState.ALLIANCE;
+        followSensorColors = false;
     }
 
     public void showSolidAlliance(Alliance alliance) {
         setAlliance(alliance);
         state = LightingState.ALLIANCE;
-        resetLaneColors();
-        updateLaneOutputs();
+        followSensorColors = false;
     }
 
     public void showAllianceReminder(Alliance alliance) {
-        showSolidAlliance(alliance);
+        // Simplified - just show alliance color
+        setAlliance(alliance);
+        state = LightingState.ALLIANCE;
     }
 
     public void resumeLaneTracking() {
         setFollowSensorColors(true);
     }
 
+    /**
+     * Requests aim-aligned visual feedback (yellow flash).
+     * Priority: HIGH - will override most patterns except rainbow alert.
+     * Duration: 8 seconds
+     */
     public void flashAimAligned() {
-        aimFlashRestoreSensorFollow = followSensorColors;
-        setFollowSensorColors(false);
-        applySolidPosition(clamp01(colorPositionConfig.yellowPosition));
-        aimFlashUntilMs = System.currentTimeMillis() + 8000L;
+        requestPattern(LightingPattern.AIM_ALIGNED, 8000L);
     }
 
     /**
-     * Shows visual feedback for motif tail selection using orange/yellow blink pattern.
-     *
-     * Motif tail 0: All 3 lanes blink orange
-     * Motif tail 1: Left lane blinks orange (center/right off)
-     * Motif tail 2: Left and center blink orange (right off)
-     *
-     * Pattern displays for 2 seconds, then resumes normal lane tracking.
-     *
-     * @param value The motif tail value (0, 1, or 2)
+     * Disabled - motif tail feedback removed for simplicity.
      */
     public void showMotifTailFeedback(int value) {
-        motifTailRestoreSensorFollow = followSensorColors;
-        setFollowSensorColors(false);
-
-        // Use yellow/orange position for visual feedback
-        double orangePosition = clamp01(colorPositionConfig.yellowPosition);
-        double offPosition = clamp01(colorPositionConfig.offPosition);
-
-        // Clear all lanes first
-        resetLaneColors();
-
-        // Set pattern based on motif tail value
-        switch (value) {
-            case 0:
-                // All 3 lanes blink orange
-                laneOutputs.put(LauncherLane.LEFT, orangePosition);
-                laneOutputs.put(LauncherLane.CENTER, orangePosition);
-                laneOutputs.put(LauncherLane.RIGHT, orangePosition);
-                break;
-            case 1:
-                // Left lane only
-                laneOutputs.put(LauncherLane.LEFT, orangePosition);
-                laneOutputs.put(LauncherLane.CENTER, offPosition);
-                laneOutputs.put(LauncherLane.RIGHT, offPosition);
-                break;
-            case 2:
-                // Left and center
-                laneOutputs.put(LauncherLane.LEFT, orangePosition);
-                laneOutputs.put(LauncherLane.CENTER, orangePosition);
-                laneOutputs.put(LauncherLane.RIGHT, offPosition);
-                break;
-            default:
-                // Invalid value - show all off
-                laneOutputs.put(LauncherLane.LEFT, offPosition);
-                laneOutputs.put(LauncherLane.CENTER, offPosition);
-                laneOutputs.put(LauncherLane.RIGHT, offPosition);
-                break;
-        }
-
-        // Apply the pattern to servos
-        for (LauncherLane lane : LauncherLane.values()) {
-            LaneIndicator indicator = laneIndicators.get(lane);
-            if (indicator != null && indicator.isPresent()) {
-                indicator.apply(laneOutputs.get(lane));
-            }
-        }
-
-        // Set timeout to restore normal tracking after 2 seconds
-        motifTailFlashUntilMs = System.currentTimeMillis() + 2000L;
+        // No-op - pattern disabled
     }
 
     /**
-     * Shows visual notification that robot has switched to DECODE mode.
-     * Displays rainbow pattern for 2 seconds.
+     * Disabled - DECODE mode switch notification removed for simplicity.
      */
     public void showDecodeModeSwitchNotification() {
-        setFollowSensorColors(false);
-        // Start rainbow alert that will cycle during periodic()
-        decodeModeSwitchFlashUntilMs = System.currentTimeMillis() + 2000L;
+        // No-op - pattern disabled
     }
+
+    /**
+     * Core method to request a temporary pattern with expiration.
+     * Honors priority system - only activates if higher priority than current.
+     *
+     * @param pattern The pattern to display
+     * @param durationMs How long to show it (0 = permanent)
+     */
+    private void requestPattern(LightingPattern pattern, long durationMs) {
+        if (pattern.hasHigherPriorityThan(currentPattern) || patternExpirationMs == 0L) {
+            currentPattern = pattern;
+            goalPattern = pattern;
+            patternExpirationMs = (durationMs > 0) ? System.currentTimeMillis() + durationMs : 0L;
+            followSensorColors = false;
+        }
+    }
+
+    // ========== RENDER METHODS ==========
+    // Each method renders a specific pattern to the physical LEDs
+
+    private void renderAimAligned() {
+        // Yellow flash for aim-aligned feedback
+        applySolidPosition(clamp01(colorPositionConfig.yellowPosition));
+    }
+
+    private void renderLaneTracking() {
+        // Show artifact colors from sensors:
+        // - GREEN sensor → green light
+        // - PURPLE sensor → purple light
+        // - UNKNOWN sensor (detected but unknown color) → white light
+        // - NONE sensor (empty) → alliance color or off
+        for (Map.Entry<LauncherLane, ArtifactColor> entry : sensorLaneColors.entrySet()) {
+            laneColors.put(entry.getKey(), entry.getValue());
+        }
+        updateLaneOutputs();
+    }
+
+    private void renderAlliance() {
+        // Show solid alliance color (used during init)
+        resetLaneColors();
+        updateLaneOutputs();
+    }
+
+    private void renderOff() {
+        // All lights off
+        applySolidPosition(clamp01(colorPositionConfig.offPosition));
+    }
+
+    // ========== END RENDER METHODS ==========
 
     private void updateLaneOutputs() {
         for (LauncherLane lane : LauncherLane.values()) {
@@ -365,8 +399,6 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     protected double fallbackPosition() {
         switch (state) {
-            case BUSY:
-                return clamp01(colorPositionConfig.busyPosition);
             case ALLIANCE:
                 return alliancePosition();
             case OFF:
@@ -397,6 +429,15 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             laneOutputs.put(lane, clamp01(position));
             LaneIndicator indicator = laneIndicators.get(lane);
             if (indicator != null) indicator.apply(position);
+        }
+    }
+
+    private void applyLaneOutputs() {
+        for (LauncherLane lane : LauncherLane.values()) {
+            LaneIndicator indicator = laneIndicators.get(lane);
+            if (indicator != null && indicator.isPresent()) {
+                indicator.apply(laneOutputs.get(lane));
+            }
         }
     }
 
