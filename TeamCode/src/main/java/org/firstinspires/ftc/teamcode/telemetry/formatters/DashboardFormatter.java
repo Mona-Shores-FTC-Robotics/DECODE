@@ -271,7 +271,10 @@ public class DashboardFormatter {
      * Provides comprehensive performance diagnostics for loop optimization.
      */
     private void addLoopTimingData(TelemetryPacket packet, RobotTelemetryData data) {
-        double totalTelemetryMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - data.timing.telemetryStartNs);
+        // Calculate telemetry time, but guard against initial 0 value
+        double totalTelemetryMs = (data.timing.telemetryStartNs > 0)
+                ? TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - data.timing.telemetryStartNs)
+                : 0.0;
 
         // Total loop time
         packet.put("timing/total_loop_ms", data.timing.totalLoopMs(totalTelemetryMs));
