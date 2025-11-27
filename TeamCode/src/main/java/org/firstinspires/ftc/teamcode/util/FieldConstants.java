@@ -23,17 +23,18 @@ public final class FieldConstants {
     private FieldConstants() {
         // Utility only.
     }
+    public static BasketTargetOffsets  basketTargetOffsets = new BasketTargetOffsets();
 
     @Configurable
     public static class BasketTargetOffsets {
         /** Blue basket X offset from incenter (inches). Negative = left toward corner */
-        public static double blueDeltaX = 0;
+        public double blueDeltaX = 0;
         /** Blue basket Y offset from incenter (inches). Positive = up toward corner */
-        public static double blueDeltaY = 0;
+        public double blueDeltaY = 0;
         /** Red basket X offset from incenter (inches). Positive = right toward corner */
-        public static double redDeltaX = 0.0;
+        public double redDeltaX = 0.0;
         /** Red basket Y offset from incenter (inches). Positive = up toward corner */
-        public static double redDeltaY = 0.0;
+        public double redDeltaY = 0.0;
     }
 
 
@@ -114,15 +115,15 @@ public final class FieldConstants {
      */
     public static Pose getBlueBasketTarget() {
         Pose triangleIncenterGoalPose =  new Pose(
-                BLUE_GOAL_CENTER.getX() + BasketTargetOffsets.blueDeltaX,
-                BLUE_GOAL_CENTER.getY() + BasketTargetOffsets.blueDeltaY,
+                BLUE_GOAL_CENTER.getX() + basketTargetOffsets.blueDeltaX,
+                BLUE_GOAL_CENTER.getY() + basketTargetOffsets.blueDeltaY,
                 0.0
         );
         RobotState.putPose("Goal Poses/BLUE_INCENTER_GOAL", triangleIncenterGoalPose);
 
         Pose chebyshevGoalPedroPose = new Pose(
-                BLUE_GOAL_CHEBYSHEV_PEDRO.getX() + BasketTargetOffsets.blueDeltaX,
-                BLUE_GOAL_CHEBYSHEV_PEDRO.getY() + BasketTargetOffsets.blueDeltaY,
+                BLUE_GOAL_CHEBYSHEV_PEDRO.getX() + basketTargetOffsets.blueDeltaX,
+                BLUE_GOAL_CHEBYSHEV_PEDRO.getY() + basketTargetOffsets.blueDeltaY,
                 0.0
         );
         Pose chebyshevGoalFTCPose = PoseFrames.pedroToFtc(chebyshevGoalPedroPose);
@@ -136,15 +137,15 @@ public final class FieldConstants {
      */
     public static Pose getRedBasketTarget() {
         Pose triangleIncenterGoalPose =  new Pose(
-                RED_GOAL_CENTER.getX() + BasketTargetOffsets.redDeltaX,
-                RED_GOAL_CENTER.getY() + BasketTargetOffsets.redDeltaY,
+                RED_GOAL_CENTER.getX() + basketTargetOffsets.redDeltaX,
+                RED_GOAL_CENTER.getY() + basketTargetOffsets.redDeltaY,
                 0.0
         );
         RobotState.putPose("Goal Poses/RED_INCENTER_GOAL", triangleIncenterGoalPose);
 
         Pose chebyshevGoalPedroPose = new Pose(
-                RED_GOAL_CHEBYSHEV_PEDRO.getX() + BasketTargetOffsets.redDeltaX,
-                RED_GOAL_CHEBYSHEV_PEDRO.getY() + BasketTargetOffsets.redDeltaY,
+                RED_GOAL_CHEBYSHEV_PEDRO.getX() + basketTargetOffsets.redDeltaX,
+                RED_GOAL_CHEBYSHEV_PEDRO.getY() + basketTargetOffsets.redDeltaY,
                 0.0
         );
         Pose chebyshevGoalFTCPose = PoseFrames.pedroToFtc(chebyshevGoalPedroPose);

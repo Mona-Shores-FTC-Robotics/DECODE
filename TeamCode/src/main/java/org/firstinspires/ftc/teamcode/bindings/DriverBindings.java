@@ -1,19 +1,14 @@
 package org.firstinspires.ftc.teamcode.bindings;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.AimAndDriveCommand;
-import org.firstinspires.ftc.teamcode.commands.AimAndDriveVisionCenteredCommand;
-import org.firstinspires.ftc.teamcode.commands.AimAndDriveFixedAngleCommand;
-import org.firstinspires.ftc.teamcode.commands.CaptureAndAimCommand;
-import org.firstinspires.ftc.teamcode.commands.DefaultDriveCommand;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveVisionCenteredCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveFixedAngleCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.DefaultDriveCommand;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.bindings.Range;
 import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.commands.delays.Delay;
-import dev.nextftc.core.commands.groups.SequentialGroup;
-import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.ftc.GamepadEx;
 
 
@@ -32,6 +27,7 @@ import dev.nextftc.ftc.GamepadEx;
  *
  * Vision Relocalization:
  * - A button: MANUAL vision relocalization (instant, no movement)
+ * - Square: Reset heading toward basket (for recovering after bad auto handoff)
  * - Robot starts with known pose during init (set before match)
  * - Odometry tracks from initial pose
  * - Manual relocalization available when drift is noticeable
@@ -48,6 +44,7 @@ public class DriverBindings {
     private final Button slowHold;
     private final Button aimHold;
     private final Button relocalizeRequest;
+    private final Button headingResetRequest;
 
     // D-pad buttons for testing different aiming methods
     private final Button aimVisionCentered;
@@ -69,6 +66,7 @@ public class DriverBindings {
 
         //Test Buttons
         relocalizeRequest = driver.cross();
+        headingResetRequest = driver.square();
 
         // D-pad for testing different aiming methods
         aimVisionCentered = driver.dpadUp();
@@ -135,6 +133,7 @@ public class DriverBindings {
 //                    .whenBecomesFalse(captureAndAimCmd::cancel);
 
             relocalizeRequest.whenBecomesTrue(robot.drive::tryRelocalize);
+            headingResetRequest.whenBecomesTrue(robot.drive::resetHeadingToFieldForward);
         }
     }
 

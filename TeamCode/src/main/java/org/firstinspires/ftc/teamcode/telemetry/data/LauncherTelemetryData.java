@@ -5,33 +5,23 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 /**
  * Launcher subsystem telemetry data.
- * Includes per-lane flywheel, hood, and feeder data.
+ * Per-lane design: Each lane is independent. Check individual lane readiness
+ * rather than looking for a global "ready" state.
+ *
+ * Simplified design: Direct RPM control via feedforward + optional proportional feedback.
+ * No SpinMode or ControlMode - just target RPM per lane.
  */
 public class LauncherTelemetryData {
-    // High-level launcher state
-    public final boolean ready;
-    public final String state;
-    public final String spinMode;
-    public final String controlMode;
-
-    // Per-lane data
+    // Per-lane data (each lane independent)
     public final LaneData left;
     public final LaneData center;
     public final LaneData right;
 
     public LauncherTelemetryData(
-            boolean ready,
-            String state,
-            String spinMode,
-            String controlMode,
             LaneData left,
             LaneData center,
             LaneData right
     ) {
-        this.ready = ready;
-        this.state = state;
-        this.spinMode = spinMode;
-        this.controlMode = controlMode;
         this.left = left;
         this.center = center;
         this.right = right;
@@ -47,13 +37,6 @@ public class LauncherTelemetryData {
         public final double power;
         public final boolean ready;
 
-        // Control phase
-        public final String phase;
-        public final boolean phaseBang;
-        public final boolean phaseHold;
-        public final boolean phaseHybrid;
-        public final int bangToHoldCount;
-
         // Hood position
         public final double hoodPosition;
 
@@ -65,8 +48,6 @@ public class LauncherTelemetryData {
                 double currentRpm,
                 double power,
                 boolean ready,
-                String phase,
-                int bangToHoldCount,
                 double hoodPosition,
                 double feederPosition
         ) {
@@ -74,11 +55,6 @@ public class LauncherTelemetryData {
             this.currentRpm = currentRpm;
             this.power = power;
             this.ready = ready;
-            this.phase = phase;
-            this.phaseBang = "BANG".equals(phase);
-            this.phaseHold = "HOLD".equals(phase);
-            this.phaseHybrid = "HYBRID".equals(phase);
-            this.bangToHoldCount = bangToHoldCount;
             this.hoodPosition = hoodPosition;
             this.feederPosition = feederPosition;
         }
@@ -89,8 +65,6 @@ public class LauncherTelemetryData {
                     launcher.getCurrentRpm(lane),
                     launcher.getLastPower(lane),
                     launcher.isLaneReady(lane),
-                    launcher.getPhaseName(lane),
-                    launcher.getBangToHoldCount(lane),
                     launcher.getHoodPosition(lane),
                     launcher.getFeederPosition(lane)
             );
@@ -99,10 +73,6 @@ public class LauncherTelemetryData {
 
     public static LauncherTelemetryData capture(LauncherSubsystem launcher) {
         return new LauncherTelemetryData(
-                launcher.atTarget(),
-                launcher.getState().name(),
-                launcher.getEffectiveSpinMode().name(),
-                LauncherSubsystem.getFlywheelControlMode().name(),
                 LaneData.capture(launcher, LauncherLane.LEFT),
                 LaneData.capture(launcher, LauncherLane.CENTER),
                 LaneData.capture(launcher, LauncherLane.RIGHT)

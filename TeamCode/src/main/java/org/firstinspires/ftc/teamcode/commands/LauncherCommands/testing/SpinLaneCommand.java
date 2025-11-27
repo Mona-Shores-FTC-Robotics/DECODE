@@ -23,7 +23,7 @@ public class SpinLaneCommand extends Command {
 
     @Override
     public void start() {
-        launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        launcher.spinUpAllLanesToLaunch();
     }
 
     @Override

@@ -8,15 +8,7 @@ import com.bylazar.configurables.annotations.Configurable;
  */
 @Configurable
 public class LauncherFlywheelConfig {
-
-    public enum FlywheelControlMode {
-        HYBRID,
-        BANG_BANG_HOLD,
-        PURE_BANG_BANG
-    }
-
     public FlywheelParameters parameters = new FlywheelParameters();
-    public FlywheelModeConfig modeConfig = new FlywheelModeConfig();
 
     @Configurable
     public static class FlywheelParameters {
@@ -28,46 +20,6 @@ public class LauncherFlywheelConfig {
         public double rpmTolerance = 50;
     }
 
-    @Configurable
-    public static class FlywheelModeConfig {
-        public FlywheelControlMode mode = FlywheelControlMode.HYBRID;
-        public BangBangConfig bangBang = new BangBangConfig();
-        public HybridPidConfig hybridPid = new HybridPidConfig();
-        public HoldConfig hold = new HoldConfig();
-        public PhaseSwitchConfig phaseSwitch = new PhaseSwitchConfig();
-
-        @Configurable
-        public static class BangBangConfig {
-            public double highPower = 1.0;
-            public double lowPower = 0.2;
-            public double enterBangThresholdRpm = 800;
-            public double exitBangThresholdRpm = 600;
-        }
-
-        @Configurable
-        public static class HybridPidConfig {
-            public double kP = .008;
-            public double kF = .22;
-            public double maxPower = 1.0;
-        }
-
-        @Configurable
-        public static class HoldConfig {
-            public double baseHoldPower = 0.6;
-            public double rpmPowerGain = 0.00012;
-            public double minHoldPower = 0.2;
-            public double maxHoldPower = 1.0;
-        }
-
-        @Configurable
-        public static class PhaseSwitchConfig {
-            public int bangToHybridConfirmCycles = 1;
-            public int bangToHoldConfirmCycles = 3;
-            public int hybridToBangConfirmCycles = 3;
-            public int holdToBangConfirmCycles = 3;
-        }
-    }
-
     public LeftFlywheelConfig flywheelLeft = new LeftFlywheelConfig();
     public CenterFlywheelConfig flywheelCenter = new CenterFlywheelConfig();
     public RightFlywheelConfig flywheelRight = new RightFlywheelConfig();
@@ -75,22 +27,31 @@ public class LauncherFlywheelConfig {
     @Configurable
     public static class LeftFlywheelConfig {
         public String motorName = "launcher_left";
-        public boolean reversed; //TODO Is this really reversed depending on robot?
-        public double idleRpm = 1500;
+        public double idleRpm;
+        public boolean reversed;
+        public double kS;
+        public double kV;
+        public double kP;
     }
 
     @Configurable
     public static class CenterFlywheelConfig {
         public String motorName = "launcher_center";
-        public boolean reversed = false;
-        public double idleRpm = 1500;
+        public boolean reversed;
+        public double idleRpm;
+        public double kS;
+        public double kV;
+        public double kP;
     }
 
     @Configurable
     public static class RightFlywheelConfig { //actually left
         public String motorName = "launcher_right";
-        public boolean reversed = true;
-        public double idleRpm = 1500;
+        public boolean reversed;
+        public double idleRpm;
+        public double kS;
+        public double kV;
+        public double kP;
     }
 
     // Robot-specific instances
@@ -99,7 +60,24 @@ public class LauncherFlywheelConfig {
 
     private static LauncherFlywheelConfig createFlywheelConfig19429() {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
-        config.flywheelLeft.reversed = true;  // 19429 has left motor reversed
+        config.flywheelLeft.reversed = true;
+        config.flywheelLeft.idleRpm = 1500;
+        config.flywheelLeft.kS = 0.10;
+        config.flywheelLeft.kV = 0.0002;
+        config.flywheelLeft.kP = .001;
+
+        config.flywheelCenter.reversed = false;
+        config.flywheelCenter.idleRpm = 1500;
+        config.flywheelCenter.kS = 0.10;
+        config.flywheelCenter.kV = 0.0002;
+        config.flywheelCenter.kP = .001;
+
+        config.flywheelRight.reversed = false;
+        config.flywheelRight.idleRpm = 1500;
+        config.flywheelRight.kS = 0.10;
+        config.flywheelRight.kV = 0.0002;
+        config.flywheelRight.kP = .001;
+
         return config;
     }
 
@@ -109,6 +87,22 @@ public class LauncherFlywheelConfig {
     private static LauncherFlywheelConfig createFlywheelConfig20245() {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
         config.flywheelLeft.reversed = false;
+        config.flywheelLeft.idleRpm = 1500;
+        config.flywheelLeft.kS = 0.10;
+        config.flywheelLeft.kV = 0.0002;
+        config.flywheelLeft.kP = .001;
+
+        config.flywheelCenter.reversed = false;
+        config.flywheelCenter.idleRpm = 1500;
+        config.flywheelCenter.kS = 0.10;
+        config.flywheelCenter.kV = 0.0002;
+        config.flywheelCenter.kP = .001;
+
+        config.flywheelRight.reversed = true;
+        config.flywheelRight.idleRpm = 1500;
+        config.flywheelRight.kS = 0.10;
+        config.flywheelRight.kV = 0.0002;
+        config.flywheelRight.kP = .001;
 
         return config;
     }

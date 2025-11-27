@@ -107,6 +107,12 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 - Access via `DriveSubsystem.getFollower()`
 - Use `follower.followPath(path)` for path following
 
+**Path Visualization:**
+- Run `ExportCloseAutoPaths` OpMode to generate `.pp` files
+- Files saved to `/sdcard/FIRST/` on robot
+- Load in [Pedro Path Generator](https://pedro-path-generator.vercel.app/) to visualize
+- See `docs/PATH_VISUALIZATION.md` for detailed instructions
+
 ## Vision and Relocalization
 
 **AprilTag Vision:**

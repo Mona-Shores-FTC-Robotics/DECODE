@@ -8,6 +8,7 @@ import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -17,7 +18,6 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -59,6 +59,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  */
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "OPEN GATE Auto - Close", group = "Command")
 @Configurable
+@Disabled
 public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
@@ -183,7 +184,7 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
         RobotState.setLauncherMode(config.startingLauncherMode);
         RobotState.resetMotifTail(); // Start with fresh motif tail (0)
 
-        robot.launcher.setSpinMode(LauncherSubsystem.SpinMode.FULL);
+        robot.launcher.spinUpAllLanesToLaunch();
 
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();
@@ -236,10 +237,10 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
         return new SequentialGroup(
             // Start already at LAUNCH_CLOSE, so spin up launcher
                 new ParallelGroup(
-                        spinUpLauncher(),
+                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true),
                         followPath(startClosePose, launchClosePose)
                 ),
-                scoreSequence(),
+                launcherCommands.launchAll(false),
 
                 //preartifactpose
                 followPath(launchClosePose, poseForAlliance(24,112, 270, activeAlliance)),
@@ -290,12 +291,13 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
                 // Drive to score while spinning up launcher
                 new ParallelGroup(
                         followPath(pickupPose, scorePose),
-                        spinUpLauncher()
+                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true)
                 ),
 
                 // Score the samples
-                scoreSequence()
-        );
+                launcherCommands.launchAll(false)
+
+                );
     }
 
     /**
@@ -323,23 +325,6 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
                 return true;
             }
         };
-    }
-
-    /**
-     * Spins up the launcher and waits until all launchers reach target RPM.
-     * Phase 1: Uses position-specific tunable RPM from LaunchAtPositionCommand.PositionRpmConfig
-     */
-    private Command spinUpLauncher() {
-        return launcherCommands.spinUpForPosition(FieldPoint.LAUNCH_CLOSE);
-    }
-
-    /**
-     * Scores samples using the launcher
-     */
-    private Command scoreSequence() {
-        return new SequentialGroup(
-            launcherCommands.launchAllAtRangePreset(LauncherRange.SHORT, false)  // Fires all enabled lanes at long range
-        );
     }
 
     private void applyAlliance(Alliance alliance, Pose startOverride) {

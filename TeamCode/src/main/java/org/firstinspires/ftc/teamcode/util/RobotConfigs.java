@@ -3,14 +3,20 @@ package org.firstinspires.ftc.teamcode.util;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.constants.PinpointConstants;
+
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.CommandRangeConfig;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherTimingConfig;
+
+import dev.nextftc.core.commands.Command;
 
 /**
  * Centralized robot-specific configuration selector.
@@ -91,26 +97,12 @@ public class RobotConfigs {
      * Returns the static instance from DriveSubsystem so Dashboard edits are applied.
      * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245 based on robot name
      */
-    public static DriveSubsystem.FixedAngleAimConfig getFixedAngleAimConfig() {
+    public static DriveFixedAngleAimConfig getFixedAngleAimConfig() {
         String robotName = RobotState.getRobotName();
         if ("DECODE_19429".equals(robotName)) {
             return DriveSubsystem.fixedAngleAimConfig19429;
         } else {
             return DriveSubsystem.fixedAngleAimConfig20245;
-        }
-    }
-
-    /**
-     * Gets the active InitialPoseConfig for the current robot.
-     * Returns the static instance from DriveSubsystem so Dashboard edits are applied.
-     * @return initialPoseConfig19429 or initialPoseConfig20245 based on robot name
-     */
-    public static DriveSubsystem.InitialPoseConfig getInitialPoseConfig() {
-        String robotName = RobotState.getRobotName();
-        if ("DECODE_19429".equals(robotName)) {
-            return DriveSubsystem.initialPoseConfig19429;
-        } else {
-            return DriveSubsystem.initialPoseConfig20245;
         }
     }
 
@@ -168,6 +160,16 @@ public class RobotConfigs {
             return "19429";
         } else {
             return "20245 (default)";
+        }
+    }
+
+    public static CommandRangeConfig getCommandRangeConfig() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_19429".equals(robotName)) {
+            return CommandRangeConfig.commandRangeConfig19429;
+        } else {
+            // Default to 20245 config if robot name is unknown or is 20245
+            return CommandRangeConfig.commandRangeConfig20245;
         }
     }
 }

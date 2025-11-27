@@ -19,6 +19,7 @@ public class LauncherFeederConfig {
         public double holdMs = 1000;
 
         public double loadPosition;
+        public double pinchPosition;
         public double firePosition;
     }
 
@@ -30,6 +31,7 @@ public class LauncherFeederConfig {
         public double holdMs = 1000;
 
         public double loadPosition;
+        public double pinchPosition;
         public double firePosition;
     }
 
@@ -40,6 +42,7 @@ public class LauncherFeederConfig {
         public double holdMs = 1000;
 
         public double loadPosition;
+        public double pinchPosition;
         public double firePosition;
     }
 
@@ -54,12 +57,15 @@ public class LauncherFeederConfig {
         LauncherFeederConfig config = new LauncherFeederConfig();
         // Apply 19429-specific values
         config.center.loadPosition = .93;
+        config.center.pinchPosition = .87;
         config.center.firePosition = .75;
 
         config.left.loadPosition = .8;
+        config.left.pinchPosition = .74;
         config.left.firePosition = .61;
 
         config.right.loadPosition = .75;
+        config.right.pinchPosition = .69;
         config.right.firePosition = .56;
 
         return config;
@@ -69,12 +75,15 @@ public class LauncherFeederConfig {
         LauncherFeederConfig config = new LauncherFeederConfig();
         // Apply 20245-specific values
         config.center.loadPosition = .18;
+        config.center.pinchPosition = .12;
         config.center.firePosition = .03;
 
         config.right.loadPosition = .78;
+        config.right.pinchPosition = .72;
         config.right.firePosition = .58;
 
         config.left.loadPosition = .33;
+        config.left.pinchPosition = .27;
         config.left.firePosition = .18;
         return config;
     }

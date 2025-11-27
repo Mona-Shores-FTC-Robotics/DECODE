@@ -13,7 +13,6 @@ import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
-import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig.FlywheelControlMode;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherReverseIntakeConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherTimingConfig;
@@ -38,59 +37,17 @@ import java.util.Set;
 @Configurable
 public class LauncherSubsystem implements Subsystem {
 
-    public enum SpinMode {
-        OFF,
-        IDLE,
-        FULL
-    }
-
-    private enum ControlPhase {
-        BANG,
-        HYBRID,
-        HOLD
-    }
-
-    public enum LauncherState {
-        DISABLED,
-        IDLE,
-        SPINNING_UP,
-        READY,
-        FEEDING,
-        RECOVERING
-    }
-
     // Global configuration instances
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
 
-    /**
-     * Gets the robot-specific Timing based on RobotState.getRobotName().
-     * @return timing19429 or timing20245
-     */
-    public static LauncherTimingConfig timing() {
+    public static LauncherTimingConfig timingConfig() {
         return RobotConfigs.getTiming();
     }
-
-    /**
-     * Gets the robot-specific FlywheelConfig based on RobotState.getRobotName().
-     * @return flywheelConfig19429 or flywheelConfig20245
-     */
-    public static LauncherFlywheelConfig flywheelConfig() {
-        return RobotConfigs.getFlywheelConfig();
-    }
-
-    /**
-     * Gets the robot-specific FeederConfig based on RobotState.getRobotName().
-     * @return feederConfig19429 or feederConfig20245
-     */
+    public static LauncherFlywheelConfig flywheelConfig() {return RobotConfigs.getFlywheelConfig();}
     public static LauncherFeederConfig feederConfig() {
         return RobotConfigs.getFeederConfig();
     }
-
-    /**
-     * Gets the robot-specific HoodConfig based on RobotState.getRobotName().
-     * @return hoodConfig19429 or hoodConfig20245
-     */
     public static LauncherHoodConfig hoodConfig() {
         return RobotConfigs.getHoodConfig();
     }
@@ -105,12 +62,9 @@ public class LauncherSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, Double> idleRpmOverrides = new EnumMap<>(LauncherLane.class);
     private final Deque<ShotRequest> shotQueue = new ArrayDeque<>();
     private final ElapsedTime clock = new ElapsedTime();
-    private final ElapsedTime stateTimer = new ElapsedTime();
 
-    private SpinMode requestedSpinMode = SpinMode.OFF;
-    private LauncherState state = LauncherState.DISABLED;
     private double lastPeriodicMs = 0.0;
-    private boolean reverseFlywheelActive = false;
+    private boolean reverseFlywheelsActive = false;
 
     /**
      * Safely retrieves a motor from the hardware map. Returns null if the motor
@@ -144,17 +98,6 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    public static FlywheelControlMode getFlywheelControlMode() {
-        return flywheelConfig().modeConfig.mode;
-    }
-
-     public String getPhaseName(LauncherLane lane) {
-        Flywheel flywheel = flywheels.get(lane);
-        return flywheel == null ? "UNKNOWN" : flywheel.getPhaseName();
-    }
-
-    private boolean debugOverrideEnabled = false;
-
     public LauncherSubsystem(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
         for (LauncherLane lane : LauncherLane.values()) {
@@ -169,10 +112,8 @@ public class LauncherSubsystem implements Subsystem {
     @Override
     public void initialize() {
         clock.reset();
-        stateTimer.reset();
         shotQueue.clear();
-        requestedSpinMode = SpinMode.OFF;
-        reverseFlywheelActive = false;
+        reverseFlywheelsActive = false;
 
         for (Map.Entry<LauncherLane, Flywheel> entry : flywheels.entrySet()) {
             entry.getValue().initialize();
@@ -185,7 +126,6 @@ public class LauncherSubsystem implements Subsystem {
         for (Hood hood : hoods.values()) {
             hood.initialize();
         }
-        setState(LauncherState.DISABLED);
     }
 
     @Override
@@ -197,37 +137,103 @@ public class LauncherSubsystem implements Subsystem {
             feeder.update();
         }
 
-        SpinMode effectiveSpinMode = computeEffectiveSpinMode();
-        applySpinMode(effectiveSpinMode);
+        applyTargetRpms();
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
+            if (flywheel.motor != null) {
+                // Log velocity measurements using cached values
+                double velocityTps = flywheel.getMeasuredTicksPerSec();
+                double velocityRpm = flywheel.getCurrentRpm();
+                RobotState.packet.put("velocity_tps_" + flywheel.lane.name(), velocityTps);
+                RobotState.packet.put("velocity_rpm_" + flywheel.lane.name(), velocityRpm);
 
+                // Log control diagnostics for feedforward tuning
+                double targetRpm = flywheel.getTargetRpm();
+                double error = targetRpm - velocityRpm;
+                double kS = kSFor(flywheel.lane);
+                double kV = kVFor(flywheel.lane);
+                double kP = kPFor(flywheel.lane);
+                double feedforward = kS + kV * targetRpm;
+                double feedback = kP * error;
+                double totalPower = flywheel.getAppliedPower();
+
+                RobotState.packet.put("ff_error_" + flywheel.lane.name(), error);
+                RobotState.packet.put("ff_feedforward_" + flywheel.lane.name(), feedforward);
+                RobotState.packet.put("ff_feedback_" + flywheel.lane.name(), feedback);
+                RobotState.packet.put("ff_power_" + flywheel.lane.name(), totalPower);
+            }
         }
-        updateStateMachine(now, effectiveSpinMode);
+        updateStateMachine(now);
         updateLaneRecovery(now);
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
     }
 
-    public void setSpinMode(SpinMode mode) {
-        requestedSpinMode = mode == null ? SpinMode.OFF : mode;
-        applySpinMode(computeEffectiveSpinMode());
-    }
-
-    public void requestSpinUp() {
-        setSpinMode(SpinMode.FULL);
-    }
-
-    public void requestStandbySpin() {
-        setSpinMode(SpinMode.IDLE);
-    }
-
-    public boolean atTarget() {
+    /**
+     * Spins all lanes up to their configured launch RPM.
+     * Use this when preparing to fire all lanes.
+     */
+    public void spinUpAllLanesToLaunch() {
         for (LauncherLane lane : LauncherLane.values()) {
-            if (!flywheels.get(lane).isAtLaunch()) {
-                return false;
+            Flywheel flywheel = flywheels.get(lane);
+            if (flywheel != null) {
+                flywheel.commandLaunch();
             }
         }
-        return true;
+    }
+
+    /**
+     * Sets all lanes to their configured idle RPM.
+     * Use this for standby/background spinning.
+     */
+    public void setAllLanesToIdle() {
+        for (LauncherLane lane : LauncherLane.values()) {
+            Flywheel flywheel = flywheels.get(lane);
+            if (flywheel != null) {
+                flywheel.commandIdle();
+            }
+        }
+    }
+
+    /**
+     * Stops all launcher motors.
+     */
+    public void stopAllLanes() {
+        for (LauncherLane lane : LauncherLane.values()) {
+            Flywheel flywheel = flywheels.get(lane);
+            if (flywheel != null) {
+                flywheel.stop();
+            }
+        }
+    }
+
+    /**
+     * Spins a specific lane to its configured launch RPM.
+     */
+    public void spinUpLaneToLaunch(LauncherLane lane) {
+        Flywheel flywheel = flywheels.get(lane);
+        if (flywheel != null) {
+            flywheel.commandLaunch();
+        }
+    }
+
+    /**
+     * Sets a specific lane to its configured idle RPM.
+     */
+    public void setLaneToIdle(LauncherLane lane) {
+        Flywheel flywheel = flywheels.get(lane);
+        if (flywheel != null) {
+            flywheel.commandIdle();
+        }
+    }
+
+    /**
+     * Stops a specific launcher motor.
+     */
+    public void stopLane(LauncherLane lane) {
+        Flywheel flywheel = flywheels.get(lane);
+        if (flywheel != null) {
+            flywheel.stop();
+        }
     }
 
     public boolean isBusy() {
@@ -245,14 +251,6 @@ public class LauncherSubsystem implements Subsystem {
             }
         }
         return false;
-    }
-
-    public LauncherState getState() {
-        return state;
-    }
-
-    public double getStateElapsedSeconds() {
-        return stateTimer.seconds();
     }
 
     public int getQueuedShots() {
@@ -281,7 +279,7 @@ public class LauncherSubsystem implements Subsystem {
         double delayMs = 0.0;
         for (LauncherLane lane : LauncherLane.DEFAULT_BURST_ORDER) {
             scheduleShot(lane, delayMs);
-            delayMs += timing().burstSpacingMs;
+            delayMs += timingConfig().burstSpacingMs;
         }
     }
 
@@ -300,16 +298,15 @@ public class LauncherSubsystem implements Subsystem {
 
     public void abort() {
         clearQueue();
-        reverseFlywheelActive = false;
+        reverseFlywheelsActive = false;
         double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
             laneLaunchHoldDeadlineMs.put(lane, 0.0);
-            laneRecoveryDeadlineMs.put(lane, now + timing().recoveryMs);
+            laneRecoveryDeadlineMs.put(lane, now + timingConfig().recoveryMs);
             feeders.get(lane).stop();
             flywheels.get(lane).stop();
         }
-        setSpinMode(SpinMode.OFF);
-        setState(LauncherState.DISABLED);
+        stopAllLanes();
     }
 
     public void homeFeeder(LauncherLane lane) {
@@ -333,9 +330,22 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    public void moveFeederToPinch(LauncherLane lane) {
+        Feeder feeder = feeders.get(lane);
+        if (feeder != null) {
+            feeder.toPinchPosition();
+        }
+    }
+
     public void homeAllFeeders() {
         for (Feeder feeder : feeders.values()) {
             feeder.toLoadPosition();
+        }
+    }
+
+    public void pinchAllFeeders() {
+        for (Feeder feeder : feeders.values()) {
+            feeder.toPinchPosition();
         }
     }
 
@@ -387,19 +397,21 @@ public class LauncherSubsystem implements Subsystem {
         return hood == null ? Double.NaN : hood.getPosition();
     }
 
+    /**
+     * Checks if a specific lane is ready to fire.
+     *
+     * IMPORTANT: Lanes are INDEPENDENT. Each lane can fire as soon as it's ready,
+     * without waiting for other lanes. Use this method for shot decisions, not
+     * allLanesReady() which is only for telemetry/status display.
+     *
+     * @param lane The lane to check
+     * @return true if this lane is at launch speed and can fire
+     */
     public boolean isLaneReady(LauncherLane lane) {
         if (lane == null) {
             return false;
         }
         return isLaneReadyForShot(lane, clock.milliseconds());
-    }
-
-    public double getCurrentRpm() {
-        double sum = 0.0;
-        for (LauncherLane lane : LauncherLane.values()) {
-            sum += getCurrentRpm(lane);
-        }
-        return sum / LauncherLane.values().length;
     }
 
     public double getCurrentRpm(LauncherLane lane) {
@@ -433,19 +445,6 @@ public class LauncherSubsystem implements Subsystem {
         return flywheel == null ? 0.0 : flywheel.getAppliedPower();
     }
 
-    public int getBangToHoldCount(LauncherLane lane) {
-        Flywheel flywheel = flywheels.get(lane);
-        return flywheel == null ? 0 : flywheel.getBangToHoldCounter();
-    }
-
-    public SpinMode getRequestedSpinMode() {
-        return requestedSpinMode;
-    }
-
-    public SpinMode getEffectiveSpinMode() {
-        return computeEffectiveSpinMode();
-    }
-
     public void setLaunchRpm(LauncherLane lane, double rpm) {
         if (lane == null) {
             return;
@@ -455,7 +454,6 @@ public class LauncherSubsystem implements Subsystem {
         } else {
             launchRpmOverrides.put(lane, rpm);
         }
-        applySpinMode(computeEffectiveSpinMode());
     }
 
     public void setIdleRpm(LauncherLane lane, double rpm) {
@@ -467,7 +465,6 @@ public class LauncherSubsystem implements Subsystem {
         } else {
             idleRpmOverrides.put(lane, rpm);
         }
-        applySpinMode(computeEffectiveSpinMode());
     }
 
     public double getLaunchRpm(LauncherLane lane) {
@@ -481,7 +478,6 @@ public class LauncherSubsystem implements Subsystem {
     public void clearOverrides() {
         launchRpmOverrides.clear();
         idleRpmOverrides.clear();
-        applySpinMode(computeEffectiveSpinMode());
     }
 
     public void debugSetLaneTargetRpm(LauncherLane lane, double rpm) {
@@ -493,7 +489,6 @@ public class LauncherSubsystem implements Subsystem {
             return;
         }
         shotQueue.clear();
-        requestedSpinMode = SpinMode.OFF;
         flywheel.commandCustom(rpm);
     }
 
@@ -502,24 +497,12 @@ public class LauncherSubsystem implements Subsystem {
         return flywheel == null ? 0.0 : flywheel.getTargetRpm();
     }
 
-    public void setDebugOverrideEnabled(boolean enabled) {
-        debugOverrideEnabled = enabled;
-        if (!enabled) {
-            for (LauncherLane lane : LauncherLane.values()) {
-                Flywheel flywheel = flywheels.get(lane);
-                if (flywheel != null) {
-                    flywheel.commandCustom(0.0);
-                }
-            }
-        }
-    }
-
     /**
      * Runs all launcher motors in reverse at low speed for human player intake.
      * This allows game pieces to be fed into the launcher from above.
      */
     public void runReverseFlywheelForHumanLoading() {
-        reverseFlywheelActive = true;
+        reverseFlywheelsActive = true;
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel != null) {
@@ -532,7 +515,7 @@ public class LauncherSubsystem implements Subsystem {
      * Stops the reverse intake mode and returns motors to normal control.
      */
     public void stopReverseFlywheelForHumanLoading() {
-        reverseFlywheelActive = false;
+        reverseFlywheelsActive = false;
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel != null) {
@@ -545,7 +528,7 @@ public class LauncherSubsystem implements Subsystem {
      * Returns true if reverse intake mode is currently active.
      */
     public boolean isReverseFlywheelForHumanLoadingActive() {
-        return reverseFlywheelActive;
+        return reverseFlywheelsActive;
     }
 
     /**
@@ -597,31 +580,31 @@ public class LauncherSubsystem implements Subsystem {
         shotQueue.addLast(new ShotRequest(lane, when));
     }
 
-    private void updateStateMachine(double now, SpinMode effectiveSpinMode) {
-        // Allow per-lane independent firing
+    private void updateStateMachine(double now) {
+        // Per-lane independent firing: Each lane fires as soon as it's ready,
+        // without waiting for other lanes. If LEFT is ready but CENTER isn't,
+        // LEFT fires immediately. This maximizes throughput with per-lane tuning.
         if (!shotQueue.isEmpty()) {
             Iterator<ShotRequest> iterator = shotQueue.iterator();
             while (iterator.hasNext()) {
                 ShotRequest next = iterator.next();
 
                 if (now < next.scheduledTimeMs) {
-                    continue;
+                    continue;  // Scheduled for later
                 }
                 if (!isLaneReadyForShot(next.lane, now)) {
-                    continue;
+                    continue;  // This lane not ready - check next shot in queue
                 }
 
                 Feeder feeder = feeders.get(next.lane);
                 if (feeder != null && !feeder.isBusy()) {
                     feeder.fire();
-                    laneLaunchHoldDeadlineMs.put(next.lane, now + timing().launchHoldAfterFireMs);
-                    laneRecoveryDeadlineMs.put(next.lane, now + timing().recoveryMs);
+                    laneLaunchHoldDeadlineMs.put(next.lane, now + timingConfig().launchHoldAfterFireMs);
+                    laneRecoveryDeadlineMs.put(next.lane, now + timingConfig().recoveryMs);
                     iterator.remove();
                 }
             }
         }
-
-        reflectSpinState(effectiveSpinMode);
     }
 
     private void updateLaneRecovery(double now) {
@@ -632,31 +615,11 @@ public class LauncherSubsystem implements Subsystem {
                 laneLaunchHoldDeadlineMs.put(lane, 0.0);
             }
 
-            // Command to idle when recovery period ends
+            // Clear recovery deadline when it expires
             double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
             if (recoveryDeadline > 0.0 && now >= recoveryDeadline) {
-                Flywheel flywheel = flywheels.get(lane);
-                if (flywheel != null) {
-                    flywheel.commandIdle();
-                }
                 laneRecoveryDeadlineMs.put(lane, 0.0);
             }
-        }
-    }
-
-
-    private void reflectSpinState(SpinMode effectiveSpinMode) {
-        switch (effectiveSpinMode) {
-            case FULL:
-                setState(atTarget() ? LauncherState.READY : LauncherState.SPINNING_UP);
-                break;
-            case IDLE:
-                setState(LauncherState.IDLE);
-                break;
-            case OFF:
-            default:
-                setState(LauncherState.DISABLED);
-                break;
         }
     }
 
@@ -673,12 +636,23 @@ public class LauncherSubsystem implements Subsystem {
         return flywheel != null && flywheel.isAtLaunch();
     }
 
-    private void applySpinMode(SpinMode mode) {
-        if (debugOverrideEnabled || reverseFlywheelActive) {
+    /**
+     * Applies target RPMs to flywheels based on queued shots and lane state.
+     * This replaces the old SpinMode-based approach with direct RPM control.
+     *
+     * Logic:
+     * - If lane has launch hold deadline (just fired), maintain launch RPM
+     * - If lane is in recovery, skip it (motor already commanded)
+     * - If lane has queued shot, command launch RPM
+     * - Otherwise, lane is idle (controlled by commands via spinUpAllLanesToLaunch() etc.)
+     */
+    private void applyTargetRpms() {
+        if (reverseFlywheelsActive) {
             return;
         }
 
         double now = clock.milliseconds();
+        Set<LauncherLane> queuedLanes = getQueuedLanes();
 
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
@@ -697,40 +671,16 @@ public class LauncherSubsystem implements Subsystem {
                 continue;
             }
 
-            // Per-lane control: only apply when actively processing shots
-            // When queue is empty (command starting OR all done), use requested mode directly
-            SpinMode laneMode = mode;
-            if (mode == SpinMode.FULL && !shotQueue.isEmpty()) {
-                // Get lanes with queued shots for per-lane spin control
-                Set<LauncherLane> queuedLanes = lanesWithQueuedShots();
-                if (!queuedLanes.contains(lane)) {
-                    laneMode = SpinMode.IDLE;
-                }
+            // Spin up lanes with queued shots to launch RPM
+            if (queuedLanes.contains(lane)) {
+                flywheel.commandLaunch();
             }
-
-            switch (laneMode) {
-                case FULL:
-                    flywheel.commandLaunch();
-                    break;
-                case IDLE:
-                    flywheel.commandIdle();
-                    break;
-                case OFF:
-                default:
-                    flywheel.stop();
-                    break;
-            }
+            // Note: Other lanes maintain their current RPM (set by commands via
+            // spinUpAllLanesToLaunch(), setAllLanesToIdle(), stopAllLanes(), etc.)
         }
     }
 
-    private SpinMode computeEffectiveSpinMode() {
-        if (!shotQueue.isEmpty()) {
-            return SpinMode.FULL;
-        }
-        return requestedSpinMode;
-    }
-
-    private Set<LauncherLane> lanesWithQueuedShots() {
+    private Set<LauncherLane> getQueuedLanes() {
         if (shotQueue.isEmpty()) {
             return EnumSet.noneOf(LauncherLane.class);
         }
@@ -741,13 +691,6 @@ public class LauncherSubsystem implements Subsystem {
             }
         }
         return lanes;
-    }
-
-    private void setState(LauncherState newState) {
-        if (state != newState) {
-            state = newState;
-            stateTimer.reset();
-        }
     }
 
     /**
@@ -819,6 +762,18 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
+    private static double feederPinchPositionFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return clampServo(feederConfig().left.pinchPosition);
+            case CENTER:
+                return clampServo(feederConfig().center.pinchPosition);
+            case RIGHT:
+            default:
+                return clampServo(feederConfig().right.pinchPosition);
+        }
+    }
+
     private static boolean feederReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
@@ -878,6 +833,55 @@ public class LauncherSubsystem implements Subsystem {
         return ticksPerSecond * 60.0 / (flywheelConfig().parameters.ticksPerRev * flywheelConfig().parameters.gearRatio);
     }
 
+    /**
+     * Gets the per-lane static friction coefficient (kS).
+     * This is the minimum power needed to overcome friction and start the motor spinning.
+     */
+    private static double kSFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return flywheelConfig().flywheelLeft.kS;
+            case CENTER:
+                return flywheelConfig().flywheelCenter.kS;
+            case RIGHT:
+            default:
+                return flywheelConfig().flywheelRight.kS;
+        }
+    }
+
+    /**
+     * Gets the per-lane velocity gain (kV).
+     * This maps target RPM to required power: power = kS + kV * rpm
+     */
+    private static double kVFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return flywheelConfig().flywheelLeft.kV;
+            case CENTER:
+                return flywheelConfig().flywheelCenter.kV;
+            case RIGHT:
+            default:
+                return flywheelConfig().flywheelRight.kV;
+        }
+    }
+
+    /**
+     * Gets the per-lane proportional gain (kP).
+     * This adds feedback correction: power += kP * (target - actual)
+     * Set to 0 for pure feedforward, >0 to add error correction.
+     */
+    private static double kPFor(LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return flywheelConfig().flywheelLeft.kP;
+            case CENTER:
+                return flywheelConfig().flywheelCenter.kP;
+            case RIGHT:
+            default:
+                return flywheelConfig().flywheelRight.kP;
+        }
+    }
+
     private static double clampServo(double position) {
         if (position < 0.0) {
             return 0.0;
@@ -905,14 +909,9 @@ public class LauncherSubsystem implements Subsystem {
 
         private double commandedRpm = 0.0;
         private boolean launchCommandActive = false;
-        private ControlPhase phase = ControlPhase.BANG;
-        private int bangToHybridCounter = 0;
-        private int hybridToBangCounter = 0;
-        private int bangToHoldCounter = 0;
-        private int holdToBangCounter = 0;
-        private int lastPositionTicks = 0;
-        private double lastSampleTimeMs = Double.NaN;
-        private double estimatedTicksPerSec = 0.0;
+        private double measuredTicksPerSec = 0.0;
+        private double measuredRpm = 0.0;
+        private double appliedPower = 0.0;
 
         Flywheel(LauncherLane lane, HardwareMap hardwareMap) {
             this.lane = lane;
@@ -925,18 +924,10 @@ public class LauncherSubsystem implements Subsystem {
         void initialize() {
             commandedRpm = 0.0;
             launchCommandActive = false;
-            phase = ControlPhase.BANG;
-            bangToHybridCounter = 0;
-            hybridToBangCounter = 0;
-            bangToHoldCounter = 0;
-            holdToBangCounter = 0;
             launchTimer.reset();
             if (motor != null) {
                 motor.setPower(0.0);
-                lastPositionTicks = motor.getCurrentPosition();
             }
-            lastSampleTimeMs = clock.milliseconds();
-            estimatedTicksPerSec = 0.0;
         }
 
         void commandLaunch() {
@@ -964,7 +955,7 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         double getCurrentRpm() {
-            return Math.abs(ticksPerSecondToRpm(estimatedTicksPerSec));
+            return measuredRpm;
         }
 
         double getTargetRpm() {
@@ -972,15 +963,11 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         double getAppliedPower() {
-            return motor == null ? 0.0 : motor.getPower();
+            return appliedPower;
         }
 
-        String getPhaseName() {
-            return phase.name();
-        }
-
-        int getBangToHoldCounter() {
-            return bangToHoldCounter;
+        double getMeasuredTicksPerSec() {
+            return measuredTicksPerSec;
         }
 
         boolean isAtLaunch() {
@@ -1004,14 +991,14 @@ public class LauncherSubsystem implements Subsystem {
 
             // Fallback for spinning UP: allow if minimal time elapsed and we've commanded the right RPM
             // This handles encoder issues but still requires the command to be sent
-            if (elapsed >= timing().fallbackReadyMs) {
+            if (elapsed >= timingConfig().fallbackReadyMs) {
                 return true;  // Timeout - assume ready
             }
 
             // For early ready (before fallback timeout), check both:
             // 1. Minimal spin-up time elapsed
             // 2. Current RPM is appropriate for target (works for both spin-up and spin-down)
-            if (elapsed >= timing().minimalSpinUpMs) {
+            if (elapsed >= timingConfig().minimalSpinUpMs) {
                 // Check if we're close enough OR if spinning down, at least below a reasonable threshold
                 // Allow some headroom when spinning down (within 10% above target is acceptable)
                 double upperThreshold = launchRpm * 1.1;  // 10% overspeed tolerance
@@ -1022,103 +1009,29 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         void updateControl() {
-            updateVelocityEstimate();
-            double velocityTPS = motor.getVelocity();
-            double RPS = velocityTPS / 28;
-            double RPM = RPS*60;
-            RobotState.packet.put("velocity" + lane.name(), RPM);
-
             if (motor == null) {
                 return;
             }
 
+            // Refresh cached measurements so we only hit the motor API once per loop
+            measuredTicksPerSec = Math.abs(motor.getVelocity());
+            measuredRpm = ticksPerSecondToRpm(measuredTicksPerSec);
+            appliedPower = motor.getPower();
+
             // Skip normal control if reverse intake is active
-            if (reverseFlywheelActive) {
+            if (reverseFlywheelsActive) {
                 return;
             }
 
+            // Stop motor if no velocity commanded
             if (commandedRpm <= 0.0) {
                 motor.setPower(0.0);
-                phase = ControlPhase.BANG;
+                appliedPower = 0.0;
                 return;
             }
 
-            double error = commandedRpm - getCurrentRpm();
-            double absError = Math.abs(error);
-
-            // Pure bang-bang mode - simple and fast
-            if (getFlywheelControlMode() == FlywheelControlMode.PURE_BANG_BANG) {
-                phase = ControlPhase.BANG;
-                applyBangBangControl(error);
-                return;
-            }
-
-            // Legacy multi-phase control for HYBRID and BANG_BANG_HOLD modes
-            switch (phase) {
-                case BANG:
-                    if (getFlywheelControlMode() == FlywheelControlMode.BANG_BANG_HOLD) {
-                        if (absError <= flywheelConfig().modeConfig.bangBang.exitBangThresholdRpm) {
-                            bangToHoldCounter++;
-                            if (bangToHoldCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.bangToHoldConfirmCycles)) {
-                                phase = ControlPhase.HOLD;
-                                bangToHoldCounter = 0;
-                            }
-                        } else {
-                            bangToHoldCounter = 0;
-                        }
-                        bangToHybridCounter = 0;
-                    } else {
-                        if (absError <= flywheelConfig().modeConfig.bangBang.exitBangThresholdRpm) {
-                            bangToHybridCounter++;
-                            if (bangToHybridCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.bangToHybridConfirmCycles)) {
-                                phase = ControlPhase.HYBRID;
-                                bangToHybridCounter = 0;
-                            }
-                        } else {
-                            bangToHybridCounter = 0;
-                        }
-                        bangToHoldCounter = 0;
-                    }
-                    hybridToBangCounter = 0;
-                    holdToBangCounter = 0;
-                    break;
-                case HYBRID:
-                    if (absError >= flywheelConfig().modeConfig.bangBang.enterBangThresholdRpm) {
-                        hybridToBangCounter++;
-                        if (hybridToBangCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.hybridToBangConfirmCycles)) {
-                            phase = ControlPhase.BANG;
-                            hybridToBangCounter = 0;
-                            bangToHybridCounter = 0;
-                        }
-                    } else {
-                        hybridToBangCounter = 0;
-                    }
-                    bangToHoldCounter = 0;
-                    holdToBangCounter = 0;
-                    break;
-                case HOLD:
-                    if (absError >= flywheelConfig().modeConfig.bangBang.enterBangThresholdRpm) {
-                        holdToBangCounter++;
-                        if (holdToBangCounter >= Math.max(1, flywheelConfig().modeConfig.phaseSwitch.holdToBangConfirmCycles)) {
-                            phase = ControlPhase.BANG;
-                            holdToBangCounter = 0;
-                            bangToHoldCounter = 0;
-                        }
-                    } else {
-                        holdToBangCounter = 0;
-                    }
-                    bangToHybridCounter = 0;
-                    hybridToBangCounter = 0;
-                    break;
-            }
-
-            if (phase == ControlPhase.BANG) {
-                applyBangBangControl(error);
-            } else if (phase == ControlPhase.HYBRID) {
-                applyHybridControl(error);
-            } else {
-                applyHoldControl(error);
-            }
+            // Apply feedforward control (only control mode)
+            applyFeedforwardControl(commandedRpm);
         }
 
         private void setTargetRpm(double rpm) {
@@ -1128,55 +1041,43 @@ public class LauncherSubsystem implements Subsystem {
             if (launchCommandActive) {
                 launchTimer.reset();
             }
-            phase = ControlPhase.BANG;
-            bangToHybridCounter = 0;
-            hybridToBangCounter = 0;
-            bangToHoldCounter = 0;
-            holdToBangCounter = 0;
         }
 
-        private void applyBangBangControl(double error) {
-            double high = Range.clip(flywheelConfig().modeConfig.bangBang.highPower, -1.0, 1.0);
-            double low = Range.clip(flywheelConfig().modeConfig.bangBang.lowPower, -1.0, 1.0);
+        private void applyFeedforwardControl(double targetRpm) {
+            // Feedforward + Proportional control model:
+            //   Feedforward: Predicts power needed based on target velocity
+            //   Feedback: Corrects for errors based on actual velocity
+            //
+            // Formula: power = (kS + kV * targetRpm) + kP * error
+            //   kS: Static friction - minimum power to start spinning
+            //   kV: Velocity gain - additional power per RPM
+            //   kP: Proportional gain - error correction (0 = pure feedforward)
+            //
+            // Tuning per lane allows each flywheel to be independently optimized.
 
-            // Apply voltage compensation
+            // Get per-lane gains
+            double kS = kSFor(lane);
+            double kV = kVFor(lane);
+            double kP = kPFor(lane);
+
+            // Feedforward term: predicts power based on target velocity
+            double feedforward = kS + kV * targetRpm;
+
+            // Feedback term: corrects for velocity error (optional, disabled if kP=0)
+            double currentRpm = measuredRpm;
+            double error = targetRpm - currentRpm;
+            double feedback = kP * error;
+
+            // Combined control output
+            double power = feedforward + feedback;
+
+            // Apply voltage compensation to maintain consistent performance across battery voltages
             double voltageMultiplier = getVoltageCompensationMultiplier();
-            high = Range.clip(high * voltageMultiplier, -1.0, 1.0);
-            low = Range.clip(low * voltageMultiplier, -1.0, 1.0);
-
-            // Simple bang-bang: high power when below target, low power when at/above target
-            if (error > 0.0) {
-                motor.setPower(high);
-            } else {
-                motor.setPower(low);
-            }
-        }
-
-        private void applyHybridControl(double error) {
-            double power = flywheelConfig().modeConfig.hybridPid.kF + flywheelConfig().modeConfig.hybridPid.kP * error;
-            power = Range.clip(power, 0.0, Math.max(0.0, flywheelConfig().modeConfig.hybridPid.maxPower));
-
-            // Apply voltage compensation
-            double voltageMultiplier = getVoltageCompensationMultiplier();
+            RobotState.packet.put("LauncherSubsystem/" + lane.name() + "/voltageMultiplier", voltageMultiplier);
             power = Range.clip(power * voltageMultiplier, 0.0, 1.0);
 
             motor.setPower(power);
-        }
-
-        private void applyHoldControl(double error) {
-            double holdPower = flywheelConfig().modeConfig.hold.baseHoldPower + flywheelConfig().modeConfig.hold.rpmPowerGain * commandedRpm;
-            holdPower = Range.clip(holdPower, flywheelConfig().modeConfig.hold.minHoldPower, flywheelConfig().modeConfig.hold.maxHoldPower);
-
-            // Apply voltage compensation
-            double voltageMultiplier = getVoltageCompensationMultiplier();
-            holdPower = Range.clip(holdPower * voltageMultiplier, 0.0, 1.0);
-            double lowPower = Range.clip(flywheelConfig().modeConfig.bangBang.lowPower * voltageMultiplier, 0.0, 1.0);
-
-            if (error < 0.0) {
-                motor.setPower(lowPower);
-            } else {
-                motor.setPower(holdPower);
-            }
+            appliedPower = power;
         }
 
         private void configureMotor() {
@@ -1187,31 +1088,6 @@ public class LauncherSubsystem implements Subsystem {
             } else {
                 motor.setDirection(DcMotorSimple.Direction.FORWARD);
             }
-        }
-
-        private void updateVelocityEstimate() {
-            if (motor == null) {
-                return;
-            }
-            double nowMs = clock.milliseconds();
-            int position = motor.getCurrentPosition();
-            if (!Double.isNaN(lastSampleTimeMs)) {
-                double deltaMs = nowMs - lastSampleTimeMs;
-                if (deltaMs > 1.0) {
-                    int deltaTicks = position - lastPositionTicks;
-                    // Validate encoder delta to prevent glitch-induced RPM spikes
-                    // Max physical RPM ~6000, which is ~2800 ticks/sec
-                    // Allow 2x safety margin = 5600 ticks/sec max
-                    double maxTicksDelta = 5600.0 * deltaMs / 1000.0;
-                    if (Math.abs(deltaTicks) < maxTicksDelta) {
-                        double ticksPerSec = deltaTicks * 1000.0 / deltaMs;
-                        estimatedTicksPerSec = Math.abs(ticksPerSec);
-                    }
-                    // If delta is too large, keep previous estimate (encoder glitch detected)
-                }
-            }
-            lastPositionTicks = position;
-            lastSampleTimeMs = nowMs;
         }
     }
 
@@ -1259,6 +1135,13 @@ public class LauncherSubsystem implements Subsystem {
         void toLoadPosition() {
             if (servo != null) {
                 servo.setPosition(feederLoadPositionFor(lane));
+            }
+            busy = false;
+        }
+
+        void toPinchPosition() {
+            if (servo != null) {
+                servo.setPosition(feederPinchPositionFor(lane));
             }
             busy = false;
         }

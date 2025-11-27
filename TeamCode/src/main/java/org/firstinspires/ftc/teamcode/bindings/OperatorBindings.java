@@ -7,46 +7,21 @@ import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ContinuousDistanceBasedSpinCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllAtPresetRangeCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpinCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.UniversalSmartShotCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
-/**
- * Match-oriented operator bindings. Keeps the intake running in reverse by default,
- * forwards when the operator pulls the trigger, and maps launcher commands to the
- * standard match buttons.
- *
- * Button assignments:
- * - X: Hold to continuously calculate distance and spin up at calculated RPM, release to fire all lanes
- * - A: Fire all lanes at SHORT range (~2700 RPM) - close shots safety net
- * - B: Fire all lanes at LONG range (~4200 RPM)
- * - Y: Toggle human loading (press once to start, press again to stop)
- * - D-Pad Left: Universal smart shot (distance-based RPM + mode-aware firing) - THE ULTIMATE BUTTON!
- * - D-Pad Right: Cycle motif tail (0 → 1 → 2 → 0, visual feedback blinks corresponding lanes orange)
- * - Back: Toggle launcher mode (THROUGHPUT ↔ DECODE)
- * - Right Bumper: Intake forward
- *
- * Removed bindings (simplified controls):
- * - Left Bumper: Removed (was redundant with X button hold-to-spin)
- * - D-Pad Down: Removed (redundant with D-Pad Left UniversalSmartShot)
- * - D-Pad Up: Available for future use
- *
- * Testing: D-Pad Left has UniversalSmartShotCommand for evaluation. If it proves reliable,
- * it could replace X entirely, becoming the single primary fire button.
- */
 public class OperatorBindings {
-    private final Button fireDistanceBased;
-//    private final Button fireUniversalSmart;
+    private final Button distanceBasedLaunch;
     private final Button runIntake;
     private final Button humanLoading;
 
-    private final Button fireShort;
-    private final Button fireMid;
-
+    private final Button launchShort;
+    private final Button launchMid;
 
     private final Button motifTailCycle;
     private final Button toggleLauncherMode;
@@ -55,14 +30,18 @@ public class OperatorBindings {
 
     public OperatorBindings(GamepadEx operator) {
 
-        //Robot Intake
+        //Ground Intake
         runIntake = operator.rightBumper();
 
-        //Human Player Loading
+        //Human Player Intake
         humanLoading = operator.triangle();
 
-        //launch based on range to april tag.
-        fireDistanceBased = operator.cross();
+        //Distance Based Launching
+        distanceBasedLaunch = operator.cross();
+
+        //Preset Range Launching
+        launchShort = operator.dpadDown();  // SHORT range for close shots (if vision is broken)
+        launchMid = operator.dpadLeft(); // LONG range for far shots (if vision is broken)
 
         //launch based on range to april tag - simultaneous or sequential (Obelisk Pattern) depending on launcher mode
 //        fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
@@ -70,32 +49,52 @@ public class OperatorBindings {
         toggleLauncherMode = operator.back();
         motifTailCycle = operator.dpadRight();  // Cycle through 0 → 1 → 2 → 0
 
-        //launch based on preset RPM and hood values for specific field locations
-        fireShort = operator.dpadDown();  // SHORT range for close shots (if vision is broken)
-        fireMid = operator.dpadLeft(); // LONG range for far shots (if vision is broken)
-
-
     }
 
     public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
         this.rawGamepad = operatorGamepad; //Need the raw gamepad for rumble features
 
+        configureGroundIntakeBindings(robot);
+        configureHumanIntakeBindings(robot);
+        configureDistanceBasedLaunchBindings(robot);
+        configurePresetRangeLaunchBindings(robot);
+
+        // Motif tail cycle: single button cycles through 0 → 1 → 2 → 0 with visual feedback
+        motifTailCycle.whenBecomesTrue(() -> cycleMotifTailWithFeedback(robot));
+
+        // Mode toggle: manually switch between THROUGHPUT and DECODE
+        toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
+
+    }
+
+    private void configurePresetRangeLaunchBindings(Robot robot) {
+        LaunchAllCommand launchAllCommand = robot.launcherCommands.launchAll(true);
+
+        PresetRangeSpinCommand spinShortCommand = robot.launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, false);
+        launchShort
+                .whenBecomesTrue(spinShortCommand)
+                .whenBecomesFalse(launchAllCommand);
+
+        PresetRangeSpinCommand spinMidCommand = robot.launcherCommands.presetRangeSpinUp(LauncherRange.MID, false);
+        launchMid
+                .whenBecomesTrue(spinMidCommand)
+                .whenBecomesFalse(launchAllCommand);
+    }
+
+    private void configureDistanceBasedLaunchBindings(Robot robot) {
+
         // Distance-based launching commands
-        ContinuousDistanceBasedSpinCommand spinUpAtDistanceCommand =
-                robot.launcherCommands.spinUpAtDistance(robot.vision, robot.drive, robot.lighting, rawGamepad);
-        LaunchAllCommand fireAllCommand = robot.launcherCommands.fireAll(true);
-        // X button: Hold to spin up at distance-calculatedRPM, release to fire all lanes
-        fireDistanceBased.whenBecomesTrue(spinUpAtDistanceCommand);
-        fireDistanceBased.whenBecomesFalse(fireAllCommand);
+        DistanceBasedSpinCommand distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, rawGamepad);
+        LaunchAllCommand launchAllCommand = robot.launcherCommands.launchAll(true);
 
-        // Intake control commands
-        SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
-        SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+        // Cross button: Hold to spin up at distance-calculatedRPM, release to fire all lanes
+        distanceBasedLaunch
+                .whenBecomesTrue(distanceBasedSpinCommand)
+                .whenBecomesFalse(launchAllCommand);
 
-        // Intake control
-        runIntake.whenBecomesTrue(intakeForwardCommand);
-        runIntake.whenBecomesFalse(intakeReverseCommand);
+    }
 
+    private void configureHumanIntakeBindings(Robot robot) {
         // Human Loading
         humanLoading
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
@@ -109,27 +108,16 @@ public class OperatorBindings {
                 .whenBecomesFalse(robot.intake::setGatePreventArtifact)
                 .whenBecomesFalse(robot.launcher::setAllHoodsExtended)
                 .whenBecomesFalse(robot.intake::forwardRoller);
+    }
 
+    private void configureGroundIntakeBindings(Robot robot) {
+        // Intake control commands
+        SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
+        SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
 
-        // Universal smart shot command (distance-based + mode-aware)
-        UniversalSmartShotCommand universalSmartShotCommand = robot.launcherCommands.fireUniversalSmart(
-                robot.vision, robot.drive, robot.lighting, rawGamepad);
-
-        // Universal smart shot: distance-based RPM + mode-aware firing (TESTING)
-//        fireUniversalSmart.whenBecomesTrue(universalSmartShotCommand);
-
-        // Motif tail cycle: single button cycles through 0 → 1 → 2 → 0 with visual feedback
-        motifTailCycle.whenBecomesTrue(() -> cycleMotifTailWithFeedback(robot));
-
-        // Mode toggle: manually switch between THROUGHPUT and DECODE
-        toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
-
-        LaunchAllAtPresetRangeCommand launchAllShortCommand = robot.launcherCommands.fireAllShortRange();
-        fireShort.whenBecomesTrue(launchAllShortCommand);
-
-        LaunchAllAtPresetRangeCommand launchAllMidCommand = robot.launcherCommands.fireAllMidRange();
-        fireMid.whenBecomesTrue(launchAllMidCommand);
-
+        // Intake control
+        runIntake.whenBecomesTrue(intakeForwardCommand);
+        runIntake.whenBecomesFalse(intakeReverseCommand);
     }
 
     /**

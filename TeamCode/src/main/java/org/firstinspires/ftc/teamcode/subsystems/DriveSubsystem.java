@@ -21,6 +21,12 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveAimAssistConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRampConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveTeleOpConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionCenteredAimConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
@@ -36,88 +42,24 @@ public class DriveSubsystem implements Subsystem {
     private static final double VISION_TIMEOUT_MS = 100;
     private static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.5;
     private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
+    private static final long MAX_VISION_AGE_MS = 250L;
     private static final String LOG_TAG = "DriveSubsystem";
 
-    @Configurable
-    public static class TeleOpDriveConfig {
-        /** Max power multiplier for normal (non-slow) teleop driving (0.0-1.0) */
-        public double normalMultiplier = 0.7;
-        /** Max power multiplier for slow mode teleop driving (0.0-1.0) */
-        public double slowMultiplier = 0.2;
-        /** Turn multiplier for normal mode */
-        public double normalTurnMultiplier = 0.4;
-        /** Turn multiplier for slow mode */
-        public double slowTurnMultiplier = 0.2;
-        /** Rotation override threshold for aim assist */
-        public double rotationOverrideThreshold = 0.05;
-    }
-
-    @Configurable
-    public static class AimAssistConfig {
-        /** Proportional gain for geometry-based aiming - higher = faster response to error */
-        public double kP = .5;
-        /** Max turn speed when aiming (0.0-1.0) */
-        public double kMaxTurn = 0.7;
-
-        public double MT2DistanceThreshold = 12;
-    }
-
-    @Configurable
-    public static class VisionCenteredAimConfig {
-        /** Proportional gain for vision-centered aiming (motor power per radian) */
-        public double kP = 1.7;  // Equivalent to 0.03 per degree
-        /** Max turn speed when aiming (0.0-1.0) */
-        public double kMaxTurn = 0.7;
-        /** Deadband - stop turning when tx error is below this (degrees) */
-        public double deadbandDeg = 1.0;
-    }
-
-    @Configurable
-    public static class FixedAngleAimConfig {
-        /** Fixed target heading for blue alliance (degrees, 0=forward, 90=left) */
-        public double blueHeadingDeg = 133.9;
-        /** Fixed target heading for red alliance (degrees, 0=forward, 90=left) */
-        public double redHeadingDeg = 45.2;
-        /** Proportional gain for fixed-angle aiming */
-        public double kP = 0.5;
-        /** Max turn speed when aiming (0.0-1.0) */
-        public double kMaxTurn = 0.7;
-    }
-
-    @Configurable
-    public static class InitialPoseConfig {
-        /** Starting X position in Pedro coordinates (inches) */
-        public double startX = 56;
-        /** Starting Y position in Pedro coordinates (inches) */
-        public double startY = 8;
-        /** Starting heading in degrees */
-        public double startHeadingDeg = 90;
-    }
-
-    @Configurable
-    public static class RampConfig {
-        public double forwardRatePerSec = 0.3;
-        public double strafeRatePerSec = 0.3;
-        public double turnRatePerSec = 0.6;
-        public double fallbackDtSeconds = 0.02;
-    }
-
-    public static TeleOpDriveConfig teleOpDriveConfig = new TeleOpDriveConfig();
-    public static AimAssistConfig aimAssistConfig = new AimAssistConfig();
-    public static VisionCenteredAimConfig visionCenteredAimConfig = new VisionCenteredAimConfig();
-    public static RampConfig rampConfig = new RampConfig();
+    // Global configuration instances
+    public static DriveTeleOpConfig teleOpDriveConfig = new DriveTeleOpConfig();
+    public static DriveAimAssistConfig aimAssistConfig = new DriveAimAssistConfig();
+    public static DriveVisionCenteredAimConfig visionCenteredAimConfig = new DriveVisionCenteredAimConfig();
+    public static DriveRampConfig rampConfig = new DriveRampConfig();
 
     // Robot-specific configs - visible in Panels for tuning
-    public static FixedAngleAimConfig fixedAngleAimConfig19429 = createFixedAngleAimConfig19429();
-    public static FixedAngleAimConfig fixedAngleAimConfig20245 = createFixedAngleAimConfig20245();
-    public static InitialPoseConfig initialPoseConfig19429 = createInitialPoseConfig19429();
-    public static InitialPoseConfig initialPoseConfig20245 = createInitialPoseConfig20245();
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig19429 = createFixedAngleAimConfig19429();
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig20245 = createFixedAngleAimConfig20245();
 
     /**
      * Helper to create 19429-specific fixed angle aim configuration.
      */
-    private static FixedAngleAimConfig createFixedAngleAimConfig19429() {
-        FixedAngleAimConfig config = new FixedAngleAimConfig();
+    private static DriveFixedAngleAimConfig createFixedAngleAimConfig19429() {
+        DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
         config.blueHeadingDeg = 133.9;
         config.redHeadingDeg = 45.2;
         config.kP = 0.7;
@@ -128,8 +70,8 @@ public class DriveSubsystem implements Subsystem {
     /**
      * Helper to create 20245-specific fixed angle aim configuration.
      */
-    private static FixedAngleAimConfig createFixedAngleAimConfig20245() {
-        FixedAngleAimConfig config = new FixedAngleAimConfig();
+    private static DriveFixedAngleAimConfig createFixedAngleAimConfig20245() {
+        DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
         config.blueHeadingDeg = 135.2;
         config.redHeadingDeg = 45.2;
         config.kP = 0.5;
@@ -138,32 +80,10 @@ public class DriveSubsystem implements Subsystem {
     }
 
     /**
-     * Helper to create 19429-specific initial pose configuration.
-     */
-    private static InitialPoseConfig createInitialPoseConfig19429() {
-        InitialPoseConfig config = new InitialPoseConfig();
-        config.startX = 56;
-        config.startY = 9;
-        config.startHeadingDeg = 90;
-        return config;
-    }
-
-    /**
-     * Helper to create 20245-specific initial pose configuration.
-     */
-    private static InitialPoseConfig createInitialPoseConfig20245() {
-        InitialPoseConfig config = new InitialPoseConfig();
-        config.startX = 0;
-        config.startY = 0;
-        config.startHeadingDeg = 90;
-        return config;
-    }
-
-    /**
      * Gets the robot-specific FixedAngleAimConfig based on RobotState.getRobotName().
      * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245
      */
-    public static FixedAngleAimConfig fixedAngleAimConfig() {
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig() {
         return org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
     }
 
@@ -171,9 +91,7 @@ public class DriveSubsystem implements Subsystem {
      * Gets the robot-specific InitialPoseConfig based on RobotState.getRobotName().
      * @return initialPoseConfig19429 or initialPoseConfig20245
      */
-    public static InitialPoseConfig initialPoseConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getInitialPoseConfig();
-    }
+    public static DriveInitialPoseConfig initialPoseConfig = new DriveInitialPoseConfig();
 
     public String visionRelocalizeStatus = "Press A to re-localize";
     public long visionRelocalizeStatusMs = 0L;
@@ -192,6 +110,7 @@ public class DriveSubsystem implements Subsystem {
     private final DcMotorEx motorLb;
     private final DcMotorEx motorRb;
     private final VisionSubsystemLimelight vision;
+    private LightingSubsystem lighting;
     private final PoseFusion poseFusion = new PoseFusion();
     private final ElapsedTime clock = new ElapsedTime();
 
@@ -224,6 +143,7 @@ public class DriveSubsystem implements Subsystem {
     private long lastRampUpdateNs = 0L;
     private boolean teleOpControlEnabled = false;
     private boolean visionRelocalizationEnabled = false;
+    private long lastAutoRelocalizeMs = 0L;
 
     public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
 //        follower = Constants.createFollower(hardwareMap);
@@ -235,6 +155,10 @@ public class DriveSubsystem implements Subsystem {
         motorLb = driveMotors.lb;
         motorRb = driveMotors.rb;
         this.vision = vision;
+    }
+
+    public void setLightingSubsystem(LightingSubsystem lighting) {
+        this.lighting = lighting;
     }
 
     public void attachFollower() {
@@ -286,7 +210,7 @@ public class DriveSubsystem implements Subsystem {
         Pose pedroFollowerSeed = RobotState.takeHandoffPose();
 
         if (pedroFollowerSeed == null) {
-            InitialPoseConfig poseConfig = initialPoseConfig();
+            DriveInitialPoseConfig poseConfig = initialPoseConfig;
             pedroFollowerSeed = new Pose(poseConfig.startX, poseConfig.startY, Math.toRadians(poseConfig.startHeadingDeg));
 
 //            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
@@ -311,6 +235,7 @@ public class DriveSubsystem implements Subsystem {
 
         poseFusion.reset(pedroFollowerSeed, System.currentTimeMillis());
         lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
+        visionRelocalizationEnabled = true;
     }
 
     /**
@@ -497,6 +422,8 @@ public class DriveSubsystem implements Subsystem {
      * Geometry-based aiming: Calculates angle from robot pose to basket centroid using atan2.
      * Uses odometry pose and basket target coordinates (tunable via FTC Dashboard).
      * Falls back to vision-based angle if available and relocalization is enabled.
+     * This is an open-loop turn controller (kP + static). It does **not** use Pedro's heading PID
+     * so you can see the raw turn command in telemetry when tuning.
      *
      * @param fieldX Driver's X input (strafe)
      * @param fieldY Driver's Y input (forward)
@@ -527,14 +454,29 @@ public class DriveSubsystem implements Subsystem {
             : FieldConstants.getBlueBasketTarget();
         double targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
 
-        double headingError = normalizeAngle(targetHeading - follower.getHeading());
-        lastAimErrorRad = headingError;
-        RobotState.packet.put("Aim Error", Math.toDegrees(headingError));
+        double headingErrorRad = normalizeAngle(targetHeading - follower.getHeading());
+        double headingErrorDeg = Math.toDegrees(headingErrorRad);
+        boolean withinDeadband = Math.abs(headingErrorDeg) <= aimAssistConfig.deadbandDeg;
 
+        // Apply a small deadband to keep the robot still when settled; telemetry matches what is commanded
+        if (withinDeadband) {
+            headingErrorRad = 0.0;
+            headingErrorDeg = 0.0;
+        }
 
-        // Simple P controller
+        // Simple P controller with static feedforward to overcome friction near zero
         double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
-        double turn = Range.clip(aimAssistConfig.kP * headingError, -maxTurn, maxTurn);
+        double turn = aimAssistConfig.kP * headingErrorRad;
+        if (headingErrorRad != 0.0 && Math.abs(turn) < aimAssistConfig.kStatic) {
+            turn = Math.copySign(aimAssistConfig.kStatic, headingErrorRad);
+        }
+        turn = Range.clip(turn, -maxTurn, maxTurn);
+
+        lastAimErrorRad = headingErrorRad;
+        RobotState.packet.put("Aim Error (deg)", headingErrorDeg);
+        RobotState.packet.put("Aim Target Heading (deg)", Math.toDegrees(targetHeading));
+        RobotState.packet.put("Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
+        RobotState.packet.put("Aim Turn Cmd", turn);
 
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
@@ -542,6 +484,8 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = turn;
 
         follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
+
+        maybeAutoRelocalizeDuringAim();
     }
 
     /**
@@ -644,7 +588,7 @@ public class DriveSubsystem implements Subsystem {
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
         // Get fixed target heading based on alliance
-        FixedAngleAimConfig aimConfig = fixedAngleAimConfig();
+        DriveFixedAngleAimConfig aimConfig = fixedAngleAimConfig();
         double targetHeadingDeg = (alliance == Alliance.RED)
             ? aimConfig.redHeadingDeg
             : aimConfig.blueHeadingDeg;
@@ -783,6 +727,101 @@ public class DriveSubsystem implements Subsystem {
         };
     }
 
+    private boolean isGoalAprilTag(int tagId) {
+        return tagId == FieldConstants.BLUE_GOAL_TAG_ID || tagId == FieldConstants.RED_GOAL_TAG_ID;
+    }
+
+    private boolean isVisionPoseFresh() {
+        long ageMs = System.currentTimeMillis() - vision.getLastPoseTimestampMs();
+        return ageMs <= MAX_VISION_AGE_MS;
+    }
+
+    private double mt2DistanceThresholdInches() {
+        return aimAssistConfig.MT2DistanceThreshold;
+    }
+
+    private double headingErrorDegrees(Pose mt1 , Pose mt2) {
+        double headingErrorRad = normalizeAngle(mt1.getHeading() - mt2.getHeading());
+        return Math.abs(Math.toDegrees(headingErrorRad));
+    }
+
+    private boolean posesAgreeForMt2(Pose mt1 , Pose mt2) {
+        double distanceInches = distanceBetween(mt1 , mt2);
+        double headingErrorDeg = headingErrorDegrees(mt1 , mt2);
+
+        return distanceInches < mt2DistanceThresholdInches()
+                && headingErrorDeg < aimAssistConfig.MT2HeadingThresholdDeg;
+    }
+
+    private void recordVisionAgreementTelemetry(double distance , double headingErrorDeg , boolean mt2Safe) {
+        RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distance);
+        RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
+        RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
+    }
+
+    private void flashRelocalizeFeedback() {
+        if (lighting != null) {
+            lighting.flashAimAligned();
+        }
+    }
+
+    private void maybeAutoRelocalizeDuringAim() {
+        if (! visionRelocalizationEnabled) {
+            return;
+        }
+        if (! vision.shouldUpdateOdometry()) {
+            return;
+        }
+        if (! vision.hasValidTag()) {
+            return;
+        }
+
+        if (getRobotSpeedInchesPerSecond() > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
+            return;
+        }
+
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
+        if (! snapOpt.isPresent()) {
+            return;
+        }
+
+        VisionSubsystemLimelight.TagSnapshot snapshot = snapOpt.get();
+        if (! isGoalAprilTag(snapshot.tagId)) {
+            return;
+        }
+
+        if (! isVisionPoseFresh()) {
+            return;
+        }
+
+        Pose pedroPoseMT1 = snapshot.pedroPoseMT1;
+        Pose pedroPoseMT2 = snapshot.pedroPoseMT2;
+
+        if (pedroPoseMT1 == null || pedroPoseMT2 == null) {
+            return;
+        }
+
+        double distanceInches = distanceBetween(pedroPoseMT1 , pedroPoseMT2);
+        double headingErrorDeg = headingErrorDegrees(pedroPoseMT1 , pedroPoseMT2);
+        boolean mt2Safe = posesAgreeForMt2(pedroPoseMT1 , pedroPoseMT2);
+
+        recordVisionAgreementTelemetry(distanceInches , headingErrorDeg , mt2Safe);
+
+        long nowMs = System.currentTimeMillis();
+        if (! mt2Safe) {
+            visionRelocalizeStatus = "Vision mismatch - manual re-localize";
+            visionRelocalizeStatusMs = nowMs;
+            return;
+        }
+
+        if (forceRelocalizeFromVision()) {
+            lastAutoRelocalizeMs = nowMs;
+            visionRelocalizeStatus = "Auto re-localized while aiming";
+            visionRelocalizeStatusMs = nowMs;
+            flashRelocalizeFeedback();
+        }
+    }
+
     private void maybeRelocalizeFromVision() {
         if (! visionRelocalizationEnabled) {
             return;
@@ -826,6 +865,28 @@ public class DriveSubsystem implements Subsystem {
         visionRelocalizeStatusMs = System.currentTimeMillis();
     }
 
+    /**
+     * Re-centers odometry heading to the configured field-forward angle.
+     * Driver should square the robot to the field wall (start-heading direction)
+     * before triggering this for a quick recovery after a bad auto handoff.
+     */
+    public void resetHeadingToFieldForward() {
+        Pose currentPose = follower.getPose();
+        if (currentPose == null) {
+            return;
+        }
+
+        double targetHeading = Math.toRadians(initialPoseConfig.startHeadingDeg);
+        Pose correctedPose = new Pose(currentPose.getX() , currentPose.getY() , targetHeading);
+
+        follower.setPose(correctedPose);
+        poseFusion.reset(correctedPose , System.currentTimeMillis());
+        vision.markOdometryUpdated();
+
+        visionRelocalizeStatus = "Heading reset to field-forward (square to wall)";
+        visionRelocalizeStatusMs = System.currentTimeMillis();
+    }
+
     public boolean forceRelocalizeFromVision() {
         Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
         if (!snapOpt.isPresent()) return false;
@@ -833,27 +894,23 @@ public class DriveSubsystem implements Subsystem {
         VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
 
         long ageMs = System.currentTimeMillis() - vision.getLastPoseTimestampMs();
-        if (ageMs > 250) {
+        if (ageMs > MAX_VISION_AGE_MS) {
             // Stale data, do not relocalize
             return false;
         }
         Pose pedroPoseMT1 = snap.pedroPoseMT1; //only use MT1 for relocalization
         Pose pedroPoseMT2 = snap.pedroPoseMT2; //only use MT1 for relocalization
 
-        // MT1 and MT2 positions are in meters in Pedro space
-        double dx = pedroPoseMT1.getX() - pedroPoseMT2.getX();
-        double dy = pedroPoseMT1.getY() - pedroPoseMT2.getY();
-
-        // Euclidean distance between the two poses
-        double distanceMeters = Math.hypot(dx, dy);
-        boolean relocalizeWithMT2 = distanceMeters < aimAssistConfig.MT2DistanceThreshold;
-        Pose pedroPose = pedroPoseMT1;
-
-        if (relocalizeWithMT2) {
-            pedroPose = pedroPoseMT2;
+        if (pedroPoseMT1 == null || pedroPoseMT2 == null) {
+            return false;
         }
-        RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distanceMeters);
-        RobotState.packet.put("/vision/Poses/relocalizeWithMT2", relocalizeWithMT2);
+
+        double distanceInches = distanceBetween(pedroPoseMT1 , pedroPoseMT2);
+        double headingErrorDeg = headingErrorDegrees(pedroPoseMT1 , pedroPoseMT2);
+        boolean relocalizeWithMT2 = posesAgreeForMt2(pedroPoseMT1 , pedroPoseMT2);
+        Pose pedroPose = relocalizeWithMT2 ? pedroPoseMT2 : pedroPoseMT1;
+
+        recordVisionAgreementTelemetry(distanceInches , headingErrorDeg , relocalizeWithMT2);
         RobotState.packet.put("/vision/Poses/RelocalizePedro",pedroPose);
         RobotState.putPose("/vision/Poses/Relocalize", PoseFrames.pedroToFtc(pedroPose));
 
