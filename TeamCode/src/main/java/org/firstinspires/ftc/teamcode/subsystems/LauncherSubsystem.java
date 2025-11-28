@@ -144,8 +144,8 @@ public class LauncherSubsystem implements Subsystem {
                 // Log velocity measurements using cached values
                 double velocityTps = flywheel.getMeasuredTicksPerSec();
                 double velocityRpm = flywheel.getCurrentRpm();
-                RobotState.packet.put("velocity_tps_" + flywheel.lane.name(), velocityTps);
-                RobotState.packet.put("velocity_rpm_" + flywheel.lane.name(), velocityRpm);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "velocity_tps", velocityTps);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "velocity_rpm" , velocityRpm);
 
                 // Log control diagnostics for feedforward tuning
                 double targetRpm = flywheel.getTargetRpm();
@@ -157,10 +157,10 @@ public class LauncherSubsystem implements Subsystem {
                 double feedback = kP * error;
                 double totalPower = flywheel.getAppliedPower();
 
-                RobotState.packet.put("ff_error_" + flywheel.lane.name(), error);
-                RobotState.packet.put("ff_feedforward_" + flywheel.lane.name(), feedforward);
-                RobotState.packet.put("ff_feedback_" + flywheel.lane.name(), feedback);
-                RobotState.packet.put("ff_power_" + flywheel.lane.name(), totalPower);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_error" + flywheel.lane.name(), error);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_feedforward" + flywheel.lane.name(), feedforward);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_feedback" + flywheel.lane.name(), feedback);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_power", totalPower);
             }
         }
         updateStateMachine(now);

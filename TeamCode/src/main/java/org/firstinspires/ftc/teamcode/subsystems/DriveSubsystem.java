@@ -227,11 +227,6 @@ public class DriveSubsystem implements Subsystem {
         }
         Pose ftcSeed = PoseFrames.pedroToFtc(pedroFollowerSeed);
         RobotState.putPose("PoseDiag/FTC Coord Seed Pose",ftcSeed );
-        Pose pedroSeed = PoseFrames.ftcToPedro(ftcSeed);
-        RobotState.putPose("PoseDiag/Pedro Coord Seed Pose", pedroSeed);
-
-        RobotState.putPose("PoseDiag/redonetoFTC", PoseFrames.pedroToFtc(pedroSeed));
-
 
         // Follower initialization
         follower.setStartingPose(pedroFollowerSeed);

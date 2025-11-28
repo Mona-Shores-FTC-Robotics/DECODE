@@ -216,22 +216,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         robot.drive.getFollower().setPose(startPose);
     }
 
-    private void drawPreviewForAlliance(Alliance alliance) {
-        FieldLayout layout = AutoField.layoutForAlliance(alliance);
-        // Preview paths would be drawn here using PanelsBridge
-        PanelsBridge.drawPreview(new PathChain[0], layout.pose(FieldPoint.START_CLOSE), alliance == Alliance.RED);
-    }
-
-    /**
-     * Applies the last AprilTag-detected start pose (bound to dpad A during init)
-     */
-    private void applyLastDetectedStartPose() {
-        if (!shouldUpdateStartPose(lastDetectedStartPosePedro)) {
-            return;
-        }
-        applyAlliance(activeAlliance, lastDetectedStartPosePedro);
-    }
-
     /**
      * Validates that a detected pose is reasonable before applying it
      */
