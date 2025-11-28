@@ -85,7 +85,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
         activeAlliance = allianceSelector.getSelectedAlliance();
-        applyAlliance(activeAlliance, null);
+        applyAlliance(activeAlliance, LocalizeCommand.getDefaultStartPose());
         allianceSelector.applySelection(robot, robot.lighting);
         prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
 
@@ -192,7 +192,11 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
         if (status.alliance != activeAlliance) {
             activeAlliance = status.alliance;
-            applyAlliance(activeAlliance, null);
+            // When alliance changes without vision, use LocalizeCommand default
+            Pose defaultPose = lastDetectedStartPosePedro != null
+                ? lastDetectedStartPosePedro
+                : LocalizeCommand.getDefaultStartPose();
+            applyAlliance(activeAlliance, defaultPose);
         }
 
         lastDetectedStartPosePedro = status.startPoseFromVision;
@@ -203,20 +207,22 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
 
 
-    private void applyAlliance(Alliance alliance, Pose startOverride) {
+    /**
+     * Applies alliance color and start pose to robot systems.
+     * @param alliance Alliance color (BLUE or RED)
+     * @param startPose Start pose (from vision or LocalizeCommand default)
+     */
+    private void applyAlliance(Alliance alliance, Pose startPose) {
         Alliance safeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
         activeAlliance = safeAlliance;
         robot.setAlliance(activeAlliance);
 
+        // Note: currentLayout is kept for proximity feedback target
+        // Eventually this can be replaced with LocalizeCommand.getDefaultStartPose()
         currentLayout = AutoField.layoutForAlliance(activeAlliance);
+        currentLayout.overrideStart(startPose);
+        lastAppliedStartPosePedro = copyPose(startPose);
 
-        // Apply AprilTag-detected start pose override if provided
-        if (startOverride != null) {
-            currentLayout.overrideStart(startOverride);
-            lastAppliedStartPosePedro = copyPose(startOverride);
-        }
-
-        Pose startPose = currentLayout.pose(FieldPoint.START_CLOSE);
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
     }

@@ -106,6 +106,15 @@ public class LocalizeCommand {
     private LocalizeCommand() {}
 
     /**
+     * Gets the default start pose from waypoints (before alliance mirroring).
+     * This is the fallback when vision initialization is not available.
+     * @return Default start pose
+     */
+    public static Pose getDefaultStartPose() {
+        return start();
+    }
+
+    /**
      * Creates the autonomous command sequence.
      * @param robot Robot instance with all subsystems
      * @param alliance Current alliance (BLUE or RED)
