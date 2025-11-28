@@ -15,7 +15,10 @@ public enum LauncherRange {
     LONG("Long"),
 
     /** Short autonomous shot configuration (tuned separately from SHORT for auto) */
-    SHORT_AUTO("Short Auto");
+    SHORT_AUTO("Short Auto"),
+
+    /** Far autonomous shot configuration (tuned separately from LONG for auto) */
+    FAR_AUTO("Far Auto");
 
     private final String displayName;
 
