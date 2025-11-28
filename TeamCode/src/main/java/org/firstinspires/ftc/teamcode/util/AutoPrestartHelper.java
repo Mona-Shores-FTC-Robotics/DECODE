@@ -42,7 +42,7 @@ public class AutoPrestartHelper {
         syncHeadingForVision();
 
         // Poll Limelight once per init loop so snapshots stay fresh
-        robot.vision.periodic();
+//        robot.vision.periodic();
 
         Alliance selectedAlliance = allianceSelector.updateDuringInit(robot.vision, robot, robot.lighting);
         Pose startPoseFromVision = allianceSelector.getLastSnapshot()

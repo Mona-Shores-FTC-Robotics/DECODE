@@ -237,6 +237,8 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             double deltaY = Math.abs(candidate.getY() - lastAppliedStartPosePedro.getY());
             double maxDelta = 12.0; // 12 inches tolerance
 
+            RobotState.packet.put("init/deltaX", deltaX);
+            RobotState.packet.put("init/deltaY", deltaY);
             if (deltaX > maxDelta || deltaY > maxDelta) {
                 return false; // Detected pose too different from expected
             }
@@ -260,6 +262,14 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return "No tag yet";
         }
         String tagText = status.motifTagId == null ? "n/a" : status.motifTagId.toString();
+        Pose followerPose = robot.drive.getFollower().getPose();
+        Pose layoutPose = currentLayout.pose(FieldPoint.START_CLOSE);
+        telemetry.addLine();
+        telemetry.addLine("--- Debug ---");
+        telemetry.addData("Follower", "X=%.1f Y=%.1f θ=%.0f°",
+                followerPose.getX(), followerPose.getY(), Math.toDegrees(followerPose.getHeading()));
+        telemetry.addData("Layout", "X=%.1f Y=%.1f θ=%.0f°",
+                layoutPose.getX(), layoutPose.getY(), Math.toDegrees(layoutPose.getHeading()));
         return String.format("%s (tag %s)", status.motifPattern.name(), tagText);
     }
 
@@ -350,25 +360,5 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
                 0,
                 0
         );
-    }
-
-    /**
-     * Builds a PathChain from start to end with optional control points.
-     * This is public static so test OpModes can visualize the same paths.
-     */
-    public static PathChain buildPath(Follower follower, Pose startPose, Pose endPose, Pose... controlPoints) {
-        if (controlPoints.length > 0) {
-            // Curved path with control points
-            return follower.pathBuilder()
-                    .addPath(new BezierCurve(startPose, controlPoints[0], endPose))
-                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), .7)
-                    .build();
-        } else {
-            // Straight line
-            return follower.pathBuilder()
-                    .addPath(new BezierLine(startPose, endPose))
-                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), .7)
-                    .build();
-        }
     }
 }
