@@ -5,6 +5,7 @@ import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.RelocalizeFromVisionCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
@@ -32,6 +33,8 @@ public class CloseThreeAtOnceCommand {
         public double maxPathPower = 0.7;
         public double endTimeForLinearHeadingInterpolation = .7;
         public double intakeDelaySeconds = 3;
+        public int relocalizeMaxAttempts = 10;
+        public boolean relocalizeBeforeLaunches = true;
     }
 
     @Configurable
@@ -156,6 +159,7 @@ public class CloseThreeAtOnceCommand {
 
                         launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true)
                 ),
+                maybeRelocalize(robot),
                 launcherCommands.launchAll(false),
 
                 // Pickup Artifact Set 1
@@ -181,7 +185,7 @@ public class CloseThreeAtOnceCommand {
                                 )
                 ),
                 // Launch Artifact Set 1 - We should not need to spin up again since we never should have gone to idle
-
+                maybeRelocalize(robot),
                 launcherCommands.launchAll(false),
 
                 // Pickup Artifact Set 2
@@ -206,7 +210,7 @@ public class CloseThreeAtOnceCommand {
                                 new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
                         )
                 ),
-
+                maybeRelocalize(robot),
                 launcherCommands.launchAll(false),
 
 
@@ -234,6 +238,7 @@ public class CloseThreeAtOnceCommand {
                                 new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
                         )
                 ),
+                maybeRelocalize(robot),
                 launcherCommands.launchAll(true),
 
                 // Get Ready to Open Gate
@@ -300,5 +305,18 @@ public class CloseThreeAtOnceCommand {
 
     private static Pose nearGateControl0() {
         return new Pose(waypoints.nearGateControl0X, waypoints.nearGateControl0Y, 0);
+    }
+
+    /**
+     * Conditionally creates a relocalization command based on config settings.
+     * @param robot Robot instance
+     * @return Relocalization command if enabled, or instant no-op command if disabled
+     */
+    private static Command maybeRelocalize(Robot robot) {
+        if (config.relocalizeBeforeLaunches) {
+            return new RelocalizeFromVisionCommand(robot, config.relocalizeMaxAttempts);
+        } else {
+            return new InstantCommand(() -> {}); // No-op
+        }
     }
 }
