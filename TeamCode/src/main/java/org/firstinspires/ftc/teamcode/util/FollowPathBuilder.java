@@ -36,8 +36,20 @@ public class FollowPathBuilder {
     // Fluent API
     // ---------------------------
 
+    /**
+     * Sets start pose from waypoint coordinates (will be mirrored for red alliance)
+     */
     public FollowPathBuilder from(Pose startPose) {
         this.start = mirror(startPose);
+        return this;
+    }
+
+    /**
+     * Sets start pose from world coordinates (already accounts for alliance, no mirroring)
+     * Use this for vision-detected poses or follower's current pose
+     */
+    public FollowPathBuilder fromWorldCoordinates(Pose worldStartPose) {
+        this.start = worldStartPose;
         return this;
     }
 

@@ -134,24 +134,20 @@ public class LocalizeCommand {
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
         LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
 
-        // Determine effective start pose
-        // Vision poses are already in world coordinates - use follower's current pose
-        // Waypoint poses need to be mirrored for alliance
-        Pose effectiveStart;
+        // Build first path: start -> launch position
+        FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
         if (startOverride != null) {
-            // Use follower's current pose (already set by applyAlliance with vision pose)
-            // This is in world coordinates and should NOT be mirrored
-            effectiveStart = robot.drive.getFollower().getPose();
+            // Vision detected: use follower's current pose (world coordinates, no mirroring)
+            firstPathBuilder.fromWorldCoordinates(robot.drive.getFollower().getPose());
         } else {
-            // Use waypoint start pose, which FollowPathBuilder will mirror for red alliance
-            effectiveStart = start();
+            // No vision: use waypoint start pose (will be mirrored for red alliance)
+            firstPathBuilder.from(start());
         }
 
         return new SequentialGroup(
                 // Launch Preloads
                 new ParallelDeadlineGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(effectiveStart)
+                        firstPathBuilder
                                 .to(launchClose1())
                                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                 .build(config.maxPathPower),
