@@ -166,19 +166,21 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     private void updateProximityFeedback() {
         Pose currentPose = robot.drive.getFollower().getPose();
-        if (currentPose == null || currentLayout == null) {
+        if (currentPose == null) {
             robot.lighting.stopProximityFeedback();
             return;
         }
 
-        Pose target = currentLayout.pose(FieldPoint.START_CLOSE);
-        if (target == null) {
-            robot.lighting.stopProximityFeedback();
-            return;
-        }
+        // Get target pose from LocalizeCommand waypoints (mirrored for alliance)
+        Pose targetPose = AutoField.poseForAlliance(
+            LocalizeCommand.waypoints.startX,
+            LocalizeCommand.waypoints.startY,
+            LocalizeCommand.waypoints.startHeading,
+            activeAlliance
+        );
 
-        double dx = currentPose.getX() - target.getX();
-        double dy = currentPose.getY() - target.getY();
+        double dx = currentPose.getX() - targetPose.getX();
+        double dy = currentPose.getY() - targetPose.getY();
         double distance = Math.hypot(dx, dy);
 
         // Blink faster as distance shrinks; target radius ~18in matches other autos
@@ -333,27 +335,49 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
         telemetry.addLine();
 
-        // Current poses
+        // Current poses - compare to target
         Pose followerPose = robot.drive.getFollower().getPose();
         Pose visionPose = status != null ? status.startPoseFromVision : null;
 
+        // Get default/target start pose (mirrored for current alliance)
+        Pose targetPose = AutoField.poseForAlliance(
+            LocalizeCommand.waypoints.startX,
+            LocalizeCommand.waypoints.startY,
+            LocalizeCommand.waypoints.startHeading,
+            activeAlliance
+        );
+
+        telemetry.addData("Target", "X=%.1f Y=%.1f θ=%.0f°",
+            targetPose.getX(), targetPose.getY(), Math.toDegrees(targetPose.getHeading()));
+
         telemetry.addData("Follower", "X=%.1f Y=%.1f θ=%.0f°",
             followerPose.getX(), followerPose.getY(), Math.toDegrees(followerPose.getHeading()));
+
+        // Show delta from follower to target
+        double followerDx = followerPose.getX() - targetPose.getX();
+        double followerDy = followerPose.getY() - targetPose.getY();
+        double followerDistance = Math.hypot(followerDx, followerDy);
+        double followerHeadingDelta = Math.toDegrees(Math.abs(followerPose.getHeading() - targetPose.getHeading()));
+        while (followerHeadingDelta > 180) followerHeadingDelta -= 360;
+        followerHeadingDelta = Math.abs(followerHeadingDelta);
+
+        String followerDeltaStatus = (followerDistance < 3.0 && followerHeadingDelta < 10) ? "✓" : "⚠";
+        telemetry.addData("  Delta", "%s %.1f in, %.0f°", followerDeltaStatus, followerDistance, followerHeadingDelta);
 
         if (visionPose != null) {
             telemetry.addData("Vision", "X=%.1f Y=%.1f θ=%.0f°",
                 visionPose.getX(), visionPose.getY(), Math.toDegrees(visionPose.getHeading()));
 
-            // Show distance between vision and follower
-            double dx = visionPose.getX() - followerPose.getX();
-            double dy = visionPose.getY() - followerPose.getY();
-            double distance = Math.hypot(dx, dy);
-            double headingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - followerPose.getHeading()));
-            while (headingDelta > 180) headingDelta -= 360;
-            headingDelta = Math.abs(headingDelta);
+            // Show delta from vision to target
+            double visionDx = visionPose.getX() - targetPose.getX();
+            double visionDy = visionPose.getY() - targetPose.getY();
+            double visionDistance = Math.hypot(visionDx, visionDy);
+            double visionHeadingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - targetPose.getHeading()));
+            while (visionHeadingDelta > 180) visionHeadingDelta -= 360;
+            visionHeadingDelta = Math.abs(visionHeadingDelta);
 
-            String deltaStatus = (distance < 3.0 && headingDelta < 10) ? "✓" : "⚠";
-            telemetry.addData("Delta", "%s %.1f in, %.0f°", deltaStatus, distance, headingDelta);
+            String visionDeltaStatus = (visionDistance < 3.0 && visionHeadingDelta < 10) ? "✓" : "⚠";
+            telemetry.addData("  Delta", "%s %.1f in, %.0f°", visionDeltaStatus, visionDistance, visionHeadingDelta);
         } else {
             telemetry.addData("Vision", "No tag detected");
         }
@@ -387,16 +411,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return "⚠ NO VISION - Using manual pose";
         }
 
-        Pose followerPose = robot.drive.getFollower().getPose();
-        Pose visionPose = status.startPoseFromVision;
-
-        double dx = visionPose.getX() - followerPose.getX();
-        double dy = visionPose.getY() - followerPose.getY();
-        double distance = Math.hypot(dx, dy);
-        double headingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - followerPose.getHeading()));
-        while (headingDelta > 180) headingDelta -= 360;
-        headingDelta = Math.abs(headingDelta);
-
         // Check vision freshness
         long ageMs = status.relocalizePoseTimestampMs > 0L
                 ? System.currentTimeMillis() - status.relocalizePoseTimestampMs
@@ -406,7 +420,23 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return "⚠ VISION STALE - Move robot to see tag";
         }
 
-        // Check vision quality
+        // Compare vision pose to target (not to follower)
+        Pose visionPose = status.startPoseFromVision;
+        Pose targetPose = AutoField.poseForAlliance(
+            LocalizeCommand.waypoints.startX,
+            LocalizeCommand.waypoints.startY,
+            LocalizeCommand.waypoints.startHeading,
+            activeAlliance
+        );
+
+        double dx = visionPose.getX() - targetPose.getX();
+        double dy = visionPose.getY() - targetPose.getY();
+        double distance = Math.hypot(dx, dy);
+        double headingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - targetPose.getHeading()));
+        while (headingDelta > 180) headingDelta -= 360;
+        headingDelta = Math.abs(headingDelta);
+
+        // Check vision quality against target
         if (distance < 3.0 && headingDelta < 10) {
             return "✓ VISION LOCKED - Ready to start";
         } else if (distance < 12.0 && headingDelta < 30) {
