@@ -8,7 +8,9 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
+import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.delays.Delay;
@@ -156,7 +158,7 @@ public class CloseThreeAtOnceCommand {
 
                         launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true)
                 ),
-                launcherCommands.launchAll(false),
+                createModeAwareLaunch(launcherCommands, false),
 
                 // Pickup Artifact Set 1
                 new ParallelGroup(
@@ -182,7 +184,7 @@ public class CloseThreeAtOnceCommand {
                 ),
                 // Launch Artifact Set 1 - We should not need to spin up again since we never should have gone to idle
 
-                launcherCommands.launchAll(false),
+                createModeAwareLaunch(launcherCommands, false),
 
                 // Pickup Artifact Set 2
                 new ParallelGroup(
@@ -207,7 +209,7 @@ public class CloseThreeAtOnceCommand {
                         )
                 ),
 
-                launcherCommands.launchAll(false),
+                createModeAwareLaunch(launcherCommands, false),
 
 
                 // Pickup Artifact Set 3
@@ -234,7 +236,7 @@ public class CloseThreeAtOnceCommand {
                                 new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
                         )
                 ),
-                launcherCommands.launchAll(true),
+                createModeAwareLaunch(launcherCommands, true),
 
                 // Get Ready to Open Gate
                 new FollowPathBuilder(robot, alliance)
@@ -300,5 +302,22 @@ public class CloseThreeAtOnceCommand {
 
     private static Pose nearGateControl0() {
         return new Pose(waypoints.nearGateControl0X, waypoints.nearGateControl0Y, 0);
+    }
+
+    /**
+     * Creates a mode-aware launch command based on RobotState.getLauncherMode().
+     * - THROUGHPUT mode: Rapid firing of all lanes (launchAll)
+     * - DECODE mode: Sequential pattern firing (fireInSequence)
+     *
+     * @param launcherCommands The launcher command factory
+     * @param spinDown Whether to spin down after firing
+     * @return The appropriate launch command for the current mode
+     */
+    private static Command createModeAwareLaunch(LauncherCommands launcherCommands, boolean spinDown) {
+        if (RobotState.getLauncherMode() == LauncherMode.DECODE) {
+            return launcherCommands.fireInSequence();
+        } else {
+            return launcherCommands.launchAll(spinDown);
+        }
     }
 }
