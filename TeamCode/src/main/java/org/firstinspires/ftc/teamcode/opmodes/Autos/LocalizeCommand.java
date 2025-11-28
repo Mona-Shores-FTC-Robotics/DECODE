@@ -105,14 +105,34 @@ public class LocalizeCommand {
 
     private LocalizeCommand() {}
 
+    /**
+     * Creates the autonomous command sequence.
+     * @param robot Robot instance with all subsystems
+     * @param alliance Current alliance (BLUE or RED)
+     * @return Complete autonomous command
+     */
     public static Command create(Robot robot, Alliance alliance) {
+        return create(robot, alliance, null);
+    }
+
+    /**
+     * Creates the autonomous command sequence with optional start pose override.
+     * @param robot Robot instance with all subsystems
+     * @param alliance Current alliance (BLUE or RED)
+     * @param startOverride Vision-detected start pose (or null to use waypoints)
+     * @return Complete autonomous command
+     */
+    public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
         LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
+
+        // Use vision-detected pose if available, otherwise use configured waypoints
+        Pose effectiveStart = (startOverride != null) ? startOverride : start();
 
         return new SequentialGroup(
                 // Launch Preloads
                 new ParallelDeadlineGroup(
                         new FollowPathBuilder(robot, alliance)
-                                .from(start())
+                                .from(effectiveStart)
                                 .to(launchClose1())
                                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                 .build(config.maxPathPower),
