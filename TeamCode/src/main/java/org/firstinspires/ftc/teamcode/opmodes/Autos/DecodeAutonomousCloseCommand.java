@@ -18,7 +18,6 @@ import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
@@ -28,6 +27,7 @@ import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.Command;
@@ -55,6 +55,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     private AllianceSelector allianceSelector;
     private Alliance activeAlliance = Alliance.BLUE;
     private FieldLayout currentLayout;
+    private AutoPrestartHelper prestartHelper;
 
     // AprilTag-based start pose detection
     private Pose lastAppliedStartPosePedro;
@@ -86,6 +87,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         activeAlliance = allianceSelector.getSelectedAlliance();
         applyAlliance(activeAlliance, null);
         allianceSelector.applySelection(robot, robot.lighting);
+        prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
 
         addComponents(
                 new SubsystemComponent(robot.drive),
@@ -99,42 +101,31 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     @Override
     public void onWaitForStart() {
 
-        // One call that:
-        // - Polls vision for a basket tag
-        // - Uses Pedro pose X to infer alliance (X < 72 blue, X > 72 red)
-        // - Merges with manual overrides and default
-        // - Applies alliance to robot and lighting
-        Alliance selected = allianceSelector.updateDuringInit(
+        AutoPrestartHelper.InitStatus initStatus = prestartHelper.update(activeAlliance);
+        applyInitSelections(initStatus);
+
+        updateProximityFeedback();
+        updateInitTelemetry(initStatus);
+        updateDriverStationTelemetry(initStatus);
+        robot.telemetry.publishLoopTelemetry(
+                robot.drive,
+                robot.launcher,
+                robot.intake,
                 robot.vision,
-                robot,
-                robot.lighting
+                robot.lighting,
+                null,
+                gamepad1,
+                gamepad2,
+                RobotState.getAlliance(),
+                getRuntime(),
+                Math.max(0.0, 150.0 - getRuntime()),
+                telemetry,
+                "AutoInit",
+                true,
+                null,
+                0,
+                0
         );
-
-        // If alliance changed since last loop, update layout and starting pose
-        if (selected != activeAlliance) {
-            activeAlliance = selected;
-            applyAlliance(activeAlliance, null);
-        }
-
-        // Capture the detected start pose from vision, if available
-        allianceSelector.getLastSnapshot()
-                .flatMap(VisionSubsystemLimelight.TagSnapshot::getRobotPosePedroMT1)
-                .ifPresent(pose -> {
-                    lastDetectedStartPosePedro = copyPose(pose);
-
-                    // Optionally apply the pose as a starting override,
-                    // with your sanity checks.
-                    if (shouldUpdateStartPose(lastDetectedStartPosePedro)) {
-                        applyAlliance(activeAlliance, lastDetectedStartPosePedro);
-                    }
-                });
-
-        telemetry.clear();
-        telemetry.addData("Alliance", activeAlliance.displayName());
-        telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
-        telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
-        telemetry.addLine("Press START when ready");
-        telemetry.update();
     }
 
     @Override
@@ -168,6 +159,42 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         RobotState.setHandoffPose(robot.drive.getFollower().getPose());
     }
 
+    private void updateProximityFeedback() {
+        Pose currentPose = robot.drive.getFollower().getPose();
+        if (currentPose == null || currentLayout == null) {
+            robot.lighting.stopProximityFeedback();
+            return;
+        }
+
+        Pose target = currentLayout.pose(FieldPoint.START_CLOSE);
+        if (target == null) {
+            robot.lighting.stopProximityFeedback();
+            return;
+        }
+
+        double dx = currentPose.getX() - target.getX();
+        double dy = currentPose.getY() - target.getY();
+        double distance = Math.hypot(dx, dy);
+
+        // Blink faster as distance shrinks; target radius ~18in matches other autos
+        robot.lighting.showProximityFeedback(distance, 18.0);
+    }
+
+    private void applyInitSelections(AutoPrestartHelper.InitStatus status) {
+        if (status == null) {
+            return;
+        }
+
+        if (status.alliance != activeAlliance) {
+            activeAlliance = status.alliance;
+            applyAlliance(activeAlliance, null);
+        }
+
+        lastDetectedStartPosePedro = status.startPoseFromVision;
+        if (shouldUpdateStartPose(lastDetectedStartPosePedro)) {
+            applyAlliance(activeAlliance, lastDetectedStartPosePedro);
+        }
+    }
 
 
 
@@ -242,6 +269,80 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return null;
         }
         return new Pose(pose.getX(), pose.getY(), pose.getHeading());
+    }
+
+    private String formatMotif(AutoPrestartHelper.InitStatus status) {
+        if (status == null || !status.hasMotif()) {
+            return "No tag yet";
+        }
+        String tagText = status.motifTagId == null ? "n/a" : status.motifTagId.toString();
+        return String.format("%s (tag %s)", status.motifPattern.name(), tagText);
+    }
+
+    private String formatRelocalize(AutoPrestartHelper.InitStatus status) {
+        if (status == null || !status.hasRelocalized()) {
+            return "Waiting for goal tag";
+        }
+        Pose pose = status.relocalizedPose;
+        if (pose == null) {
+            return "Tag locked but pose unavailable";
+        }
+        String tagText = status.relocalizeTagId > 0
+                ? String.format("%d%s", status.relocalizeTagId, isOppositeGoalTag(status.relocalizeTagId) ? " (opp)" : "")
+                : "unknown tag";
+        long ageMs = status.relocalizePoseTimestampMs > 0L
+                ? System.currentTimeMillis() - status.relocalizePoseTimestampMs
+                : 0L;
+        return String.format(
+                "%s -> (%.1f, %.1f, %.0f°) age:%dms",
+                tagText,
+                pose.getX(),
+                pose.getY(),
+                Math.toDegrees(pose.getHeading()),
+                ageMs
+        );
+    }
+
+    private void updateInitTelemetry(AutoPrestartHelper.InitStatus status) {
+        RobotState.packet.put("init/alliance", activeAlliance.name());
+        RobotState.packet.put("init/motif/name", status == null || status.motifPattern == null ? "UNKNOWN" : status.motifPattern.name());
+        RobotState.packet.put("init/motif/tag", status == null || status.motifTagId == null ? -1 : status.motifTagId);
+        RobotState.packet.put("init/relocalize/tag", status == null ? -1 : status.relocalizeTagId);
+        RobotState.packet.put("init/relocalize/has_pose", status != null && status.relocalizedPose != null);
+        if (status != null && status.relocalizedPose != null) {
+            RobotState.packet.put("init/relocalize/x", status.relocalizedPose.getX());
+            RobotState.packet.put("init/relocalize/y", status.relocalizedPose.getY());
+            RobotState.packet.put("init/relocalize/heading_deg", Math.toDegrees(status.relocalizedPose.getHeading()));
+            RobotState.packet.put("init/relocalize/age_ms", System.currentTimeMillis() - status.relocalizePoseTimestampMs);
+        }
+        RobotState.packet.put("init/start_pose/has_vision", status != null && status.startPoseFromVision != null);
+        if (status != null && status.startPoseFromVision != null) {
+            RobotState.packet.put("init/start_pose/x", status.startPoseFromVision.getX());
+            RobotState.packet.put("init/start_pose/y", status.startPoseFromVision.getY());
+            RobotState.packet.put("init/start_pose/heading_deg", Math.toDegrees(status.startPoseFromVision.getHeading()));
+        }
+        RobotState.packet.put("init/artifacts_detected", robot.intake.getArtifactCount());
+        RobotState.packet.put("init/relocalize/readable", status == null ? "Waiting" : formatRelocalize(status));
+        RobotState.packet.put("init/motif/readable", status == null ? "UNKNOWN" : formatMotif(status));
+    }
+
+    private void updateDriverStationTelemetry(AutoPrestartHelper.InitStatus status) {
+        telemetry.clear();
+        telemetry.addData("Alliance", activeAlliance.displayName());
+        telemetry.addData("Motif", status == null ? "UNKNOWN" : formatMotif(status));
+        telemetry.addData("Relocalize", status == null ? "Waiting" : formatRelocalize(status));
+        telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
+        telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
+        telemetry.addLine("Press START when ready");
+        telemetry.update();
+    }
+
+    private boolean isOppositeGoalTag(int tagId) {
+        if (activeAlliance == Alliance.UNKNOWN) {
+            return false;
+        }
+        return (activeAlliance == Alliance.BLUE && tagId == FieldConstants.RED_GOAL_TAG_ID)
+                || (activeAlliance == Alliance.RED && tagId == FieldConstants.BLUE_GOAL_TAG_ID);
     }
 
 
