@@ -257,11 +257,16 @@ public static class Waypoints {
             return stored == null ? null : new Pose(stored.getX(), stored.getY(), stored.getHeading());
         }
 
+        /**
+         * Overrides both START_FAR and START_CLOSE with the provided pose.
+         * Used for vision-based initialization in autonomous.
+         */
         public void overrideStart(Pose startPose) {
             if (startPose == null) {
                 return;
             }
             poses.put(FieldPoint.START_FAR, new Pose(startPose.getX(), startPose.getY(), startPose.getHeading()));
+            poses.put(FieldPoint.START_CLOSE, new Pose(startPose.getX(), startPose.getY(), startPose.getHeading()));
         }
     }
 
