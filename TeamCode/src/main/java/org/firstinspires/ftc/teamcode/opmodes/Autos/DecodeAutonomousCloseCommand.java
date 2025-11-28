@@ -133,8 +133,13 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         BindingManager.reset();
         allianceSelector.lockSelection();
 
-        // Build and schedule the complete autonomous routine
-        Command autoRoutine = LocalizeCommand.create(robot, activeAlliance);
+        // Build auto with vision-detected start pose (or null to use LocalizeCommand defaults)
+        // Use follower's current pose as the source of truth (it was set from vision if available)
+        Pose startPoseOverride = lastAppliedStartPosePedro != null
+            ? lastAppliedStartPosePedro
+            : null;
+
+        Command autoRoutine = LocalizeCommand.create(robot, activeAlliance, startPoseOverride);
 
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
 
@@ -217,7 +222,9 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     }
 
     /**
-     * Validates that a detected pose is reasonable before applying it
+     * Validates that a detected pose is reasonable before applying it.
+     * Only checks that pose is on the field - no distance restrictions.
+     * This allows students to adjust robot placement without getting locked to a bad pose.
      */
     private boolean shouldUpdateStartPose(Pose candidate) {
         if (candidate == null) {
@@ -225,23 +232,18 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         }
 
         // Sanity check: pose should be on the field
-        double fieldWidthIn = FieldConstants.FIELD_WIDTH_INCHES ;
+        double fieldWidthIn = FieldConstants.FIELD_WIDTH_INCHES;
         if (candidate.getX() < 0 || candidate.getX() > fieldWidthIn ||
             candidate.getY() < 0 || candidate.getY() > fieldWidthIn) {
             return false;
         }
 
-        // Additional check: if we have an applied pose, the detected pose shouldn't be wildly different
+        // Log delta for diagnostics (if we have a previous pose)
         if (lastAppliedStartPosePedro != null) {
             double deltaX = Math.abs(candidate.getX() - lastAppliedStartPosePedro.getX());
             double deltaY = Math.abs(candidate.getY() - lastAppliedStartPosePedro.getY());
-            double maxDelta = 12.0; // 12 inches tolerance
-
             RobotState.packet.put("init/deltaX", deltaX);
             RobotState.packet.put("init/deltaY", deltaY);
-            if (deltaX > maxDelta || deltaY > maxDelta) {
-                return false; // Detected pose too different from expected
-            }
         }
 
         return true;
