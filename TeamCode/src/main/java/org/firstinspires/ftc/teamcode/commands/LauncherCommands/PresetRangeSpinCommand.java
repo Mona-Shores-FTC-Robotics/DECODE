@@ -141,6 +141,12 @@ public class PresetRangeSpinCommand extends Command {
                 launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().longCenterRpm);
                 launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().longRightRpm);
                 break;
+
+            case SHORTSTOP:
+                launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().shortstopLeftRpm);
+                launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().shortstopCenterRpm);
+                launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().shortstopRightRpm);
+                break;
         }
     }
 
@@ -151,8 +157,11 @@ public class PresetRangeSpinCommand extends Command {
             case MID:
                 return rangeConfig().midHoodPosition;
             case LONG:
-            default:
                 return rangeConfig().longHoodPosition;
+            case SHORTSTOP:
+                return rangeConfig().shortstopHoodPosition;
+            default:
+                return rangeConfig().midHoodPosition;
         }
     }
 
