@@ -23,6 +23,7 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
+import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
@@ -84,9 +85,12 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
     private LauncherCommands launcherCommands;
     private LightingSubsystem.InitController lightingInitController;
     private GamepadEx driverPad = new GamepadEx(() -> gamepad1);
+    private AutoPrestartHelper prestartHelper;
 
     // AprilTag-based start pose detection
     private Pose lastAppliedStartPosePedro;
+    private Pose lastDetectedStartPosePedro;
+
     {
         addComponents(
                 BulkReadComponent.INSTANCE,
@@ -101,7 +105,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         BindingManager.reset();
         robot = new Robot(hardwareMap);
-        ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
 
         robot.attachPedroFollower();
 
@@ -110,16 +113,14 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         robot.initializeForAuto();
 
-        // Initialize command factories
-        intakeCommands = new IntakeCommands(robot.intake);
-        launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
-
+        GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
         activeAlliance = allianceSelector.getSelectedAlliance();
-        applyAlliance(activeAlliance, null);
+
+        applyAlliance(activeAlliance, FarThreeAtOnceCommand.getDefaultStartPose());
+
         allianceSelector.applySelection(robot, robot.lighting);
-//        lightingInitController = new LightingSubsystem.InitController(robot, allianceSelector, robot.lighting);
-//        lightingInitController.initialize();
+        prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
 
         addComponents(
                 new SubsystemComponent(robot.drive),
@@ -128,80 +129,270 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
                 new SubsystemComponent(robot.lighting),
                 new SubsystemComponent(robot.vision)
         );
-        publishTelemetry();
     }
+
 
     @Override
     public void onWaitForStart() {
-        BindingManager.update();
-//        if (lightingInitController != null) {
-//            lightingInitController.updateDuringInit(gamepad1.dpad_up);
-//        }
+        AutoPrestartHelper.InitStatus initStatus = prestartHelper.update(activeAlliance);
+        applyInitSelections(initStatus);
 
-        // Update subsystems to poll sensors (especially intake color sensors)
-        robot.intake.periodic();
-        robot.vision.periodic();
+//        updateProximityFeedback();
+        updateInitTelemetry(initStatus);
+        updateDriverStationTelemetry(initStatus);
+        robot.telemetry.publishLoopTelemetry(
+                robot.drive,
+                robot.launcher,
+                robot.intake,
+                robot.vision,
+                robot.lighting,
+                null,
+                gamepad1,
+                gamepad2,
+                RobotState.getAlliance(),
+                getRuntime(),
+                Math.max(0.0, 150.0 - getRuntime()),
+                telemetry,
+                "AutoInit",
+                true,
+                null,
+                0,
+                0
+        );
+    }
+    private String formatRelocalize(AutoPrestartHelper.InitStatus status) {
+        if (status == null || !status.hasRelocalized()) {
+            return "Waiting for goal tag";
+        }
+        Pose pose = status.relocalizedPose;
+        if (pose == null) {
+            return "Tag locked but pose unavailable";
+        }
+        String tagText = status.relocalizeTagId > 0
+                ? String.format("%d%s", status.relocalizeTagId, isOppositeGoalTag(status.relocalizeTagId) ? " (opp)" : "")
+                : "unknown tag";
+        long ageMs = status.relocalizePoseTimestampMs > 0L
+                ? System.currentTimeMillis() - status.relocalizePoseTimestampMs
+                : 0L;
+        return String.format(
+                "%s -> (%.1f, %.1f, %.0f°) age:%dms",
+                tagText,
+                pose.getX(),
+                pose.getY(),
+                Math.toDegrees(pose.getHeading()),
+                ageMs
+        );
+    }
+    private String formatMotif(AutoPrestartHelper.InitStatus status) {
+        if (status == null || !status.hasMotif()) {
+            return "No tag yet";
+        }
+        String tagText = status.motifTagId == null ? "n/a" : status.motifTagId.toString();
+        return String.format("%s (tag %s)", status.motifPattern.name(), tagText);
+    }
+    private void updateInitTelemetry(AutoPrestartHelper.InitStatus status) {
+        RobotState.packet.put("init/alliance", activeAlliance.name());
+        RobotState.packet.put("init/motif/name", status == null || status.motifPattern == null ? "UNKNOWN" : status.motifPattern.name());
+        RobotState.packet.put("init/motif/tag", status == null || status.motifTagId == null ? -1 : status.motifTagId);
+        RobotState.packet.put("init/relocalize/tag", status == null ? -1 : status.relocalizeTagId);
+        RobotState.packet.put("init/relocalize/has_pose", status != null && status.relocalizedPose != null);
+        if (status != null && status.relocalizedPose != null) {
+            RobotState.packet.put("init/relocalize/x", status.relocalizedPose.getX());
+            RobotState.packet.put("init/relocalize/y", status.relocalizedPose.getY());
+            RobotState.packet.put("init/relocalize/heading_deg", Math.toDegrees(status.relocalizedPose.getHeading()));
+            RobotState.packet.put("init/relocalize/age_ms", System.currentTimeMillis() - status.relocalizePoseTimestampMs);
+        }
+        RobotState.packet.put("init/start_pose/has_vision", status != null && status.startPoseFromVision != null);
+        if (status != null && status.startPoseFromVision != null) {
+            RobotState.packet.put("init/start_pose/x", status.startPoseFromVision.getX());
+            RobotState.packet.put("init/start_pose/y", status.startPoseFromVision.getY());
+            RobotState.packet.put("init/start_pose/heading_deg", Math.toDegrees(status.startPoseFromVision.getHeading()));
+        }
+        RobotState.packet.put("init/artifacts_detected", robot.intake.getArtifactCount());
+        RobotState.packet.put("init/relocalize/readable", status == null ? "Waiting" : formatRelocalize(status));
+        RobotState.packet.put("init/motif/readable", status == null ? "UNKNOWN" : formatMotif(status));
+    }
 
-        publishTelemetry();
 
-        // Detect alliance and start pose from AprilTag vision
-        java.util.Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt =
-                allianceSelector.updateFromVision(robot.vision);
-
-        allianceSelector.applySelection(robot, robot.lighting);
-
-//         Extract detected start pose from vision
-//        if (snapshotOpt.isPresent()) {
-//            VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-//            java.util.Optional<Pose> detectedPose = snapshot.getRobotPosePeroMT2();
-//            if (detectedPose.isPresent()) {
-//                Pose candidate = detectedPose.get();
-//                if (shouldUpdateStartPose(candidate)) {
-//                    applyAlliance(activeAlliance, candidate);
-//                }
-//            }
-//        }
-
-        Alliance selectedAlliance = allianceSelector.getSelectedAlliance();
-        if (selectedAlliance != activeAlliance) {
-            activeAlliance = selectedAlliance;
-            applyAlliance(activeAlliance, null);
+    private void applyInitSelections(AutoPrestartHelper.InitStatus status) {
+        if (status == null) {
+            return;
         }
 
-        telemetry.clear();
-        telemetry.addData("Alliance", activeAlliance.displayName());
-        telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
-        telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
-        telemetry.addLine("Press START when ready");
-        telemetry.update();    }
 
+        if (status.alliance != activeAlliance) {
+            activeAlliance = status.alliance;
+            // When alliance changes without vision, use LocalizeCommand default
+            Pose defaultPose = lastDetectedStartPosePedro != null
+                    ? lastDetectedStartPosePedro
+                    : FarThreeAtOnceCommand.getDefaultStartPose();
+            applyAlliance(activeAlliance, defaultPose);
+        }
+
+        lastDetectedStartPosePedro = status.startPoseFromVision;
+        if (shouldUpdateStartPose(lastDetectedStartPosePedro)) {
+            applyAlliance(activeAlliance, lastDetectedStartPosePedro);
+        }
+    }
+    private String computeVisionStatus(AutoPrestartHelper.InitStatus status) {
+        if (status == null || status.startPoseFromVision == null) {
+            return "⚠ NO VISION - Using manual pose";
+        }
+
+        // Check vision freshness
+        long ageMs = status.relocalizePoseTimestampMs > 0L
+                ? System.currentTimeMillis() - status.relocalizePoseTimestampMs
+                : Long.MAX_VALUE;
+
+        if (ageMs > 2000) {
+            return "⚠ VISION STALE - Move robot to see tag";
+        }
+
+        // Compare vision pose to target (not to follower)
+        Pose visionPose = status.startPoseFromVision;
+        Pose targetPose = AutoField.poseForAlliance(
+                FarThreeAtOnceCommand.waypoints.startX,
+                FarThreeAtOnceCommand.waypoints.startY,
+                FarThreeAtOnceCommand.waypoints.startHeading,
+                activeAlliance
+        );
+
+        double dx = visionPose.getX() - targetPose.getX();
+        double dy = visionPose.getY() - targetPose.getY();
+        double distance = Math.hypot(dx, dy);
+        double headingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - targetPose.getHeading()));
+        while (headingDelta > 180) headingDelta -= 360;
+        headingDelta = Math.abs(headingDelta);
+
+        // Check vision quality against target
+        if (distance < 3.0 && headingDelta < 10) {
+            return "✓ VISION LOCKED - Ready to start";
+        } else if (distance < 12.0 && headingDelta < 30) {
+            return "⚠ VISION OK - Adjust placement for best results";
+        } else {
+            return "✗ VISION MISMATCH - Check robot placement";
+        }
+    }
+    private String computeMotifStatus(AutoPrestartHelper.InitStatus status) {
+        if (status == null || !status.hasMotif()) {
+            return "⚠ NO MOTIF - Point at Motif AprilTag";
+        }
+
+        // Motif detected and fresh
+        if (status.motifPattern != null) {
+            return String.format("✓ MOTIF SEEN - %s", status.motifPattern.name());
+        } else {
+            return "✓ MOTIF DETECTED - Pattern unknown";
+        }
+    }
+
+    private void updateDriverStationTelemetry(AutoPrestartHelper.InitStatus status) {
+        telemetry.clear();
+
+        // Vision relocalization status
+        String visionStatus = computeVisionStatus(status);
+        telemetry.addData(">> RELOCALIZE", visionStatus);
+
+        // Motif detection status
+        String motifStatus = computeMotifStatus(status);
+        telemetry.addData(">> MOTIF", motifStatus);
+
+        telemetry.addLine();
+
+        // Current poses - compare to target
+        Pose followerPose = robot.drive.getFollower().getPose();
+        Pose visionPose = status != null ? status.startPoseFromVision : null;
+
+        // Get default/target start pose (mirrored for current alliance)
+        Pose targetPose = AutoField.poseForAlliance(
+                FarThreeAtOnceCommand.waypoints.startX,
+                FarThreeAtOnceCommand.waypoints.startY,
+                FarThreeAtOnceCommand.waypoints.startHeading,
+                activeAlliance
+        );
+
+        telemetry.addData("Target", "X=%.1f Y=%.1f θ=%.0f°",
+                targetPose.getX(), targetPose.getY(), Math.toDegrees(targetPose.getHeading()));
+
+        telemetry.addData("Follower", "X=%.1f Y=%.1f θ=%.0f°",
+                followerPose.getX(), followerPose.getY(), Math.toDegrees(followerPose.getHeading()));
+
+        // Show delta from follower to target
+        double followerDx = followerPose.getX() - targetPose.getX();
+        double followerDy = followerPose.getY() - targetPose.getY();
+        double followerDistance = Math.hypot(followerDx, followerDy);
+        double followerHeadingDelta = Math.toDegrees(Math.abs(followerPose.getHeading() - targetPose.getHeading()));
+        while (followerHeadingDelta > 180) followerHeadingDelta -= 360;
+        followerHeadingDelta = Math.abs(followerHeadingDelta);
+
+        String followerDeltaStatus = (followerDistance < 3.0 && followerHeadingDelta < 10) ? "✓" : "⚠";
+        telemetry.addData("  Delta", "%s %.1f in, %.0f°", followerDeltaStatus, followerDistance, followerHeadingDelta);
+
+        if (visionPose != null) {
+            telemetry.addData("Vision", "X=%.1f Y=%.1f θ=%.0f°",
+                    visionPose.getX(), visionPose.getY(), Math.toDegrees(visionPose.getHeading()));
+
+            // Show delta from vision to target
+            double visionDx = visionPose.getX() - targetPose.getX();
+            double visionDy = visionPose.getY() - targetPose.getY();
+            double visionDistance = Math.hypot(visionDx, visionDy);
+            double visionHeadingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - targetPose.getHeading()));
+            while (visionHeadingDelta > 180) visionHeadingDelta -= 360;
+            visionHeadingDelta = Math.abs(visionHeadingDelta);
+
+//            String visionDeltaStatus = (visionDistance < 3.0 && visionHeadingDelta < 10) ? "✓" : "⚠";
+//            telemetry.addData("  Delta", "%s %.1f in, %.0f°", visionDeltaStatus, visionDistance, visionHeadingDelta);
+        } else {
+            telemetry.addData("Vision", "No tag detected");
+        }
+
+        telemetry.addLine();
+        telemetry.addData("Alliance", activeAlliance.displayName());
+        telemetry.addData("Relocalize Tag", status != null && status.relocalizeTagId > 0
+                ? String.format("%d%s", status.relocalizeTagId, isOppositeGoalTag(status.relocalizeTagId) ? " (opp)" : "")
+                : "none");
+
+        if (status != null && status.hasMotif()) {
+            telemetry.addData("Motif Tag", status.motifTagId != null
+                    ? String.format("%d", status.motifTagId)
+                    : "none");
+            telemetry.addData("Pattern", status.motifPattern != null
+                    ? status.motifPattern.name()
+                    : "UNKNOWN");
+        } else {
+            telemetry.addData("Motif Tag", "none");
+        }
+
+        telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
+        telemetry.addLine();
+        telemetry.addLine("D-pad Left/Right override alliance");
+        telemetry.addLine("Press START when ready");
+        telemetry.update();
+    }
     @Override
     public void onStartButtonPressed() {
         BindingManager.reset();
         allianceSelector.lockSelection();
-        if (lightingInitController != null) {
-            lightingInitController.onStart();
-        }
 
-        // Initialize launcher mode from config (defaults to DECODE, can be changed via Dashboard)
-        RobotState.setLauncherMode(config.startingLauncherMode);
-        RobotState.resetMotifTail(); // Start with fresh motif tail (0)
+        // Build auto with vision-detected start pose (or null to use LocalizeCommand defaults)
+        // Use follower's current pose as the source of truth (it was set from vision if available)
+        Pose startPoseOverride = lastAppliedStartPosePedro != null
+                ? lastAppliedStartPosePedro
+                : null;
 
-        robot.launcher.spinUpAllLanesToLaunch();
+        Command autoRoutine = CloseThreeAtOnceCommand.create(robot, activeAlliance, startPoseOverride);
 
-        // Build and schedule the complete autonomous routine
-        Command autoRoutine = buildAutonomousRoutine();
-        robot.intake.forwardRoller();
-        robot.intake.setGateAllowArtifacts();
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
 
+        robot.intake.forwardRoller();
+        robot.intake.setGateAllowArtifacts();
     }
+
+
+
 
     @Override
     public void onUpdate() {
-        if (lightingInitController != null) {
-            lightingInitController.updateDuringMatch();
-        }
         publishTelemetry();
     }
 
@@ -215,107 +406,6 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
 
         // Save final pose for TeleOp transition
         RobotState.setHandoffPose(robot.drive.getFollower().getPose());
-    }
-
-    /**
-     * Builds the complete autonomous routine using command groups
-     */
-    private Command buildAutonomousRoutine() {
-        if (currentLayout == null) {
-            return new Delay(0.01);
-        }
-
-        Pose startFarPose = currentLayout.pose(FieldPoint.START_FAR);
-        Pose launchFarPose = currentLayout.pose(FieldPoint.LAUNCH_FAR);
-        Pose allianceWallPose = currentLayout.pose(FieldPoint.ALLIANCE_WALL_ARTIFACTS_PICKUP);
-        Pose parking90DegPose = currentLayout.pose(FieldPoint.PARKING_ARTIFACTS_PICKUP_90_DEG);
-        Pose gateFar90DegPose = currentLayout.pose(FieldPoint.GATE_FAR_ARTIFACTS_PICKUP_90_DEG);
-        Pose parkingControlPoint = AutoField.parkingArtifactsControlPoint(activeAlliance);
-//        Pose gateFarControlPoint = AutoField.artifactsSet2ControlPoint(activeAlliance);
-        Pose gateFarControlPoint = AutoField.gateFarArtifactsControlPoint(activeAlliance);
-        Pose moveOffLineFar = currentLayout.pose(FieldPoint.MOVE_OFF_LINE_FAR);
-
-
-
-
-
-        return new SequentialGroup(
-                // Phase 1: Drive to launch position and score preload
-                new ParallelGroup(
-                        launcherCommands.presetRangeSpinUp(LONG , true),
-                        followPath(startFarPose, launchFarPose)
-                ),
-                launcherCommands.launchAll(false),
-                // Phase 2: Collect from Alliance Wall and score
-                collectAndScore(launchFarPose, allianceWallPose, launchFarPose),
-
-                // Phase 3: Collect from Parking Zone and score
-                collectAndScore(launchFarPose, parking90DegPose, launchFarPose, parkingControlPoint),
-
-                // Phase 4: Collect from Gate Far and score
-                collectAndScore(launchFarPose, gateFar90DegPose, launchFarPose, gateFarControlPoint),
-
-                followPath(launchFarPose, moveOffLineFar)
-
-        );
-    }
-
-    /**
-     * Creates a collect-and-score sequence
-     * @param fromPose Starting pose
-     * @param pickupPose Pickup location
-     * @param scorePose Score location
-     * @param controlPoints Optional control points for curved paths
-     */
-    private Command collectAndScore(Pose fromPose, Pose pickupPose, Pose scorePose, Pose... controlPoints) {
-        return new SequentialGroup(
-            // Drive to pickup while preparing intake
-            new ParallelGroup(
-                    followPath(fromPose, pickupPose, controlPoints),
-                    new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                ),
-            new SequentialGroup(
-                    new Delay(config.intakeDelaySeconds)
-//                    new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
-            ),
-
-            // Drive to score while spinning up launcher
-            new ParallelGroup(
-                    followPath(pickupPose, scorePose),
-                    launcherCommands.presetRangeSpinUp(LONG , true)
-            ),
-            // Score the samples
-                launcherCommands.launchAll(false)
-        );
-    }
-
-    /**
-     * Creates a path following command
-     */
-    private Command followPath(Pose startPose, Pose endPose, Pose... controlPoints) {
-        PathChain path = buildPath(robot.drive.getFollower(), startPose, endPose, controlPoints);
-        double maxPower = Range.clip(config.maxPathPower, 0.0, 1.0);
-        return new FollowPath(path, false, maxPower);
-    }
-
-    /**
-     * Builds a PathChain from start to end with optional control points.
-     * This is public static so test OpModes can visualize the same paths.
-     */
-    public static PathChain buildPath(Follower follower, Pose startPose, Pose endPose, Pose... controlPoints) {
-        if (controlPoints.length > 0) {
-            // Curved path with control points
-            return follower.pathBuilder()
-                    .addPath(new BezierCurve(startPose, controlPoints[0], endPose))
-                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), 0.5)
-                    .build();
-        } else {
-            // Straight line
-            return follower.pathBuilder()
-                    .addPath(new BezierLine(startPose, endPose))
-                    .setLinearHeadingInterpolation(startPose.getHeading(), endPose.getHeading(), .5)
-                    .build();
-        }
     }
 
     private void applyAlliance(Alliance alliance, Pose startOverride) {
@@ -372,6 +462,13 @@ public class DecodeAutonomousFarCommand extends NextFTCOpMode {
             return null;
         }
         return new Pose(pose.getX(), pose.getY(), pose.getHeading());
+    }
+    private boolean isOppositeGoalTag(int tagId) {
+        if (activeAlliance == Alliance.UNKNOWN) {
+            return false;
+        }
+        return (activeAlliance == Alliance.BLUE && tagId == FieldConstants.RED_GOAL_TAG_ID)
+                || (activeAlliance == Alliance.RED && tagId == FieldConstants.BLUE_GOAL_TAG_ID);
     }
 
 
