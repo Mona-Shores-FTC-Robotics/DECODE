@@ -159,7 +159,6 @@ public class CloseThreeAtOnceCommand {
 
                         launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true)
                 ),
-                maybeRelocalize(robot),
                 launcherCommands.launchAll(false),
 
                 // Pickup Artifact Set 1
@@ -171,7 +170,7 @@ public class CloseThreeAtOnceCommand {
                                 .build(config.maxPathPower),
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
-
+                maybeRelocalize(robot),
 
                 new ParallelGroup(
                         new FollowPathBuilder(robot, alliance)
@@ -185,7 +184,6 @@ public class CloseThreeAtOnceCommand {
                                 )
                 ),
                 // Launch Artifact Set 1 - We should not need to spin up again since we never should have gone to idle
-                maybeRelocalize(robot),
                 launcherCommands.launchAll(false),
 
                 // Pickup Artifact Set 2
@@ -198,6 +196,8 @@ public class CloseThreeAtOnceCommand {
                                 .build(config.maxPathPower),
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
+                maybeRelocalize(robot),
+
                 new ParallelGroup(
                         new FollowPathBuilder(robot, alliance)
                             .from(artifactsSet2())
@@ -210,9 +210,7 @@ public class CloseThreeAtOnceCommand {
                                 new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
                         )
                 ),
-                maybeRelocalize(robot),
                 launcherCommands.launchAll(false),
-
 
                 // Pickup Artifact Set 3
                 new ParallelGroup(
@@ -224,6 +222,7 @@ public class CloseThreeAtOnceCommand {
                                 .build(config.maxPathPower),
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
+                maybeRelocalize(robot),
 
                 // LaunchOffLine
                 new ParallelGroup(
@@ -238,7 +237,6 @@ public class CloseThreeAtOnceCommand {
                                 new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
                         )
                 ),
-                maybeRelocalize(robot),
                 launcherCommands.launchAll(true),
 
                 // Get Ready to Open Gate
