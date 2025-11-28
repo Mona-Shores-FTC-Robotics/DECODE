@@ -154,7 +154,7 @@ public class CloseThreeAtOnceCommand {
                                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                 .build(config.maxPathPower),
 
-                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORTSTOP, true)
+                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true)
                 ),
                 launcherCommands.launchAll(false),
 

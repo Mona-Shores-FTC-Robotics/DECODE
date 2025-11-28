@@ -14,8 +14,8 @@ public enum LauncherRange {
     /** Long-range shot configuration (~4200 RPM) */
     LONG("Long"),
 
-    /** Shortstop autonomous shot configuration (tuned separately from SHORT for auto) */
-    SHORTSTOP("Shortstop");
+    /** Short autonomous shot configuration (tuned separately from SHORT for auto) */
+    SHORT_AUTO("Short Auto");
 
     private final String displayName;
 

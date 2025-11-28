@@ -26,16 +26,16 @@ public class CommandRangeConfig {
     public double longCenterRpm; // Center disabled by default
     public double longRightRpm;
 
-    /** Shortstop range RPMs (autonomous close shots, tuned separately from SHORT) */
-    public double shortstopLeftRpm;
-    public double shortstopCenterRpm;
-    public double shortstopRightRpm;
+    /** Short Auto range RPMs (autonomous close shots, tuned separately from SHORT) */
+    public double shortAutoLeftRpm;
+    public double shortAutoCenterRpm;
+    public double shortAutoRightRpm;
 
     /** Per-range hood positions (applied uniformly to all lanes) */
     public double shortHoodPosition;
     public double midHoodPosition;
     public double longHoodPosition;
-    public double shortstopHoodPosition;
+    public double shortAutoHoodPosition;
 
     /** Timeout in seconds before giving up on spin-up */
     public double timeoutSeconds;
@@ -67,16 +67,16 @@ public class CommandRangeConfig {
         config.longCenterRpm = 2725; // Center disabled by default
         config.longRightRpm = 2725;
 
-        /** Shortstop range RPMs (starts matching SHORT, tune independently for auto) */
-        config.shortstopLeftRpm = 2000;
-        config.shortstopCenterRpm = 2000;
-        config.shortstopRightRpm = 2000;
+        /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
+        config.shortAutoLeftRpm = 2000;
+        config.shortAutoCenterRpm = 2000;
+        config.shortAutoRightRpm = 2000;
 
         /** Per-range hood positions (applied uniformly to all lanes) */
         config.shortHoodPosition = 0.3;
         config.midHoodPosition = 0.05;
         config.longHoodPosition = 0.0;
-        config.shortstopHoodPosition = 0.3; // Starts matching SHORT
+        config.shortAutoHoodPosition = 0.3; // Starts matching SHORT
 
         /** Timeout in seconds before giving up on spin-up */
         config.timeoutSeconds = 3.5;
@@ -102,16 +102,16 @@ public class CommandRangeConfig {
         config.longCenterRpm = 2828; // Center disabled by default
         config.longRightRpm = 2828;
 
-        /** Shortstop range RPMs (starts matching SHORT, tune independently for auto) */
-        config.shortstopLeftRpm = 2000;
-        config.shortstopCenterRpm = 1875;
-        config.shortstopRightRpm = 1875;
+        /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
+        config.shortAutoLeftRpm = 2000;
+        config.shortAutoCenterRpm = 1875;
+        config.shortAutoRightRpm = 1875;
 
         /** Per-range hood positions (applied uniformly to all lanes) */
         config.shortHoodPosition = .42;
         config.midHoodPosition = 0.05;
         config.longHoodPosition = .05;
-        config.shortstopHoodPosition = .42; // Starts matching SHORT
+        config.shortAutoHoodPosition = .42; // Starts matching SHORT
 
         /** Timeout in seconds before giving up on spin-up */
         config.timeoutSeconds = 3.5;
