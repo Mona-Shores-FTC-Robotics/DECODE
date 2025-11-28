@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
 import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
@@ -30,40 +31,41 @@ public class LocalizeCommand {
     public static class Config {
         public double maxPathPower = 0.7;
         public double endTimeForLinearHeadingInterpolation = .7;
+        public double intakeDelaySeconds = 3;
     }
 
     @Configurable
     public static class Waypoints {
-        public double startX = 23.5;
-        public double startY = 121.5;
-        public double startHeading = 15;
+        public double startX = 30.5;
+        public double startY = 129;
+        public double startHeading = 0;
 
         // LaunchClose1
-        public double launchClose1X = 27.0;
+        public double launchClose1X = 31.0;
         public double launchClose1Y = 116.0;
         public double launchClose1Heading = 134.0;
 
         // ArtifactsSet1
-        public double artifactsSet1X = 24.0;
+        public double artifactsSet1X = 28.0;
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
         // LaunchClose2
-        public double launchClose2X = 27.0;
+        public double launchClose2X = 31.0;
         public double launchClose2Y = 116.0;
         public double launchClose2Heading = 134.0;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 24.0;
+        public double artifactsSet2X = 28.0;
         public double artifactsSet2Y = 60.0;
         public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 25.0;
+        public double artifactsSet2Control0X = 28.0;
         public double artifactsSet2Control0Y = 96.0;
 
         // LaunchClose3
-        public double launchClose3X = 27.0;
+        public double launchClose3X = 31.0;
         public double launchClose3Y = 116.0;
         public double launchClose3Heading = 134.0;
 
@@ -72,12 +74,12 @@ public class LocalizeCommand {
         public double launchClose3Control0Y = 84;
 
         // ArtifactsSet3
-        public double artifactsSet3X = 24.0;
+        public double artifactsSet3X = 28.0;
         public double artifactsSet3Y = 35.5;
         public double artifactsSet3Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet3Control0X = 24;
+        public double artifactsSet3Control0X = 28;
         public double artifactsSet3Control0Y = 96.6;
 
         // LaunchOffLine
@@ -166,14 +168,21 @@ public class LocalizeCommand {
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
 
-                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE)),
 
+                new ParallelGroup(
+                        new FollowPathBuilder(robot, alliance)
+                                .from(artifactsSet1())
+                                .to( launchClose2())
+                                .withTimeout(3)
+                                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                .build(config.maxPathPower),
+                        new SequentialGroup(
+                                new Delay(config.intakeDelaySeconds),
+                                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
+                                )
+                ),
                 // Launch Artifact Set 1 - We should not need to spin up again since we never should have gone to idle
-                new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet1())
-                        .to( launchClose2())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower),
+
                 launcherCommands.launchAll(false),
 
                 // Pickup Artifact Set 2
@@ -186,16 +195,19 @@ public class LocalizeCommand {
                                 .build(config.maxPathPower),
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
+                new ParallelGroup(
+                        new FollowPathBuilder(robot, alliance)
+                            .from(artifactsSet2())
+                            .to(launchClose3())
+                            .withControl(launchClose3Control0())
+                            .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                            .build(config.maxPathPower),
+                        new SequentialGroup(
+                                new Delay(config.intakeDelaySeconds),
+                                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
+                        )
+                ),
 
-                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE)),
-
-                // Launch Artifact Set 2
-                new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet2())
-                        .to(launchClose3())
-                        .withControl(launchClose3Control0())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower),
                 launcherCommands.launchAll(false),
 
 
@@ -209,15 +221,20 @@ public class LocalizeCommand {
                                 .build(config.maxPathPower),
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
-                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE)),
 
                 // LaunchOffLine
-                new FollowPathBuilder(robot, alliance)
+                new ParallelGroup(
+                    new FollowPathBuilder(robot, alliance)
                         .from(artifactsSet3())
                         .to(launchOffLine())
                         .withControl(launchOffLineControl0())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
+                       new SequentialGroup(
+                                 new Delay(config.intakeDelaySeconds),
+                                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
+                        )
+                ),
                 launcherCommands.launchAll(true),
 
                 // Get Ready to Open Gate

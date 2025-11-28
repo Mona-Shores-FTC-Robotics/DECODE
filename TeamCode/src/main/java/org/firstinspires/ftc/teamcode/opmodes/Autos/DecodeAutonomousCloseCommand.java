@@ -85,7 +85,9 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
         activeAlliance = allianceSelector.getSelectedAlliance();
+
         applyAlliance(activeAlliance, LocalizeCommand.getDefaultStartPose());
+
         allianceSelector.applySelection(robot, robot.lighting);
         prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
 
@@ -104,7 +106,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         AutoPrestartHelper.InitStatus initStatus = prestartHelper.update(activeAlliance);
         applyInitSelections(initStatus);
 
-        updateProximityFeedback();
+//        updateProximityFeedback();
         updateInitTelemetry(initStatus);
         updateDriverStationTelemetry(initStatus);
         robot.telemetry.publishLoopTelemetry(
@@ -376,8 +378,8 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             while (visionHeadingDelta > 180) visionHeadingDelta -= 360;
             visionHeadingDelta = Math.abs(visionHeadingDelta);
 
-            String visionDeltaStatus = (visionDistance < 3.0 && visionHeadingDelta < 10) ? "✓" : "⚠";
-            telemetry.addData("  Delta", "%s %.1f in, %.0f°", visionDeltaStatus, visionDistance, visionHeadingDelta);
+//            String visionDeltaStatus = (visionDistance < 3.0 && visionHeadingDelta < 10) ? "✓" : "⚠";
+//            telemetry.addData("  Delta", "%s %.1f in, %.0f°", visionDeltaStatus, visionDistance, visionHeadingDelta);
         } else {
             telemetry.addData("Vision", "No tag detected");
         }
@@ -448,21 +450,12 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     private String computeMotifStatus(AutoPrestartHelper.InitStatus status) {
         if (status == null || !status.hasMotif()) {
-            return "⚠ NO MOTIF - Point at any AprilTag";
-        }
-
-        // Check motif detection freshness
-        long ageMs = status.motifTimestampMs > 0L
-                ? System.currentTimeMillis() - status.motifTimestampMs
-                : Long.MAX_VALUE;
-
-        if (ageMs > 2000) {
-            return "⚠ MOTIF STALE - Point at an AprilTag";
+            return "⚠ NO MOTIF - Point at Motif AprilTag";
         }
 
         // Motif detected and fresh
         if (status.motifPattern != null) {
-            return String.format("✓ MOTIF LOCKED - %s", status.motifPattern.name());
+            return String.format("✓ MOTIF SEEN - %s", status.motifPattern.name());
         } else {
             return "✓ MOTIF DETECTED - Pattern unknown";
         }

@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.util;
 
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
+import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.util.Range;
@@ -19,6 +20,9 @@ public class FollowPathBuilder {
     private Pose start;
     private Pose end;
     private Pose control;
+
+    private Double timeoutSec = 0.0;
+
 
     private boolean useControlPoint = false;
 
@@ -75,6 +79,7 @@ public class FollowPathBuilder {
         return this;
     }
 
+
     // ---------------------------
     // Build
     // ---------------------------
@@ -103,7 +108,15 @@ public class FollowPathBuilder {
             );
         }
 
+
         PathChain chain = builder.build();
+
+        if (timeoutSec != null) {
+            // Assuming your chain only has one path
+            Path onlyPath = chain.getPath(0);
+            onlyPath.setTimeoutConstraint(timeoutSec);
+        }
+
         double clippedPower = Range.clip(maxPower, 0.0, 1.0);
 
         return new FollowPath(chain, false, clippedPower);
@@ -125,5 +138,10 @@ public class FollowPathBuilder {
     // This forwards to your existing method
     private static Pose poseForAlliance(double x, double y, double headingDeg, Alliance alliance) {
         return AutoField.poseForAlliance(x, y, headingDeg, alliance);
+    }
+
+    public FollowPathBuilder withTimeout(double seconds) {
+        this.timeoutSec = seconds;
+        return this;
     }
 }
