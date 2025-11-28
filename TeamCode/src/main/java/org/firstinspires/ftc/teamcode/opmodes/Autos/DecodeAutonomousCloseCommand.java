@@ -316,13 +316,81 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
     private void updateDriverStationTelemetry(AutoPrestartHelper.InitStatus status) {
         telemetry.clear();
+
+        // Vision status indicator at top
+        String visionStatus = computeVisionStatus(status);
+        telemetry.addData(">> STATUS", visionStatus);
+        telemetry.addLine();
+
+        // Current poses
+        Pose followerPose = robot.drive.getFollower().getPose();
+        Pose visionPose = status != null ? status.startPoseFromVision : null;
+
+        telemetry.addData("Follower", "X=%.1f Y=%.1f θ=%.0f°",
+            followerPose.getX(), followerPose.getY(), Math.toDegrees(followerPose.getHeading()));
+
+        if (visionPose != null) {
+            telemetry.addData("Vision", "X=%.1f Y=%.1f θ=%.0f°",
+                visionPose.getX(), visionPose.getY(), Math.toDegrees(visionPose.getHeading()));
+
+            // Show distance between vision and follower
+            double dx = visionPose.getX() - followerPose.getX();
+            double dy = visionPose.getY() - followerPose.getY();
+            double distance = Math.hypot(dx, dy);
+            double headingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - followerPose.getHeading()));
+            while (headingDelta > 180) headingDelta -= 360;
+            headingDelta = Math.abs(headingDelta);
+
+            String deltaStatus = (distance < 3.0 && headingDelta < 10) ? "✓" : "⚠";
+            telemetry.addData("Delta", "%s %.1f in, %.0f°", deltaStatus, distance, headingDelta);
+        } else {
+            telemetry.addData("Vision", "No tag detected");
+        }
+
+        telemetry.addLine();
         telemetry.addData("Alliance", activeAlliance.displayName());
-        telemetry.addData("Motif", status == null ? "UNKNOWN" : formatMotif(status));
-        telemetry.addData("Relocalize", status == null ? "Waiting" : formatRelocalize(status));
+        telemetry.addData("Tag ID", status != null && status.relocalizeTagId > 0
+            ? String.format("%d%s", status.relocalizeTagId, isOppositeGoalTag(status.relocalizeTagId) ? " (opp)" : "")
+            : "none");
         telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
-        telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
+        telemetry.addLine();
+        telemetry.addLine("D-pad Left/Right override alliance");
         telemetry.addLine("Press START when ready");
         telemetry.update();
+    }
+
+    private String computeVisionStatus(AutoPrestartHelper.InitStatus status) {
+        if (status == null || status.startPoseFromVision == null) {
+            return "⚠ NO VISION - Using manual pose";
+        }
+
+        Pose followerPose = robot.drive.getFollower().getPose();
+        Pose visionPose = status.startPoseFromVision;
+
+        double dx = visionPose.getX() - followerPose.getX();
+        double dy = visionPose.getY() - followerPose.getY();
+        double distance = Math.hypot(dx, dy);
+        double headingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - followerPose.getHeading()));
+        while (headingDelta > 180) headingDelta -= 360;
+        headingDelta = Math.abs(headingDelta);
+
+        // Check vision freshness
+        long ageMs = status.relocalizePoseTimestampMs > 0L
+                ? System.currentTimeMillis() - status.relocalizePoseTimestampMs
+                : Long.MAX_VALUE;
+
+        if (ageMs > 2000) {
+            return "⚠ VISION STALE - Move robot to see tag";
+        }
+
+        // Check vision quality
+        if (distance < 3.0 && headingDelta < 10) {
+            return "✓ VISION LOCKED - Ready to start";
+        } else if (distance < 12.0 && headingDelta < 30) {
+            return "⚠ VISION OK - Adjust placement for best results";
+        } else {
+            return "✗ VISION MISMATCH - Check robot placement";
+        }
     }
 
     private boolean isOppositeGoalTag(int tagId) {
