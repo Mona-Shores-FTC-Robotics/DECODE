@@ -36,36 +36,36 @@ public class LocalizeCommand {
 
     @Configurable
     public static class Waypoints {
-        public double startX = 30.5;
-        public double startY = 129;
+        public double startX = 27.5;
+        public double startY = 128.5;
         public double startHeading = 0;
 
         // LaunchClose1
-        public double launchClose1X = 31.0;
+        public double launchClose1X = 28;
         public double launchClose1Y = 116.0;
         public double launchClose1Heading = 134.0;
 
         // ArtifactsSet1
-        public double artifactsSet1X = 28.0;
+        public double artifactsSet1X = 21;
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
         // LaunchClose2
-        public double launchClose2X = 31.0;
+        public double launchClose2X = 28;
         public double launchClose2Y = 116.0;
         public double launchClose2Heading = 134.0;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 28.0;
+        public double artifactsSet2X = 23;
         public double artifactsSet2Y = 60.0;
         public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 28.0;
+        public double artifactsSet2Control0X = 23;
         public double artifactsSet2Control0Y = 96.0;
 
         // LaunchClose3
-        public double launchClose3X = 31.0;
+        public double launchClose3X = 28;
         public double launchClose3Y = 116.0;
         public double launchClose3Heading = 134.0;
 
@@ -74,16 +74,16 @@ public class LocalizeCommand {
         public double launchClose3Control0Y = 84;
 
         // ArtifactsSet3
-        public double artifactsSet3X = 28.0;
+        public double artifactsSet3X = 23.0;
         public double artifactsSet3Y = 35.5;
         public double artifactsSet3Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet3Control0X = 28;
+        public double artifactsSet3Control0X = 30;
         public double artifactsSet3Control0Y = 96.6;
 
         // LaunchOffLine
-        public double launchOffLineX = 27.0;
+        public double launchOffLineX = 28;
         public double launchOffLineY = 116.0;
         public double launchOffLineHeading = 134.0;
 
@@ -173,7 +173,6 @@ public class LocalizeCommand {
                         new FollowPathBuilder(robot, alliance)
                                 .from(artifactsSet1())
                                 .to( launchClose2())
-                                .withTimeout(3)
                                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                 .build(config.maxPathPower),
                         new SequentialGroup(
