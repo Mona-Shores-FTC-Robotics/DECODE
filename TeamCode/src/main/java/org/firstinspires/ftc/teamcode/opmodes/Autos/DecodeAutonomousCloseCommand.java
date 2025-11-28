@@ -262,14 +262,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return "No tag yet";
         }
         String tagText = status.motifTagId == null ? "n/a" : status.motifTagId.toString();
-        Pose followerPose = robot.drive.getFollower().getPose();
-        Pose layoutPose = currentLayout.pose(FieldPoint.START_CLOSE);
-        telemetry.addLine();
-        telemetry.addLine("--- Debug ---");
-        telemetry.addData("Follower", "X=%.1f Y=%.1f θ=%.0f°",
-                followerPose.getX(), followerPose.getY(), Math.toDegrees(followerPose.getHeading()));
-        telemetry.addData("Layout", "X=%.1f Y=%.1f θ=%.0f°",
-                layoutPose.getX(), layoutPose.getY(), Math.toDegrees(layoutPose.getHeading()));
         return String.format("%s (tag %s)", status.motifPattern.name(), tagText);
     }
 

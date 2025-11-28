@@ -56,7 +56,7 @@ public class LocalizeCommand {
         // ArtifactsSet2
         public double artifactsSet2X = 24.0;
         public double artifactsSet2Y = 60.0;
-        public double artifactsSet2Heading = 134.0;
+        public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
         public double artifactsSet2Control0X = 25.0;
@@ -90,7 +90,7 @@ public class LocalizeCommand {
         public double launchOffLineControl0Y = 73.5;
 
         // NearGate
-        public double nearGateX = 26;
+        public double nearGateX = 35;
         public double nearGateY = 70.4;
         public double nearGateHeading = 180.0;
 
