@@ -1,45 +1,24 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos;
 
-import static org.firstinspires.ftc.teamcode.util.AutoField.poseForAlliance;
-
 import com.bylazar.configurables.annotations.Configurable;
-import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.BezierCurve;
-import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
-import com.pedropathing.paths.PathChain;
-import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
-import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
-import org.firstinspires.ftc.teamcode.util.LauncherMode;
-import org.firstinspires.ftc.teamcode.util.LauncherRange;
-import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.CommandManager;
-import dev.nextftc.core.commands.delays.Delay;
-import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
-import dev.nextftc.core.commands.groups.ParallelGroup;
-import dev.nextftc.core.commands.groups.SequentialGroup;
-import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.extensions.pedro.FollowPath;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
@@ -47,7 +26,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Fixed Auto Close (Command)", group = "Command")
 @Configurable
-public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
+public class DecodeAutonomousCloseHeadOnCommand extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
@@ -86,7 +65,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
         activeAlliance = allianceSelector.getSelectedAlliance();
 
-        applyAlliance(activeAlliance, LocalizeCommand.getDefaultStartPose());
+        applyAlliance(activeAlliance, CloseHeadOnCommand.getDefaultStartPose());
 
         allianceSelector.applySelection(robot, robot.lighting);
         prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
@@ -141,7 +120,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             ? lastAppliedStartPosePedro
             : null;
 
-        Command autoRoutine = LocalizeCommand.create(robot, activeAlliance, startPoseOverride);
+        Command autoRoutine = CloseHeadOnCommand.create(robot, activeAlliance, startPoseOverride);
 
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
 
@@ -166,28 +145,6 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         RobotState.setHandoffPose(robot.drive.getFollower().getPose());
     }
 
-    private void updateProximityFeedback() {
-        Pose currentPose = robot.drive.getFollower().getPose();
-        if (currentPose == null) {
-            robot.lighting.stopProximityFeedback();
-            return;
-        }
-
-        // Get target pose from LocalizeCommand waypoints (mirrored for alliance)
-        Pose targetPose = AutoField.poseForAlliance(
-            LocalizeCommand.waypoints.startX,
-            LocalizeCommand.waypoints.startY,
-            LocalizeCommand.waypoints.startHeading,
-            activeAlliance
-        );
-
-        double dx = currentPose.getX() - targetPose.getX();
-        double dy = currentPose.getY() - targetPose.getY();
-        double distance = Math.hypot(dx, dy);
-
-        // Blink faster as distance shrinks; target radius ~18in matches other autos
-        robot.lighting.showProximityFeedback(distance, 18.0);
-    }
 
     private void applyInitSelections(AutoPrestartHelper.InitStatus status) {
         if (status == null) {
@@ -199,7 +156,7 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             // When alliance changes without vision, use LocalizeCommand default
             Pose defaultPose = lastDetectedStartPosePedro != null
                 ? lastDetectedStartPosePedro
-                : LocalizeCommand.getDefaultStartPose();
+                : CloseHeadOnCommand.getDefaultStartPose();
             applyAlliance(activeAlliance, defaultPose);
         }
 
@@ -343,9 +300,9 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
         // Get default/target start pose (mirrored for current alliance)
         Pose targetPose = AutoField.poseForAlliance(
-            LocalizeCommand.waypoints.startX,
-            LocalizeCommand.waypoints.startY,
-            LocalizeCommand.waypoints.startHeading,
+            CloseHeadOnCommand.waypoints.startX,
+            CloseHeadOnCommand.waypoints.startY,
+            CloseHeadOnCommand.waypoints.startHeading,
             activeAlliance
         );
 
@@ -425,9 +382,9 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
         // Compare vision pose to target (not to follower)
         Pose visionPose = status.startPoseFromVision;
         Pose targetPose = AutoField.poseForAlliance(
-            LocalizeCommand.waypoints.startX,
-            LocalizeCommand.waypoints.startY,
-            LocalizeCommand.waypoints.startHeading,
+            CloseHeadOnCommand.waypoints.startX,
+            CloseHeadOnCommand.waypoints.startY,
+            CloseHeadOnCommand.waypoints.startHeading,
             activeAlliance
         );
 

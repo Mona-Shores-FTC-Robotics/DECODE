@@ -25,7 +25,7 @@ import dev.nextftc.core.commands.utility.InstantCommand;
  * 
  */
 @Configurable
-public class LocalizeCommand {
+public class CloseThreeAtOnceCommand {
 
     @Configurable
     public static class Config {
@@ -105,7 +105,7 @@ public class LocalizeCommand {
     public static Config config = new Config();
     public static Waypoints waypoints = new Waypoints();
 
-    private LocalizeCommand() {}
+    private CloseThreeAtOnceCommand() {}
 
     /**
      * Gets the default start pose from waypoints (before alliance mirroring).

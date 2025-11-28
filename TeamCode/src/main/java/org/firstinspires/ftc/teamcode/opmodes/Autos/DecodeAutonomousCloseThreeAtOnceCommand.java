@@ -10,9 +10,9 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
-import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.Command;
@@ -26,7 +26,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Fixed Auto Close (Command)", group = "Command")
 @Configurable
-public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
+public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
@@ -64,7 +64,9 @@ public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
         activeAlliance = allianceSelector.getSelectedAlliance();
-        applyAlliance(activeAlliance, LocalizeCommand.getDefaultStartPose());
+
+        applyAlliance(activeAlliance, CloseThreeAtOnceCommand.getDefaultStartPose());
+
         allianceSelector.applySelection(robot, robot.lighting);
         prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
 
@@ -83,7 +85,7 @@ public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
         AutoPrestartHelper.InitStatus initStatus = prestartHelper.update(activeAlliance);
         applyInitSelections(initStatus);
 
-        updateProximityFeedback();
+//        updateProximityFeedback();
         updateInitTelemetry(initStatus);
         updateDriverStationTelemetry(initStatus);
         robot.telemetry.publishLoopTelemetry(
@@ -118,7 +120,7 @@ public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
             ? lastAppliedStartPosePedro
             : null;
 
-        Command autoRoutine = LocalizeCommand.create(robot, activeAlliance, startPoseOverride);
+        Command autoRoutine = CloseThreeAtOnceCommand.create(robot, activeAlliance, startPoseOverride);
 
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
 
@@ -143,28 +145,6 @@ public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
         RobotState.setHandoffPose(robot.drive.getFollower().getPose());
     }
 
-    private void updateProximityFeedback() {
-        Pose currentPose = robot.drive.getFollower().getPose();
-        if (currentPose == null) {
-            robot.lighting.stopProximityFeedback();
-            return;
-        }
-
-        // Get target pose from LocalizeCommand waypoints (mirrored for alliance)
-        Pose targetPose = AutoField.poseForAlliance(
-            LocalizeCommand.waypoints.startX,
-            LocalizeCommand.waypoints.startY,
-            LocalizeCommand.waypoints.startHeading,
-            activeAlliance
-        );
-
-        double dx = currentPose.getX() - targetPose.getX();
-        double dy = currentPose.getY() - targetPose.getY();
-        double distance = Math.hypot(dx, dy);
-
-        // Blink faster as distance shrinks; target radius ~18in matches other autos
-        robot.lighting.showProximityFeedback(distance, 18.0);
-    }
 
     private void applyInitSelections(AutoPrestartHelper.InitStatus status) {
         if (status == null) {
@@ -176,7 +156,7 @@ public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
             // When alliance changes without vision, use LocalizeCommand default
             Pose defaultPose = lastDetectedStartPosePedro != null
                 ? lastDetectedStartPosePedro
-                : LocalizeCommand.getDefaultStartPose();
+                : CloseThreeAtOnceCommand.getDefaultStartPose();
             applyAlliance(activeAlliance, defaultPose);
         }
 
@@ -320,9 +300,9 @@ public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
 
         // Get default/target start pose (mirrored for current alliance)
         Pose targetPose = AutoField.poseForAlliance(
-            LocalizeCommand.waypoints.startX,
-            LocalizeCommand.waypoints.startY,
-            LocalizeCommand.waypoints.startHeading,
+                CloseThreeAtOnceCommand.waypoints.startX,
+                CloseThreeAtOnceCommand.waypoints.startY,
+                CloseThreeAtOnceCommand.waypoints.startHeading,
             activeAlliance
         );
 
@@ -355,8 +335,8 @@ public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
             while (visionHeadingDelta > 180) visionHeadingDelta -= 360;
             visionHeadingDelta = Math.abs(visionHeadingDelta);
 
-            String visionDeltaStatus = (visionDistance < 3.0 && visionHeadingDelta < 10) ? "✓" : "⚠";
-            telemetry.addData("  Delta", "%s %.1f in, %.0f°", visionDeltaStatus, visionDistance, visionHeadingDelta);
+//            String visionDeltaStatus = (visionDistance < 3.0 && visionHeadingDelta < 10) ? "✓" : "⚠";
+//            telemetry.addData("  Delta", "%s %.1f in, %.0f°", visionDeltaStatus, visionDistance, visionHeadingDelta);
         } else {
             telemetry.addData("Vision", "No tag detected");
         }
@@ -402,9 +382,9 @@ public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
         // Compare vision pose to target (not to follower)
         Pose visionPose = status.startPoseFromVision;
         Pose targetPose = AutoField.poseForAlliance(
-            LocalizeCommand.waypoints.startX,
-            LocalizeCommand.waypoints.startY,
-            LocalizeCommand.waypoints.startHeading,
+                CloseThreeAtOnceCommand.waypoints.startX,
+                CloseThreeAtOnceCommand.waypoints.startY,
+                CloseThreeAtOnceCommand.waypoints.startHeading,
             activeAlliance
         );
 
@@ -427,21 +407,12 @@ public class DecodeAutoStraightOnCloseCommand extends NextFTCOpMode {
 
     private String computeMotifStatus(AutoPrestartHelper.InitStatus status) {
         if (status == null || !status.hasMotif()) {
-            return "⚠ NO MOTIF - Point at any AprilTag";
-        }
-
-        // Check motif detection freshness
-        long ageMs = status.motifTimestampMs > 0L
-                ? System.currentTimeMillis() - status.motifTimestampMs
-                : Long.MAX_VALUE;
-
-        if (ageMs > 2000) {
-            return "⚠ MOTIF STALE - Point at an AprilTag";
+            return "⚠ NO MOTIF - Point at Motif AprilTag";
         }
 
         // Motif detected and fresh
         if (status.motifPattern != null) {
-            return String.format("✓ MOTIF LOCKED - %s", status.motifPattern.name());
+            return String.format("✓ MOTIF SEEN - %s", status.motifPattern.name());
         } else {
             return "✓ MOTIF DETECTED - Pattern unknown";
         }
