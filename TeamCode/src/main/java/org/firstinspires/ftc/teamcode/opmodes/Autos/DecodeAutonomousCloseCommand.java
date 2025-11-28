@@ -323,9 +323,14 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
     private void updateDriverStationTelemetry(AutoPrestartHelper.InitStatus status) {
         telemetry.clear();
 
-        // Vision status indicator at top
+        // Vision relocalization status
         String visionStatus = computeVisionStatus(status);
-        telemetry.addData(">> STATUS", visionStatus);
+        telemetry.addData(">> RELOCALIZE", visionStatus);
+
+        // Motif detection status
+        String motifStatus = computeMotifStatus(status);
+        telemetry.addData(">> MOTIF", motifStatus);
+
         telemetry.addLine();
 
         // Current poses
@@ -355,9 +360,21 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
 
         telemetry.addLine();
         telemetry.addData("Alliance", activeAlliance.displayName());
-        telemetry.addData("Tag ID", status != null && status.relocalizeTagId > 0
+        telemetry.addData("Relocalize Tag", status != null && status.relocalizeTagId > 0
             ? String.format("%d%s", status.relocalizeTagId, isOppositeGoalTag(status.relocalizeTagId) ? " (opp)" : "")
             : "none");
+
+        if (status != null && status.hasMotif()) {
+            telemetry.addData("Motif Tag", status.motifTagId != null
+                ? String.format("%d", status.motifTagId)
+                : "none");
+            telemetry.addData("Pattern", status.motifPattern != null
+                ? status.motifPattern.name()
+                : "UNKNOWN");
+        } else {
+            telemetry.addData("Motif Tag", "none");
+        }
+
         telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
         telemetry.addLine();
         telemetry.addLine("D-pad Left/Right override alliance");
@@ -396,6 +413,28 @@ public class DecodeAutonomousCloseCommand extends NextFTCOpMode {
             return "⚠ VISION OK - Adjust placement for best results";
         } else {
             return "✗ VISION MISMATCH - Check robot placement";
+        }
+    }
+
+    private String computeMotifStatus(AutoPrestartHelper.InitStatus status) {
+        if (status == null || !status.hasMotif()) {
+            return "⚠ NO MOTIF - Point at any AprilTag";
+        }
+
+        // Check motif detection freshness
+        long ageMs = status.motifTimestampMs > 0L
+                ? System.currentTimeMillis() - status.motifTimestampMs
+                : Long.MAX_VALUE;
+
+        if (ageMs > 2000) {
+            return "⚠ MOTIF STALE - Point at an AprilTag";
+        }
+
+        // Motif detected and fresh
+        if (status.motifPattern != null) {
+            return String.format("✓ MOTIF LOCKED - %s", status.motifPattern.name());
+        } else {
+            return "✓ MOTIF DETECTED - Pattern unknown";
         }
     }
 
