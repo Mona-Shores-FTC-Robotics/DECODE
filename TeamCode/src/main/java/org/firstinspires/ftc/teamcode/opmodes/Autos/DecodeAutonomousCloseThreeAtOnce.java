@@ -137,6 +137,7 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
 
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
 
+        robot.lighting.resumeLaneTracking();
         robot.intake.forwardRoller();
         robot.intake.setGateAllowArtifacts();
     }

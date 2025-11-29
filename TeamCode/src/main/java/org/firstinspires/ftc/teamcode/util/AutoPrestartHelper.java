@@ -45,6 +45,9 @@ public class AutoPrestartHelper {
 //        robot.vision.periodic();
 
         Alliance selectedAlliance = allianceSelector.updateDuringInit(robot.vision, robot, robot.lighting);
+        if (robot.lighting != null) {
+            robot.lighting.showSolidAlliance(selectedAlliance);
+        }
         Pose startPoseFromVision = allianceSelector.getLastSnapshot()
                 .flatMap(VisionSubsystemLimelight.TagSnapshot::getRobotPosePedroMT1)
                 .map(AutoPrestartHelper::copyPose)

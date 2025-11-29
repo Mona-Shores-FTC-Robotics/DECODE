@@ -166,6 +166,7 @@ public class DecodeAutonomousFarTOGETHER extends NextFTCOpMode {
             activeAlliance = selectedAlliance;
             applyAlliance(activeAlliance, null);
         }
+        robot.lighting.showSolidAlliance(activeAlliance);
 
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
@@ -187,6 +188,7 @@ public class DecodeAutonomousFarTOGETHER extends NextFTCOpMode {
         RobotState.resetMotifTail(); // Start with fresh motif tail (0)
 
         robot.launcher.spinUpAllLanesToLaunch();
+        robot.lighting.resumeLaneTracking();
 
         // Build and schedule the complete autonomous routine
         Command autoRoutine = buildAutonomousRoutine();
