@@ -175,8 +175,11 @@ public class LaunchInSequenceCommand extends Command {
             intake.setGatePreventArtifact();
         }
 
-        // Clear RPM overrides to return to default values
-        launcher.clearOverrides();
+        // Only clear overrides if interrupted or if we explicitly spun down
+        // This preserves RPMs across multiple sequential launches in autonomous
+        if (interrupted || spinDownApplied) {
+            launcher.clearOverrides();
+        }
 
         // Clear queue if interrupted
         if (interrupted && shotsQueued) {
