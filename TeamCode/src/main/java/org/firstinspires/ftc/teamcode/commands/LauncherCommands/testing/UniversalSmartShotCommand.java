@@ -476,7 +476,7 @@ public class UniversalSmartShotCommand extends Command {
         switch (mode) {
             case DECODE:
                 // DECODE mode: Fire in obelisk pattern sequence with motif tail offset
-                delegateFireCommand = new LaunchInSequenceCommand(launcher, intake);
+                delegateFireCommand = new LaunchInSequenceCommand(launcher, intake, true);
                 break;
 
             case THROUGHPUT:
