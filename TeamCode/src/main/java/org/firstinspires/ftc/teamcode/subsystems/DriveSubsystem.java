@@ -490,8 +490,6 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = turn;
 
         follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
-
-        maybeAutoRelocalizeDuringAim();
     }
 
     /**
@@ -614,7 +612,6 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = turn;
 
         follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
-        maybeRelocalizeFromVision();
     }
 
     public double getLastAimErrorRadians() {
@@ -957,21 +954,21 @@ public class DriveSubsystem implements Subsystem {
             return true;
         }
 
-        // 2. If heading is known, use MT2 primarily
-        if (pedroPoseMT2 != null) {
-            follower.setPose(pedroPoseMT2);
-            poseFusion.reset(pedroPoseMT2, System.currentTimeMillis());
-            vision.markOdometryUpdated();
-            recordRelocalizeSource("mt2", true, nowMs, snap.tagId);
-            return true;
-        }
-
-        // 3. Fallback to MT1 if MT2 unavailable
+        // 2. If heading is known, stick to MT1 while MT2 is unreliable
         if (pedroPoseMT1 != null) {
             follower.setPose(pedroPoseMT1);
             poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
             vision.markOdometryUpdated();
-            recordRelocalizeSource("mt1_fallback", true, nowMs, snap.tagId);
+            recordRelocalizeSource("mt1", true, nowMs, snap.tagId);
+            return true;
+        }
+
+        // 3. As a last resort, try MT2 if MT1 is missing entirely
+        if (pedroPoseMT2 != null) {
+            follower.setPose(pedroPoseMT2);
+            poseFusion.reset(pedroPoseMT2, System.currentTimeMillis());
+            vision.markOdometryUpdated();
+            recordRelocalizeSource("mt2_fallback", true, nowMs, snap.tagId);
             return true;
         }
 

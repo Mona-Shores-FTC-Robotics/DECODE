@@ -402,10 +402,10 @@ public class VisionSubsystemLimelight implements Subsystem {
         boolean stale = lastSnapshotTimestampMs == 0L || (now - lastSnapshotTimestampMs) > ODOMETRY_RESET_TIMEOUT_MS;
         lastSnapshot = snapshot;
         lastSnapshotTimestampMs = now;
-        // Prefer MT2 (IMU-fused) over MT1 for better accuracy
-        Optional<Pose> poseOpt = snapshot.getRobotPosePeroMT2();
+        // Bandaid: MT2 poses have been unstable, prefer MT1 for now
+        Optional<Pose> poseOpt = snapshot.getRobotPosePedroMT1();
         if (!poseOpt.isPresent()) {
-            poseOpt = snapshot.getRobotPosePedroMT1();
+            poseOpt = snapshot.getRobotPosePeroMT2();
         }
         Optional<Pose> ftcPoseOpt = snapshot.getFtcPose();
         if (poseOpt.isPresent()) {
