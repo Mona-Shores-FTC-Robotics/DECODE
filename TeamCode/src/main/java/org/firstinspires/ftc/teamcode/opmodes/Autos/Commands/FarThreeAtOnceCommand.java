@@ -4,6 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtBasketCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -130,8 +131,10 @@ public class FarThreeAtOnceCommand {
                                 .to(launchFar())
                                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                 .build(config.maxPathPower),
-                        launcherCommands.presetRangeSpinUp(LauncherRange.LONG, true)
+                        launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true)
                 ),
+                new AimAtBasketCommand(robot.drive, robot.vision),  // <-- Add this
+
                 launcherCommands.launchAll(false),
 
                 // Pickup Alliance Wall Artifacts
@@ -157,6 +160,8 @@ public class FarThreeAtOnceCommand {
                                 new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
                                 )
                 ),
+                new AimAtBasketCommand(robot.drive, robot.vision),  // <-- Add this
+
                 launcherCommands.launchAll(false),
 
                 // Pickup Artifact Set 3
@@ -180,6 +185,8 @@ public class FarThreeAtOnceCommand {
                                 new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
                         )
                 ),
+                new AimAtBasketCommand(robot.drive, robot.vision),  // <-- Add this
+
                 launcherCommands.launchAll(false),
 
                 // Pickup Artifact Set 2
@@ -205,6 +212,8 @@ public class FarThreeAtOnceCommand {
                                 new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
                         )
                 ),
+                new AimAtBasketCommand(robot.drive, robot.vision),  // <-- Add this
+
                 launcherCommands.launchAll(true),
 
                 // Get Ready to Open Gate

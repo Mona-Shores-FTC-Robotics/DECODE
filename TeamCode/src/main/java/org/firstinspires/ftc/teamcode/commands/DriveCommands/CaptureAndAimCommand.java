@@ -34,7 +34,9 @@ public class CaptureAndAimCommand extends Command {
     private final VisionSubsystemLimelight vision;
 
     private Double capturedTargetHeadingRad = null;
+    private boolean breakRequested = false;
     private boolean turnStarted = false;
+    private boolean alreadyAimed = false;
     private long startTimeMs = -1L;
     private int framesSampled = 0;
     private double summedCos = 0.0;
@@ -60,7 +62,9 @@ public class CaptureAndAimCommand extends Command {
         }
 
         capturedTargetHeadingRad = null;
+        breakRequested = false;
         turnStarted = false;
+        alreadyAimed = false;
         startTimeMs = System.currentTimeMillis();
         framesSampled = 0;
         summedCos = 0.0;
@@ -108,12 +112,29 @@ public class CaptureAndAimCommand extends Command {
         }
 
         // Phase 2: Execute turn using Pedro Follower directly
-        if (!turnStarted) {
-            // Break out of teleop drive mode before starting autonomous turn
-            // This ensures the follower switches from manual control to path following
-            drive.getFollower().breakFollowing();
+        if (!turnStarted && !alreadyAimed) {
+            // Check if we're already aimed within tolerance - if so, skip the turn
+            double currentHeading = drive.getFollower().getHeading();
+            double headingError = normalizeAngle(capturedTargetHeadingRad - currentHeading);
+            double headingErrorDeg = Math.toDegrees(Math.abs(headingError));
 
-            // Now command the turn - follower will use autonomous PIDF control
+            if (headingErrorDeg <= config.headingToleranceDeg) {
+                // Already aimed - no turn needed
+                alreadyAimed = true;
+                return;
+            }
+
+            // If follower is still busy from previous command, break it first
+            if (drive.getFollower().isBusy()) {
+                if (!breakRequested) {
+                    drive.getFollower().breakFollowing();
+                    breakRequested = true;
+                }
+                // Wait for follower to process the break (need one update cycle)
+                return;
+            }
+
+            // Follower is now ready - command the turn using autonomous PIDF control
             drive.getFollower().turnTo(capturedTargetHeadingRad);
             turnStarted = true;
         }
@@ -125,6 +146,11 @@ public class CaptureAndAimCommand extends Command {
         if (capturedTargetHeadingRad == null
                 && framesSampled == 0
                 && System.currentTimeMillis() - startTimeMs >= config.samplingTimeoutMs) {
+            return true;
+        }
+
+        // If already aimed within tolerance, we're done (no turn needed)
+        if (alreadyAimed) {
             return true;
         }
 
@@ -140,7 +166,9 @@ public class CaptureAndAimCommand extends Command {
     @Override
     public void stop(boolean interrupted) {
         capturedTargetHeadingRad = null;
+        breakRequested = false;
         turnStarted = false;
+        alreadyAimed = false;
         startTimeMs = -1L;
         drive.stop();
     }
@@ -182,5 +210,12 @@ public class CaptureAndAimCommand extends Command {
      */
     public Double getCapturedTargetHeading() {
         return capturedTargetHeadingRad;
+    }
+
+    /**
+     * Normalizes an angle to [-π, π] range.
+     */
+    private static double normalizeAngle(double angle) {
+        return Math.atan2(Math.sin(angle), Math.cos(angle));
     }
 }
