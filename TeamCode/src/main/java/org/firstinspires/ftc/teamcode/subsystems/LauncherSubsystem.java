@@ -1073,7 +1073,7 @@ public class LauncherSubsystem implements Subsystem {
 
             // Apply voltage compensation to maintain consistent performance across battery voltages
             double voltageMultiplier = getVoltageCompensationMultiplier();
-            RobotState.packet.put("LauncherSubsystem/" + lane.name() + "/voltageMultiplier", voltageMultiplier);
+            RobotState.packet.put("launcher/" + lane.name().toLowerCase() + "/voltageMultiplier", voltageMultiplier);
             power = Range.clip(power * voltageMultiplier, 0.0, 1.0);
 
             motor.setPower(power);

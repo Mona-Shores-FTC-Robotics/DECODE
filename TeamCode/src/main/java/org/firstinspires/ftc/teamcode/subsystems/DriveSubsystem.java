@@ -104,6 +104,7 @@ public class DriveSubsystem implements Subsystem {
 
     public String visionRelocalizeStatus = "Press A to re-localize";
     public long visionRelocalizeStatusMs = 0L;
+    private String lastRelocalizeSource = "none";
 
     public enum DriveMode {
         NORMAL,
@@ -226,7 +227,7 @@ public class DriveSubsystem implements Subsystem {
 //            pedroFollowerSeed = poseFromVision.orElseGet(() -> new Pose(0, 0, Math.toRadians(90.0)));
         }
         Pose ftcSeed = PoseFrames.pedroToFtc(pedroFollowerSeed);
-        RobotState.putPose("PoseDiag/FTC Coord Seed Pose",ftcSeed );
+        RobotState.putPose("Pose/FTC Coord Seed Pose",ftcSeed );
 
         // Follower initialization
         follower.setStartingPose(pedroFollowerSeed);
@@ -268,6 +269,7 @@ public class DriveSubsystem implements Subsystem {
         }
 
         updatePoseFusion();
+        RobotState.packet.put("/vision/state", visionState.name());
 
         // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)
         Pose pose = follower.getPose();
@@ -477,10 +479,10 @@ public class DriveSubsystem implements Subsystem {
         turn = Range.clip(turn, -maxTurn, maxTurn);
 
         lastAimErrorRad = headingErrorRad;
-        RobotState.packet.put("Aim Error (deg)", headingErrorDeg);
-        RobotState.packet.put("Aim Target Heading (deg)", Math.toDegrees(targetHeading));
-        RobotState.packet.put("Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
-        RobotState.packet.put("Aim Turn Cmd", turn);
+        RobotState.packet.put("Command/AimAndDrive/Aim Error (deg)", headingErrorDeg);
+        RobotState.packet.put("Command/AimAndDrive/Aim Target Heading (deg)", Math.toDegrees(targetHeading));
+        RobotState.packet.put("Command/AimAndDrive/Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
+        RobotState.packet.put("Command/AimAndDrive/Aim Turn Cmd", turn);
 
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
@@ -612,6 +614,7 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = turn;
 
         follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
+        maybeRelocalizeFromVision();
     }
 
     public double getLastAimErrorRadians() {
@@ -761,6 +764,37 @@ public class DriveSubsystem implements Subsystem {
         RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distance);
         RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
         RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
+        RobotState.packet.put("/vision/Poses/mt2DistanceThreshold", mt2DistanceThresholdInches());
+        RobotState.packet.put("/vision/Poses/mt2HeadingThresholdDeg", aimAssistConfig.MT2HeadingThresholdDeg);
+    }
+
+    private void recordVisionPoseTelemetry(Pose mt1 , Pose mt2) {
+        double mt1HeadingDeg = mt1 == null ? Double.NaN : Math.toDegrees(mt1.getHeading());
+        double mt2HeadingDeg = mt2 == null ? Double.NaN : Math.toDegrees(mt2.getHeading());
+
+        RobotState.packet.put("/vision/Poses/mt1/x", mt1 == null ? Double.NaN : mt1.getX());
+        RobotState.packet.put("/vision/Poses/mt1/y", mt1 == null ? Double.NaN : mt1.getY());
+        RobotState.packet.put("/vision/Poses/mt1/heading_deg", mt1HeadingDeg);
+
+        RobotState.packet.put("/vision/Poses/mt2/x", mt2 == null ? Double.NaN : mt2.getX());
+        RobotState.packet.put("/vision/Poses/mt2/y", mt2 == null ? Double.NaN : mt2.getY());
+        RobotState.packet.put("/vision/Poses/mt2/heading_deg", mt2HeadingDeg);
+    }
+
+    private void recordRelocalizeSource(String source , boolean success , long timestampMs , int tagId) {
+        lastRelocalizeSource = source;
+        RobotState.packet.put("/vision/relocalize/last/source", source);
+        RobotState.packet.put("/vision/relocalize/last/success", success);
+        RobotState.packet.put("/vision/relocalize/last/timestamp_ms", timestampMs);
+        RobotState.packet.put("/vision/relocalize/last/tag", tagId);
+    }
+
+    private void recordAutoRelocalizePacket(boolean success , long timestampMs , int tagId , String status , String source) {
+        RobotState.packet.put("/vision/relocalize/auto/success", success);
+        RobotState.packet.put("/vision/relocalize/auto/timestamp_ms", timestampMs);
+        RobotState.packet.put("/vision/relocalize/auto/tag", tagId);
+        RobotState.packet.put("/vision/relocalize/auto/status", status);
+        RobotState.packet.put("/vision/relocalize/auto/source", source);
     }
 
     private void flashRelocalizeFeedback() {
@@ -777,10 +811,6 @@ public class DriveSubsystem implements Subsystem {
             return;
         }
         if (! vision.hasValidTag()) {
-            return;
-        }
-
-        if (getRobotSpeedInchesPerSecond() > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
             return;
         }
 
@@ -810,11 +840,17 @@ public class DriveSubsystem implements Subsystem {
         boolean mt2Safe = posesAgreeForMt2(pedroPoseMT1 , pedroPoseMT2);
 
         recordVisionAgreementTelemetry(distanceInches , headingErrorDeg , mt2Safe);
+        recordVisionPoseTelemetry(pedroPoseMT1 , pedroPoseMT2);
+
+        if (getRobotSpeedInchesPerSecond() > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
+            return;
+        }
 
         long nowMs = System.currentTimeMillis();
         if (! mt2Safe) {
             visionRelocalizeStatus = "Vision mismatch - manual re-localize";
             visionRelocalizeStatusMs = nowMs;
+            recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , visionRelocalizeStatus , "blocked_mt2_disagree");
             return;
         }
 
@@ -822,6 +858,7 @@ public class DriveSubsystem implements Subsystem {
             lastAutoRelocalizeMs = nowMs;
             visionRelocalizeStatus = "Auto re-localized while aiming";
             visionRelocalizeStatusMs = nowMs;
+            recordAutoRelocalizePacket(true , nowMs , snapshot.tagId , visionRelocalizeStatus , lastRelocalizeSource);
             flashRelocalizeFeedback();
         }
     }
@@ -892,7 +929,11 @@ public class DriveSubsystem implements Subsystem {
     }
     public boolean forceRelocalizeFromVision() {
         Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
-        if (!snapOpt.isPresent()) return false;
+        long nowMs = System.currentTimeMillis();
+        if (!snapOpt.isPresent()) {
+            recordRelocalizeSource("none", false, nowMs, -1);
+            return false;
+        }
 
         VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
 
@@ -901,7 +942,10 @@ public class DriveSubsystem implements Subsystem {
         Pose pedroPoseMT2 = snap.pedroPoseMT2;
 
         if (visionState == HEADING_UNKNOWN) {
-            if (pedroPoseMT1 == null) return false;
+            if (pedroPoseMT1 == null) {
+                recordRelocalizeSource("mt1_missing", false, nowMs, snap.tagId);
+                return false;
+            }
 
             follower.setPose(pedroPoseMT1);
             poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
@@ -909,6 +953,7 @@ public class DriveSubsystem implements Subsystem {
 
             // Now heading is calibrated
             visionState = HEADING_KNOWN;
+            recordRelocalizeSource("mt1_seed", true, nowMs, snap.tagId);
             return true;
         }
 
@@ -917,6 +962,7 @@ public class DriveSubsystem implements Subsystem {
             follower.setPose(pedroPoseMT2);
             poseFusion.reset(pedroPoseMT2, System.currentTimeMillis());
             vision.markOdometryUpdated();
+            recordRelocalizeSource("mt2", true, nowMs, snap.tagId);
             return true;
         }
 
@@ -925,9 +971,11 @@ public class DriveSubsystem implements Subsystem {
             follower.setPose(pedroPoseMT1);
             poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
             vision.markOdometryUpdated();
+            recordRelocalizeSource("mt1_fallback", true, nowMs, snap.tagId);
             return true;
         }
 
+        recordRelocalizeSource("none", false, nowMs, snap.tagId);
         return false;
     }
 

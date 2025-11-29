@@ -175,7 +175,7 @@ public class DashboardFormatter {
         }
 
         packet.put(prefix + "/present", summary.detected);
-        packet.put(prefix + "/distance_cm", summary.distanceCm);
+        packet.put(prefix + "/distance_cm-2", summary.distanceCm);
         packet.put(prefix + "/color", summary.color);
     }
 
@@ -194,7 +194,7 @@ public class DashboardFormatter {
             packet.put(prefix + "/sensor_present", sample.sensorPresent);
             packet.put(prefix + "/distance_available", sample.distanceAvailable);
             packet.put(prefix + "/within_distance", sample.withinDistance);
-            packet.put(prefix + "/distance_cm", sample.distanceCm);
+            packet.put(prefix + "/  distance_cm", sample.distanceCm);
             packet.put(prefix + "/color", sample.color.name());
             packet.put(prefix + "/color_hsv", sample.hsvColor.name());
             packet.put(prefix + "/normalized_rgb", formatNormalizedRgb(sample.normalizedRed, sample.normalizedGreen, sample.normalizedBlue));

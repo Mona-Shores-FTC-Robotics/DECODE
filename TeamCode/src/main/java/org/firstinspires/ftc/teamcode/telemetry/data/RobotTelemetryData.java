@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 /**
  * Root container for all robot telemetry data.
@@ -97,7 +98,10 @@ public class RobotTelemetryData {
                 runtimeSec,
                 matchTimeSec,
                 opMode,
-                isAutonomous
+                isAutonomous,
+                org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName(),
+                RobotState.getLauncherMode().name(),
+                RobotState.getMotifTail()
         );
 
         // Capture vision data (needed for pose)

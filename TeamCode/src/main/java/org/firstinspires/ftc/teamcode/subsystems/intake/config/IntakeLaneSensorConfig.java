@@ -21,93 +21,167 @@ public class IntakeLaneSensorConfig {
         DISTANCE_BASED
     }
 
-    public boolean enablePolling = true;
-    public String leftSensor = "lane_left_color";
-    public String centerSensor = "lane_center_color";
-    public String rightSensor = "lane_right_color";
-    public double samplePeriodMs = 200.0;
+    // Groups below are shown as collapsible sections in @Configurable UI
+    public Polling polling = new Polling();
+    public Hardware hardware = new Hardware();
+    public Gating gating = new Gating();
+    public Quality quality = new Quality();
+    public Presence presence = new Presence();
+    public Background background = new Background();
+    public Classifier classifier = new Classifier();
+    public static LanePresenceConfig lanePresenceConfig19429 = createLanePresenceConfig19429();
+    public static LanePresenceConfig lanePresenceConfig20245 = createLanePresenceConfig20245();
 
-    // Classifier mode selector
-    public String classifierMode = ClassifierMode.DECISION_BOUNDARY.name();
-    /** Minimum confidence required to accept a new artifact color classification */
-    public double minConfidenceToAccept = 0.4;
-    /** Number of consecutive confident samples required before updating lane color */
-    public int consecutiveConfirmationsRequired = 2;
+    @Configurable
+    public static class Polling {
+        public boolean enablePolling = true;
+        public double samplePeriodMs = 200.0;
+        public String leftSensor = "lane_left_color";
+        public String centerSensor = "lane_center_color";
+        public String rightSensor = "lane_right_color";
+    }
 
-    // Hardware tuning
-    /** Turn the onboard white LED on/off (applied at bind time) */
-    public boolean enableSensorLight = true;
-    /** If true, override sensor gain with sensorGain value; otherwise leave default */
-    public boolean overrideSensorGain = false;
-    /** Gain applied when overrideSensorGain is true (REV Color Sensor V3 typical range ~1-10) */
-    public double sensorGain = 1.0;
+    @Configurable
+    public static class Hardware {
+        /** Turn the onboard white LED on/off (applied at bind time) */
+        public boolean enableSensorLight = true;
+        /** If true, override sensor gain with sensorGain value; otherwise leave default */
+        public boolean overrideSensorGain = true;
+        /** Gain applied when overrideSensorGain is true (REV Color Sensor V3 typical range ~1-10) */
+        public double sensorGain = 20.0;
+    }
 
-    // Quality thresholds (used by all classifiers)
-    public double minValue = 0.02;
-    public double minSaturation = 0.15;
+    @Configurable
+    public static class Gating {
+        /** Minimum confidence required to accept a new artifact color classification */
+        public double minConfidenceToAccept = 0.4;
+        /** Number of consecutive confident samples required before updating lane color */
+        public int consecutiveConfirmationsRequired = 2;
+    }
 
-    // RANGE_BASED mode parameters (legacy)
-    public double greenHueMin = 80.0;
-    public double greenHueMax = 160.0;
-    public double purpleHueMin = 260.0;
-    public double purpleHueMax = 330.0;
-    public double purpleHueWrapMax = 40.0;
+    @Configurable
+    public static class Quality {
+        // Quality thresholds (used by all classifiers)
+        public double minValue = 0.02;
+        public double minSaturation = 0.15;
+    }
 
-    // DECISION_BOUNDARY mode parameters (default, recommended)
-    /** Typical green hue (set from calibration) */
-    public double greenHueTarget = 120.0;
-    /** Typical purple hue unwrapped (set from calibration, typically ~290°) */
-    public double purpleHueTarget = 290.0;
-    /** Hue decision boundary - classify as GREEN if hue < boundary, PURPLE otherwise */
-    public double hueDecisionBoundary = 205.0;
-    /** Distance from boundary for low confidence warning (degrees) */
-    public double lowConfidenceMargin = 15.0;
+    @Configurable
+    public static class Presence {
+        // Distance gating (used by all classifiers)
+        public boolean useDistance = true;
+        /** Legacy presence distance for scoring (diagnostics only; hysteresis uses per-lane thresholds) */
+        public double presenceDistanceCm = 5.5;
 
-    // DISTANCE_BASED mode parameters
-    /** Weight for hue component in distance calculation */
-    public double hueWeight = 2.0;
-    /** Weight for saturation component in distance calculation */
-    public double saturationWeight = 0.5;
-    /** Weight for value component in distance calculation */
-    public double valueWeight = 0.3;
-    /** Target saturation for green artifacts */
-    public double greenSatTarget = 0.45;
-    /** Target value for green artifacts */
-    public double greenValTarget = 0.50;
-    /** Target saturation for purple artifacts */
-    public double purpleSatTarget = 0.40;
-    /** Target value for purple artifacts */
-    public double purpleValTarget = 0.45;
+        // Multi-factor presence detection - improves artifact vs background discrimination
+        /** Enabnicle enhanced presence scoring (not just distance) */
+        public boolean enablePresenceScoring = true;
+        /** Minimum total RGB intensity for artifact presence (0-765 range) */
+        public double minTotalIntensity = 10;
+        /** Weight for distance factor in presence score */
+        public double presenceDistanceWeight = .55;
+        /** Weight for saturation factor in presence score */
+        public double presenceSaturationWeight = 0.25;
+        /** Weight for value factor in presence score */
+        public double presenceValueWeight = 0.15;
+        /** Weight for intensity factor in presence score */
+        public double presenceIntensityWeight = 0.05;
+        /** Minimum presence score (0-1) to consider artifact present */
+        public double minPresenceScore = .25;
+    }
 
-    // Distance gating (used by all classifiers)
-    public boolean useDistance = true;
-    public double presenceDistanceCm = 5;
+    @Configurable
+    public static class LanePresenceConfig {
+        /** Enter/exit distance thresholds per lane (cm) with hysteresis */
+        public double leftEnterDistanceCm;
+        public double leftExitDistanceCm;
+        public double centerEnterDistanceCm;
+        public double centerExitDistanceCm;
+        public double rightEnterDistanceCm;
+        public double rightExitDistanceCm;
+    }
 
-    // Background detection - distinguishes empty space from artifacts
-    /** Enable background similarity checking */
-    public boolean enableBackgroundDetection = true;
-    /** Background hue (set from calibration, typically ~40-60° for field mat) */
-    public double backgroundHue = 50.0;
-    /** Background saturation (set from calibration, typically low ~0.1-0.3) */
-    public double backgroundSaturation = 0.20;
-    /** Background value (set from calibration, brightness of empty space) */
-    public double backgroundValue = 0.30;
-    /** Maximum weighted distance to background to classify as BACKGROUND */
-    public double maxBackgroundDistance = 40.0;
+    @Configurable
+    public static class Background {
+        // Background detection - distinguishes empty space from artifacts
+        /** Enable background similarity checking */
+        public boolean enableBackgroundDetection = true;
+        /** Background hue (set from calibration, typically ~40-60° for field mat) */
+        public double backgroundHue = 50.0;
+        /** Background saturation (set from calibration, typically low ~0.1-0.3) */
+        public double backgroundSaturation = 0.20;
+        /** Background value (set from calibration, brightness of empty space) */
+        public double backgroundValue = 0.30;
+        /** Maximum weighted distance to background to classify as BACKGROUND */
+        public double maxBackgroundDistance = 40.0;
+    }
 
-    // Multi-factor presence detection - improves artifact vs background discrimination
-    /** Enable enhanced presence scoring (not just distance) */
-    public boolean enablePresenceScoring = true;
-    /** Minimum total RGB intensity for artifact presence (0-765 range) */
-    public double minTotalIntensity = 50.0;
-    /** Weight for distance factor in presence score */
-    public double presenceDistanceWeight = 0.4;
-    /** Weight for saturation factor in presence score */
-    public double presenceSaturationWeight = 0.3;
-    /** Weight for value factor in presence score */
-    public double presenceValueWeight = 0.2;
-    /** Weight for intensity factor in presence score */
-    public double presenceIntensityWeight = 0.1;
-    /** Minimum presence score (0-1) to consider artifact present */
-    public double minPresenceScore = 0.5;
+    @Configurable
+    public static class Classifier {
+        // Classifier mode selector
+        public String mode = ClassifierMode.DECISION_BOUNDARY.name();
+
+        public DecisionBoundary decision = new DecisionBoundary();
+        public Range range = new Range();
+        public DistanceBased distance = new DistanceBased();
+    }
+
+    @Configurable
+    public static class DecisionBoundary {
+        /** Hue decision boundary - classify as GREEN if hue < boundary, PURPLE otherwise */
+        public double hueDecisionBoundary = 175.0;
+        /** Distance from boundary for low confidence warning (degrees) */
+        public double lowConfidenceMargin = 15.0;
+    }
+
+    @Configurable
+    public static class Range {
+        /** Range-based mode parameters (legacy) */
+        public double greenHueMin = 80.0;
+        public double greenHueMax = 160.0;
+        public double purpleHueMin = 260.0;
+        public double purpleHueMax = 330.0;
+        public double purpleHueWrapMax = 40.0;
+    }
+
+    @Configurable
+    public static class DistanceBased {
+        /** Weight for hue component in distance calculation */
+        public double hueWeight = 2.0;
+        /** Weight for saturation component in distance calculation */
+        public double saturationWeight = 0.5;
+        /** Weight for value component in distance calculation */
+        public double valueWeight = 0.3;
+        /** Target hue/sat/value for green artifacts */
+        public double greenHueTarget = 120.0;
+        public double greenSatTarget = 0.45;
+        public double greenValTarget = 0.50;
+        /** Target hue/sat/value for purple artifacts */
+        public double purpleHueTarget = 290.0;
+        public double purpleSatTarget = 0.40;
+        public double purpleValTarget = 0.45;
+    }
+
+    private static LanePresenceConfig createLanePresenceConfig19429() {
+        LanePresenceConfig config = new LanePresenceConfig();
+        config.leftEnterDistanceCm = 4.2;
+        config.leftExitDistanceCm = 4.7;
+        config.centerEnterDistanceCm = 5.0;
+        config.centerExitDistanceCm = 5.5;
+        config.rightEnterDistanceCm = 5.5;
+        config.rightExitDistanceCm = 6.0;
+        return config;
+    }
+
+    private static LanePresenceConfig createLanePresenceConfig20245() {
+        LanePresenceConfig config = new LanePresenceConfig();
+        // Start with the same defaults; tune via Dashboard per robot
+        config.leftEnterDistanceCm = 3.8;
+        config.leftExitDistanceCm = 3.5;
+        config.centerEnterDistanceCm = 5.0;
+        config.centerExitDistanceCm = 5.5;
+        config.rightEnterDistanceCm = 5.5;
+        config.rightExitDistanceCm = 6.0;
+        return config;
+    }
 }

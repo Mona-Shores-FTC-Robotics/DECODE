@@ -243,19 +243,16 @@ public class DriverStationFormatter {
     private void publishDebugControls(Telemetry telemetry, RobotTelemetryData data) {
         // Driver controls (Gamepad 1)
         telemetry.addLine("=== DRIVER (GP1) ===");
-        telemetry.addData("L-Bumper", "Smooth accel (ramp)");
-        telemetry.addData("R-Bumper", "Slow mode (hold)");
-        telemetry.addData("A", "Vision relocalize");
-        telemetry.addData("B", "Aim at target (hold)");
+        for (String line : org.firstinspires.ftc.teamcode.bindings.DriverBindings.controlsSummary()) {
+            telemetry.addLine(line);
+        }
 
         // Operator controls (Gamepad 2)
         telemetry.addLine();
         telemetry.addLine("=== OPERATOR (GP2) ===");
-        telemetry.addData("X", "Fire ALL SHORT (~2700)");
-        telemetry.addData("Y", "Fire ALL MID (~3600)");
-        telemetry.addData("B", "Fire ALL LONG (~4200)");
-        telemetry.addData("A", "Manual spin (hold)");
-        telemetry.addData("R-Bumper", "Intake forward (hold)");
+        for (String line : org.firstinspires.ftc.teamcode.bindings.OperatorBindings.controlsSummary()) {
+            telemetry.addLine(line);
+        }
     }
 
     /**
@@ -290,6 +287,9 @@ public class DriverStationFormatter {
     private void publishDebugOverview(Telemetry telemetry, RobotTelemetryData data) {
         // Alliance and time
         telemetry.addData("Alliance", data.context.alliance.displayName());
+        telemetry.addData("Robot", data.context.robotConfig);
+        telemetry.addData("Launcher Mode", data.context.launcherMode);
+        telemetry.addData("Motif Tail", data.context.motifTail);
         telemetry.addData("Match Time", formatMatchTime(data.context.matchTimeSec));
 
         // Pose
@@ -361,32 +361,32 @@ public class DriverStationFormatter {
         telemetry.addData("Control", "Feedforward + Proportional");
 
         telemetry.addData("Left",
-                "T=%.0f C=%.0f P=%.2f %s",
+                "Target=%.0f  Curr=%.0f  Pow=%.2f  %s",
                 data.launcher.left.targetRpm,
                 data.launcher.left.currentRpm,
                 data.launcher.left.power,
-                data.launcher.left.ready ? "✓" : "✗");
-        telemetry.addData("  H/F", "%.2f / %.2f",
+                data.launcher.left.ready ? "READY" : "WAIT");
+        telemetry.addData("  Hood/Feeder", "%.2f / %.2f",
                 data.launcher.left.hoodPosition,
                 data.launcher.left.feederPosition);
 
         telemetry.addData("Center",
-                "T=%.0f C=%.0f P=%.2f %s",
+                "Target=%.0f  Curr=%.0f  Pow=%.2f  %s",
                 data.launcher.center.targetRpm,
                 data.launcher.center.currentRpm,
                 data.launcher.center.power,
-                data.launcher.center.ready ? "✓" : "✗");
-        telemetry.addData("  H/F", "%.2f / %.2f",
+                data.launcher.center.ready ? "READY" : "WAIT");
+        telemetry.addData("  Hood/Feeder", "%.2f / %.2f",
                 data.launcher.center.hoodPosition,
                 data.launcher.center.feederPosition);
 
         telemetry.addData("Right",
-                "T=%.0f C=%.0f P=%.2f %s",
+                "Target=%.0f  Curr=%.0f  Pow=%.2f  %s",
                 data.launcher.right.targetRpm,
                 data.launcher.right.currentRpm,
                 data.launcher.right.power,
-                data.launcher.right.ready ? "✓" : "✗");
-        telemetry.addData("  H/F", "%.2f / %.2f",
+                data.launcher.right.ready ? "READY" : "WAIT");
+        telemetry.addData("  Hood/Feeder", "%.2f / %.2f",
                 data.launcher.right.hoodPosition,
                 data.launcher.right.feederPosition);
     }
@@ -427,7 +427,7 @@ public class DriverStationFormatter {
      */
     private void publishDebugColorSensors(Telemetry telemetry, RobotTelemetryData data) {
         // Show classifier mode at top
-        String classifierMode = org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.laneSensorConfig.classifierMode;
+        String classifierMode = org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.laneSensorConfig.classifier.mode;
         telemetry.addData("Classifier", classifierMode);
 
         // Left lane

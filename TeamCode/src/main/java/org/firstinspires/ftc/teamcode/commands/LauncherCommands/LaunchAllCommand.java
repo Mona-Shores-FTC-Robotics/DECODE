@@ -101,10 +101,10 @@ public class LaunchAllCommand extends Command {
             double currentRpm = launcher.getCurrentRpm(lane);
             double targetRpm = launcher.getTargetRpm(lane);
 
-            RobotState.packet.put("LaunchAll/Lane " + lane.name() + "/Ready", ready);
-            RobotState.packet.put("LaunchAll/Lane " + lane.name() + "/Launch RPM", launchRpm);
-            RobotState.packet.put("LaunchAll/Lane " + lane.name() + "/Current RPM", currentRpm);
-            RobotState.packet.put("LaunchAll/Lane " + lane.name() + "/Target RPM", targetRpm);
+            RobotState.packet.put("Commands/LaunchAll/Lane " + lane.name() + "/Ready", ready);
+            RobotState.packet.put("Commands/LaunchAll/Lane " + lane.name() + "/Launch RPM", launchRpm);
+            RobotState.packet.put("Commands/LaunchAll/Lane " + lane.name() + "/Current RPM", currentRpm);
+            RobotState.packet.put("Commands/LaunchAll/Lane " + lane.name() + "/Target RPM", targetRpm);
 
             // Queue shot immediately when lane is ready - no stability wait
             if (ready) {

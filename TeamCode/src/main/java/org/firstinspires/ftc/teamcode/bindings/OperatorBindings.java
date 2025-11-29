@@ -3,10 +3,12 @@ package org.firstinspires.ftc.teamcode.bindings;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import dev.nextftc.bindings.Button;
+import dev.nextftc.bindings.Range;
 import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpinCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LaunchAllCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
@@ -17,7 +19,9 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 
 public class OperatorBindings {
     private final Button distanceBasedLaunch;
-    private final Button runIntake;
+    private final Button runIntakeButton;
+    private final Button runIntakeTrigger;
+    private final Range runIntakeTriggerRange;
     private final Button humanLoading;
 
     private final Button launchShort;
@@ -31,7 +35,10 @@ public class OperatorBindings {
     public OperatorBindings(GamepadEx operator) {
 
         //Ground Intake
-        runIntake = operator.rightBumper();
+        runIntakeButton = operator.rightBumper();
+        runIntakeTriggerRange = operator.rightTrigger();
+        // Use the Range convenience to build a button that updates every poll
+        runIntakeTrigger = runIntakeTriggerRange.greaterThan(0.2);
 
         //Human Player Intake
         humanLoading = operator.triangle();
@@ -54,7 +61,7 @@ public class OperatorBindings {
     public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
         this.rawGamepad = operatorGamepad; //Need the raw gamepad for rumble features
 
-        configureGroundIntakeBindings(robot);
+        configureGroundIntakeBindings(robot, operatorGamepad);
         configureHumanIntakeBindings(robot);
         configureDistanceBasedLaunchBindings(robot);
         configurePresetRangeLaunchBindings(robot);
@@ -110,14 +117,21 @@ public class OperatorBindings {
                 .whenBecomesFalse(robot.intake::forwardRoller);
     }
 
-    private void configureGroundIntakeBindings(Robot robot) {
+    private void configureGroundIntakeBindings(Robot robot, Gamepad rawOperatorGamepad) {
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
         SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
 
+        SmartIntakeCommand smartIntakeCommand = new SmartIntakeCommand(robot.intake, rawOperatorGamepad );
+
+
         // Intake control
-        runIntake.whenBecomesTrue(intakeForwardCommand);
-        runIntake.whenBecomesFalse(intakeReverseCommand);
+        runIntakeButton.whenBecomesTrue(intakeForwardCommand);
+        runIntakeButton.whenBecomesFalse(intakeReverseCommand);
+
+        // Allow right trigger to start smart intake as well
+        runIntakeTrigger.whenBecomesTrue(smartIntakeCommand);
+        runIntakeTrigger.whenBecomesFalse(intakeReverseCommand);
     }
 
     /**
@@ -150,4 +164,18 @@ public class OperatorBindings {
         RobotState.setLauncherMode(newMode);
     }
 
+    /**
+     * Human-readable control summary for driver station telemetry.
+     */
+    public static String[] controlsSummary() {
+        return new String[]{
+                "Right bumper/trigger (>0.2): Ground intake (hold)",
+                "Triangle/Y: Human loading (hold)",
+                "Cross/A: Spin for distance, release to launch all",
+                "D-pad Down: Preset SHORT spin, release to launch all",
+                "D-pad Left: Preset MID spin, release to launch all",
+                "D-pad Right: Cycle motif tail",
+                "Back/Share: Toggle launcher mode"
+        };
+    }
 }

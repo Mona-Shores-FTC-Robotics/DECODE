@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
+import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeLaneSensorConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
@@ -170,6 +171,20 @@ public class RobotConfigs {
         } else {
             // Default to 20245 config if robot name is unknown or is 20245
             return CommandRangeConfig.commandRangeConfig20245;
+        }
+    }
+
+    /**
+     * Gets the active per-lane presence thresholds for the current robot.
+     * Returns the static instance from IntakeLaneSensorConfig so Dashboard edits are applied.
+     * @return LanePresenceConfig for 19429 or 20245 based on robot name
+     */
+    public static IntakeLaneSensorConfig.LanePresenceConfig getLanePresenceConfig() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_19429".equals(robotName)) {
+            return IntakeLaneSensorConfig.lanePresenceConfig19429;
+        } else {
+            return IntakeLaneSensorConfig.lanePresenceConfig20245;
         }
     }
 }

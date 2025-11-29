@@ -177,17 +177,17 @@ public class DistanceBasedSpinCommand extends Command {
         diagnostics.lastCalculatedDistanceIn = smoothedDistance;
 
         // Push diagnostics to telemetry packet
-        RobotState.packet.put("Distance-Based-Spin/Update Count", diagnostics.updateCount);
-        RobotState.packet.put("Distance-Based-Spin/Distance (in)", diagnostics.lastCalculatedDistanceIn);
-        RobotState.packet.put("Distance-Based-Spin/Left Target RPM", diagnostics.lastLeftTargetRpm);
-        RobotState.packet.put("Distance-Based-Spin/Center Target RPM", diagnostics.lastCenterTargetRpm);
-        RobotState.packet.put("Distance-Based-Spin/Right Target RPM", diagnostics.lastRightTargetRpm);
-        RobotState.packet.put("Distance-Based-Spin/Hood Position", diagnostics.lastHoodPosition);
-        RobotState.packet.put("Distance-Based-Spin/Data Source", diagnostics.lastSource);
-        RobotState.packet.put("Distance-Based-Spin/Robot Pose Available", diagnostics.robotPoseAvailable);
-        RobotState.packet.put("Distance-Based-Spin/Goal Pose Available", diagnostics.goalPoseAvailable);
-        RobotState.packet.put("Distance-Based-Spin/Odometry Pose Available", diagnostics.odometryPoseAvailable);
-        RobotState.packet.put("Distance-Based-Spin/Feedback Triggered", feedbackTriggered);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Update Count", diagnostics.updateCount);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Distance (in)", diagnostics.lastCalculatedDistanceIn);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Left Target RPM", diagnostics.lastLeftTargetRpm);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Center Target RPM", diagnostics.lastCenterTargetRpm);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Right Target RPM", diagnostics.lastRightTargetRpm);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Hood Position", diagnostics.lastHoodPosition);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Data Source", diagnostics.lastSource);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Robot Pose Available", diagnostics.robotPoseAvailable);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Goal Pose Available", diagnostics.goalPoseAvailable);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Odometry Pose Available", diagnostics.odometryPoseAvailable);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Feedback Triggered", feedbackTriggered);
     }
 
     @Override

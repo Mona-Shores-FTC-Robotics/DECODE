@@ -390,7 +390,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             case UNKNOWN: return clamp01(colorPositionConfig.whitePosition);
             case NONE:
             case BACKGROUND:
-            default:      return fallbackPosition();
+            default:      return followSensorColors ? clamp01(colorPositionConfig.offPosition) : fallbackPosition();
         }
     }
 

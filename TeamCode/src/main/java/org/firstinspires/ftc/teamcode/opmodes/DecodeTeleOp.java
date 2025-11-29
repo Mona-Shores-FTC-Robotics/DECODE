@@ -49,6 +49,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
     // Previous loop timing (for telemetry reporting)
     private double prevMainLoopMs = 0.0;
     private long telemetryStartNs = 0;
+    private long lastLoopStartNs = 0;
 
     // Endgame mode switch tracking
     private boolean autoSwitchedToDecodeMode = false;
@@ -81,6 +82,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
             robot.setAlliance(persistedAlliance);
             selectedAlliance = persistedAlliance;
         }
+        updateAllianceLighting();
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.initializeForTeleOp();
         allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
@@ -102,6 +104,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         if (allianceSelector != null) {
             selectedAlliance = allianceSelector.updateDuringInit(robot.vision, robot, robot.lighting);
         }
+        updateAllianceLighting();
         telemetry.addData("Alliance", selectedAlliance.displayName());
         telemetry.addLine("D-pad Left/Right override, Down uses vision, Up returns to default");
         telemetry.addLine("Press START when ready");
@@ -133,6 +136,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
             allianceSelector.applySelection(robot, robot.lighting);
             selectedAlliance = allianceSelector.getSelectedAlliance();
         }
+        robot.lighting.resumeLaneTracking();
         if (lightingInitController != null) {
             lightingInitController.onStart();
         }
@@ -142,19 +146,25 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
-        long mainLoopStartMs = System.currentTimeMillis();
+        long loopStartNs = System.nanoTime();
+        if (lastLoopStartNs != 0) {
+            prevMainLoopMs = (loopStartNs - lastLoopStartNs) / 1_000_000.0;
+        } else {
+            prevMainLoopMs = 0.0;
+        }
+        lastLoopStartNs = loopStartNs;
         BindingManager.update();
 
         // Auto-switch to DECODE mode when endgame threshold is reached
         checkEndgameModeSwitch();
 
-        relocalizeTelemetry(mainLoopStartMs);
+        long nowMs = System.currentTimeMillis();
+        relocalizeTelemetry(nowMs);
         if (lightingInitController != null) {
             lightingInitController.updateDuringMatch();
         }
 
-        telemetryStartNs = System.nanoTime();
-        prevMainLoopMs =  TimeUnit.NANOSECONDS.toMillis(mainLoopStartMs - telemetryStartNs);
+        telemetryStartNs = loopStartNs;
         publishTelemetry();
     }
 
@@ -225,6 +235,13 @@ public class DecodeTeleOp extends NextFTCOpMode {
             telemetry.addData("Vision re-localize", "Press A to sync with Limelight");
         }
         telemetry.addLine();
+    }
+
+    private void updateAllianceLighting() {
+        if (robot == null || robot.lighting == null) {
+            return;
+        }
+        robot.lighting.showSolidAlliance(selectedAlliance);
     }
 
     private static final class LoopTiming {

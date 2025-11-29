@@ -179,4 +179,20 @@ public class DriverBindings {
             this.aimMode = aimMode;
         }
     }
+
+    /**
+     * Human-readable control summary for driver station telemetry.
+     */
+    public static String[] controlsSummary() {
+        return new String[]{
+                "Left stick: Drive (X/Y)",
+                "Right stick X: Rotate",
+                "Right bumper: Slow mode (hold)",
+                "Circle/B: Aim+drive (hold)",
+                "Triangle/Y: Fixed-angle aim (hold)",
+                "D-pad Up: Vision-centered aim (hold)",
+                "Cross/A: Vision relocalize",
+                "Square/X: Reset heading to field forward"
+        };
+    }
 }
