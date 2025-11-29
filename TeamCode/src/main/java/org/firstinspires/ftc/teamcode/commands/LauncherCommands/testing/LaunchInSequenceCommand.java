@@ -287,6 +287,14 @@ public class LaunchInSequenceCommand extends Command {
                 usedLanes.add(lane);
             }
         }
+
+        // Phase 3: Fallback if NO colors detected - fire all lanes
+        // This handles the case where color sensors aren't working or return NONE/UNKNOWN
+        if (usedLanes.isEmpty()) {
+            for (LauncherLane lane : LauncherLane.values()) {
+                launcher.queueShot(lane);  // Fire all simultaneously at 0ms
+            }
+        }
     }
 
     /**
