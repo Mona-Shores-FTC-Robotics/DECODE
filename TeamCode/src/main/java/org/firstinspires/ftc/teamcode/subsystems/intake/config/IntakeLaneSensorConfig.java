@@ -29,6 +29,18 @@ public class IntakeLaneSensorConfig {
 
     // Classifier mode selector
     public String classifierMode = ClassifierMode.DECISION_BOUNDARY.name();
+    /** Minimum confidence required to accept a new artifact color classification */
+    public double minConfidenceToAccept = 0.4;
+    /** Number of consecutive confident samples required before updating lane color */
+    public int consecutiveConfirmationsRequired = 2;
+
+    // Hardware tuning
+    /** Turn the onboard white LED on/off (applied at bind time) */
+    public boolean enableSensorLight = true;
+    /** If true, override sensor gain with sensorGain value; otherwise leave default */
+    public boolean overrideSensorGain = false;
+    /** Gain applied when overrideSensorGain is true (REV Color Sensor V3 typical range ~1-10) */
+    public double sensorGain = 1.0;
 
     // Quality thresholds (used by all classifiers)
     public double minValue = 0.02;

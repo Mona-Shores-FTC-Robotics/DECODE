@@ -5,7 +5,6 @@ import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
-import org.firstinspires.ftc.teamcode.commands.RelocalizeFromVisionCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
@@ -319,10 +318,6 @@ public class CloseThreeAtOnceCommand {
         return new Pose(waypoints.nearGateControl0X, waypoints.nearGateControl0Y, 0);
     }
 
-    private static Command maybeRelocalize(Robot robot) {
-        return new RelocalizeFromVisionCommand(robot, config.relocalizeMaxAttempts);
-    }
-
     /**
      * Creates a mode-aware launch command based on RobotState.getLauncherMode().
      * - THROUGHPUT mode: Rapid firing of all lanes (launchAll)
@@ -334,7 +329,7 @@ public class CloseThreeAtOnceCommand {
      */
     private static Command createModeAwareLaunch(LauncherCommands launcherCommands, boolean spinDown) {
         if (RobotState.getLauncherMode() == LauncherMode.DECODE) {
-            return launcherCommands.fireInSequence(spinDown);
+            return launcherCommands.launchInSequence(spinDown);
         } else {
             return launcherCommands.launchAll(spinDown);
         }

@@ -197,7 +197,7 @@ public class DashboardFormatter {
             packet.put(prefix + "/distance_cm", sample.distanceCm);
             packet.put(prefix + "/color", sample.color.name());
             packet.put(prefix + "/color_hsv", sample.hsvColor.name());
-            packet.put(prefix + "/raw_rgb", formatRgb(sample.rawRed, sample.rawGreen, sample.rawBlue));
+            packet.put(prefix + "/normalized_rgb", formatNormalizedRgb(sample.normalizedRed, sample.normalizedGreen, sample.normalizedBlue));
             packet.put(prefix + "/scaled_rgb", formatRgb(sample.scaledRed, sample.scaledGreen, sample.scaledBlue));
             packet.put(prefix + "/hsv", formatHsv(sample.hue, sample.saturation, sample.value));
         }
@@ -205,6 +205,10 @@ public class DashboardFormatter {
 
     private static String lanePrefix(LauncherLane lane) {
         return "intake/lane_" + lane.name().toLowerCase();
+    }
+
+    private static String formatNormalizedRgb(float red, float green, float blue) {
+        return String.format(Locale.US, "%.3f,%.3f,%.3f", red, green, blue);
     }
 
     private static String formatRgb(int red, int green, int blue) {

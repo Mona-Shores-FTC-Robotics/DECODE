@@ -154,10 +154,10 @@ public class FullPanelsFormatter {
             // Confidence metric (how certain classifier is about the color)
             panels.debug(prefix + "/confidence", sample.confidence);
 
-            // RGB values - both raw and scaled
-            panels.debug(prefix + "/rgb/rawR", sample.rawRed);
-            panels.debug(prefix + "/rgb/rawG", sample.rawGreen);
-            panels.debug(prefix + "/rgb/rawB", sample.rawBlue);
+            // RGB values - normalized (0-1) and scaled (0-255)
+            panels.debug(prefix + "/rgb/normalizedR", sample.normalizedRed);
+            panels.debug(prefix + "/rgb/normalizedG", sample.normalizedGreen);
+            panels.debug(prefix + "/rgb/normalizedB", sample.normalizedBlue);
             panels.debug(prefix + "/rgb/scaledR", sample.scaledRed);
             panels.debug(prefix + "/rgb/scaledG", sample.scaledGreen);
             panels.debug(prefix + "/rgb/scaledB", sample.scaledBlue);

@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.SwitchableLight;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -36,6 +37,7 @@ import java.util.Map;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 /**
  * Hardware-facing intake wrapper. Handles motor power, roller servo, and lane sensor sampling
@@ -69,12 +71,13 @@ public class IntakeSubsystem implements Subsystem {
         public final boolean distanceAvailable;
         public final double distanceCm;
         public final boolean withinDistance;
-        public final int rawRed;
-        public final int rawGreen;
-        public final int rawBlue;
         public final int scaledRed;
         public final int scaledGreen;
         public final int scaledBlue;
+        /** Normalized channel values directly from the sensor (0.0-1.0) */
+        public final float normalizedRed;
+        public final float normalizedGreen;
+        public final float normalizedBlue;
         public final float hue;
         public final float saturation;
         public final float value;
@@ -87,8 +90,8 @@ public class IntakeSubsystem implements Subsystem {
                            boolean distanceAvailable,
                            double distanceCm,
                            boolean withinDistance,
-                           int rawRed, int rawGreen, int rawBlue,
                            int scaledRed, int scaledGreen, int scaledBlue,
+                           float normalizedRed, float normalizedGreen, float normalizedBlue,
                            float hue, float saturation, float value,
                            ArtifactColor hsvColor,
                            ArtifactColor color,
@@ -97,12 +100,12 @@ public class IntakeSubsystem implements Subsystem {
             this.distanceAvailable = distanceAvailable;
             this.distanceCm = distanceCm;
             this.withinDistance = withinDistance;
-            this.rawRed = rawRed;
-            this.rawGreen = rawGreen;
-            this.rawBlue = rawBlue;
             this.scaledRed = scaledRed;
             this.scaledGreen = scaledGreen;
             this.scaledBlue = scaledBlue;
+            this.normalizedRed = normalizedRed;
+            this.normalizedGreen = normalizedGreen;
+            this.normalizedBlue = normalizedBlue;
             this.hue = hue;
             this.saturation = saturation;
             this.value = value;
@@ -113,16 +116,16 @@ public class IntakeSubsystem implements Subsystem {
 
         private static LaneSample absent() {
             return new LaneSample(false, false, Double.NaN, false,
-                    0, 0, 0, 0, 0, 0,
-                    0.0f, 0.0f, 0.0f,
+                    0, 0, 0,
+                    0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
                     ArtifactColor.NONE, ArtifactColor.NONE, 0.0);
         }
 
         private static LaneSample present(boolean distanceAvailable,
                                           double distanceCm,
                                           boolean withinDistance,
-                                          int rawRed, int rawGreen, int rawBlue,
                                           int scaledRed, int scaledGreen, int scaledBlue,
+                                          float normalizedRed, float normalizedGreen, float normalizedBlue,
                                           float hue, float saturation, float value,
                                           ArtifactColor hsvColor,
                                           ArtifactColor color,
@@ -131,8 +134,8 @@ public class IntakeSubsystem implements Subsystem {
                     distanceAvailable,
                     distanceCm,
                     withinDistance,
-                    rawRed, rawGreen, rawBlue,
                     scaledRed, scaledGreen, scaledBlue,
+                    normalizedRed, normalizedGreen, normalizedBlue,
                     hue, saturation, value,
                     hsvColor, color, confidence);
         }
@@ -147,6 +150,8 @@ public class IntakeSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, NormalizedColorSensor> laneSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, DistanceSensor> laneDistanceSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, LaneSample> laneSamples = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, ArtifactColor> laneCandidateColor = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, Integer> laneCandidateCount = new EnumMap<>(LauncherLane.class);
     private final float[] hsvBuffer = new float[3];
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
     private boolean anyLaneSensorsPresent = false;
@@ -195,6 +200,8 @@ public class IntakeSubsystem implements Subsystem {
         for (LauncherLane lane : LauncherLane.values()) {
             laneColors.put(lane, ArtifactColor.NONE);
             laneSamples.put(lane, ABSENT_SAMPLE);
+            laneCandidateColor.put(lane, ArtifactColor.NONE);
+            laneCandidateCount.put(lane, 0);
         }
         bindLaneSensors(hardwareMap);
     }
@@ -204,6 +211,8 @@ public class IntakeSubsystem implements Subsystem {
         clearLaneColors();
         for (LauncherLane lane : LauncherLane.values()) {
             laneSamples.put(lane, ABSENT_SAMPLE);
+            laneCandidateColor.put(lane, ArtifactColor.NONE);
+            laneCandidateCount.put(lane, 0);
         }
         sensorTimer.reset();
         intakeMode = IntakeMode.STOPPED;
@@ -418,7 +427,49 @@ public class IntakeSubsystem implements Subsystem {
         for (LauncherLane lane : LauncherLane.values()) {
             LaneSample sample = sampleLane(lane);
             laneSamples.put(lane, sample);
-            updateLaneColor(lane, sample.color);
+            applyGatedLaneColor(lane, sample);
+        }
+    }
+
+    /**
+     * Applies debounce + confidence gating before updating lane color to reduce flicker from holes/background.
+     */
+    private void applyGatedLaneColor(LauncherLane lane, LaneSample sample) {
+        if (lane == null || sample == null) {
+            return;
+        }
+
+        ArtifactColor candidate = sample.color == null ? ArtifactColor.NONE : sample.color;
+
+        // Non-artifact classifications clear immediately (no debounce) to prevent stale colors.
+        if (!candidate.isArtifact()) {
+            laneCandidateColor.put(lane, ArtifactColor.NONE);
+            laneCandidateCount.put(lane, 0);
+            updateLaneColor(lane, ArtifactColor.NONE);
+            return;
+        }
+
+        // Require minimum confidence for artifact candidates.
+        if (sample.confidence < laneSensorConfig.minConfidenceToAccept) {
+            laneCandidateCount.put(lane, 0);
+            return;
+        }
+
+        ArtifactColor previousCandidate = laneCandidateColor.getOrDefault(lane, ArtifactColor.NONE);
+        int count = laneCandidateCount.getOrDefault(lane, 0);
+
+        if (candidate == previousCandidate) {
+            count++;
+        } else {
+            previousCandidate = candidate;
+            count = 1;
+        }
+
+        laneCandidateColor.put(lane, previousCandidate);
+        laneCandidateCount.put(lane, count);
+
+        if (count >= Math.max(1, laneSensorConfig.consecutiveConfirmationsRequired)) {
+            updateLaneColor(lane, previousCandidate);
         }
     }
 
@@ -426,10 +477,15 @@ public class IntakeSubsystem implements Subsystem {
         anyLaneSensorsPresent = false;
         laneSensors.put(LauncherLane.LEFT, tryGetColorSensor(hardwareMap, laneSensorConfig.leftSensor));
         laneDistanceSensors.put(LauncherLane.LEFT, tryGetDistanceSensor(hardwareMap, laneSensorConfig.leftSensor));
+        applyLaneSensorSettings(laneSensors.get(LauncherLane.LEFT));
+
         laneSensors.put(LauncherLane.CENTER, tryGetColorSensor(hardwareMap, laneSensorConfig.centerSensor));
         laneDistanceSensors.put(LauncherLane.CENTER, tryGetDistanceSensor(hardwareMap, laneSensorConfig.centerSensor));
+        applyLaneSensorSettings(laneSensors.get(LauncherLane.CENTER));
+
         laneSensors.put(LauncherLane.RIGHT, tryGetColorSensor(hardwareMap, laneSensorConfig.rightSensor));
         laneDistanceSensors.put(LauncherLane.RIGHT, tryGetDistanceSensor(hardwareMap, laneSensorConfig.rightSensor));
+        applyLaneSensorSettings(laneSensors.get(LauncherLane.RIGHT));
         for (NormalizedColorSensor sensor : laneSensors.values()) {
             if (sensor != null) {
                 anyLaneSensorsPresent = true;
@@ -457,6 +513,22 @@ public class IntakeSubsystem implements Subsystem {
             return hardwareMap.get(NormalizedColorSensor.class, name);
         } catch (IllegalArgumentException ignored) {
             return null;
+        }
+    }
+
+    private void applyLaneSensorSettings(NormalizedColorSensor sensor) {
+        if (sensor == null) {
+            return;
+        }
+        if (sensor instanceof SwitchableLight) {
+            ((SwitchableLight) sensor).enableLight(laneSensorConfig.enableSensorLight);
+        }
+        if (laneSensorConfig.overrideSensorGain) {
+            try {
+                sensor.setGain((float) laneSensorConfig.sensorGain);
+            } catch (IllegalArgumentException | UnsupportedOperationException ignored) {
+                // Ignore invalid gain values to avoid crashing during onInit
+            }
         }
     }
 
@@ -497,6 +569,7 @@ public class IntakeSubsystem implements Subsystem {
 
         boolean distanceValid = distanceAvailable && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
         boolean withinDistance;
+        // Fallback: if distance is unavailable or disabled in config, do not block classification on distance
         if (!distanceAvailable || !laneSensorConfig.useDistance) {
             withinDistance = true;
         } else if (!distanceValid) {
@@ -507,19 +580,20 @@ public class IntakeSubsystem implements Subsystem {
 
         // SINGLE I2C read for all color channels (red, green, blue, alpha)
         NormalizedRGBA colors = colorSensor.getNormalizedColors();
+        float normalizedRed = colors.red;
+        float normalizedGreen = colors.green;
+        float normalizedBlue = colors.blue;
 
-        // Convert normalized values (0-1) to 0-255 range
+        // Convert normalized values (0-1) to 0-255 range without losing fractional detail
         // NormalizedColorSensor already applies gain internally, so these are our scaled values
-        int scaledRed = Math.min(255, Math.round(colors.red * 255.0f));
-        int scaledGreen = Math.min(255, Math.round(colors.green * 255.0f));
-        int scaledBlue = Math.min(255, Math.round(colors.blue * 255.0f));
+        float scaledRedFloat = Math.min(255.0f, normalizedRed * 255.0f);
+        float scaledGreenFloat = Math.min(255.0f, normalizedGreen * 255.0f);
+        float scaledBlueFloat = Math.min(255.0f, normalizedBlue * 255.0f);
+        int scaledRed = Math.round(scaledRedFloat);
+        int scaledGreen = Math.round(scaledGreenFloat);
+        int scaledBlue = Math.round(scaledBlueFloat);
 
-        // For raw values, use the same normalized values scaled to 0-255
-        int rawRed = scaledRed;
-        int rawGreen = scaledGreen;
-        int rawBlue = scaledBlue;
-
-        int maxComponent = Math.max(scaledRed, Math.max(scaledGreen, scaledBlue));
+        float maxComponent = Math.max(scaledRedFloat, Math.max(scaledGreenFloat, scaledBlueFloat));
         float hue = 0.0f;
         float saturation = 0.0f;
         float value = 0.0f;
@@ -531,8 +605,10 @@ public class IntakeSubsystem implements Subsystem {
             value = hsvBuffer[2];
         }
 
-        // Compute total RGB intensity for presence detection
-        int totalIntensity = scaledRed + scaledGreen + scaledBlue;
+        // Compute total RGB intensity for presence detection (preserve fractional contribution)
+        int totalIntensity = Math.round(scaledRedFloat + scaledGreenFloat + scaledBlueFloat);
+
+        String lanePrefix = lane == null ? "unknown" : lane.name().toLowerCase(Locale.US);
 
         // Classify color using selected classifier mode with enhanced presence/background detection
         ClassificationResult result = classifyColor(
@@ -540,7 +616,8 @@ public class IntakeSubsystem implements Subsystem {
                 maxComponent > 0,
                 totalIntensity,
                 distanceValid ? distanceCm : Double.NaN,
-                withinDistance
+                withinDistance,
+                lanePrefix
         );
         ArtifactColor hsvColor = result.color;
         double confidence = result.confidence;
@@ -552,8 +629,8 @@ public class IntakeSubsystem implements Subsystem {
                 distanceAvailable,
                 distanceValid ? distanceCm : Double.NaN,
                 withinDistance,
-                rawRed, rawGreen, rawBlue,
                 scaledRed, scaledGreen, scaledBlue,
+                normalizedRed, normalizedGreen, normalizedBlue,
                 hue, saturation, value,
                 hsvColor,
                 finalColor,
@@ -588,9 +665,11 @@ public class IntakeSubsystem implements Subsystem {
      */
     private ClassificationResult classifyColor(float hue, float saturation, float value,
                                                boolean hasSignal, int totalIntensity,
-                                               double distanceCm, boolean withinDistance) {
+                                               double distanceCm, boolean withinDistance,
+                                               String lanePrefix) {
         // Basic quality check - no signal
         if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", "no_signal");
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
 
@@ -599,8 +678,14 @@ public class IntakeSubsystem implements Subsystem {
             double presenceScore = computePresenceScore(saturation, value, totalIntensity, distanceCm, withinDistance);
             if (presenceScore < laneSensorConfig.minPresenceScore) {
                 // Not enough evidence that an artifact is present
+                RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", "presence_low");
+                RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_score", presenceScore);
                 return new ClassificationResult(ArtifactColor.NONE, 0.0);
             }
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_score", presenceScore);
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_distance_valid", !Double.isNaN(distanceCm));
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_within_distance", withinDistance);
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_total_intensity", totalIntensity);
         }
 
         // Background similarity check - does this look like empty space / field mat?
@@ -609,8 +694,11 @@ public class IntakeSubsystem implements Subsystem {
             if (backgroundDistance < laneSensorConfig.maxBackgroundDistance) {
                 // Looks like background, not an artifact
                 double confidence = 1.0 - (backgroundDistance / laneSensorConfig.maxBackgroundDistance);
+                RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", "background");
+                RobotState.packet.put("intake/classifier/" + lanePrefix + "/background_distance", backgroundDistance);
                 return new ClassificationResult(ArtifactColor.BACKGROUND, confidence);
             }
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/background_distance", backgroundDistance);
         }
 
         // Parse classifier mode
@@ -620,15 +708,16 @@ public class IntakeSubsystem implements Subsystem {
         } catch (IllegalArgumentException e) {
             mode = ClassifierMode.DECISION_BOUNDARY; // Default
         }
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/mode", mode.name());
 
         // Route to appropriate color classifier (GREEN vs PURPLE)
         switch (mode) {
             case RANGE_BASED:
-                return classifyColorRangeBased(hue, saturation, value, hasSignal);
+                return classifyColorRangeBased(hue, saturation, value, hasSignal, lanePrefix);
             case DECISION_BOUNDARY:
-                return classifyColorDecisionBoundary(hue, saturation, value, hasSignal);
+                return classifyColorDecisionBoundary(hue, saturation, value, hasSignal, lanePrefix);
             case DISTANCE_BASED:
-                return classifyColorDistanceBased(hue, saturation, value, hasSignal);
+                return classifyColorDistanceBased(hue, saturation, value, hasSignal, lanePrefix);
             default:
                 return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
@@ -695,7 +784,7 @@ public class IntakeSubsystem implements Subsystem {
      * RANGE_BASED classifier: Independent hue ranges for green and purple (legacy).
      * Returns UNKNOWN if hue is outside both ranges.
      */
-    private ClassificationResult classifyColorRangeBased(float hue, float saturation, float value, boolean hasSignal) {
+    private ClassificationResult classifyColorRangeBased(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
         if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
@@ -707,6 +796,8 @@ public class IntakeSubsystem implements Subsystem {
             double distFromMax = laneSensorConfig.greenHueMax - hue;
             double distFromEdge = Math.min(distFromMin, distFromMax);
             double confidence = Math.min(1.0, distFromEdge / 20.0); // 20° margin
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_result", "GREEN");
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_confidence", confidence);
             return new ClassificationResult(ArtifactColor.GREEN, confidence);
         }
 
@@ -714,10 +805,14 @@ public class IntakeSubsystem implements Subsystem {
         if ((hue >= laneSensorConfig.purpleHueMin && hue <= laneSensorConfig.purpleHueMax)
                 || hue <= laneSensorConfig.purpleHueWrapMax) {
             double confidence = 0.7; // Fixed confidence for purple (wrap makes it harder to compute)
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_result", "PURPLE");
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_confidence", confidence);
             return new ClassificationResult(ArtifactColor.PURPLE, confidence);
         }
 
         // Outside both ranges
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_result", "UNKNOWN");
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_confidence", 0.0);
         return new ClassificationResult(ArtifactColor.UNKNOWN, 0.0);
     }
 
@@ -725,17 +820,18 @@ public class IntakeSubsystem implements Subsystem {
      * DECISION_BOUNDARY classifier: Single hue threshold between green and purple (recommended).
      * Always returns GREEN or PURPLE, never UNKNOWN (two-class problem).
      */
-    private ClassificationResult classifyColorDecisionBoundary(float hue, float saturation, float value, boolean hasSignal) {
+    private ClassificationResult classifyColorDecisionBoundary(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
         if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
 
         // Unwrap hue to handle purple wrap-around
-        // Purple spans 0° (e.g., 270-30°), so we map to continuous range
-        // Green ~120°, Purple ~290° (unwrapped from 0-30° → 360-390°)
+        // Purple spans across 0°; we map low-end hues onto the high side relative to the boundary.
         float unwrappedHue = hue;
-        if (hue < 90.0f) {  // Likely purple on the wrap side (0-40°)
-            unwrappedHue = hue + 360.0f;  // Map 0-40° → 360-400°
+        // Dynamic wrap window: anything more than 180° below the boundary is considered wrap-side purple
+        float wrapThreshold = (float) (laneSensorConfig.hueDecisionBoundary - 180.0);
+        if (hue < wrapThreshold) {
+            unwrappedHue = hue + 360.0f;
         }
 
         // Classify based on which side of decision boundary
@@ -754,6 +850,11 @@ public class IntakeSubsystem implements Subsystem {
         // High confidence if far from boundary, low if close
         double confidence = Math.min(1.0, distanceFromBoundary / laneSensorConfig.lowConfidenceMargin);
 
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_unwrapped_hue", unwrappedHue);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_boundary", laneSensorConfig.hueDecisionBoundary);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_distance_from_boundary", distanceFromBoundary);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_result", color.name());
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_confidence", confidence);
         return new ClassificationResult(color, confidence);
     }
 
@@ -761,7 +862,7 @@ public class IntakeSubsystem implements Subsystem {
      * DISTANCE_BASED classifier: Euclidean distance in HSV space to color targets.
      * Picks the closer target (green or purple).
      */
-    private ClassificationResult classifyColorDistanceBased(float hue, float saturation, float value, boolean hasSignal) {
+    private ClassificationResult classifyColorDistanceBased(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
         if (!hasSignal || value < laneSensorConfig.minValue || saturation < laneSensorConfig.minSaturation) {
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
@@ -788,6 +889,11 @@ public class IntakeSubsystem implements Subsystem {
         double separation = maxDist - minDist;
         double confidence = Math.min(1.0, separation / 30.0); // 30° weighted separation for full confidence
 
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_green", distToGreen);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_purple", distToPurple);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_separation", separation);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_result", color.name());
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_confidence", confidence);
         return new ClassificationResult(color, confidence);
     }
 
@@ -833,6 +939,8 @@ public class IntakeSubsystem implements Subsystem {
     public void clearLaneColors() {
         for (LauncherLane lane : LauncherLane.values()) {
             updateLaneColor(lane, ArtifactColor.NONE);
+            laneCandidateColor.put(lane, ArtifactColor.NONE);
+            laneCandidateCount.put(lane, 0);
         }
     }
 

@@ -64,7 +64,7 @@ public class Robot {
         intake.initialize();
 
         // Wire lighting to receive lane color updates from intake
-//        intake.addLaneColorListener(lighting);
+        intake.addLaneColorListener(lighting);
     }
 
     public void initializeForTeleOp() {
