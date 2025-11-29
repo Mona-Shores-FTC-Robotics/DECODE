@@ -208,14 +208,6 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
             }
         }
 
-        // Provide proximity feedback via blinking lights (faster = closer to target)
-        if (visionInitialized && !Double.isInfinite(proximityDistance)) {
-            robot.lighting.showProximityFeedback(proximityDistance, 18.0);
-        } else {
-            // No vision or invalid - stop proximity feedback
-            robot.lighting.stopProximityFeedback();
-        }
-
         // Display initialization status
         telemetry.clear();
         telemetry.addData("Alliance", activeAlliance.displayName());
@@ -259,8 +251,6 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
         BindingManager.reset();
         allianceSelector.lockSelection();
 
-        // Stop proximity feedback when match starts
-        robot.lighting.stopProximityFeedback();
         if (lightingInitController != null) {
             lightingInitController.onStart();
         }
