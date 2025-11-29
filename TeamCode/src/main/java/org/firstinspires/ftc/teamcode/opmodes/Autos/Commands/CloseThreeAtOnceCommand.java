@@ -334,7 +334,7 @@ public class CloseThreeAtOnceCommand {
      */
     private static Command createModeAwareLaunch(LauncherCommands launcherCommands, boolean spinDown) {
         if (RobotState.getLauncherMode() == LauncherMode.DECODE) {
-            return launcherCommands.fireInSequence();
+            return launcherCommands.fireInSequence(spinDown);
         } else {
             return launcherCommands.launchAll(spinDown);
         }

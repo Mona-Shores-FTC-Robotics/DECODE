@@ -119,10 +119,11 @@ public class LauncherCommands {
      *
      * Used for precise obelisk scoring in DECODE mode.
      *
+     * @param spinDownAfterShot Whether to spin down flywheels after shooting (false in autonomous)
      * @return Command that fires in motif-aware sequence
      */
-    public LaunchInSequenceCommand fireInSequence() {
-        return new LaunchInSequenceCommand(launcher, intake);
+    public LaunchInSequenceCommand fireInSequence(boolean spinDownAfterShot) {
+        return new LaunchInSequenceCommand(launcher, intake, spinDownAfterShot);
     }
 
 

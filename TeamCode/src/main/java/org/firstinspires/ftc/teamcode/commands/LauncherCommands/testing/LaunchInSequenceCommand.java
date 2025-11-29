@@ -65,6 +65,7 @@ public class LaunchInSequenceCommand extends Command {
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
+    private final boolean spinDownAfterShot;
 
     private final ElapsedTime timer = new ElapsedTime();
     private final EnumSet<LauncherLane> usedLanes = EnumSet.noneOf(LauncherLane.class);
@@ -78,11 +79,14 @@ public class LaunchInSequenceCommand extends Command {
      *
      * @param launcher The launcher subsystem
      * @param intake The intake subsystem (for prefeed roller control and artifact tracking)
+     * @param spinDownAfterShot Whether to spin down flywheels after shooting (false in autonomous)
      */
     public LaunchInSequenceCommand(LauncherSubsystem launcher,
-                                    IntakeSubsystem intake) {
+                                    IntakeSubsystem intake,
+                                    boolean spinDownAfterShot) {
         this.launcher = Objects.requireNonNull(launcher, "launcher required");
         this.intake = Objects.requireNonNull(intake, "intake required");
+        this.spinDownAfterShot = spinDownAfterShot;
         requires(launcher);
         setInterruptible(true);
     }
@@ -150,7 +154,7 @@ public class LaunchInSequenceCommand extends Command {
             case SHOTS_QUEUED:
                 if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
                     stage = Stage.COMPLETED;
-                    if (!spinDownApplied) {
+                    if (spinDownAfterShot && !spinDownApplied) {
                         launcher.setAllLanesToIdle();
                         spinDownApplied = true;
                     }
@@ -187,7 +191,7 @@ public class LaunchInSequenceCommand extends Command {
         }
 
         // Spin down if not already done
-        if (interrupted && !spinDownApplied) {
+        if (interrupted && spinDownAfterShot && !spinDownApplied) {
             launcher.setAllLanesToIdle();
             spinDownApplied = true;
         }
