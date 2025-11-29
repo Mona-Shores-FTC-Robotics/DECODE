@@ -24,4 +24,10 @@ public class CaptureAndAimConfig {
      * Maximum time for sampling phase before giving up (milliseconds).
      */
     public double samplingTimeoutMs = 500.0;
+
+    /**
+     * Heading tolerance in degrees - if already within this tolerance, skip the turn.
+     * This prevents Pedro turnTo() from getting stuck when heading error is tiny.
+     */
+    public double headingToleranceDeg = 3.0;
 }

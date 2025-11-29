@@ -4,17 +4,16 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.CloseHeadOnCommand;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
-import org.firstinspires.ftc.teamcode.util.LauncherMode;
-import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
-import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.Command;
@@ -26,15 +25,14 @@ import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Close Three At Once", group = "Command")
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Close Head On", group = "Command")
 @Configurable
-public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
+public class DecodeAutonomousCloseHeadOn extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
     private Robot robot;
     private AllianceSelector allianceSelector;
-    private LauncherModeSelector modeSelector;
     private Alliance activeAlliance = Alliance.BLUE;
     private FieldLayout currentLayout;
     private AutoPrestartHelper prestartHelper;
@@ -65,17 +63,12 @@ public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
         robot.initializeForAuto();
 
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
-        GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
-
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
-        modeSelector = new LauncherModeSelector(operatorPad, LauncherMode.THROUGHPUT);
-
         activeAlliance = allianceSelector.getSelectedAlliance();
 
-        applyAlliance(activeAlliance, CloseThreeAtOnceCommand.getDefaultStartPose());
+        applyAlliance(activeAlliance, CloseHeadOnCommand.getDefaultStartPose());
 
         allianceSelector.applySelection(robot, robot.lighting);
-        modeSelector.applySelection(robot.lighting);
         prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
 
         addComponents(
@@ -92,9 +85,6 @@ public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
 
         AutoPrestartHelper.InitStatus initStatus = prestartHelper.update(activeAlliance);
         applyInitSelections(initStatus);
-
-        // Update launcher mode selection (operator dpad left/right)
-        modeSelector.updateDuringInit(robot.lighting);
 
 //        updateProximityFeedback();
         updateInitTelemetry(initStatus);
@@ -124,7 +114,6 @@ public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
     public void onStartButtonPressed() {
         BindingManager.reset();
         allianceSelector.lockSelection();
-        modeSelector.lockSelection();
 
         // Build auto with vision-detected start pose (or null to use LocalizeCommand defaults)
         // Use follower's current pose as the source of truth (it was set from vision if available)
@@ -132,7 +121,7 @@ public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
             ? lastAppliedStartPosePedro
             : null;
 
-        Command autoRoutine = CloseThreeAtOnceCommand.create(robot, activeAlliance, startPoseOverride);
+        Command autoRoutine = CloseHeadOnCommand.create(robot, activeAlliance, startPoseOverride);
 
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
 
@@ -148,7 +137,6 @@ public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
     @Override
     public void onStop() {
         allianceSelector.unlockSelection();
-        modeSelector.unlockSelection();
         BindingManager.reset();
         robot.launcher.abort();
         robot.drive.stop();
@@ -169,7 +157,7 @@ public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
             // When alliance changes without vision, use LocalizeCommand default
             Pose defaultPose = lastDetectedStartPosePedro != null
                 ? lastDetectedStartPosePedro
-                : CloseThreeAtOnceCommand.getDefaultStartPose();
+                : CloseHeadOnCommand.getDefaultStartPose();
             applyAlliance(activeAlliance, defaultPose);
         }
 
@@ -313,9 +301,9 @@ public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
 
         // Get default/target start pose (mirrored for current alliance)
         Pose targetPose = AutoField.poseForAlliance(
-                CloseThreeAtOnceCommand.waypoints.startX,
-                CloseThreeAtOnceCommand.waypoints.startY,
-                CloseThreeAtOnceCommand.waypoints.startHeading,
+            CloseHeadOnCommand.waypoints.startX,
+            CloseHeadOnCommand.waypoints.startY,
+            CloseHeadOnCommand.waypoints.startHeading,
             activeAlliance
         );
 
@@ -373,10 +361,7 @@ public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
 
         telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
         telemetry.addLine();
-        telemetry.addData("Launcher Mode", modeSelector.getDisplayText());
-        telemetry.addLine();
-        telemetry.addLine("Driver D-pad: Alliance (L=BLUE R=RED)");
-        telemetry.addLine("Operator D-pad: Mode (L=THRU R=SEQ)");
+        telemetry.addLine("D-pad Left/Right override alliance");
         telemetry.addLine("Press START when ready");
         telemetry.update();
     }
@@ -398,9 +383,9 @@ public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
         // Compare vision pose to target (not to follower)
         Pose visionPose = status.startPoseFromVision;
         Pose targetPose = AutoField.poseForAlliance(
-                CloseThreeAtOnceCommand.waypoints.startX,
-                CloseThreeAtOnceCommand.waypoints.startY,
-                CloseThreeAtOnceCommand.waypoints.startHeading,
+            CloseHeadOnCommand.waypoints.startX,
+            CloseHeadOnCommand.waypoints.startY,
+            CloseHeadOnCommand.waypoints.startHeading,
             activeAlliance
         );
 

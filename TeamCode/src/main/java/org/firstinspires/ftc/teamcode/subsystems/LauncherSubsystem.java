@@ -1204,6 +1204,12 @@ public class LauncherSubsystem implements Subsystem {
                 case LONG:
                     position = hoodLongPositionFor(lane);
                     break;
+                case SHORT_AUTO:
+                    position = hoodShortPositionFor(lane);
+                    break;
+                case FAR_AUTO:
+                    position = hoodLongPositionFor(lane);
+                    break;
                 default:
                     position = hoodMidPositionFor(lane);
                     break;

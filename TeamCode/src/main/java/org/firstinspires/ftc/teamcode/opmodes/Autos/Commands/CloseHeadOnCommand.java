@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.opmodes.Autos;
+package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
 import static org.firstinspires.ftc.teamcode.util.AutoField.poseForAlliance;
 

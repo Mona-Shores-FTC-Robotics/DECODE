@@ -1,10 +1,11 @@
-package org.firstinspires.ftc.teamcode.opmodes.Autos;
+package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.RelocalizeFromVisionCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
@@ -31,9 +32,10 @@ public class CloseThreeAtOnceCommand {
 
     @Configurable
     public static class Config {
-        public double maxPathPower = 0.7;
+        public double maxPathPower = 0.75;
         public double endTimeForLinearHeadingInterpolation = .7;
-        public double intakeDelaySeconds = 3;
+        public double intakeDelaySeconds = 3.2;
+        public int relocalizeMaxAttempts = 5;
     }
 
     @Configurable
@@ -43,50 +45,54 @@ public class CloseThreeAtOnceCommand {
         public double startHeading = 0;
 
         // LaunchClose1
-        public double launchClose1X = 28;
-        public double launchClose1Y = 116.0;
+        public double launchClose1X = 30.0;
+        public double launchClose1Y = 113.0;
         public double launchClose1Heading = 134.0;
 
         // ArtifactsSet1
-        public double artifactsSet1X = 21;
+        public double artifactsSet1X = 25.5;
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
+        // Control point for segment: ArtifactsSet3
+        public double artifactsSet1Control0X = 25;
+        public double artifactsSet1Control0Y = 113;
+
         // LaunchClose2
-        public double launchClose2X = 28;
-        public double launchClose2Y = 116.0;
+        public double launchClose2X = 30.0;
+        public double launchClose2Y = 113.0;
         public double launchClose2Heading = 134.0;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 23;
-        public double artifactsSet2Y = 60.0;
+        public double artifactsSet2X = 25.5;
+        public double artifactsSet2Y = 57.0;
         public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 23;
-        public double artifactsSet2Control0Y = 96.0;
+        public double artifactsSet2Control0X = 25;
+        public double artifactsSet2Control0Y = 113;
 
         // LaunchClose3
-        public double launchClose3X = 28;
-        public double launchClose3Y = 116.0;
+        public double launchClose3X = 30.0;
+        public double launchClose3Y = 113.0;
         public double launchClose3Heading = 134.0;
 
         // Control point for segment: LaunchClose3
-        public double launchClose3Control0X = 33;
-        public double launchClose3Control0Y = 84;
+        public double launchClose3Control0X = 50.5;
+        public double launchClose3Control0Y = 72;
 
         // ArtifactsSet3
-        public double artifactsSet3X = 23.0;
+        public double artifactsSet3X = 25;
         public double artifactsSet3Y = 35.5;
         public double artifactsSet3Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet3Control0X = 30;
-        public double artifactsSet3Control0Y = 96.6;
+        public double artifactsSet3Control0X = 33;
+        public double artifactsSet3Control0Y = 113;
 
         // LaunchOffLine
-        public double launchOffLineX = 28;
-        public double launchOffLineY = 116.0;
+        public double launchOffLineX = 30;
+        public double launchOffLineY = 113.0;
         public double launchOffLineHeading = 134.0;
 
         // Control point for segment: LaunchOffLine
@@ -155,8 +161,7 @@ public class CloseThreeAtOnceCommand {
                                 .to(launchClose1())
                                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                 .build(config.maxPathPower),
-
-                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, true)
+                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true)
                 ),
                 createModeAwareLaunch(launcherCommands, false),
 
@@ -165,11 +170,12 @@ public class CloseThreeAtOnceCommand {
                         new FollowPathBuilder(robot, alliance)
                                 .from(launchClose1())
                                 .to(artifactsSet1())
+                                .withControl(artifactsSet1Control0())
                                 .withConstantHeading(artifactsSet1().getHeading())
                                 .build(config.maxPathPower),
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
-
+                new Delay(.1),
 
                 new ParallelGroup(
                         new FollowPathBuilder(robot, alliance)
@@ -190,12 +196,14 @@ public class CloseThreeAtOnceCommand {
                 new ParallelGroup(
                         new FollowPathBuilder(robot, alliance)
                                 .from(launchClose2())
-                                .withControl(artifactsSet2Control0())
                                 .to(artifactsSet2())
+                                .withControl(artifactsSet2Control0())
                                 .withConstantHeading(artifactsSet2().getHeading())
                                 .build(config.maxPathPower),
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
+
+                new Delay(.1),
                 new ParallelGroup(
                         new FollowPathBuilder(robot, alliance)
                             .from(artifactsSet2())
@@ -216,12 +224,15 @@ public class CloseThreeAtOnceCommand {
                 new ParallelGroup(
                         new FollowPathBuilder(robot, alliance)
                                 .from(launchClose3())
-                                .withControl(artifactsSet3Control0())
                                 .to(artifactsSet3())
+                                .withControl(artifactsSet3Control0())
                                 .withConstantHeading(artifactsSet3().getHeading())
                                 .build(config.maxPathPower),
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
+
+
+                new Delay(.1),
 
                 // LaunchOffLine
                 new ParallelGroup(
@@ -234,7 +245,7 @@ public class CloseThreeAtOnceCommand {
                        new SequentialGroup(
                                  new Delay(config.intakeDelaySeconds),
                                 new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
-                        )
+                       )
                 ),
                 createModeAwareLaunch(launcherCommands, true),
 
@@ -258,6 +269,10 @@ public class CloseThreeAtOnceCommand {
 
     private static Pose artifactsSet1() {
         return new Pose(waypoints.artifactsSet1X, waypoints.artifactsSet1Y, Math.toRadians(waypoints.artifactsSet1Heading));
+    }
+
+    private static Pose artifactsSet1Control0() {
+        return new Pose(waypoints.artifactsSet1Control0X, waypoints.artifactsSet1Control0Y, 0);
     }
 
     private static Pose launchClose2() {
@@ -302,6 +317,10 @@ public class CloseThreeAtOnceCommand {
 
     private static Pose nearGateControl0() {
         return new Pose(waypoints.nearGateControl0X, waypoints.nearGateControl0Y, 0);
+    }
+
+    private static Command maybeRelocalize(Robot robot) {
+        return new RelocalizeFromVisionCommand(robot, config.relocalizeMaxAttempts);
     }
 
     /**
