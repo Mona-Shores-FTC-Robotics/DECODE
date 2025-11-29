@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode.util;
 
 /**
- * Represents the three shooting range configurations for the launcher.
+ * Represents the shooting range configurations for the launcher.
  * Each range corresponds to a different set of flywheel RPM targets.
  */
 public enum LauncherRange {
@@ -12,7 +12,13 @@ public enum LauncherRange {
     MID("Mid"),
 
     /** Long-range shot configuration (~4200 RPM) */
-    LONG("Long");
+    LONG("Long"),
+
+    /** Short autonomous shot configuration (tuned separately from SHORT for auto) */
+    SHORT_AUTO("Short Auto"),
+
+    /** Far autonomous shot configuration (tuned separately from LONG for auto) */
+    FAR_AUTO("Far Auto");
 
     private final String displayName;
 
