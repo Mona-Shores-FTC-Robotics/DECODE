@@ -101,23 +101,23 @@ public class CommandRangeConfig {
         // Apply 20245-specific values
         /** Short range RPMs */
         config.shortLeftRpm = 2000;
-        config.shortCenterRpm = 1875; // Center disabled by default
+        config.shortCenterRpm = 1875;
         config.shortRightRpm = 1875;
 
         /** Mid range RPMs */
         config.midLeftRpm = 2400;
-        config.midCenterRpm = 2300; // Center disabled by default
+        config.midCenterRpm = 2300;
         config.midRightRpm = 2300;
 
         /** Long range RPMs */
         config.longLeftRpm = 2828;
-        config.longCenterRpm = 2828; // Center disabled by default
+        config.longCenterRpm = 2828;
         config.longRightRpm = 2828;
 
         /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
-        config.shortAutoLeftRpm = 2000;
-        config.shortAutoCenterRpm = 1875;
-        config.shortAutoRightRpm = 1875;
+        config.shortAutoLeftRpm = 1950;
+        config.shortAutoCenterRpm = 1900;
+        config.shortAutoRightRpm = 1900;
 
         /** Far Auto range RPMs (starts matching LONG, tune independently for auto) */
         config.farAutoLeftRpm = 2828;
@@ -128,7 +128,7 @@ public class CommandRangeConfig {
         config.shortHoodPosition = .42;
         config.midHoodPosition = 0.05;
         config.longHoodPosition = .05;
-        config.shortAutoHoodPosition = .42; // Starts matching SHORT
+        config.shortAutoHoodPosition = .38; // Starts matching SHORT
         config.farAutoHoodPosition = .05; // Starts matching LONG
 
         /** Timeout in seconds before giving up on spin-up */

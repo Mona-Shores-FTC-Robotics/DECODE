@@ -56,7 +56,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  */
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "TOGETHER Auto Far", group = "Command")
 @Configurable
-public class DecodeAutonomousFarTOGETHERCommand extends NextFTCOpMode {
+public class DecodeAutonomousFarTOGETHER extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
@@ -73,7 +73,7 @@ public class DecodeAutonomousFarTOGETHERCommand extends NextFTCOpMode {
         public LauncherMode startingLauncherMode = LauncherMode.THROUGHPUT;
     }
 
-    public static DecodeAutonomousFarTOGETHERCommand.AutoMotionConfig config = new DecodeAutonomousFarTOGETHERCommand.AutoMotionConfig();
+    public static DecodeAutonomousFarTOGETHER.AutoMotionConfig config = new DecodeAutonomousFarTOGETHER.AutoMotionConfig();
 
     private Robot robot;
     private AllianceSelector allianceSelector;

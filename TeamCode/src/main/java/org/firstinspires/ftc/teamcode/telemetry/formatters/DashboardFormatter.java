@@ -224,6 +224,7 @@ public class DashboardFormatter {
         packet.put("Pose/Pedro x", data.pose.poseXIn);
         packet.put("Pose/Pedro y", data.pose.poseYIn);
         packet.put("Pose/Pedro heading", data.pose.headingRad);
+        packet.put("Pose/Pedro degrees", Math.toDegrees(data.pose.headingRad));
 
         // FTC pose (for compatibility)
         if (!Double.isNaN(data.pose.ftcXIn) && !Double.isNaN(data.pose.ftcYIn)) {
@@ -232,6 +233,7 @@ public class DashboardFormatter {
         }
         if (!Double.isNaN(data.pose.ftcHeadingRad)) {
             packet.put("Pose/FTC heading", data.pose.ftcHeadingRad);
+
         }
 
         // Vision pose (when available)

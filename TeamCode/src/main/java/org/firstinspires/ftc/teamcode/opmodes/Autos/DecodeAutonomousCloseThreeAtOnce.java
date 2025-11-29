@@ -4,6 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.CloseThreeAtOnceCommand;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -26,7 +27,7 @@ import dev.nextftc.ftc.components.BulkReadComponent;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Close Three At Once", group = "Command")
 @Configurable
-public class DecodeAutonomousCloseThreeAtOnceCommand extends NextFTCOpMode {
+public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 

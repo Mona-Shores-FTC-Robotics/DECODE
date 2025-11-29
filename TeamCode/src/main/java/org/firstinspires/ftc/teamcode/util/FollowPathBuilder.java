@@ -21,13 +21,16 @@ public class FollowPathBuilder {
     private Pose end;
     private Pose control;
 
-    private Double timeoutSec = 0.0;
+    private Double timeoutMilliSec = 0.0;
 
 
     private boolean useControlPoint = false;
 
     private boolean constantHeading = false;
     private double constantHeadingDeg = 0;
+    private double translationalConstraint = 3;
+    private double headingConstraint = 2;
+
 
     private double linearInterpWeight = 0.7;
 
@@ -79,6 +82,17 @@ public class FollowPathBuilder {
         return this;
     }
 
+    public FollowPathBuilder withTranslationalConstraint(double t) {
+        this.translationalConstraint = t;
+        return this;
+    }
+
+    public FollowPathBuilder withHeadingConstraint(double radians) {
+        this.headingConstraint = radians;
+        return this;
+    }
+
+
 
     // ---------------------------
     // Build
@@ -111,10 +125,22 @@ public class FollowPathBuilder {
 
         PathChain chain = builder.build();
 
-        if (timeoutSec != null) {
+        if (timeoutMilliSec != null) {
             // Assuming your chain only has one path
             Path onlyPath = chain.getPath(0);
-            onlyPath.setTimeoutConstraint(timeoutSec);
+            onlyPath.setTimeoutConstraint(timeoutMilliSec);
+        }
+
+        if (headingConstraint != 0) {
+            // Assuming your chain only has one path
+            Path onlyPath = chain.getPath(0);
+            onlyPath.setHeadingConstraint(headingConstraint);
+        }
+
+        if (translationalConstraint != 0) {
+            // Assuming your chain only has one path
+            Path onlyPath = chain.getPath(0);
+            onlyPath.setTranslationalConstraint(translationalConstraint);
         }
 
         double clippedPower = Range.clip(maxPower, 0.0, 1.0);
@@ -140,8 +166,8 @@ public class FollowPathBuilder {
         return AutoField.poseForAlliance(x, y, headingDeg, alliance);
     }
 
-    public FollowPathBuilder withTimeout(double seconds) {
-        this.timeoutSec = seconds;
+    public FollowPathBuilder withTimeout(double milliseconds) {
+        this.timeoutMilliSec = milliseconds;
         return this;
     }
 }
