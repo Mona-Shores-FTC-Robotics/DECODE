@@ -28,16 +28,16 @@ public class AimAtBasketCommand extends Command {
     @Configurable
     public static class Config {
         /** Heading tolerance in degrees - command completes when within this error */
-        public double headingToleranceDeg = 1.0;
+        public double headingToleranceDeg = 2.0;
 
         /** Speed threshold in inches/sec - robot must be stationary to complete */
         public double stationaryThresholdIps = 1.5;
 
         /** Number of consecutive loops within tolerance before completing */
-        public int settledLoops = 2;
+        public int settledLoops = 3;
 
         /** Maximum time to spend aiming before giving up (milliseconds) */
-        public double timeoutMs = 5000.0;
+        public double timeoutMs = 3000.0;
 
         /** Use direct motor control instead of aimAndDrive for more aggressive turning */
         public boolean useDirectTurnControl = true;
@@ -46,10 +46,10 @@ public class AimAtBasketCommand extends Command {
         public double turnPower = 0.6;
 
         /** P gain for direct turn control */
-        public double kP = 1.2;
+        public double kP = 1.3;
 
         /** Minimum turn power to overcome friction */
-        public double kStatic = 0.15;
+        public double kStatic = 0.075;
     }
 
     public static Config config = new Config();

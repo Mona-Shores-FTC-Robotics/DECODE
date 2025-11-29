@@ -42,16 +42,16 @@ public class FarThreeAtOnceCommand {
         public double startHeading = 90.0;
 
         // LaunchFar
-        public double launchFarX = 55;
-        public double launchFarY = 12.3;
-        public double launchFarHeadingDeg = 111;
+        public double launchFarX = 58;
+        public double launchFarY = 11;
+        public double launchFarHeadingDeg = 115;
 
         // Artifacts at Alliance Wall)
         public double artifactsWallX = 8;
         public double artifactsWallY = 7.0;
         public double artifactsWallHeading = 180;
 
-        // Control point for segment: ArtifactsSet2
+        // Control point for segment: leavewall
         public double leaveWallControlPointX = 27.5;
         public double leaveWallControlPointY = 18;
 
@@ -61,8 +61,8 @@ public class FarThreeAtOnceCommand {
         public double artifactsSet3Heading = 90;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactSet3ControlPointX = 23.75;
-        public double artifactSet3ControlPointY = 10;
+        public double artifactSet3ControlPointX = 20.5;
+        public double artifactSet3ControlPointY = 7;
 
         // ArtifactsSet3
         public double artifactsSet2X = 23.75;
@@ -70,8 +70,8 @@ public class FarThreeAtOnceCommand {
         public double artifactsSet2Heading = 90;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactSet2ControlPointX = 23.75;
-        public double artifactSet2ControlPointY = 25;
+        public double artifactSet2ControlPointX = 19;
+        public double artifactSet2ControlPointY = 23;
 
         // NearGate
         public double nearGateX = 35;
@@ -174,6 +174,7 @@ public class FarThreeAtOnceCommand {
                                 .build(config.maxPathPower),
                         new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 ),
+
                 new ParallelGroup(
                         new FollowPathBuilder(robot, alliance)
                             .from(artifactsSet3())
