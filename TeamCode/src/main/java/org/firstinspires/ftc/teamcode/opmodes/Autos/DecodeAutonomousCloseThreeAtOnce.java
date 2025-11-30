@@ -27,7 +27,7 @@ import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Close Three At Once", group = "Command")
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Close Three At Once", group = "Auto")
 @Configurable
 public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
 
