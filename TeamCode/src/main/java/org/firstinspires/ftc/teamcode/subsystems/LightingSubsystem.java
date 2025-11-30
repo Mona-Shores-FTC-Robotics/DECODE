@@ -40,7 +40,8 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         OFF(0),                      // Disabled/off state
         ALLIANCE(1),                 // Alliance color (used during init)
         LANE_TRACKING(2),            // Default - show artifact presence/colors
-        AIM_ALIGNED(3);              // Yellow flash when aim-aligned (8 seconds)
+        LAUNCH_READY(3),             // White blink when RPM ready + goal aligned + stationary
+        DECODE_SWITCH(4);            // Endgame switch to DECODE mode
 
         public final int priority;
         LightingPattern(int priority) {
@@ -70,6 +71,8 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private LightingPattern currentPattern = LightingPattern.OFF;
     private LightingPattern goalPattern = LightingPattern.OFF;
     private long patternExpirationMs = 0L;  // When current pattern expires (0 = permanent)
+    private boolean blinkOn = false;
+    private long lastBlinkToggleMs = 0L;
 
     // State tracking
     private LightingState state = LightingState.OFF;
@@ -141,8 +144,12 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
      */
     private void renderCurrentPattern(long nowMs) {
         switch (currentPattern) {
-            case AIM_ALIGNED:
-                renderAimAligned();
+            case LAUNCH_READY:
+                renderAimAligned(nowMs);
+                break;
+
+            case DECODE_SWITCH:
+                renderDecodeSwitch();
                 break;
 
             case LANE_TRACKING:
@@ -295,13 +302,9 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         setFollowSensorColors(true);
     }
 
-    /**
-     * Requests aim-aligned visual feedback (yellow flash).
-     * Priority: HIGH - will override most patterns.
-     * Duration: 8 seconds
-     */
+
     public void flashAimAligned() {
-        requestPattern(LightingPattern.AIM_ALIGNED, 8000L);
+        requestPattern(LightingPattern.LAUNCH_READY, 1000L);
     }
 
     /**
@@ -312,10 +315,11 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     /**
-     * Disabled - DECODE mode switch notification removed for simplicity.
+     * Visual cue when switching to DECODE mode.
+     * Uses a short rainbow flash.
      */
     public void showDecodeModeSwitchNotification() {
-        // No-op - pattern disabled
+        requestPattern(LightingPattern.DECODE_SWITCH, 2000L);
     }
 
     /**
@@ -336,9 +340,17 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     // ========== RENDER METHODS ==========
     // Each method renders a specific pattern to the physical LEDs
-    private void renderAimAligned() {
-        // Yellow flash for aim-aligned feedback
-        applySolidPosition(clamp01(colorPositionConfig.yellowPosition));
+    private void renderAimAligned(long nowMs) {
+        // White blink for aim-aligned feedback (short burst)
+        if (nowMs - lastBlinkToggleMs >= 50L) { // toggle at 20Hz
+            blinkOn = !blinkOn;
+            lastBlinkToggleMs = nowMs;
+        }
+        ArtifactColor blinkColor = blinkOn ? ArtifactColor.UNKNOWN : ArtifactColor.NONE; // UNKNOWN -> white, NONE -> off
+        laneColors.put(LauncherLane.LEFT, blinkColor);
+        laneColors.put(LauncherLane.CENTER, blinkColor);
+        laneColors.put(LauncherLane.RIGHT, blinkColor);
+        updateLaneOutputs();
     }
 
     private void renderLaneTracking() {
@@ -362,6 +374,14 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private void renderOff() {
         // All lights off
         applySolidPosition(clamp01(colorPositionConfig.offPosition));
+    }
+
+    private void renderDecodeSwitch() {
+        // Use all-lane rainbow indicator for DECODE mode switch
+        laneColors.put(LauncherLane.LEFT, ArtifactColor.UNKNOWN);   // Use UNKNOWN as a stand-in for rainbow
+        laneColors.put(LauncherLane.CENTER, ArtifactColor.UNKNOWN);
+        laneColors.put(LauncherLane.RIGHT, ArtifactColor.UNKNOWN);
+        updateLaneOutputs();
     }
 
     // ========== END RENDER METHODS ==========

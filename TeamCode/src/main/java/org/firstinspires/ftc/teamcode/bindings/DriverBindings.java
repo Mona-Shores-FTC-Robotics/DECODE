@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.bindings;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveCommand;
-import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveVisionCenteredCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveFixedAngleCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.DefaultDriveCommand;
 
@@ -11,28 +10,6 @@ import dev.nextftc.bindings.Range;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.ftc.GamepadEx;
 
-
-/**
- * Driver-facing bindings that configure drive commands and button mappings.
- *
- * Drive Commands:
- * - Default: Normal field-centric drive with slow/ramp modes
- * - B button (hold): Geometry-based continuous aim-and-drive (uses odometry + incenter)
- *
- * Aiming Methods (for testing/comparison):
- * - B button: Geometry-based (odometry + incenter) - RECOMMENDED for competition
- * - D-pad Up: Vision-centered continuous tracking (centers AprilTag tx)
- * - D-pad Down: Fixed-angle continuous tracking (134° blue, 46° red) - RELIABLE from known positions
- * - D-pad Left: Capture-and-aim snap turn (samples then discrete turn)
- *
- * Vision Relocalization:
- * - A button: MANUAL vision relocalization (instant, no movement)
- * - Square: Reset heading toward basket (for recovering after bad auto handoff)
- * - Robot starts with known pose during init (set before match)
- * - Odometry tracks from initial pose
- * - Manual relocalization available when drift is noticeable
- * - PoseFusion runs continuously for diagnostics (not used for control yet)
- */
 public class DriverBindings {
 
     private static final double TRANSLATION_DEADBAND = 0.05;
@@ -45,11 +22,7 @@ public class DriverBindings {
     private final Button aimHold;
     private final Button relocalizeRequest;
     private final Button headingResetRequest;
-
-    // D-pad buttons for testing different aiming methods
-    private final Button aimVisionCentered;
     private final Button aimFixedAngle;
-
 
     Command defaultDrive;
     Command aimAndDrive;
@@ -64,13 +37,9 @@ public class DriverBindings {
         aimFixedAngle = driver.triangle();
         aimHold = driver.circle();
 
-        //Test Buttons
         relocalizeRequest = driver.cross();
         headingResetRequest = driver.square();
 
-        // D-pad for testing different aiming methods
-        aimVisionCentered = driver.dpadUp();
-//
     }
 
     /**
@@ -88,13 +57,6 @@ public class DriverBindings {
                 robot.drive
         );
 
-//        slowHold.whenBecomesTrue(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-//                .whenBecomesFalse(new SequentialGroup(
-//                        new Delay(1),
-//                        new InstantCommand(()->robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE)
-//                        )));
-
-        // Method 1: Geometry-based (B button - current default)
         aimAndDrive = new AimAndDriveCommand(
                 fieldX::get,
                 fieldY::get,
@@ -106,18 +68,7 @@ public class DriverBindings {
         aimHold.whenBecomesTrue(aimAndDrive)
                 .whenBecomesFalse(aimAndDrive::cancel);
 
-        // Method 2: Vision-centered (D-pad Up)
-        Command aimVisionCenteredCmd = new AimAndDriveVisionCenteredCommand(
-                fieldX::get,
-                fieldY::get,
-                slowHold::get,
-                robot.drive
-        );
-        aimVisionCentered.whenBecomesTrue(aimVisionCenteredCmd)
-                .whenBecomesFalse(aimVisionCenteredCmd::cancel);
-
-        // Method 3: Fixed-angle (D-pad Down)
-        Command aimFixedAngleCmd = new AimAndDriveFixedAngleCommand(
+          Command aimFixedAngleCmd = new AimAndDriveFixedAngleCommand(
                 fieldX::get,
                 fieldY::get,
                 slowHold::get,
@@ -127,11 +78,6 @@ public class DriverBindings {
                 .whenBecomesFalse(aimFixedAngleCmd::cancel);
 
         if (robot.vision != null) {
-            // Method 4: Capture-and-aim snap turn (D-pad Left)
-//            Command captureAndAimCmd = new CaptureAndAimCommand(robot.drive, robot.vision);
-//            aimCaptureSnap.whenBecomesTrue(captureAndAimCmd)
-//                    .whenBecomesFalse(captureAndAimCmd::cancel);
-
             relocalizeRequest.whenBecomesTrue(robot.drive::tryRelocalize);
             headingResetRequest.whenBecomesTrue(robot.drive::resetHeadingToFieldForward);
         }
@@ -188,11 +134,10 @@ public class DriverBindings {
                 "Left stick: Drive (X/Y)",
                 "Right stick X: Rotate",
                 "Right bumper: Slow mode (hold)",
-                "Circle/B: Aim+drive (hold)",
-                "Triangle/Y: Fixed-angle aim (hold)",
-                "D-pad Up: Vision-centered aim (hold)",
-                "Cross/A: Vision relocalize",
-                "Square/X: Reset heading to field forward"
+                "Circle: Aim+drive (hold)",
+                "Triangle: Fixed-angle aim (hold)",
+                "Cross: Vision relocalize",
+                "Square: Reset heading to face obelisk"
         };
     }
 }

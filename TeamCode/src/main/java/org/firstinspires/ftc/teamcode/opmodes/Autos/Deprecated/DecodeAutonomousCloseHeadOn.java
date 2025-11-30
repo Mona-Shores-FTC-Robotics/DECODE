@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.opmodes.Autos;
+package org.firstinspires.ftc.teamcode.opmodes.Autos.Deprecated;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;

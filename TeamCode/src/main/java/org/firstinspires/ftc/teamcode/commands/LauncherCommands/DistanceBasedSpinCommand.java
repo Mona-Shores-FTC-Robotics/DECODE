@@ -209,10 +209,6 @@ public class DistanceBasedSpinCommand extends Command {
      * Feedback is only triggered once per button press (when first crossing the threshold).
      */
     private void checkAndTriggerReadyFeedback() {
-        if (feedbackTriggered) {
-            return;  // Only trigger once
-        }
-
         // Check each lane to see if it's at 95% of target RPM
         double maxTargetRpm = 0.0;
         double maxCurrentRpm = 0.0;
@@ -227,19 +223,32 @@ public class DistanceBasedSpinCommand extends Command {
             }
         }
 
-        // Trigger feedback if current RPM >= 95% of target RPM
-        if (maxTargetRpm > 0.0 && maxCurrentRpm >= maxTargetRpm * RPM_READY_THRESHOLD_PERCENT) {
-            feedbackTriggered = true;
+        boolean rpmReady = maxTargetRpm > 0.0 && maxCurrentRpm >= maxTargetRpm * RPM_READY_THRESHOLD_PERCENT;
+        boolean aimReady = drive.isAimSettled(2.0); // tight deadband for firing
+        boolean stationary = drive.getRobotSpeedInchesPerSecond() <= DriveSubsystem.STATIONARY_SPEED_THRESHOLD_IN_PER_SEC;
+        boolean readyWithAim = rpmReady && aimReady && stationary;
 
-            // Haptic feedback: rumble controller for 200ms
-            if (gamepad != null) {
-                gamepad.rumble(2000);  // 200ms rumble
-            }
+        // Publish readiness axes for dashboard / lighting debug
+        RobotState.packet.put("Commands/Distance-Based-Spin/RPM Ready", rpmReady);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Aim Ready", aimReady);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Stationary", stationary);
+        RobotState.packet.put("Commands/Distance-Based-Spin/Ready With Aim", readyWithAim);
 
-            // Light feedback: flash yellow to indicate launcher ready
-            if (lighting != null) {
-                lighting.flashAimAligned();
-            }
+        if (feedbackTriggered || !readyWithAim) {
+            return;  // Only trigger once
+        }
+
+        // Trigger feedback only when both launcher and aim are ready
+        feedbackTriggered = true;
+
+        // Haptic feedback: rumble controller for 200ms
+        if (gamepad != null) {
+            gamepad.rumble(200);  // 200ms rumble
+        }
+
+        // Light feedback: flash yellow to indicate launcher ready
+        if (lighting != null) {
+            lighting.flashAimAligned();
         }
     }
 

@@ -4,20 +4,16 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
-import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
-import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
-import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
-import dev.nextftc.core.commands.utility.InstantCommand;
 
 /**
  * Generated autonomous command from Pedro Pathing .pp file
@@ -33,8 +29,6 @@ public class CloseThreeAtOnceCommand {
     public static class Config {
         public double maxPathPower = 0.75;
         public double endTimeForLinearHeadingInterpolation = .7;
-        public double intakeDelaySeconds = 3.2;
-        public int relocalizeMaxAttempts = 5;
     }
 
     @Configurable
@@ -89,7 +83,7 @@ public class CloseThreeAtOnceCommand {
         public double artifactsSet3Control0X = 33;
         public double artifactsSet3Control0Y = 113;
 
-        // LaunchOffLine
+        // LaunchClose4
         public double launchOffLineX = 30;
         public double launchOffLineY = 113.0;
         public double launchOffLineHeading = 134.0;
@@ -106,7 +100,6 @@ public class CloseThreeAtOnceCommand {
         // Control point for segment: NearGate
         public double nearGateControl0X = 41;
         public double nearGateControl0Y = 85;
-
     }
 
     public static Config config = new Config();
@@ -141,7 +134,8 @@ public class CloseThreeAtOnceCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
-        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
+        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
+        AutoSmartIntakeCommand autoSmartIntake = new AutoSmartIntakeCommand(robot.intake);
 
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
@@ -153,108 +147,85 @@ public class CloseThreeAtOnceCommand {
             firstPathBuilder.from(start());
         }
 
-        return new SequentialGroup(
+        Command mainSequence = new SequentialGroup(
                 // Launch Preloads
-                new ParallelDeadlineGroup(
-                        firstPathBuilder
-                                .to(launchClose1())
-                                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                .build(config.maxPathPower),
-                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true)
-                ),
-                createModeAwareLaunch(launcherCommands, false),
+                firstPathBuilder
+                    .to(launchClose1())
+                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                    .build(config.maxPathPower),
+
+                new AimAtGoalCommand(robot.drive, robot.vision),
+                launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Artifact Set 1
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(launchClose1())
-                                .to(artifactsSet1())
-                                .withControl(artifactsSet1Control0())
-                                .withConstantHeading(artifactsSet1().getHeading())
-                                .build(config.maxPathPower),
-                        new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                ),
-                new Delay(.1),
+                new FollowPathBuilder(robot, alliance)
+                        .from(launchClose1())
+                        .to(artifactsSet1())
+                        .withControl(artifactsSet1Control0())
+                        .withConstantHeading(artifactsSet1().getHeading())
+                        .build(config.maxPathPower),
 
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(artifactsSet1())
-                                .to( launchClose2())
-                                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new Delay(config.intakeDelaySeconds),
-                                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
-                                )
-                ),
-                // Launch Artifact Set 1 - We should not need to spin up again since we never should have gone to idle
-
-                createModeAwareLaunch(launcherCommands, false),
-
-                // Pickup Artifact Set 2
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(launchClose2())
-                                .to(artifactsSet2())
-                                .withControl(artifactsSet2Control0())
-                                .withConstantHeading(artifactsSet2().getHeading())
-                                .build(config.maxPathPower),
-                        new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                ),
-
-                new Delay(.1),
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                            .from(artifactsSet2())
-                            .to(launchClose3())
-                            .withControl(launchClose3Control0())
-                            .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                            .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new Delay(config.intakeDelaySeconds),
-                                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
-                        )
-                ),
-
-                createModeAwareLaunch(launcherCommands, false),
-
-
-                // Pickup Artifact Set 3
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(launchClose3())
-                                .to(artifactsSet3())
-                                .withControl(artifactsSet3Control0())
-                                .withConstantHeading(artifactsSet3().getHeading())
-                                .build(config.maxPathPower),
-                        new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                ),
-
-
-                new Delay(.1),
-
-                // LaunchOffLine
-                new ParallelGroup(
-                    new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet3())
-                        .to(launchOffLine())
-                        .withControl(launchOffLineControl0())
+                // Return and Launch Set 1
+                new FollowPathBuilder(robot, alliance)
+                        .from(artifactsSet1())
+                        .to( launchClose2())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
-                       new SequentialGroup(
-                                 new Delay(config.intakeDelaySeconds),
-                                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
-                       )
-                ),
-                createModeAwareLaunch(launcherCommands, true),
 
-                // Get Ready to Open Gate
+                new AimAtGoalCommand(robot.drive, robot.vision),
+                launcherCommands.launchAccordingToMode(false),
+
+                // Pickup Artifact Set 2
+                new FollowPathBuilder(robot, alliance)
+                        .from(launchClose2())
+                        .to(artifactsSet2())
+                        .withControl(artifactsSet2Control0())
+                        .withConstantHeading(artifactsSet2().getHeading())
+                        .build(config.maxPathPower),
+
+                // Return and Launch Set 2
+                new FollowPathBuilder(robot, alliance)
+                        .from(artifactsSet2())
+                        .to(launchClose3())
+                        .withControl(launchClose3Control0())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .build(config.maxPathPower),
+
+                new AimAtGoalCommand(robot.drive, robot.vision),
+                launcherCommands.launchAccordingToMode(false),
+
+                // Pickup Artifact Set 3
+                new FollowPathBuilder(robot, alliance)
+                        .from(launchClose3())
+                        .to(artifactsSet3())
+                        .withControl(artifactsSet3Control0())
+                        .withConstantHeading(artifactsSet3().getHeading())
+                        .build(config.maxPathPower),
+
+                // Return and Launch Set 3
+                new FollowPathBuilder(robot, alliance)
+                    .from(artifactsSet3())
+                    .to(launchOffLine())
+                    .withControl(launchOffLineControl0())
+                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                    .build(config.maxPathPower),
+
+                new AimAtGoalCommand(robot.drive, robot.vision),
+                launcherCommands.launchAccordingToMode(false),
+
+                // Get Ready to Open Gate and Get Off Launch Line
                 new FollowPathBuilder(robot, alliance)
                         .from(launchOffLine())
                         .to(nearGate())
                         .withControl(nearGateControl0())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower)
+            );
+
+        return new ParallelDeadlineGroup(
+                mainSequence,
+                autoSmartIntake, // Run the smart intake the whole time
+                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
         );
     }
 
@@ -318,20 +289,4 @@ public class CloseThreeAtOnceCommand {
         return new Pose(waypoints.nearGateControl0X, waypoints.nearGateControl0Y, 0);
     }
 
-    /**
-     * Creates a mode-aware launch command based on RobotState.getLauncherMode().
-     * - THROUGHPUT mode: Rapid firing of all lanes (launchAll)
-     * - DECODE mode: Sequential pattern firing (fireInSequence)
-     *
-     * @param launcherCommands The launcher command factory
-     * @param spinDown Whether to spin down after firing
-     * @return The appropriate launch command for the current mode
-     */
-    private static Command createModeAwareLaunch(LauncherCommands launcherCommands, boolean spinDown) {
-        if (RobotState.getLauncherMode() == LauncherMode.DECODE) {
-            return launcherCommands.launchInSequence(spinDown);
-        } else {
-            return launcherCommands.launchAll(spinDown);
-        }
-    }
 }

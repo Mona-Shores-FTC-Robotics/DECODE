@@ -4,9 +4,9 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtBasketCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -14,9 +14,7 @@ import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
-import dev.nextftc.core.commands.groups.ParallelGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
-import dev.nextftc.core.commands.utility.InstantCommand;
 
 /**
  * Generated autonomous command from Pedro Pathing .pp file
@@ -32,7 +30,6 @@ public class FarThreeAtOnceCommand {
     public static class Config {
         public double maxPathPower = 0.65;
         public double endTimeForLinearHeadingInterpolation = .7;
-        public double intakeDelaySeconds = 3;
     }
 
     @Configurable
@@ -112,7 +109,8 @@ public class FarThreeAtOnceCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
-        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
+        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
+        AutoSmartIntakeCommand autoSmartIntake = new AutoSmartIntakeCommand(robot.intake);
 
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
@@ -124,105 +122,81 @@ public class FarThreeAtOnceCommand {
             firstPathBuilder.from(start());
         }
 
-        return new SequentialGroup(
-                // Launch Preloads
-                new ParallelDeadlineGroup(
-                        firstPathBuilder
-                                .to(launchFar())
-                                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                .build(config.maxPathPower),
-                        launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true)
-                ),
-                new AimAtBasketCommand(robot.drive, robot.vision),  // <-- Add this
+        Command mainSequence = new SequentialGroup(
+            // Launch Preloads
+            firstPathBuilder
+                .to(launchFar())
+                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                .build(config.maxPathPower),
 
-                launcherCommands.launchAll(false),
+            new AimAtGoalCommand(robot.drive, robot.vision),
+            launcherCommands.launchAccordingToMode(false),
 
-                // Pickup Alliance Wall Artifacts
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(launchFar())
-                                .to(artifactsAllianceWall())
-                                .withConstantHeading(artifactsAllianceWall().getHeading())
-                                .build(config.maxPathPower),
-                        new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                ),
+            // Pickup Alliance Wall Artifacts
+            new FollowPathBuilder(robot, alliance)
+                    .from(launchFar())
+                    .to(artifactsAllianceWall())
+                    .withConstantHeading(artifactsAllianceWall().getHeading())
+                    .build(config.maxPathPower),
+            new Delay(0.1),
 
-                // Launch Alliance Wall Artifacts
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(artifactsAllianceWall())
-                                .to( launchFar())
-                                .withControl(leaveControl0())
-                                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new Delay(config.intakeDelaySeconds),
-                                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
-                                )
-                ),
-                new AimAtBasketCommand(robot.drive, robot.vision),  // <-- Add this
+            // Return and launch alliance wall artifacts
+            new FollowPathBuilder(robot, alliance)
+                    .from(artifactsAllianceWall())
+                    .to( launchFar())
+                    .withControl(leaveControl0())
+                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                    .build(config.maxPathPower),
+            new AimAtGoalCommand(robot.drive, robot.vision),
+            launcherCommands.launchAccordingToMode(false),
 
-                launcherCommands.launchAll(false),
+            // Pickup Artifact Set 3
+            new FollowPathBuilder(robot, alliance)
+                    .from(launchFar())
+                    .withControl(artifactsSet3Control0())
+                    .to(artifactsSet3())
+                    .withConstantHeading(artifactsSet3().getHeading())
+                    .build(config.maxPathPower),
+            new Delay(0.1),
 
-                // Pickup Artifact Set 3
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(launchFar())
-                                .withControl(artifactsSet3Control0())
-                                .to(artifactsSet3())
-                                .withConstantHeading(artifactsSet3().getHeading())
-                                .build(config.maxPathPower),
-                        new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                ),
+            // Return and launch set 3
+            new FollowPathBuilder(robot, alliance)
+                    .from(artifactsSet3())
+                    .to(launchFar())
+                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                    .build(config.maxPathPower),
+            new AimAtGoalCommand(robot.drive, robot.vision),
+            launcherCommands.launchAccordingToMode(false),
 
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                            .from(artifactsSet3())
-                            .to(launchFar())
-                            .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                            .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new Delay(config.intakeDelaySeconds),
-                                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
-                        )
-                ),
-                new AimAtBasketCommand(robot.drive, robot.vision),  // <-- Add this
+            // Pickup Artifact Set 2
+            new FollowPathBuilder(robot, alliance)
+                    .from(launchFar())
+                    .withControl(artifactsSet2Control0())
+                    .to(artifactsSet2())
+                    .withConstantHeading(artifactsSet2().getHeading())
+                    .build(config.maxPathPower),
 
-                launcherCommands.launchAll(false),
+            // Return, final launch, and park
+            new FollowPathBuilder(robot, alliance)
+                .from(artifactsSet2())
+                .to(launchFar())
+                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                .build(config.maxPathPower),
+            new AimAtGoalCommand(robot.drive, robot.vision),
+            launcherCommands.launchAccordingToMode(false),
 
-                // Pickup Artifact Set 2
-                new ParallelGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(launchFar())
-                                .withControl(artifactsSet2Control0())
-                                .to(artifactsSet2())
-                                .withConstantHeading(artifactsSet2().getHeading())
-                                .build(config.maxPathPower),
-                        new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                ),
+            // Get Ready to Open Gate
+            new FollowPathBuilder(robot, alliance)
+                    .from(launchFar())
+                    .to(nearGate())
+                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                    .build(config.maxPathPower)
+        );
 
-                // LaunchOffLine
-                new ParallelGroup(
-                    new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet2())
-                        .to(launchFar())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower),
-                       new SequentialGroup(
-                                 new Delay(config.intakeDelaySeconds),
-                                new InstantCommand(() -> robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE))
-                        )
-                ),
-                new AimAtBasketCommand(robot.drive, robot.vision),  // <-- Add this
-
-                launcherCommands.launchAll(true),
-
-                // Get Ready to Open Gate
-                new FollowPathBuilder(robot, alliance)
-                        .from(launchFar())
-                        .to(nearGate())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower)
+        return new ParallelDeadlineGroup(
+                mainSequence,
+                autoSmartIntake, // Run the smart intake the whole time
+                launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
         );
     }
 

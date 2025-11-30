@@ -19,6 +19,7 @@ import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 public class OperatorBindings {
+    private static final double MOTIF_TAIL_STICK_THRESHOLD = 0.6;
     private final Button distanceBasedLaunch;
     private final Button runIntakeButton;
     private final Button runIntakeTrigger;
@@ -27,8 +28,13 @@ public class OperatorBindings {
 
     private final Button launchShort;
     private final Button launchMid;
+    private final Button launchFar;
 
-    private final Button motifTailCycle;
+    private final Range motifTailStickX;
+    private final Range motifTailStickY;
+    private final Button motifTailLeft;
+    private final Button motifTailUp;
+    private final Button motifTailRight;
     private final Button toggleLauncherMode;
 
     private Gamepad rawGamepad;  // Raw gamepad for haptic feedback
@@ -38,7 +44,6 @@ public class OperatorBindings {
         //Ground Intake
         runIntakeButton = operator.rightBumper();
         runIntakeTriggerRange = operator.rightTrigger();
-        // Use the Range convenience to build a button that updates every poll
         runIntakeTrigger = runIntakeTriggerRange.greaterThan(0.2);
 
         //Human Player Intake
@@ -48,27 +53,34 @@ public class OperatorBindings {
         distanceBasedLaunch = operator.cross();
 
         //Preset Range Launching
+        launchFar = operator.dpadUp();  // FAR range for close shots (if vision is broken)
+        launchMid = operator.dpadLeft(); // MID range for far shots (if vision is broken)
         launchShort = operator.dpadDown();  // SHORT range for close shots (if vision is broken)
-        launchMid = operator.dpadLeft(); // LONG range for far shots (if vision is broken)
 
-        //launch based on range to april tag - simultaneous or sequential (Obelisk Pattern) depending on launcher mode
-//        fireUniversalSmart = operator.dpadLeft();  // Ultimate smart shot for testing
+        // Motif tail quick-set on left stick (left=0, up=1, right=2)
+        motifTailStickX = operator.leftStickX().deadZone(0.15);
+        motifTailStickY = operator.leftStickY().deadZone(0.15);
+        motifTailLeft = motifTailStickX.negate().greaterThan(MOTIF_TAIL_STICK_THRESHOLD);
+        motifTailRight = motifTailStickX.greaterThan(MOTIF_TAIL_STICK_THRESHOLD);
+        motifTailUp = motifTailStickY.negate().greaterThan(MOTIF_TAIL_STICK_THRESHOLD);
 
         toggleLauncherMode = operator.back();
-        motifTailCycle = operator.dpadRight();  // Cycle through 0 → 1 → 2 → 0
 
     }
 
     public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
         this.rawGamepad = operatorGamepad; //Need the raw gamepad for rumble features
+        robot.launcherCommands.setOperatorGamepad(operatorGamepad);
 
         configureGroundIntakeBindings(robot, operatorGamepad);
         configureHumanIntakeBindings(robot);
         configureDistanceBasedLaunchBindings(robot);
         configurePresetRangeLaunchBindings(robot);
 
-        // Motif tail cycle: single button cycles through 0 → 1 → 2 → 0 with visual feedback
-        motifTailCycle.whenBecomesTrue(() -> cycleMotifTailWithFeedback(robot));
+        // Motif tail quick-set: left stick directions map to exact motif tail values
+        motifTailLeft.whenBecomesTrue(() -> setMotifTailWithFeedback(robot, 0));
+        motifTailUp.whenBecomesTrue(() -> setMotifTailWithFeedback(robot, 1));
+        motifTailRight.whenBecomesTrue(() -> setMotifTailWithFeedback(robot, 2));
 
         // Mode toggle: manually switch between THROUGHPUT and DECODE
         toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
@@ -89,10 +101,15 @@ public class OperatorBindings {
                 .whenBecomesTrue(spinMidCommand)
                 .whenBecomesFalse(launchCommand)
                 .whenBecomesFalse(robot.drive::tryRelocalizeForShot);
+
+        PresetRangeSpinCommand spinFarCommand = robot.launcherCommands.presetRangeSpinUp(LauncherRange.LONG, false);
+        launchMid
+                .whenBecomesTrue(spinFarCommand)
+                .whenBecomesFalse(launchCommand)
+                .whenBecomesFalse(robot.drive::tryRelocalizeForShot);
     }
 
     private void configureDistanceBasedLaunchBindings(Robot robot) {
-
         // Distance-based launching commands
         DistanceBasedSpinCommand distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, rawGamepad);
         Command launchCommand = robot.launcherCommands.launchAccordingToMode(true);
@@ -102,7 +119,6 @@ public class OperatorBindings {
                 .whenBecomesTrue(distanceBasedSpinCommand)
                 .whenBecomesFalse(launchCommand)
                 .whenBecomesFalse(robot.drive::tryRelocalizeForShot);
-
     }
 
     private void configureHumanIntakeBindings(Robot robot) {
@@ -128,7 +144,6 @@ public class OperatorBindings {
 
         SmartIntakeCommand smartIntakeCommand = new SmartIntakeCommand(robot.intake, rawOperatorGamepad );
 
-
         // Intake control
         runIntakeButton.whenBecomesTrue(intakeForwardCommand);
         runIntakeButton.whenBecomesFalse(intakeReverseCommand);
@@ -138,22 +153,10 @@ public class OperatorBindings {
         runIntakeTrigger.whenBecomesFalse(intakeReverseCommand);
     }
 
-    /**
-     * Cycles motif tail value through 0 → 1 → 2 → 0 and shows visual feedback on lights.
-     *
-     * Motif tail values:
-     * - 0: All 3 lanes blink orange (0, 3, 6, ... artifacts in field ramp)
-     * - 1: Left lane blinks orange (1, 4, 7, ... artifacts in field ramp)
-     * - 2: Left+center blink orange (2, 5, 8, ... artifacts in field ramp)
-     *
-     * @param robot The robot instance (for lighting subsystem access)
-     */
-    private void cycleMotifTailWithFeedback(Robot robot) {
-        int current = RobotState.getMotifTail();
-        int next = (current + 1) % 3;  // Cycle: 0 → 1 → 2 → 0
-        RobotState.setMotifTail(next);
+    private void setMotifTailWithFeedback(Robot robot, int value) {
+        RobotState.setMotifTail(value);
         if (robot != null && robot.lighting != null) {
-            robot.lighting.showMotifTailFeedback(next);
+            robot.lighting.showMotifTailFeedback(value);
         }
     }
 
@@ -173,13 +176,15 @@ public class OperatorBindings {
      */
     public static String[] controlsSummary() {
         return new String[]{
-                "Right bumper/trigger (>0.2): Ground intake (hold)",
-                "Triangle/Y: Human loading (hold)",
-                "Cross/A: Spin for distance, release to launch all",
-                "D-pad Down: Preset SHORT spin, release to launch all",
-                "D-pad Left: Preset MID spin, release to launch all",
-                "D-pad Right: Cycle motif tail",
-                "Back/Share: Toggle launcher mode"
+                "Right bumper: Ground intake (hold)",
+                "Right trigger: Smart ground intake (hold)",
+                "Triangle: Human loading (hold)",
+                "Cross: Distance-based spin (hold), release to launch all",
+                "D-pad Down: Preset SHORT spin (hold), release to launch all",
+                "D-pad Left: Preset MID spin (hold), release to launch all",
+                "D-pad Up: Preset FAR spin (hold), release to launch all",
+                "Left stick: Motif tail quick set (left=0, up=1, right=2)",
+                "Back: Toggle launcher mode"
         };
     }
 }

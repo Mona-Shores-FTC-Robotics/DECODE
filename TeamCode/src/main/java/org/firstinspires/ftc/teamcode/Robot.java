@@ -4,7 +4,6 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Light;
 
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -25,7 +24,6 @@ public class Robot {
     public final TelemetryService telemetry;
 
     public final LauncherCommands launcherCommands;
-    public final IntakeCommands intakeCommands;
 
     public Robot(HardwareMap hardwareMap) {
         this(hardwareMap, new TelemetryService());
@@ -43,10 +41,7 @@ public class Robot {
 
         drive.setLightingSubsystem(lighting);
 
-        launcherCommands = new LauncherCommands(launcher, intake);
-        intakeCommands = new IntakeCommands(intake);
-
-
+        launcherCommands = new LauncherCommands(launcher, intake, drive, lighting);
     }
 
     public void setAlliance(Alliance alliance) {

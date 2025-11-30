@@ -30,6 +30,7 @@ import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseCo
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRampConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveTeleOpConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionCenteredAimConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionRelocalizeConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
@@ -43,7 +44,7 @@ import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 public class DriveSubsystem implements Subsystem {
 
     private static final double VISION_TIMEOUT_MS = 100;
-    private static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.5;
+    public static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.5;
     private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
     private static final long MAX_VISION_AGE_MS = 250L;
     private static final String LOG_TAG = "DriveSubsystem";
@@ -59,6 +60,7 @@ public class DriveSubsystem implements Subsystem {
     public static DriveAimAssistConfig aimAssistConfig = new DriveAimAssistConfig();
     public static DriveVisionCenteredAimConfig visionCenteredAimConfig = new DriveVisionCenteredAimConfig();
     public static DriveRampConfig rampConfig = new DriveRampConfig();
+    public static DriveVisionRelocalizeConfig visionRelocalizeConfig = new DriveVisionRelocalizeConfig();
 
     // Robot-specific configs - visible in Panels for tuning
     public static DriveFixedAngleAimConfig fixedAngleAimConfig19429 = createFixedAngleAimConfig19429();
@@ -146,6 +148,8 @@ public class DriveSubsystem implements Subsystem {
     private double lastCommandStrafeLeft = 0.0;
     private double lastCommandTurn = 0.0;
     private double lastAimErrorRad = Double.NaN;
+    private long lastAimUpdateNs = 0L;
+    private double lastAimTurnCommand = 0.0;
     private boolean rampModeActive = false;
     private double rampForward = 0.0;
     private double rampStrafeLeft = 0.0;
@@ -462,7 +466,10 @@ public class DriveSubsystem implements Subsystem {
 
         double headingErrorRad = normalizeAngle(targetHeading - follower.getHeading());
         double headingErrorDeg = Math.toDegrees(headingErrorRad);
-        boolean withinDeadband = Math.abs(headingErrorDeg) <= aimAssistConfig.deadbandDeg;
+        double absHeadingErrorDeg = Math.abs(headingErrorDeg);
+        boolean withinDeadband = absHeadingErrorDeg <= aimAssistConfig.deadbandDeg;
+        long now = System.nanoTime();
+        double dt = lastAimUpdateNs == 0L ? 0.0 : (now - lastAimUpdateNs) / 1_000_000_000.0;
 
         // Apply a small deadband to keep the robot still when settled; telemetry matches what is commanded
         if (withinDeadband) {
@@ -470,19 +477,50 @@ public class DriveSubsystem implements Subsystem {
             headingErrorDeg = 0.0;
         }
 
-        // Simple P controller with static feedforward to overcome friction near zero
-        double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
-        double turn = aimAssistConfig.kP * headingErrorRad;
-        if (headingErrorRad != 0.0 && Math.abs(turn) < aimAssistConfig.kStatic) {
-            turn = Math.copySign(aimAssistConfig.kStatic, headingErrorRad);
+        // PD controller with optional inner-zone P, static feedforward, and slew limit
+        double pGain = absHeadingErrorDeg <= aimAssistConfig.innerZoneDeg ? aimAssistConfig.kPInner : aimAssistConfig.kP;
+        double pTerm = pGain * headingErrorRad;
+        double errorRateRadPerSec = (dt > 0.0 && !Double.isNaN(lastAimErrorRad)) ? (headingErrorRad - lastAimErrorRad) / dt : 0.0;
+        double dTerm = aimAssistConfig.kD * errorRateRadPerSec;
+        double turnRaw = pTerm + dTerm;
+
+        boolean staticApplied = false;
+        if (headingErrorRad != 0.0
+                && Math.abs(turnRaw) < aimAssistConfig.kStatic
+                && absHeadingErrorDeg > aimAssistConfig.staticApplyAboveDeg) {
+            turnRaw = Math.copySign(aimAssistConfig.kStatic, headingErrorRad);
+            staticApplied = true;
         }
-        turn = Range.clip(turn, -maxTurn, maxTurn);
+
+        double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
+        double turnClipped = Range.clip(turnRaw, -maxTurn, maxTurn);
+
+        double turn = turnClipped;
+        if (aimAssistConfig.turnSlewRatePerSec > 0.0 && dt > 0.0) {
+            double maxDelta = aimAssistConfig.turnSlewRatePerSec * dt;
+            double delta = turnClipped - lastAimTurnCommand;
+            if (delta > maxDelta) {
+                turn = lastAimTurnCommand + maxDelta;
+            } else if (delta < -maxDelta) {
+                turn = lastAimTurnCommand - maxDelta;
+            }
+        }
 
         lastAimErrorRad = headingErrorRad;
+        lastAimUpdateNs = now;
+        lastAimTurnCommand = turn;
+        double errorRateDegPerSec = Math.toDegrees(errorRateRadPerSec);
+
         RobotState.packet.put("Command/AimAndDrive/Aim Error (deg)", headingErrorDeg);
+        RobotState.packet.put("Command/AimAndDrive/Aim Error Rate (deg/s)", errorRateDegPerSec);
         RobotState.packet.put("Command/AimAndDrive/Aim Target Heading (deg)", Math.toDegrees(targetHeading));
         RobotState.packet.put("Command/AimAndDrive/Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
-        RobotState.packet.put("Command/AimAndDrive/Aim Turn Cmd", turn);
+        RobotState.packet.put("Command/AimAndDrive/P Gain", pGain);
+        RobotState.packet.put("Command/AimAndDrive/P Term", pTerm);
+        RobotState.packet.put("Command/AimAndDrive/D Term", dTerm);
+        RobotState.packet.put("Command/AimAndDrive/Static Applied", staticApplied);
+        RobotState.packet.put("Command/AimAndDrive/Turn Cmd Raw", turnRaw);
+        RobotState.packet.put("Command/AimAndDrive/Turn Cmd (slewed)", turn);
 
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
@@ -618,6 +656,31 @@ public class DriveSubsystem implements Subsystem {
         return lastAimErrorRad;
     }
 
+    /**
+     * Returns true if the robot is effectively aimed at the goal based on the active alliance and pose.
+     * Uses odometry pose and a tight heading deadband.
+     */
+    public boolean isAimSettled(double headingDeadbandDeg) {
+        Pose pose = follower.getPose();
+        if (pose == null) {
+            return false;
+        }
+
+        // Require low chassis speed
+        if (getRobotSpeedInchesPerSecond() > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
+            return false;
+        }
+
+        Alliance alliance = vision.getAlliance();
+        Pose targetPose = (alliance == Alliance.RED)
+            ? FieldConstants.getRedBasketTarget()
+            : FieldConstants.getBlueBasketTarget();
+        double targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
+        double headingErrorRad = normalizeAngle(targetHeading - follower.getHeading());
+        double headingErrorDeg = Math.toDegrees(Math.abs(headingErrorRad));
+        return headingErrorDeg <= headingDeadbandDeg;
+    }
+
     public boolean isRobotStationary() {
         return getRobotSpeedInchesPerSecond() <= STATIONARY_SPEED_THRESHOLD_IN_PER_SEC;
     }
@@ -740,9 +803,7 @@ public class DriveSubsystem implements Subsystem {
         return ageMs <= MAX_VISION_AGE_MS;
     }
 
-    private double mt2DistanceThresholdInches() {
-        return aimAssistConfig.MT2DistanceThreshold;
-    }
+    private double mt2DistanceThresholdInches() { return visionRelocalizeConfig.MT2DistanceThreshold; }
 
     private double headingErrorDegrees(Pose mt1 , Pose mt2) {
         double headingErrorRad = normalizeAngle(mt1.getHeading() - mt2.getHeading());
@@ -754,7 +815,7 @@ public class DriveSubsystem implements Subsystem {
         double headingErrorDeg = headingErrorDegrees(mt1 , mt2);
 
         return distanceInches < mt2DistanceThresholdInches()
-                && headingErrorDeg < aimAssistConfig.MT2HeadingThresholdDeg;
+                && headingErrorDeg < visionRelocalizeConfig.MT2HeadingThresholdDeg;
     }
 
     private void recordVisionAgreementTelemetry(double distance , double headingErrorDeg , boolean mt2Safe) {
@@ -762,7 +823,7 @@ public class DriveSubsystem implements Subsystem {
         RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
         RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
         RobotState.packet.put("/vision/Poses/mt2DistanceThreshold", mt2DistanceThresholdInches());
-        RobotState.packet.put("/vision/Poses/mt2HeadingThresholdDeg", aimAssistConfig.MT2HeadingThresholdDeg);
+        RobotState.packet.put("/vision/Poses/mt2HeadingThresholdDeg", visionRelocalizeConfig.MT2HeadingThresholdDeg);
     }
 
     private void recordVisionPoseTelemetry(Pose mt1 , Pose mt2) {

@@ -126,7 +126,7 @@ public class CloseHeadOnCommand {
     private CloseHeadOnCommand() {}
 
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
-        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
+        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
 
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);

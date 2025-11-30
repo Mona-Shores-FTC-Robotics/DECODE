@@ -24,15 +24,25 @@ public class LauncherCommands {
 
     private final LauncherSubsystem launcher;
     private final IntakeSubsystem intake;
+    private final DriveSubsystem drive;
+    private final LightingSubsystem lighting;
+    private Gamepad operatorGamepad;
 
     public LauncherCommands(LauncherSubsystem launcher,
-                           IntakeSubsystem intake) {
+                            IntakeSubsystem intake,
+                            DriveSubsystem drive,
+                            LightingSubsystem lighting) {
         this.launcher = launcher;
         this.intake = intake;
+        this.drive = drive;
+        this.lighting = lighting;
     }
 
     public PresetRangeSpinCommand presetRangeSpinUp(LauncherRange range, boolean finishWhenReady) {
-        return new PresetRangeSpinCommand(launcher, range, finishWhenReady);
+        PresetRangeSpinCommand cmd = new PresetRangeSpinCommand(launcher, range, finishWhenReady);
+        cmd.setDriveSubsystem(drive);
+        cmd.setReadyFeedbackTargets(lighting, operatorGamepad);
+        return cmd;
     }
 
     public DistanceBasedSpinCommand distanceBasedSpinUp(VisionSubsystemLimelight vision,
@@ -70,6 +80,13 @@ public class LauncherCommands {
      */
     public LaunchInSequenceCommand launchInSequence(boolean spinDownAfterShot) {
         return new LaunchInSequenceCommand(launcher, intake, spinDownAfterShot);
+    }
+
+    /**
+     * Allows teleop bindings to provide the raw operator gamepad for haptic feedback.
+     */
+    public void setOperatorGamepad(Gamepad operatorGamepad) {
+        this.operatorGamepad = operatorGamepad;
     }
 
 }

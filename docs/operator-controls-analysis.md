@@ -12,19 +12,17 @@ The current operator controls are well-structured but offer **4 different ways t
 
 | Button | Function | Type | Usage Pattern |
 |--------|----------|------|---------------|
-| **X** | Distance-based shot | Smart | Hold to spin at calculated RPM → Release to fire |
-| **A** | Mid-range preset (~3600 RPM) | Manual | Press to fire all lanes at fixed RPM |
-| **B** | Long-range preset (~4200 RPM) | Manual | Press to fire all lanes at fixed RPM |
-| **Y** | Human loading | Manual | Hold to reverse flywheel + prefeed |
-| **D-Pad Down** | Mode-aware fire | Smart | Press to fire (THROUGHPUT rapid / DECODE sequence) |
-| **D-Pad Left** | Motif tail = 0 | Config | Press to set (all 3 lanes) |
-| **D-Pad Up** | Motif tail = 1 | Config | Press to set (left lane only) |
-| **D-Pad Right** | Motif tail = 2 | Config | Press to set (left + center) |
-| **Back** | Toggle mode | Config | Press to switch THROUGHPUT ↔ DECODE |
-| **Left Bumper** | Pre-spin hold | Manual | Hold to spin → Release to fire |
-| **Right Bumper** | Intake forward | Active | Hold to intake forward |
+| **Cross (X)** | Distance-based shot | Smart | Hold to spin at calculated RPM → Release to fire |
+| **D-Pad Down** | Preset SHORT spin | Manual | Hold to spin at SHORT preset → Release to fire |
+| **D-Pad Left** | Preset MID spin | Manual | Hold to spin at MID preset → Release to fire |
+| **D-Pad Up** | Preset FAR spin | Manual | Hold to spin at FAR preset → Release to fire |
+| **Triangle (Y)** | Human loading | Manual | Hold to reverse flywheel + prefeed |
+| **Left Stick** | Motif tail quick set | Config | Left=0, Up=1, Right=2 |
+| **Back/Share** | Toggle mode | Config | Press to switch THROUGHPUT ↔ DECODE |
+| **Right Bumper** | Ground intake | Active | Hold to run ground intake forward |
+| **Right Trigger (>0.2)** | Smart ground intake | Active | Hold to run smart ground intake |
 
-**Total:** 11 buttons mapped, 4 different firing methods
+**Total:** 7 active mappings, 3 firing paths (distance + 2 presets)
 
 ---
 
@@ -55,31 +53,13 @@ Left Bumper:       Pre-spin manually + all lanes
 
 ---
 
-### 2. Motif Tail Configuration Occupies 3 Buttons
+### 2. Motif Tail Configuration Now on Left Stick
 
-**Problem:** D-Pad Left/Up/Right are dedicated to setting motif tail values (0, 1, 2)
-
-**Context:**
-- Motif tail is only relevant in DECODE mode (endgame, after 30 seconds)
-- Values change based on artifacts in ramp (relatively infrequent adjustments)
-- Occupies 3 prime D-pad positions that could be used for active controls
-
-**Recommendation:** **Cycle through values with a single button**
-
-Replace 3 buttons with 1 cycle button:
-```java
-// D-Pad Right: Cycle motif tail (0 → 1 → 2 → 0)
-motifTailCycle.whenBecomesTrue(() -> {
-    int current = RobotState.getMotifTail();
-    int next = (current + 1) % 3;
-    setMotifTailWithFeedback(robot, next);
-});
-```
+**Update:** Motif tail is now set by the operator left stick (left=0, up=1, right=2). D-Pad buttons are freed for other functions (currently SHORT and MID presets).
 
 **Benefits:**
-- Frees up D-Pad Left and Up for new functions
-- Still provides full control (3 presses max to reach any value)
-- Visual feedback confirms current value (already implemented)
+- No visual check needed to know the selected value
+- Keeps D-Pad available for launch presets or future actions
 
 ---
 

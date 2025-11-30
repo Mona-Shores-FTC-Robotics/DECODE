@@ -9,7 +9,6 @@ import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
@@ -79,7 +78,7 @@ public class DecodeAutonomousFarTOGETHER extends NextFTCOpMode {
     private AllianceSelector allianceSelector;
     private Alliance activeAlliance = Alliance.BLUE;
     private FieldLayout currentLayout;
-    private IntakeCommands intakeCommands;
+
     private LauncherCommands launcherCommands;
     private LightingSubsystem.InitController lightingInitController;
     private GamepadEx driverPad = new GamepadEx(() -> gamepad1);
@@ -110,8 +109,7 @@ public class DecodeAutonomousFarTOGETHER extends NextFTCOpMode {
         robot.initializeForAuto();
 
         // Initialize command factories
-        intakeCommands = new IntakeCommands(robot.intake);
-        launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
+        launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
 
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
         activeAlliance = allianceSelector.getSelectedAlliance();

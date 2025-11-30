@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.opmodes.Autos;
+package org.firstinspires.ftc.teamcode.opmodes.Autos.Deprecated;
 
 import static org.firstinspires.ftc.teamcode.util.AutoField.poseForAlliance;
 
@@ -12,7 +12,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
@@ -83,7 +82,6 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
     private AllianceSelector allianceSelector;
     private Alliance activeAlliance = Alliance.BLUE;
     private FieldLayout currentLayout;
-    private IntakeCommands intakeCommands;
     private LauncherCommands launcherCommands;
     private LightingSubsystem.InitController lightingInitController;
 
@@ -113,8 +111,7 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
         robot.initializeForAuto();
 
         // Initialize command factories
-        intakeCommands = new IntakeCommands(robot.intake);
-        launcherCommands = new LauncherCommands(robot.launcher, robot.intake);
+        launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
 
         // Register init-phase controls
         // Use Alliance.UNKNOWN as default to enable automatic vision detection

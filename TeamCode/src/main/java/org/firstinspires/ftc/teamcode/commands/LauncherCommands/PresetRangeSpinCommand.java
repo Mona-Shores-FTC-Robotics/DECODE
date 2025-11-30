@@ -1,12 +1,15 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import dev.nextftc.core.commands.Command;
 
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
@@ -29,6 +32,10 @@ public class PresetRangeSpinCommand extends Command {
     }
     private final ElapsedTime timer = new ElapsedTime();
     private final boolean finishWhenReady;
+    private DriveSubsystem drive;
+    private LightingSubsystem lighting;
+    private Gamepad gamepad;
+    private boolean feedbackTriggered = false;
 
     /**
      * Creates a command that spins up to a preset range (SHORT, MID, LONG).
@@ -53,6 +60,15 @@ public class PresetRangeSpinCommand extends Command {
         setInterruptible(true);
     }
 
+    public void setDriveSubsystem(DriveSubsystem drive) {
+        this.drive = drive;
+    }
+
+    public void setReadyFeedbackTargets(LightingSubsystem lighting, Gamepad gamepad) {
+        this.lighting = lighting;
+        this.gamepad = gamepad;
+    }
+
     @Override
     public void start() {
         launcher.clearRecoveryDeadlines();
@@ -60,6 +76,7 @@ public class PresetRangeSpinCommand extends Command {
         setRpmsForRange();
         launcher.setAllHoodPositions(hoodPositionForRange());
         launcher.spinUpAllLanesToLaunch();
+        feedbackTriggered = false;
     }
 
     @Override
@@ -85,7 +102,17 @@ public class PresetRangeSpinCommand extends Command {
 
         RobotState.packet.put("Preset-Spin/Range", range.name());
         RobotState.packet.put("Preset-Spin/Finish When Ready", finishWhenReady);
-        RobotState.packet.put("Preset-Spin/All Enabled Ready", anyEnabled && allEnabledReady);
+        boolean rpmReady = anyEnabled && allEnabledReady;
+        boolean aimReady = drive != null && drive.isAimSettled(2.0);
+        boolean stable = drive != null && drive.getRobotSpeedInchesPerSecond() <= DriveSubsystem.STATIONARY_SPEED_THRESHOLD_IN_PER_SEC;
+        boolean readyWithAim = rpmReady && aimReady && stable;
+
+        RobotState.packet.put("Preset-Spin/All Enabled Ready", rpmReady);
+        RobotState.packet.put("Preset-Spin/Aim Ready", aimReady);
+        RobotState.packet.put("Preset-Spin/Stable", stable);
+        RobotState.packet.put("Preset-Spin/Ready With Aim", readyWithAim);
+
+        triggerReadyFeedback(readyWithAim);
     }
 
     @Override
@@ -118,6 +145,30 @@ public class PresetRangeSpinCommand extends Command {
             }
         }
         return true;
+    }
+
+    /**
+     * Optional feedback trigger when RPMs are ready and aim is settled.
+     */
+    public boolean isReadyWithAim() {
+        boolean rpmReady = areEnabledLaunchersReady();
+        boolean aimReady = drive != null && drive.isAimSettled(2.0);
+        boolean stable = drive != null && drive.getRobotSpeedInchesPerSecond() <= DriveSubsystem.STATIONARY_SPEED_THRESHOLD_IN_PER_SEC;
+        return rpmReady && aimReady && stable;
+    }
+
+    private void triggerReadyFeedback(boolean readyWithAim) {
+        if (!readyWithAim || feedbackTriggered) {
+            return;
+        }
+        feedbackTriggered = true;
+
+        if (gamepad != null) {
+            gamepad.rumble(200);
+        }
+        if (lighting != null) {
+            lighting.flashAimAligned();
+        }
     }
 
     /**
