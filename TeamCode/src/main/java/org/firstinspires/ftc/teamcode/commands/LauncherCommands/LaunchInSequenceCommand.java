@@ -103,18 +103,6 @@ public class LaunchInSequenceCommand extends Command {
             intake.setGateAllowArtifacts();
         }
 
-        // Preserve RPMs if already set by a spin-up command, otherwise use MID range defaults
-        // This allows the auto to control range (SHORT/MID/LONG) via presetRangeSpinUp
-        if (launcher.getLaunchRpm(LauncherLane.LEFT) <= 0.0) {
-            launcher.setLaunchRpm(LauncherLane.LEFT, sequenceConfig.sequenceLeftRpm);
-        }
-        if (launcher.getLaunchRpm(LauncherLane.CENTER) <= 0.0) {
-            launcher.setLaunchRpm(LauncherLane.CENTER, sequenceConfig.sequenceCenterRpm);
-        }
-        if (launcher.getLaunchRpm(LauncherLane.RIGHT) <= 0.0) {
-            launcher.setLaunchRpm(LauncherLane.RIGHT, sequenceConfig.sequenceRightRpm);
-        }
-
         // Note: Hood positions are preserved from the spin-up command
         // (we don't override them here)
 

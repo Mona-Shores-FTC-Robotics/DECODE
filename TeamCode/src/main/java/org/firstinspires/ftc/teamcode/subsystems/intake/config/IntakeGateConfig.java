@@ -23,8 +23,8 @@ public class IntakeGateConfig {
      */
     private static IntakeGateConfig createGateConfig19429() {
         IntakeGateConfig config = new IntakeGateConfig();
-        config.preventArtifacts = .5;
-        config.allowArtifacts = .1;
+        config.preventArtifacts = .3;
+        config.allowArtifacts = 0;
         config.reverseConfig = .8;
         return config;
     }
