@@ -5,8 +5,8 @@ import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -23,7 +23,7 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
  * 
  */
 @Configurable
-public class CloseThreeAtOnceCommand {
+public class CloseTogetherCommand {
 
     @Configurable
     public static class Config {
@@ -105,7 +105,7 @@ public class CloseThreeAtOnceCommand {
     public static Config config = new Config();
     public static Waypoints waypoints = new Waypoints();
 
-    private CloseThreeAtOnceCommand() {}
+    private CloseTogetherCommand() {}
 
     /**
      * Gets the default start pose from waypoints (before alliance mirroring).

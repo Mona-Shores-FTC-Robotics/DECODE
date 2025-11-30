@@ -111,7 +111,7 @@ public class OperatorBindings {
 
     private void configureDistanceBasedLaunchBindings(Robot robot) {
         // Distance-based launching commands
-        DistanceBasedSpinCommand distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, rawGamepad);
+        Command distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, rawGamepad);
         Command launchCommand = robot.launcherCommands.launchAccordingToMode(true);
 
         // Cross button: Hold to spin up at distance-calculatedRPM, release to fire all lanes

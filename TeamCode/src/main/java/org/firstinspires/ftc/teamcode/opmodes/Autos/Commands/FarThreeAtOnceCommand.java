@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.TryRelocalizeForShotCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -130,6 +131,7 @@ public class FarThreeAtOnceCommand {
                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                 .build(config.maxPathPower),
 
+            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
             new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
@@ -148,6 +150,7 @@ public class FarThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
+            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
             new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
@@ -166,6 +169,7 @@ public class FarThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
+            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
             new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
@@ -184,6 +188,7 @@ public class FarThreeAtOnceCommand {
                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                 .build(config.maxPathPower),
 
+            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
             new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 

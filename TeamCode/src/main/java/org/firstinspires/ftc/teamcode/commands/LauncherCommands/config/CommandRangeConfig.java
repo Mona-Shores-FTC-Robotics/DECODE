@@ -24,6 +24,14 @@ public class CommandRangeConfig {
     public double longCenterRpm; // Center disabled by default
     public double longRightRpm;
 
+    public double longMinLeftRpm;
+    public double longMinCenterRpm; // Center disabled by default
+    public double longMinRightRpm;
+
+    public double longMaxLeftRpm;
+    public double longMaxCenterRpm; // Center disabled by default
+    public double longMaxRightRpm;
+
     /** Short Auto range RPMs (autonomous close shots, tuned separately from SHORT) */
     public double shortAutoLeftRpm;
     public double shortAutoCenterRpm;
@@ -71,6 +79,16 @@ public class CommandRangeConfig {
         config.longCenterRpm = 2725; // Center disabled by default
         config.longRightRpm = 2725;
 
+        /** Long range min dist RPMs for DISTANCEBASEDSPINCOMMADN2 */
+        config.longMinLeftRpm = 2725;
+        config.longMinCenterRpm = 2725; // Center disabled by default
+        config.longMinRightRpm = 2725;
+
+        /** Long range max dist RPMs for DISTANCEBASEDSPINCOMMADN2 */
+        config.longMaxLeftRpm = 2900;
+        config.longMaxCenterRpm = 2900; // Center disabled by default
+        config.longMaxRightRpm = 2900;
+
         /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
         config.shortAutoLeftRpm = 2000;
         config.shortAutoCenterRpm = 2000;
@@ -85,6 +103,7 @@ public class CommandRangeConfig {
         config.shortHoodPosition = 0.3;
         config.midHoodPosition = 0.05;
         config.longHoodPosition = 0.0;
+
         config.shortAutoHoodPosition = 0.3; // Starts matching SHORT
         config.farAutoHoodPosition = 0.0; // Starts matching LONG
 
@@ -112,6 +131,16 @@ public class CommandRangeConfig {
         config.longCenterRpm = 2828;
         config.longRightRpm = 2828;
 
+        /** Long range min dist RPMs for DISTANCEBASEDSPINCOMMADN2 */
+        config.longMinLeftRpm = 2725;
+        config.longMinCenterRpm = 2725; // Center disabled by default
+        config.longMinRightRpm = 2725;
+
+        /** Long range max dist RPMs for DISTANCEBASEDSPINCOMMADN2 */
+        config.longMaxLeftRpm = 2900;
+        config.longMaxCenterRpm = 2900; // Center disabled by default
+        config.longMaxRightRpm = 2900;
+
         /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
         config.shortAutoLeftRpm = 1950;
         config.shortAutoCenterRpm = 1900;
@@ -126,6 +155,7 @@ public class CommandRangeConfig {
         config.shortHoodPosition = .42;
         config.midHoodPosition = 0.05;
         config.longHoodPosition = .05;
+
         config.shortAutoHoodPosition = .38; // Starts matching SHORT
         config.farAutoHoodPosition = .05; // Starts matching LONG
 

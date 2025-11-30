@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.TryRelocalizeForShotCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -154,6 +155,7 @@ public class FarTogetherCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
+                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
                 new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
@@ -172,10 +174,10 @@ public class FarTogetherCommand {
                         .withControl(wallControl())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
+
+                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
                 new AimAtGoalCommand(robot.drive, robot.vision),
-
                 new Delay(config.delayForGateToOpen),
-
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Artifact Set 3
@@ -193,6 +195,7 @@ public class FarTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
+                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
                 new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
@@ -210,6 +213,7 @@ public class FarTogetherCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
+                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
                 new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
@@ -231,6 +235,7 @@ public class FarTogetherCommand {
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower),
 
+                                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
                                 new AimAtGoalCommand(robot.drive, robot.vision),
                                 launcherCommands.launchAccordingToMode(false),
 
@@ -254,7 +259,8 @@ public class FarTogetherCommand {
         return new ParallelDeadlineGroup(
                 mainSequence,
                 autoSmartIntake, // Run the smart intake the whole time
-                launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
+                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null)
+//                launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
         );
     }
 
