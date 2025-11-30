@@ -33,8 +33,8 @@ public class CloseThreeAtOnceCommand {
 
     @Configurable
     public static class Waypoints {
-        public double startX = 27.5;
-        public double startY = 128.5;
+        public double startX = 26.5;
+        public double startY = 130;
         public double startHeading = 0;
 
         // LaunchClose1

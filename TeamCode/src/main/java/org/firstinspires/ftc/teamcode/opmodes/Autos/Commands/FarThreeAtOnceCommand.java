@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
@@ -71,9 +72,9 @@ public class FarThreeAtOnceCommand {
         public double artifactSet2ControlPointY = 23;
 
         // NearGate
-        public double nearGateX = 35;
-        public double nearGateY = 70.4;
-        public double nearGateHeading = 180.0;
+        public double readyForTeleopX = 58;
+        public double readyForTeleopY = 37;
+        public double readyForTeleopHeading = 0;
 
     }
 
@@ -138,7 +139,6 @@ public class FarThreeAtOnceCommand {
                     .to(artifactsAllianceWall())
                     .withConstantHeading(artifactsAllianceWall().getHeading())
                     .build(config.maxPathPower),
-            new Delay(0.1),
 
             // Return and launch alliance wall artifacts
             new FollowPathBuilder(robot, alliance)
@@ -147,6 +147,7 @@ public class FarThreeAtOnceCommand {
                     .withControl(leaveControl0())
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
+
             new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
@@ -157,7 +158,6 @@ public class FarThreeAtOnceCommand {
                     .to(artifactsSet3())
                     .withConstantHeading(artifactsSet3().getHeading())
                     .build(config.maxPathPower),
-            new Delay(0.1),
 
             // Return and launch set 3
             new FollowPathBuilder(robot, alliance)
@@ -165,6 +165,7 @@ public class FarThreeAtOnceCommand {
                     .to(launchFar())
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
+
             new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
@@ -182,13 +183,14 @@ public class FarThreeAtOnceCommand {
                 .to(launchFar())
                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                 .build(config.maxPathPower),
+
             new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Get Ready to Open Gate
             new FollowPathBuilder(robot, alliance)
                     .from(launchFar())
-                    .to(nearGate())
+                    .to(readyForTeleop())
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower)
         );
@@ -196,7 +198,8 @@ public class FarThreeAtOnceCommand {
         return new ParallelDeadlineGroup(
                 mainSequence,
                 autoSmartIntake, // Run the smart intake the whole time
-                launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
+                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null) //don't actually pass controller since its auto
+//                launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
         );
     }
 
@@ -233,10 +236,8 @@ public class FarThreeAtOnceCommand {
         return new Pose(waypoints.artifactSet2ControlPointX, waypoints.artifactSet2ControlPointY, 0);
     }
 
-
-
-    private static Pose nearGate() {
-        return new Pose(waypoints.nearGateX, waypoints.nearGateY, Math.toRadians(waypoints.nearGateHeading));
+    private static Pose readyForTeleop() {
+        return new Pose(waypoints.readyForTeleopX , waypoints.readyForTeleopY , Math.toRadians(waypoints.readyForTeleopHeading));
     }
 
 }
