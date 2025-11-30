@@ -4,7 +4,6 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.IntakeCommands;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.FarThreeAtOnceCommand;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -67,7 +66,6 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
     private AllianceSelector allianceSelector;
     private Alliance activeAlliance = Alliance.BLUE;
     private FieldLayout currentLayout;
-    private IntakeCommands intakeCommands;
     private LauncherCommands launcherCommands;
     private LightingSubsystem.InitController lightingInitController;
     private GamepadEx driverPad = new GamepadEx(() -> gamepad1);
