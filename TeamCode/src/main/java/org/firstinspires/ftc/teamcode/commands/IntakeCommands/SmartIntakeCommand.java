@@ -41,7 +41,7 @@ public class SmartIntakeCommand extends IntakeCommand {
          * - Decrease by 50ms if intake feels sluggish
          * - Typical range: 300-700ms
          */
-        public double fullDebounceMs = 400.0;
+        public double fullDebounceMs = 0;
 
         /**
          * Enable haptic rumble when auto-reversing.

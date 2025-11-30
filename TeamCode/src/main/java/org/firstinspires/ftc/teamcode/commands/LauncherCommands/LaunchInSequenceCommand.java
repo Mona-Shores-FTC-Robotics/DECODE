@@ -102,6 +102,10 @@ public class LaunchInSequenceCommand extends Command {
             intake.setGateAllowArtifacts();
         }
 
+        // Note: Hood positions are preserved from the spin-up command
+        // (we don't override them here)
+
+        // Spin up to target
         launcher.spinUpAllLanesToLaunch();
     }
 
