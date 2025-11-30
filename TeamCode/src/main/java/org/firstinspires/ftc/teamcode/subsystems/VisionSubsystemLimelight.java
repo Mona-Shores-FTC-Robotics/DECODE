@@ -65,6 +65,9 @@ public class VisionSubsystemLimelight implements Subsystem {
     // Diagnostic mode: When true, external code controls heading updates (for testing different offsets)
     private boolean diagnosticMode = false;
 
+    // Heading offset between Pedro heading (follower) and FTC heading expected by Limelight
+    private static final double PEDRO_TO_FTC_HEADING_OFFSET_DEG = 90.0;
+
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
         this(hardwareMap, null);
     }
@@ -127,11 +130,10 @@ public class VisionSubsystemLimelight implements Subsystem {
         // This must be called every loop before requesting pose estimates
         // Skip in diagnostic mode to allow external control for testing different offsets
         if (hasValidHeading) {
-            // Convert Pedro heading to FTC heading (Pedro - 90°)
-            // Fixed 180° heading error: changed from +90° to -90°
-            // Limelight with orientation=180° expects FTC coordinate frame heading
             double pedroHeadingDeg = Math.toDegrees(currentHeadingRad);
-            double ftcHeadingDeg = AngleUnit.normalizeDegrees(pedroHeadingDeg + 90.0);
+            double ftcHeadingDeg = AngleUnit.normalizeDegrees(
+                    pedroHeadingDeg + PEDRO_TO_FTC_HEADING_OFFSET_DEG
+            );
 
             limelight.updateRobotOrientation(ftcHeadingDeg);
         }
@@ -472,7 +474,7 @@ public class VisionSubsystemLimelight implements Subsystem {
             return;
         }
         lastRobotPosePedro = pose;
-        lastRobotPoseFtc = convertPedroToFtcPose(pose);
+        lastRobotPoseFtc = PoseFrames.pedroToFtc(pose);
         lastSnapshotTimestampMs = System.currentTimeMillis();
     }
 
@@ -648,32 +650,34 @@ public class VisionSubsystemLimelight implements Subsystem {
             Pose selectedPedro;
             Pose selectedFtc;
 
-            if (pedroPoseMT1 != null) {
-                selectedPedro = pedroPoseMT1;
-                selectedFtc = ftcPoseMT1;
-            }else {
+            if (pedroPoseMT2 != null) {
                 selectedPedro = pedroPoseMT2;
                 selectedFtc = ftcPoseMT2;
+            } else {
+                selectedPedro = pedroPoseMT1;
+                selectedFtc = ftcPoseMT1;
             }
 
             this.pedroPose = selectedPedro;
             this.ftcPose = selectedFtc;
 
+            double yawTmp = Double.NaN;
+            double rangeTmp = Double.NaN;
+            double bearingTmp = Double.NaN;
             if (selectedFtc != null) {
-                if (ftcPoseMT1 != null) {
-                    this.ftcYaw = ftcYawMT1;
-                    this.ftcRange = ftcRangeMT1;
-                    this.ftcBearing = ftcBearingMT1;
-                } else {
-                    this.ftcYaw = ftcYawMT2;
-                    this.ftcRange = ftcRangeMT2;
-                    this.ftcBearing = ftcBearingMT2;
+                if (selectedFtc == ftcPoseMT2 && ftcPoseMT2 != null) {
+                    yawTmp = ftcYawMT2;
+                    rangeTmp = ftcRangeMT2;
+                    bearingTmp = ftcBearingMT2;
+                } else if (ftcPoseMT1 != null) {
+                    yawTmp = ftcYawMT1;
+                    rangeTmp = ftcRangeMT1;
+                    bearingTmp = ftcBearingMT1;
                 }
-            } else {
-                this.ftcYaw = Double.NaN;
-                this.ftcRange = Double.NaN;
-                this.ftcBearing = Double.NaN;
             }
+            this.ftcYaw = yawTmp;
+            this.ftcRange = rangeTmp;
+            this.ftcBearing = bearingTmp;
         }
 
         // -------------------------
@@ -718,8 +722,8 @@ public class VisionSubsystemLimelight implements Subsystem {
         }
 
         public double getRobotYaw() {
-            return pedroPose == null ? Double.NaN : Math.toDegrees(pedroPose.getHeading());
-        }
+        return pedroPose == null ? Double.NaN : Math.toDegrees(pedroPose.getHeading());
+    }
 
         public Optional<Pose> getFtcPose() {
             return Optional.ofNullable(ftcPose);
@@ -773,24 +777,6 @@ public class VisionSubsystemLimelight implements Subsystem {
     // ========================================================================
     // Coordinate conversion helpers
     // ========================================================================
-
-    public static Pose convertFtcToPedroPose(double ftcX, double ftcY, double headingDeg) {
-        double halfField = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
-        double pedroX = ftcY + halfField;
-        double pedroY = halfField - ftcX;
-        // Fixed 180 degree heading error: inverse of forward conversion
-        double pedroHeading = AngleUnit.normalizeRadians(Math.toRadians(headingDeg) + Math.PI / 2.0);
-        return new Pose(pedroX, pedroY, pedroHeading);
-    }
-
-    private static Pose convertPedroToFtcPose(Pose pedroPose) {
-        double halfField = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
-        double ftcX = halfField - pedroPose.getY();
-        double ftcY = pedroPose.getX() - halfField;
-        // Matches periodic() conversion that sends FTC heading to Limelight
-        double ftcHeading = AngleUnit.normalizeRadians(pedroPose.getHeading() - Math.PI / 2.0);
-        return new Pose(ftcX, ftcY, ftcHeading);
-    }
 
     private static double getTargetAreaSafe(LLResultTypes.FiducialResult fiducial) {
         try {

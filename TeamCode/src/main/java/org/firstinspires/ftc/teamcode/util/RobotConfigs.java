@@ -4,20 +4,16 @@ import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.constants.PinpointConstants;
 
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.CommandRangeConfig;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
-import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeLaneSensorConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherTimingConfig;
-
-import dev.nextftc.core.commands.Command;
 
 /**
  * Centralized robot-specific configuration selector.

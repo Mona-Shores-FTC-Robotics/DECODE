@@ -794,69 +794,38 @@ public class DriveSubsystem implements Subsystem {
         RobotState.packet.put("/vision/relocalize/auto/source", source);
     }
 
+    private boolean poseWithinField(Pose pose) {
+        if (pose == null) {
+            return false;
+        }
+        double x = pose.getX();
+        double y = pose.getY();
+        double min = -6.0; // allow small margin
+        double max = FieldConstants.FIELD_WIDTH_INCHES + 6.0;
+        return x >= min && x <= max && y >= min && y <= max;
+    }
+
+    private boolean headingFacesTag(Pose pose, int tagId, double maxHeadingErrorDeg) {
+        if (pose == null) {
+            return false;
+        }
+        Pose tagPosePedro;
+        if (tagId == FieldConstants.BLUE_GOAL_TAG_ID) {
+            tagPosePedro = FieldConstants.BLUE_GOAL_TAG_APRILTAG; // Pedro frame already
+        } else if (tagId == FieldConstants.RED_GOAL_TAG_ID) {
+            tagPosePedro = FieldConstants.RED_GOAL_TAG_APRILTAG; // Pedro frame already
+        } else {
+            return false;
+        }
+        double bearing = Math.atan2(tagPosePedro.getY() - pose.getY(), tagPosePedro.getX() - pose.getX());
+        double headingErr = normalizeAngle(pose.getHeading() - bearing);
+        double headingErrDeg = Math.toDegrees(Math.abs(headingErr));
+        return headingErrDeg <= maxHeadingErrorDeg;
+    }
+
     private void flashRelocalizeFeedback() {
         if (lighting != null) {
             lighting.flashAimAligned();
-        }
-    }
-
-    private void maybeAutoRelocalizeDuringAim() {
-        if (! visionRelocalizationEnabled) {
-            return;
-        }
-        if (! vision.shouldUpdateOdometry()) {
-            return;
-        }
-        if (! vision.hasValidTag()) {
-            return;
-        }
-
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
-        if (! snapOpt.isPresent()) {
-            return;
-        }
-
-        VisionSubsystemLimelight.TagSnapshot snapshot = snapOpt.get();
-        if (! isGoalAprilTag(snapshot.tagId)) {
-            return;
-        }
-
-        if (! isVisionPoseFresh()) {
-            return;
-        }
-
-        Pose pedroPoseMT1 = snapshot.pedroPoseMT1;
-        Pose pedroPoseMT2 = snapshot.pedroPoseMT2;
-
-        if (pedroPoseMT1 == null || pedroPoseMT2 == null) {
-            return;
-        }
-
-        double distanceInches = distanceBetween(pedroPoseMT1 , pedroPoseMT2);
-        double headingErrorDeg = headingErrorDegrees(pedroPoseMT1 , pedroPoseMT2);
-        boolean mt2Safe = posesAgreeForMt2(pedroPoseMT1 , pedroPoseMT2);
-
-        recordVisionAgreementTelemetry(distanceInches , headingErrorDeg , mt2Safe);
-        recordVisionPoseTelemetry(pedroPoseMT1 , pedroPoseMT2);
-
-        if (getRobotSpeedInchesPerSecond() > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
-            return;
-        }
-
-        long nowMs = System.currentTimeMillis();
-        if (! mt2Safe) {
-            visionRelocalizeStatus = "Vision mismatch - manual re-localize";
-            visionRelocalizeStatusMs = nowMs;
-            recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , visionRelocalizeStatus , "blocked_mt2_disagree");
-            return;
-        }
-
-        if (forceRelocalizeFromVision()) {
-            lastAutoRelocalizeMs = nowMs;
-            visionRelocalizeStatus = "Auto re-localized while aiming";
-            visionRelocalizeStatusMs = nowMs;
-            recordAutoRelocalizePacket(true , nowMs , snapshot.tagId , visionRelocalizeStatus , lastRelocalizeSource);
-            flashRelocalizeFeedback();
         }
     }
 
@@ -875,6 +844,100 @@ public class DriveSubsystem implements Subsystem {
 
         if (forceRelocalizeFromVision()) {
             // Successful re-localization already recorded inside the helper.
+        }
+    }
+
+    /**
+     * Attempts a single relocalization tied to a launch event.
+     * Gated to moments where the robot should be steady and facing the goal tag.
+     */
+    public void tryRelocalizeForShot() {
+        if (!visionRelocalizationEnabled) {
+            recordAutoRelocalizePacket(false , System.currentTimeMillis() , -1 , "launch relocalize failed" , "disabled");
+            return;
+        }
+        if (vision == null || !vision.hasValidTag()) {
+            recordAutoRelocalizePacket(false , System.currentTimeMillis() , -1 , "launch relocalize failed" , "no_tag");
+            return;
+        }
+
+        long nowMs = System.currentTimeMillis();
+        if (nowMs - lastAutoRelocalizeMs < 300) {
+            recordAutoRelocalizePacket(false , nowMs , -1 , "launch relocalize failed" , "cooldown");
+            return; // simple cooldown
+        }
+
+        // Require low chassis speed and minimal commanded turn to avoid relocalizing while spinning
+        if (getRobotSpeedInchesPerSecond() > STATIONARY_SPEED_THRESHOLD_IN_PER_SEC) {
+            recordAutoRelocalizePacket(false , nowMs , -1 , "launch relocalize failed" , "too_fast");
+            return;
+        }
+        if (Math.abs(lastCommandTurn) > 0.05) {
+            recordAutoRelocalizePacket(false , nowMs , -1 , "launch relocalize failed" , "turning");
+            return;
+        }
+
+        long ageMs = nowMs - vision.getLastPoseTimestampMs();
+        if (ageMs > MAX_VISION_AGE_MS) {
+            recordAutoRelocalizePacket(false , nowMs , -1 , "launch relocalize failed" , "stale_pose");
+            return;
+        }
+
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
+        if (!snapOpt.isPresent()) {
+            recordAutoRelocalizePacket(false , nowMs , -1 , "launch relocalize failed" , "no_snapshot");
+            return;
+        }
+
+        VisionSubsystemLimelight.TagSnapshot snapshot = snapOpt.get();
+        if (!isGoalAprilTag(snapshot.tagId)) {
+            recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , "launch relocalize failed" , "not_goal_tag");
+            return;
+        }
+
+        Pose pedroPoseMT1 = snapshot.pedroPoseMT1;
+        Pose pedroPoseMT2 = snapshot.pedroPoseMT2;
+        if (pedroPoseMT1 == null && pedroPoseMT2 == null) {
+            recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , "launch relocalize failed" , "no_pose");
+            return;
+        }
+
+        // Geometry-based sanity checks (field bounds, facing tag, distance)
+        Pose primaryPose = pedroPoseMT2 != null ? pedroPoseMT2 : pedroPoseMT1;
+        if (!poseWithinField(primaryPose)) {
+            recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , "launch relocalize failed" , "off_field");
+            return;
+        }
+        if (!headingFacesTag(primaryPose, snapshot.tagId, 120.0)) {
+            recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , "launch relocalize failed" , "heading_not_facing_tag");
+            return;
+        }
+        double distToTag = Double.NaN;
+        Pose tagPosePedro = snapshot.tagId == FieldConstants.BLUE_GOAL_TAG_ID
+                ? FieldConstants.BLUE_GOAL_TAG_APRILTAG
+                : FieldConstants.RED_GOAL_TAG_APRILTAG;
+        if (tagPosePedro != null && primaryPose != null) {
+            distToTag = distanceBetween(primaryPose, tagPosePedro);
+        }
+        if (!Double.isNaN(distToTag) && (distToTag < 6.0 || distToTag > 200.0)) {
+            recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , "launch relocalize failed" , "distance_out_of_range");
+            return;
+        }
+
+        boolean mt2Safe = pedroPoseMT1 != null && pedroPoseMT2 != null && posesAgreeForMt2(pedroPoseMT1, pedroPoseMT2);
+        if (!mt2Safe && pedroPoseMT1 != null && pedroPoseMT2 != null) {
+            recordVisionAgreementTelemetry(distanceBetween(pedroPoseMT1, pedroPoseMT2), headingErrorDegrees(pedroPoseMT1, pedroPoseMT2), mt2Safe);
+        }
+
+        if (forceRelocalizeFromVision()) {
+            lastAutoRelocalizeMs = nowMs;
+            visionRelocalizeStatus = "Re-localized on launch";
+            visionRelocalizeStatusMs = nowMs;
+            recordAutoRelocalizePacket(true , nowMs , snapshot.tagId , visionRelocalizeStatus , lastRelocalizeSource);
+            flashRelocalizeFeedback();
+        }
+        else {
+            recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , "launch relocalize failed" , "blocked_conditions");
         }
     }
 
@@ -954,21 +1017,22 @@ public class DriveSubsystem implements Subsystem {
             return true;
         }
 
-        // 2. If heading is known, stick to MT1 while MT2 is unreliable
+        // 2. If heading is known, prefer MT2 when it agrees with MT1 (or MT1 missing)
+        boolean mt2Safe = pedroPoseMT1 != null && pedroPoseMT2 != null && posesAgreeForMt2(pedroPoseMT1, pedroPoseMT2);
+        if (pedroPoseMT2 != null && (mt2Safe || pedroPoseMT1 == null)) {
+            follower.setPose(pedroPoseMT2);
+            poseFusion.reset(pedroPoseMT2, System.currentTimeMillis());
+            vision.markOdometryUpdated();
+            recordRelocalizeSource("mt2", true, nowMs, snap.tagId);
+            return true;
+        }
+
+        // 3. Fallback to MT1 if MT2 unavailable or unsafe
         if (pedroPoseMT1 != null) {
             follower.setPose(pedroPoseMT1);
             poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
             vision.markOdometryUpdated();
             recordRelocalizeSource("mt1", true, nowMs, snap.tagId);
-            return true;
-        }
-
-        // 3. As a last resort, try MT2 if MT1 is missing entirely
-        if (pedroPoseMT2 != null) {
-            follower.setPose(pedroPoseMT2);
-            poseFusion.reset(pedroPoseMT2, System.currentTimeMillis());
-            vision.markOdometryUpdated();
-            recordRelocalizeSource("mt2_fallback", true, nowMs, snap.tagId);
             return true;
         }
 

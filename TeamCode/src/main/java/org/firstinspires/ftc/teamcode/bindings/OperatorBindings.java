@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 
 import dev.nextftc.bindings.Button;
 import dev.nextftc.bindings.Range;
+import dev.nextftc.core.commands.Command;
 import dev.nextftc.ftc.GamepadEx;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -75,29 +76,32 @@ public class OperatorBindings {
     }
 
     private void configurePresetRangeLaunchBindings(Robot robot) {
-        LaunchAllCommand launchAllCommand = robot.launcherCommands.launchAll(true);
+        Command launchCommand = robot.launcherCommands.launchAccordingToMode(true);
 
         PresetRangeSpinCommand spinShortCommand = robot.launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, false);
         launchShort
                 .whenBecomesTrue(spinShortCommand)
-                .whenBecomesFalse(launchAllCommand);
+                .whenBecomesFalse(launchCommand)
+                .whenBecomesFalse(robot.drive::tryRelocalizeForShot);
 
         PresetRangeSpinCommand spinMidCommand = robot.launcherCommands.presetRangeSpinUp(LauncherRange.MID, false);
         launchMid
                 .whenBecomesTrue(spinMidCommand)
-                .whenBecomesFalse(launchAllCommand);
+                .whenBecomesFalse(launchCommand)
+                .whenBecomesFalse(robot.drive::tryRelocalizeForShot);
     }
 
     private void configureDistanceBasedLaunchBindings(Robot robot) {
 
         // Distance-based launching commands
         DistanceBasedSpinCommand distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, rawGamepad);
-        LaunchAllCommand launchAllCommand = robot.launcherCommands.launchAll(true);
+        Command launchCommand = robot.launcherCommands.launchAccordingToMode(true);
 
         // Cross button: Hold to spin up at distance-calculatedRPM, release to fire all lanes
         distanceBasedLaunch
                 .whenBecomesTrue(distanceBasedSpinCommand)
-                .whenBecomesFalse(launchAllCommand);
+                .whenBecomesFalse(launchCommand)
+                .whenBecomesFalse(robot.drive::tryRelocalizeForShot);
 
     }
 

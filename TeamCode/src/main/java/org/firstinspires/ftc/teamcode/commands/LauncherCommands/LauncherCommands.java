@@ -10,6 +10,8 @@ import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
+import dev.nextftc.core.commands.Command;
+
 /**
  * Convenience factory for launcher-related commands alongside immediate queue helpers used by
  * legacy binding paths.
@@ -41,6 +43,16 @@ public class LauncherCommands {
     }
 
     public LaunchAllCommand launchAll(boolean spinDownAfterShot) {
+        return new LaunchAllCommand(launcher, intake, spinDownAfterShot);
+    }
+
+    /**
+     * Mode-aware launch: DECODE uses sequence, THROUGHPUT uses all-at-once.
+     */
+    public Command launchAccordingToMode(boolean spinDownAfterShot) {
+        if (org.firstinspires.ftc.teamcode.util.RobotState.getLauncherMode() == org.firstinspires.ftc.teamcode.util.LauncherMode.DECODE) {
+            return new LaunchInSequenceCommand(launcher, intake, spinDownAfterShot);
+        }
         return new LaunchAllCommand(launcher, intake, spinDownAfterShot);
     }
 

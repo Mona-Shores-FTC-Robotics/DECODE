@@ -1,8 +1,6 @@
-package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
+package org.firstinspires.ftc.teamcode.commands.LauncherCommands.config;
 
 import com.bylazar.configurables.annotations.Configurable;
-
-import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 
 /**
  * Shared tunable RPM and hood positions for SHORT/MID/LONG ranges.
