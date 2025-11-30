@@ -12,6 +12,7 @@ import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
 
@@ -29,6 +30,7 @@ public class CloseTogetherCommand {
     public static class Config {
         public double maxPathPower = 0.75;
         public double endTimeForLinearHeadingInterpolation = .7;
+        public double secondsOpeningGate = .5;
     }
 
     @Configurable
@@ -50,6 +52,14 @@ public class CloseTogetherCommand {
         // Control point for segment: ArtifactsSet3
         public double artifactsSet1Control0X = 25;
         public double artifactsSet1Control0Y = 113;
+
+        // OpenGate
+        public double openGateX = 20.0;
+        public double openGateY = 75.0;
+        public double openGateHeading = 180;
+
+        public double openGateControlX = 27;
+        public double openGateControlY = 77;
 
         // LaunchClose2
         public double launchClose2X = 30.0;
@@ -74,23 +84,23 @@ public class CloseTogetherCommand {
         public double launchClose3Control0X = 50.5;
         public double launchClose3Control0Y = 72;
 
-        // ArtifactsSet3
-        public double artifactsSet3X = 25;
-        public double artifactsSet3Y = 35.5;
-        public double artifactsSet3Heading = 270.0;
+        // ReleasedArtifacts
+        public double releasedArtifactsX = 13;
+        public double releasedArtifactsY = 54.25;
+        public double releasedArtifactsHeading = 180;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet3Control0X = 33;
-        public double artifactsSet3Control0Y = 113;
+        public double releasedArtifactsControlX = 51;
+        public double releasedArtifactsControlY = 59;
 
-        // LaunchClose4
-        public double launchOffLineX = 30;
-        public double launchOffLineY = 113.0;
-        public double launchOffLineHeading = 134.0;
+        // LaunchReleased
+        public double launchReleasedX = 30;
+        public double launchReleasedY = 113.0;
+        public double launchReleasedHeading = 134.0;
 
         // Control point for segment: LaunchOffLine
-        public double launchOffLineControl0X = 44.5;
-        public double launchOffLineControl0Y = 73.5;
+        public double launchReleasedControlX = 44;
+        public double launchReleasedControlY = 55;
 
         // NearGate
         public double nearGateX = 35;
@@ -165,10 +175,21 @@ public class CloseTogetherCommand {
                         .withConstantHeading(artifactsSet1().getHeading())
                         .build(config.maxPathPower),
 
-                // Return and Launch Set 1
+                // Open Gate
                 new FollowPathBuilder(robot, alliance)
                         .from(artifactsSet1())
-                        .to( launchClose2())
+                        .to(openGate())
+                        .withControl(openGateControl())
+                        .withConstantHeading(openGate().getHeading())
+                        .build(config.maxPathPower),
+
+                new Delay(config.secondsOpeningGate), //Delay to open the gate
+
+                // Return and Launch Set 1
+                new FollowPathBuilder(robot, alliance)
+                        .from(openGate())
+                        .to(launchClose2())
+                        .withControl(openGateControl())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
@@ -197,16 +218,16 @@ public class CloseTogetherCommand {
                 // Pickup Artifact Set 3
                 new FollowPathBuilder(robot, alliance)
                         .from(launchClose3())
-                        .to(artifactsSet3())
-                        .withControl(artifactsSet3Control0())
-                        .withConstantHeading(artifactsSet3().getHeading())
+                        .to(releasedArtifacts())
+                        .withControl(releasedArtifactsControl())
+                        .withConstantHeading(releasedArtifacts().getHeading())
                         .build(config.maxPathPower),
 
                 // Return and Launch Set 3
                 new FollowPathBuilder(robot, alliance)
-                    .from(artifactsSet3())
-                    .to(launchOffLine())
-                    .withControl(launchOffLineControl0())
+                    .from(releasedArtifacts())
+                    .to(launchReleased())
+                    .withControl(launchReleasedControl())
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
@@ -215,7 +236,7 @@ public class CloseTogetherCommand {
 
                 // Get Ready to Open Gate and Get Off Launch Line
                 new FollowPathBuilder(robot, alliance)
-                        .from(launchOffLine())
+                        .from(launchReleased())
                         .to(nearGate())
                         .withControl(nearGateControl0())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
@@ -225,8 +246,8 @@ public class CloseTogetherCommand {
         return new ParallelDeadlineGroup(
                 mainSequence,
                 autoSmartIntake, // Run the smart intake the whole time
-                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null) //don't actually pass controller since its auto
-//                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
+//                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null) //don't actually pass controller since its auto
+                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
         );
     }
 
@@ -244,6 +265,14 @@ public class CloseTogetherCommand {
 
     private static Pose artifactsSet1Control0() {
         return new Pose(waypoints.artifactsSet1Control0X, waypoints.artifactsSet1Control0Y, 0);
+    }
+
+    private static Pose openGate() {
+        return new Pose(waypoints.openGateX, waypoints.openGateY, Math.toRadians(waypoints.openGateHeading));
+    }
+
+    private static Pose openGateControl() {
+        return new Pose(waypoints.openGateControlX, waypoints.openGateControlY, 0);
     }
 
     private static Pose launchClose2() {
@@ -266,20 +295,20 @@ public class CloseTogetherCommand {
         return new Pose(waypoints.launchClose3Control0X, waypoints.launchClose3Control0Y, 0);
     }
 
-    private static Pose artifactsSet3() {
-        return new Pose(waypoints.artifactsSet3X, waypoints.artifactsSet3Y, Math.toRadians(waypoints.artifactsSet3Heading));
+    private static Pose releasedArtifacts() {
+        return new Pose(waypoints.releasedArtifactsX , waypoints.releasedArtifactsY , Math.toRadians(waypoints.releasedArtifactsHeading));
     }
 
-    private static Pose artifactsSet3Control0() {
-        return new Pose(waypoints.artifactsSet3Control0X, waypoints.artifactsSet3Control0Y, 0);
+    private static Pose releasedArtifactsControl() {
+        return new Pose(waypoints.releasedArtifactsControlX , waypoints.releasedArtifactsControlY , 0);
     }
 
-    private static Pose launchOffLine() {
-        return new Pose(waypoints.launchOffLineX, waypoints.launchOffLineY, Math.toRadians(waypoints.launchOffLineHeading));
+    private static Pose launchReleased() {
+        return new Pose(waypoints.launchReleasedX , waypoints.launchReleasedY , Math.toRadians(waypoints.launchReleasedHeading));
     }
 
-    private static Pose launchOffLineControl0() {
-        return new Pose(waypoints.launchOffLineControl0X, waypoints.launchOffLineControl0Y, 0);
+    private static Pose launchReleasedControl() {
+        return new Pose(waypoints.launchReleasedControlX , waypoints.launchReleasedControlY , 0);
     }
 
     private static Pose nearGate() {

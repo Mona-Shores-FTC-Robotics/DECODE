@@ -225,8 +225,8 @@ public class CloseThreeAtOnceCommand {
         return new ParallelDeadlineGroup(
                 mainSequence,
                 autoSmartIntake, // Run the smart intake the whole time
-                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null) //don't actually pass controller since its auto
-//                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
+//                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null) //don't actually pass controller since its auto
+                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
         );
     }
 

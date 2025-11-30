@@ -77,8 +77,8 @@ public class FarTogetherCommand {
         public double releasedTry2Y = 37;
         public double releasedTry2Heading = 180;
 
-        public double releasedTry2controlX = 44;
-        public double releasedTry2controlY = 30;
+        public double releasedTry2controlX = 35.3;
+        public double releasedTry2controlY = 13.6;
 
         // Off Line
         public double readyForTeleopX = 58;
@@ -259,8 +259,8 @@ public class FarTogetherCommand {
         return new ParallelDeadlineGroup(
                 mainSequence,
                 autoSmartIntake, // Run the smart intake the whole time
-                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null)
-//                launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
+//                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null)
+                launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
         );
     }
 
