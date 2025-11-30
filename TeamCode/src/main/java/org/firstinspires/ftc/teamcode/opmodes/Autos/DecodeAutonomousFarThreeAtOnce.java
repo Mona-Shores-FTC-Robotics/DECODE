@@ -16,7 +16,7 @@ import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
-import org.firstinspires.ftc.teamcode.util.LauncherMode;
+
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
@@ -28,6 +28,9 @@ import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
+
+import static org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.FarThreeAtOnceCommand.create;
+import static org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.FarThreeAtOnceCommand.waypoints;
 
 /**
  * Command-based version of DecodeAutonomousFar using Sequential and Parallel Command Groups
@@ -47,28 +50,11 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
-    @Configurable
-    public static class AutoMotionConfig {
-        public double maxPathPower = .9;
-        public double intakeDelaySeconds = .1; //how long into the path do we turn the intake on?
-
-        /**
-         * Starting launcher mode for autonomous.
-         * DECODE: Fire in obelisk pattern sequence (recommended for endgame scoring)
-         * THROUGHPUT: Rapid fire all lanes (recommended for early match throughput)
-         */
-        public LauncherMode startingLauncherMode = LauncherMode.THROUGHPUT;
-    }
-
-    public static DecodeAutonomousFarThreeAtOnce.AutoMotionConfig config = new DecodeAutonomousFarThreeAtOnce.AutoMotionConfig();
-
     private Robot robot;
     private AllianceSelector allianceSelector;
     private Alliance activeAlliance = Alliance.BLUE;
     private FieldLayout currentLayout;
-    private LauncherCommands launcherCommands;
-    private LightingSubsystem.InitController lightingInitController;
-    private GamepadEx driverPad = new GamepadEx(() -> gamepad1);
+
     private AutoPrestartHelper prestartHelper;
 
     // AprilTag-based start pose detection
@@ -202,7 +188,6 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
         if (status == null) {
             return;
         }
-
 
         if (status.alliance != activeAlliance) {
             activeAlliance = status.alliance;

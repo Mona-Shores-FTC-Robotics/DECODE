@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
+package org.firstinspires.ftc.teamcode.opmodes.Autos.Deprecated;
 
 import static org.firstinspires.ftc.teamcode.util.AutoField.poseForAlliance;
 
