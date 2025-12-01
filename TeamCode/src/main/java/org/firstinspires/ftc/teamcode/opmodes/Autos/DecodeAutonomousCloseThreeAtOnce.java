@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
+import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
@@ -57,7 +58,7 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
 
         BindingManager.reset();
         robot = new Robot(hardwareMap);
-
+        ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
 
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
@@ -97,7 +98,6 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
         // Update launcher mode selection (operator dpad left/right)
         modeSelector.updateDuringInit(robot.lighting);
 
-//        updateProximityFeedback();
         updateInitTelemetry(initStatus);
         updateDriverStationTelemetry(initStatus);
         robot.telemetry.publishLoopTelemetry(

@@ -113,8 +113,12 @@ public class Constants {
                 .useSecondaryDrivePIDF(true)
                 .translationalPIDFCoefficients(new PIDFCoefficients(.06, 0, .0001, .08)) // TODO: Tune for 20245
                 .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.03, 0, 0.0001, .08))
-                .headingPIDFCoefficients(new PIDFCoefficients(1.21, .0001, .033, .05)) // TODO: Tune for 20245
+
+                .headingPIDFCoefficients(new PIDFCoefficients(.75, .0001, .033, .05)) // TODO: Tune for 20245
                 .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.45, .0001, .015, .05))
+
+
+
                 .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) // TODO: Tune for 20245
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
                 .centripetalScaling(0.00005)

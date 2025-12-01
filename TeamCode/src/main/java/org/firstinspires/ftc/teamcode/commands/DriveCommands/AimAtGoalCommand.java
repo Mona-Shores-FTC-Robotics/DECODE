@@ -3,8 +3,11 @@ package org.firstinspires.ftc.teamcode.commands.DriveCommands;
 import com.bylazar.configurables.annotations.Configurable;
 import dev.nextftc.core.commands.Command;
 
+import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
+import org.firstinspires.ftc.teamcode.util.Alliance;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Objects;
@@ -26,14 +29,14 @@ public class AimAtGoalCommand extends Command {
         /** Heading tolerance in degrees - command completes when within this error */
         public double headingToleranceDeg = 2.0;
 
-        /** Speed threshold in inches/sec - robot must be stationary to complete */
+        /** Speed threshold in inches/sec - robot should be nearly stationary to complete (<= 0 disables speed gate) */
         public double stationaryThresholdIps = 1.5;
 
         /** Number of consecutive loops within tolerance before completing */
-        public int settledLoops = 3;
+        public int settledLoops = 2;
 
         /** Maximum time to spend aiming before giving up (milliseconds) */
-        public double timeoutMs = 5000;
+        public double timeoutMs = 3000;
     }
 
     public static Config config = new Config();
@@ -56,20 +59,27 @@ public class AimAtGoalCommand extends Command {
         startTimeMs = System.currentTimeMillis();
         loopsSettled = 0;
 
-        // Break any existing path following and switch to teleop drive mode
+        // Break any existing path following before issuing a heading hold
         if (drive.getFollower().isBusy()) {
             drive.getFollower().breakFollowing();
         }
-        // Ensure Pedro is in teleop mode so setTeleOpDrive commands actually move the robot (auto init disables it)
-        drive.getFollower().startTeleopDrive(true);
+
+        // Kick off a holdPoint to the current XY with the computed basket heading
+        Pose target = computeTargetPose();
+        if (target != null) {
+            drive.getFollower().holdPoint(target);
+        }
     }
 
     @Override
     public void update() {
-        // Reuse shared aim controller (same as TeleOp) for consistent tuning and telemetry
-        drive.aimAndDrive(0.0, 0.0, false);
+        Pose target = computeTargetPose();
+        if (target != null) {
+            // Refresh the target each loop in case pose drifts during the turn
+            drive.getFollower().holdPoint(target);
+        }
 
-        double headingErrorDeg = Math.toDegrees(drive.getLastAimErrorRadians());
+        double headingErrorDeg = computeHeadingErrorDeg();
         double speedIps = drive.getRobotSpeedInchesPerSecond();
 
         // Publish diagnostics
@@ -77,7 +87,8 @@ public class AimAtGoalCommand extends Command {
         RobotState.packet.put("AimAtGoal/Robot Speed (ips)", speedIps);
         RobotState.packet.put("AimAtGoal/Settled Loops", loopsSettled);
         RobotState.packet.put("AimAtGoal/Is Aimed", isAimedAndSettled(headingErrorDeg, speedIps));
-        RobotState.packet.put("AimAtGoal/Mode", "AimAndDrive");
+        RobotState.packet.put("AimAtGoal/Mode", "PedroHoldPoint");
+        RobotState.packet.put("AimAtGoal/Follower Busy", drive.getFollower().isBusy());
 
         // Check if we're aimed and settled
         if (isAimedAndSettled(headingErrorDeg, speedIps)) {
@@ -94,8 +105,10 @@ public class AimAtGoalCommand extends Command {
             return true;
         }
 
-        // Complete when settled for required number of loops
-        return loopsSettled >= config.settledLoops;
+        // Complete when settled OR follower reports not busy
+        boolean followerDone = !drive.getFollower().isBusy();
+        boolean settledDone = loopsSettled >= config.settledLoops;
+        return followerDone || settledDone;
     }
 
     @Override
@@ -103,6 +116,7 @@ public class AimAtGoalCommand extends Command {
         loopsSettled = 0;
 
         // Stop turning and hold position
+        drive.getFollower().breakFollowing();
         drive.getFollower().setTeleOpDrive(0.0, 0.0, 0.0, false);
     }
 
@@ -111,7 +125,49 @@ public class AimAtGoalCommand extends Command {
      * @param headingErrorDeg Current heading error in degrees (absolute value)
      */
     private boolean isAimedAndSettled(double headingErrorDeg, double speedIps) {
-        return Math.abs(headingErrorDeg) <= config.headingToleranceDeg
-                && speedIps <= config.stationaryThresholdIps;
+        boolean headingOk = Math.abs(headingErrorDeg) <= config.headingToleranceDeg;
+        boolean speedOk = config.stationaryThresholdIps <= 0.0
+                || speedIps <= config.stationaryThresholdIps;
+        return headingOk && speedOk;
+    }
+
+    /**
+     * Builds a holdPoint target at the current XY with heading aimed at the basket.
+     */
+    private Pose computeTargetPose() {
+        Pose pose = drive.getFollower().getPose();
+        if (pose == null) {
+            return null;
+        }
+        Alliance alliance = vision.getAlliance();
+        Pose targetPose = (alliance == Alliance.RED)
+                ? FieldConstants.getRedBasketTarget()
+                : FieldConstants.getBlueBasketTarget();
+        double targetHeading = FieldConstants.getAimAngleTo(pose, targetPose);
+        return new Pose(pose.getX(), pose.getY(), targetHeading);
+    }
+
+    /**
+     * Returns the current heading error (deg) between robot heading and basket target.
+     */
+    private double computeHeadingErrorDeg() {
+        Pose pose = drive.getFollower().getPose();
+        if (pose == null) {
+            return Double.NaN;
+        }
+        double robotHeading = drive.getFollower().getHeading();
+        Alliance alliance = vision.getAlliance();
+        Pose targetPose = (alliance == Alliance.RED)
+                ? FieldConstants.getRedBasketTarget()
+                : FieldConstants.getBlueBasketTarget();
+        double targetHeading = FieldConstants.getAimAngleTo(pose, targetPose);
+        double errorRad = normalizeAngle(targetHeading - robotHeading);
+        return Math.toDegrees(errorRad);
+    }
+
+    private static double normalizeAngle(double angleRad) {
+        while (angleRad > Math.PI) angleRad -= 2 * Math.PI;
+        while (angleRad <= -Math.PI) angleRad += 2 * Math.PI;
+        return angleRad;
     }
 }

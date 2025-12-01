@@ -12,6 +12,7 @@ import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
+import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
@@ -54,9 +55,9 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
     }
     @Override
     public void onInit() {
-
         BindingManager.reset();
         robot = new Robot(hardwareMap);
+        ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
 
         robot.attachPedroFollower();
 

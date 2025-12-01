@@ -5,6 +5,9 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
+
+import java.util.ArrayList;
+import java.util.List;
 import com.qualcomm.robotcore.util.Range;
 import com.pedropathing.geometry.Pose;
 import dev.nextftc.core.commands.Command;
@@ -19,12 +22,11 @@ public class FollowPathBuilder {
 
     private Pose start;
     private Pose end;
-    private Pose control;
 
     private Double timeoutMilliSec = 0.0;
 
 
-    private boolean useControlPoint = false;
+    private final List<Pose> controlPoints = new ArrayList<>();
 
     private boolean constantHeading = false;
     private double constantHeadingDeg = 0;
@@ -66,8 +68,7 @@ public class FollowPathBuilder {
     }
 
     public FollowPathBuilder withControl(Pose controlPose) {
-        this.control = mirror(controlPose);
-        this.useControlPoint = true;
+        this.controlPoints.add(mirror(controlPose));
         return this;
     }
 
@@ -100,16 +101,20 @@ public class FollowPathBuilder {
 
     public Command build(double maxPower) {
         PathBuilder builder = robot.drive.getFollower().pathBuilder();
+        List<Pose> pts = new ArrayList<>();
+        pts.add(start);
+        pts.addAll(controlPoints);
+        pts.add(end);
 
-        if (useControlPoint) {
-            builder.addPath(  new BezierCurve(
-                    start,
-                    control,
-                    end
-                    )
-            );
-        } else {
+        if (pts.size() == 2) {
             builder.addPath(new BezierLine(start, end));
+        } else {
+            for (int i = 0; i < pts.size() - 2; i++) {
+                Pose a = pts.get(i);
+                Pose b = pts.get(i + 1);
+                Pose c = pts.get(i + 2);
+                builder.addPath(new BezierCurve(a, b, c));
+            }
         }
 
         if (constantHeading) {

@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
+import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -72,7 +73,7 @@ public class DecodeAutonomousFarTogether extends NextFTCOpMode {
 
         BindingManager.reset();
         robot = new Robot(hardwareMap);
-
+        ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
 
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);

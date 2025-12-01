@@ -43,12 +43,12 @@ public class CloseThreeAtOnceCommand {
         public double launchClose1Heading = 134.0;
 
         // ArtifactsSet1
-        public double artifactsSet1X = 25.5;
+        public double artifactsSet1X = 23.75;
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet1Control0X = 25;
+        public double artifactsSet1Control0X = 23.75;
         public double artifactsSet1Control0Y = 113;
 
         // LaunchClose2
@@ -57,13 +57,16 @@ public class CloseThreeAtOnceCommand {
         public double launchClose2Heading = 134.0;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 25.5;
+        public double artifactsSet2X = 23.75;
         public double artifactsSet2Y = 61.0;
         public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 25;
-        public double artifactsSet2Control0Y = 113;
+        public double artifactsSet2Control0X = 32;
+        public double artifactsSet2Control0Y = 82;
+
+        public double artifactsSet2Control1X = 23.75;
+        public double artifactsSet2Control1Y = 82;
 
         // LaunchClose3
         public double launchClose3X = 30.0;
@@ -75,13 +78,17 @@ public class CloseThreeAtOnceCommand {
         public double launchClose3Control0Y = 72;
 
         // ArtifactsSet3
-        public double artifactsSet3X = 25;
+        public double artifactsSet3X = 23.75;
         public double artifactsSet3Y = 35.5;
         public double artifactsSet3Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet3Control0X = 33;
-        public double artifactsSet3Control0Y = 113;
+        public double artifactsSet3Control0X = 32;
+        public double artifactsSet3Control0Y = 72;
+
+        // Control point for segment: ArtifactsSet3
+        public double artifactsSet3Control1X = 23.75;
+        public double artifactsSet3Control1Y = 80;
 
         // LaunchClose4
         public double launchOffLineX = 30;
@@ -158,7 +165,7 @@ public class CloseThreeAtOnceCommand {
                     launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
                 ),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Artifact Set 1
@@ -176,7 +183,7 @@ public class CloseThreeAtOnceCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Artifact Set 2
@@ -184,6 +191,7 @@ public class CloseThreeAtOnceCommand {
                         .from(launchClose2())
                         .to(artifactsSet2())
                         .withControl(artifactsSet2Control0())
+                        .withControl(artifactsSet2Control1())
                         .withConstantHeading(artifactsSet2().getHeading())
                         .build(config.maxPathPower),
 
@@ -195,7 +203,7 @@ public class CloseThreeAtOnceCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Artifact Set 3
@@ -203,6 +211,7 @@ public class CloseThreeAtOnceCommand {
                         .from(launchClose3())
                         .to(artifactsSet3())
                         .withControl(artifactsSet3Control0())
+                        .withControl(artifactsSet3Control1())
                         .withConstantHeading(artifactsSet3().getHeading())
                         .build(config.maxPathPower),
 
@@ -214,7 +223,7 @@ public class CloseThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Get Ready to Open Gate and Get Off Launch Line
@@ -260,6 +269,10 @@ public class CloseThreeAtOnceCommand {
         return new Pose(waypoints.artifactsSet2Control0X, waypoints.artifactsSet2Control0Y, 0);
     }
 
+    private static Pose artifactsSet2Control1() {
+        return new Pose(waypoints.artifactsSet2Control1X, waypoints.artifactsSet2Control1Y, 0);
+    }
+
     private static Pose launchClose3() {
         return new Pose(waypoints.launchClose3X, waypoints.launchClose3Y, Math.toRadians(waypoints.launchClose3Heading));
     }
@@ -274,6 +287,10 @@ public class CloseThreeAtOnceCommand {
 
     private static Pose artifactsSet3Control0() {
         return new Pose(waypoints.artifactsSet3Control0X, waypoints.artifactsSet3Control0Y, 0);
+    }
+
+    private static Pose artifactsSet3Control1() {
+        return new Pose(waypoints.artifactsSet3Control1X, waypoints.artifactsSet3Control1Y, 0);
     }
 
     private static Pose launchOffLine() {

@@ -141,8 +141,6 @@ public class CommandRangeConfig {
         config.longMaxCenterRpm = 3050; // Center disabled by default
         config.longMaxRightRpm = 3050;
 
-
-
         /** Per-range hood positions (applied uniformly to all lanes) */
         config.shortHoodPosition = .46;
         config.midHoodPosition = 0.05;

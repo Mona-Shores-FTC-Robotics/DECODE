@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
@@ -135,7 +134,7 @@ public class FarThreeAtOnceCommand {
                     launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
             new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//            new AimAtGoalCommand(robot.drive, robot.vision),
+            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Alliance Wall Artifacts
@@ -154,7 +153,7 @@ public class FarThreeAtOnceCommand {
                     .build(config.maxPathPower),
 
             new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//            new AimAtGoalCommand(robot.drive, robot.vision),
+            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Artifact Set 3
@@ -173,7 +172,7 @@ public class FarThreeAtOnceCommand {
                     .build(config.maxPathPower),
 
             new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//            new AimAtGoalCommand(robot.drive, robot.vision),
+            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Artifact Set 2
@@ -192,7 +191,7 @@ public class FarThreeAtOnceCommand {
                 .build(config.maxPathPower),
 
             new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//            new AimAtGoalCommand(robot.drive, robot.vision),
+            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Get Ready to Open Gate

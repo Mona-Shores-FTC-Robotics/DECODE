@@ -159,7 +159,7 @@ public class FarTogetherCommand {
                 ),
 
                 new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Alliance Wall Artifacts
@@ -179,7 +179,7 @@ public class FarTogetherCommand {
                         .build(config.maxPathPower),
 
                 new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+                new AimAtGoalCommand(robot.drive, robot.vision),
                 new Delay(config.delayForGateToOpen),
                 launcherCommands.launchAccordingToMode(false),
 
@@ -199,7 +199,7 @@ public class FarTogetherCommand {
                         .build(config.maxPathPower),
 
                 new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Released Artifacts Try 1
@@ -217,7 +217,7 @@ public class FarTogetherCommand {
                     .build(config.maxPathPower),
 
                 new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Released Artifacts Try 1
@@ -239,7 +239,7 @@ public class FarTogetherCommand {
                                         .build(config.maxPathPower),
 
                                 new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//                                new AimAtGoalCommand(robot.drive, robot.vision),
+                                new AimAtGoalCommand(robot.drive, robot.vision),
                                 launcherCommands.launchAccordingToMode(false),
 
                                 //Get Off Launch Line and Ready for Teleop
