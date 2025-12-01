@@ -53,7 +53,8 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         }
     }
 
-    public enum LightingState {
+    /** Baseline display mode when no override pattern is active. */
+    public enum BaseLightingMode {
         OFF,
         ALLIANCE
     }
@@ -75,7 +76,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private long lastBlinkToggleMs = 0L;
 
     // State tracking
-    private LightingState state = LightingState.OFF;
+    private BaseLightingMode baseMode = BaseLightingMode.OFF;
     private Alliance alliance = Alliance.UNKNOWN;
     private double lastPeriodicMs = 0.0;
     private boolean followSensorColors = true;
@@ -128,10 +129,16 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
      * Does NOT directly change what's displayed - priority resolution handles that.
      */
     private void updateGoalPattern() {
+        // Keep goal aligned with an active temporary pattern for clearer telemetry/debugging.
+        if (patternExpirationMs > 0 && currentPattern != LightingPattern.OFF) {
+            goalPattern = currentPattern;
+            return;
+        }
+
         // Default to lane tracking (showing artifact colors)
         if (followSensorColors) {
             goalPattern = LightingPattern.LANE_TRACKING;
-        } else if (state == LightingState.ALLIANCE) {
+        } else if (baseMode == BaseLightingMode.ALLIANCE) {
             goalPattern = LightingPattern.ALLIANCE;
         } else {
             goalPattern = LightingPattern.OFF;
@@ -171,25 +178,25 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     public void setAlliance(Alliance alliance) {
         this.alliance = (alliance == null ? Alliance.UNKNOWN : alliance);
-        if (state == LightingState.ALLIANCE || state == LightingState.OFF) {
+        if (baseMode == BaseLightingMode.ALLIANCE || baseMode == BaseLightingMode.OFF) {
             updateLaneOutputs();
         }
     }
 
     public void indicateBusy() {
         // Simplified: just keep showing lane colors
-        state = LightingState.ALLIANCE;
+        baseMode = BaseLightingMode.ALLIANCE;
         followSensorColors = true;
     }
 
     public void indicateIdle() {
-        state = LightingState.ALLIANCE;
+        baseMode = BaseLightingMode.ALLIANCE;
         followSensorColors = true;
     }
 
     public void disable() {
         resetLaneColors();
-        state = LightingState.OFF;
+        baseMode = BaseLightingMode.OFF;
         updateLaneOutputs();
     }
 
@@ -245,7 +252,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     public void indicateAllianceInit() {
         resetLaneColors();
-        state = LightingState.ALLIANCE;
+        baseMode = BaseLightingMode.ALLIANCE;
         updateLaneOutputs();
     }
 
@@ -276,26 +283,26 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     public void showAlliancePulse(Alliance alliance, boolean brightPhase) {
         // Simplified - just show solid alliance color
         setAlliance(alliance);
-        state = LightingState.ALLIANCE;
+        baseMode = BaseLightingMode.ALLIANCE;
         followSensorColors = false;
     }
 
     public void showWhiteBlink(boolean on) {
         // Disabled - just show alliance color
-        state = LightingState.ALLIANCE;
+        baseMode = BaseLightingMode.ALLIANCE;
         followSensorColors = false;
     }
 
     public void showSolidAlliance(Alliance alliance) {
         setAlliance(alliance);
-        state = LightingState.ALLIANCE;
+        baseMode = BaseLightingMode.ALLIANCE;
         followSensorColors = false;
     }
 
     public void showAllianceReminder(Alliance alliance) {
         // Simplified - just show alliance color
         setAlliance(alliance);
-        state = LightingState.ALLIANCE;
+        baseMode = BaseLightingMode.ALLIANCE;
     }
 
     public void resumeLaneTracking() {
@@ -342,7 +349,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     // Each method renders a specific pattern to the physical LEDs
     private void renderAimAligned(long nowMs) {
         // White blink for aim-aligned feedback (short burst)
-        if (nowMs - lastBlinkToggleMs >= 50L) { // toggle at 20Hz
+        if (nowMs - lastBlinkToggleMs >= 200L) { // slower toggle (~5Hz) so servo motion is visible
             blinkOn = !blinkOn;
             lastBlinkToggleMs = nowMs;
         }
@@ -415,7 +422,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     protected double fallbackPosition() {
-        switch (state) {
+        switch (baseMode) {
             case ALLIANCE:
                 return alliancePosition();
             case OFF:

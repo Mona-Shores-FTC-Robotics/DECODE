@@ -995,7 +995,7 @@ public class DriveSubsystem implements Subsystem {
             visionRelocalizeStatus = "Re-localized on launch";
             visionRelocalizeStatusMs = nowMs;
             recordAutoRelocalizePacket(true , nowMs , snapshot.tagId , visionRelocalizeStatus , lastRelocalizeSource);
-            flashRelocalizeFeedback();
+//            flashRelocalizeFeedback();
         }
         else {
             recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , "launch relocalize failed" , "blocked_conditions");
