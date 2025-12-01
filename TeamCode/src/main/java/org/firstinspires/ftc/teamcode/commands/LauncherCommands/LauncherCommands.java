@@ -45,12 +45,11 @@ public class LauncherCommands {
         return cmd;
     }
 
-    public DistanceBasedSpinCommand2 distanceBasedSpinUp(VisionSubsystemLimelight vision,
+    public DistanceBasedSpinCommand distanceBasedSpinUp(VisionSubsystemLimelight vision,
                                                         DriveSubsystem drive,
                                                         LightingSubsystem lighting,
                                                         Gamepad gamepad) {
-//        return new DistanceBasedSpinCommand(launcher, vision, drive, lighting, gamepad);
-        return new DistanceBasedSpinCommand2(launcher, vision, drive, lighting, gamepad);
+        return new DistanceBasedSpinCommand(launcher, vision, drive, lighting, gamepad);
     }
 
     public LaunchAllCommand launchAll(boolean spinDownAfterShot) {

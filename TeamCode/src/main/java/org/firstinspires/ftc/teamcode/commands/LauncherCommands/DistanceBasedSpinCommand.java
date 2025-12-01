@@ -2,11 +2,9 @@ package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.util.Range;
-
 import com.qualcomm.robotcore.hardware.Gamepad;
-
-import dev.nextftc.core.commands.Command;
+import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
@@ -19,6 +17,8 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Objects;
 import java.util.Optional;
+
+import dev.nextftc.core.commands.Command;
 
 /**
  * Continuously calculates distance to goal and updates launcher RPM while held.
@@ -58,13 +58,14 @@ public class DistanceBasedSpinCommand extends Command {
     @Configurable
     public static class DistanceCalibration {
         /** Distance in inches for short range reference point */
-        public double shortRangeDistanceIn = 36.0;
+        public double shortRangeDistanceIn = 18.4;
 
         /** Distance in inches for mid range reference point */
-        public double midRangeDistanceIn = 90.0;
+        public double midRangeDistanceIn = 96.0;
 
         /** Distance in inches for long range reference point */
-        public double longRangeDistanceIn = 128.0;
+        public double longRangeMinDistanceIn = 125.4;
+        public double longRangeMaxDistanceIn = 153;
     }
 
     @Configurable
@@ -90,7 +91,9 @@ public class DistanceBasedSpinCommand extends Command {
     private double lastSmoothedDistanceIn = 0.0;
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;  // 0-1: higher = more filtering
     private static final double RPM_READY_THRESHOLD_PERCENT = 0.95;  // Trigger feedback at 95% of target
+    private static final double READY_LOSS_DEBOUNCE_MS = 250.0;  // How long to be "not ready" before re-arming
     private boolean feedbackTriggered = false;
+    private final ElapsedTime readyLossTimer = new ElapsedTime();
 
     /**
      * Creates command that continuously updates launcher RPM based on distance to goal.
@@ -121,6 +124,7 @@ public class DistanceBasedSpinCommand extends Command {
         diagnostics.updateCount = 0;
         lastSmoothedDistanceIn = 0.0;
         feedbackTriggered = false;
+        readyLossTimer.reset();
 
         // Clear recovery deadlines so lanes can immediately respond to new RPM targets
         // Without this, lanes in recovery from previous shots won't update their target RPM
@@ -128,10 +132,10 @@ public class DistanceBasedSpinCommand extends Command {
 
         // Set initial RPMs to mid-range values so launcher starts spinning immediately
         // update() will refine these based on actual distance calculations
-        launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().midLeftRpm);
-        launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().midCenterRpm);
-        launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().midRightRpm);
-        launcher.setAllHoodPositions(rangeConfig().midHoodPosition);
+        launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().shortLeftRpm);
+        launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().shortCenterRpm);
+        launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().shortRightRpm);
+        launcher.setAllHoodPositions(rangeConfig().shortHoodPosition);
         launcher.spinUpAllLanesToLaunch();
     }
 
@@ -228,21 +232,30 @@ public class DistanceBasedSpinCommand extends Command {
         RobotState.packet.put("Commands/Distance-Based-Spin/Stationary", stationary);
         RobotState.packet.put("Commands/Distance-Based-Spin/Ready With Aim", readyWithAim);
 
-        if (feedbackTriggered || !readyWithAim) {
-            return;  // Only trigger once
+        if (readyWithAim) {
+            readyLossTimer.reset();
+            if (feedbackTriggered) {
+                return;
+            }
+
+            // Trigger feedback only when both launcher and aim are ready
+            feedbackTriggered = true;
+
+            // Haptic feedback: rumble controller for 200ms
+            if (gamepad != null) {
+                gamepad.rumble(200);  // 200ms rumble
+            }
+
+            // Light feedback: flash white to indicate launcher ready
+            if (lighting != null) {
+                lighting.flashAimAligned();
+            }
+            return;
         }
 
-        // Trigger feedback only when both launcher and aim are ready
-        feedbackTriggered = true;
-
-        // Haptic feedback: rumble controller for 200ms
-        if (gamepad != null) {
-            gamepad.rumble(200);  // 200ms rumble
-        }
-
-        // Light feedback: flash yellow to indicate launcher ready
-        if (lighting != null) {
-            lighting.flashAimAligned();
+        // Re-arm once we've been out of the ready window for long enough
+        if (readyLossTimer.milliseconds() >= READY_LOSS_DEBOUNCE_MS) {
+            feedbackTriggered = false;
         }
     }
 
@@ -293,19 +306,22 @@ public class DistanceBasedSpinCommand extends Command {
      */
     private void setRpmsForDistance(double distanceIn) {
         double leftRpm = interpolateRpm(distanceIn,
-            distanceCalibration.shortRangeDistanceIn, rangeConfig().shortLeftRpm,
-            distanceCalibration.midRangeDistanceIn, rangeConfig().midLeftRpm,
-            distanceCalibration.longRangeDistanceIn, rangeConfig().longLeftRpm);
+                distanceCalibration.shortRangeDistanceIn, rangeConfig().shortLeftRpm,
+                distanceCalibration.midRangeDistanceIn, rangeConfig().midLeftRpm,
+                distanceCalibration.longRangeMinDistanceIn, rangeConfig().longMinLeftRpm,
+                distanceCalibration.longRangeMaxDistanceIn , rangeConfig().longMaxLeftRpm);
 
         double centerRpm = interpolateRpm(distanceIn,
-            distanceCalibration.shortRangeDistanceIn, rangeConfig().shortCenterRpm,
-            distanceCalibration.midRangeDistanceIn, rangeConfig().midCenterRpm,
-            distanceCalibration.longRangeDistanceIn, rangeConfig().longCenterRpm);
+                distanceCalibration.shortRangeDistanceIn, rangeConfig().shortCenterRpm,
+                distanceCalibration.midRangeDistanceIn, rangeConfig().midCenterRpm,
+                distanceCalibration.longRangeMinDistanceIn, rangeConfig().longMinCenterRpm,
+                distanceCalibration.longRangeMaxDistanceIn , rangeConfig().longMaxCenterRpm);
 
         double rightRpm = interpolateRpm(distanceIn,
-            distanceCalibration.shortRangeDistanceIn, rangeConfig().shortRightRpm,
-            distanceCalibration.midRangeDistanceIn, rangeConfig().midRightRpm,
-            distanceCalibration.longRangeDistanceIn, rangeConfig().longRightRpm);
+                distanceCalibration.shortRangeDistanceIn, rangeConfig().shortRightRpm,
+                distanceCalibration.midRangeDistanceIn, rangeConfig().midRightRpm,
+                distanceCalibration.longRangeMinDistanceIn, rangeConfig().longMinRightRpm,
+                distanceCalibration.longRangeMaxDistanceIn , rangeConfig().longMaxRightRpm);
 
         launcher.setLaunchRpm(LauncherLane.LEFT, leftRpm);
         launcher.setLaunchRpm(LauncherLane.CENTER, centerRpm);
@@ -317,24 +333,13 @@ public class DistanceBasedSpinCommand extends Command {
         diagnostics.lastRightTargetRpm = rightRpm;
     }
 
-    /**
-     * Interpolates RPM based on distance using piecewise linear interpolation.
-     *
-     * @param distance Current distance to goal
-     * @param shortDist Short range distance calibration point
-     * @param shortRpm Short range RPM
-     * @param midDist Mid range distance calibration point
-     * @param midRpm Mid range RPM
-     * @param longDist Long range distance calibration point
-     * @param longRpm Long range RPM
-     * @return Interpolated RPM value
-     */
     private double interpolateRpm(double distance,
                                    double shortDist, double shortRpm,
                                    double midDist, double midRpm,
-                                   double longDist, double longRpm) {
+                                   double longMinDist, double longMinRpm,
+                                   double longMaxDist, double longMaxRpm) {
         // Clamp distance to reasonable range
-        distance = Range.clip(distance, shortDist * 0.5, longDist * 1.5);
+        distance = Range.clip(distance, shortDist * 0.5, longMaxDist * 1.5);
 
         // Piecewise linear interpolation
         if (distance <= shortDist) {
@@ -344,23 +349,21 @@ public class DistanceBasedSpinCommand extends Command {
             // Between short and mid - interpolate
             double t = (distance - shortDist) / (midDist - shortDist);
             return shortRpm + t * (midRpm - shortRpm);
-        } else if (distance <= longDist) {
-            // Between mid and long - interpolate
-            double t = (distance - midDist) / (longDist - midDist);
-            return midRpm + t * (longRpm - midRpm);
+        } else if (distance <= longMaxDist) {
+            // Between minLong and maxLong - interpolate
+            double t = (distance - longMinDist) / (longMaxDist - longMinDist);
+            return longMinRpm + t * (longMaxRpm - longMinRpm);
         } else {
             // Above long range - use long RPM
-            return longRpm;
+            return longMaxRpm;
         }
     }
 
     private void setHoodForDistance(double distanceIn) {
         double hoodPosition = interpolateHood(
                 distanceIn,
-                hoodThresholds.shortRangeDistanceIn,
-                rangeConfig().shortHoodPosition,
-                hoodThresholds.midRangeDistanceIn,
-                rangeConfig().midHoodPosition,
+                hoodThresholds.shortRangeDistanceIn, rangeConfig().shortHoodPosition,
+                hoodThresholds.midRangeDistanceIn, rangeConfig().midHoodPosition,
                 rangeConfig().longHoodPosition
         );
 

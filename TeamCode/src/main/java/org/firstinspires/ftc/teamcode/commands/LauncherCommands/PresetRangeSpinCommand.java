@@ -31,6 +31,8 @@ public class PresetRangeSpinCommand extends Command {
         return RobotConfigs.getCommandRangeConfig();
     }
     private final ElapsedTime timer = new ElapsedTime();
+    private final ElapsedTime readyLossTimer = new ElapsedTime();
+    private static final double READY_LOSS_DEBOUNCE_MS = 250.0;
     private final boolean finishWhenReady;
     private DriveSubsystem drive;
     private LightingSubsystem lighting;
@@ -73,6 +75,7 @@ public class PresetRangeSpinCommand extends Command {
     public void start() {
         launcher.clearRecoveryDeadlines();
         timer.reset();
+        readyLossTimer.reset();
         setRpmsForRange();
         launcher.setAllHoodPositions(hoodPositionForRange());
         launcher.spinUpAllLanesToLaunch();
@@ -158,16 +161,25 @@ public class PresetRangeSpinCommand extends Command {
     }
 
     private void triggerReadyFeedback(boolean readyWithAim) {
-        if (!readyWithAim || feedbackTriggered) {
+        if (readyWithAim) {
+            readyLossTimer.reset();
+            if (feedbackTriggered) {
+                return;
+            }
+            feedbackTriggered = true;
+
+            if (gamepad != null) {
+                gamepad.rumble(200);
+            }
+            if (lighting != null) {
+                lighting.flashAimAligned();
+            }
             return;
         }
-        feedbackTriggered = true;
 
-        if (gamepad != null) {
-            gamepad.rumble(200);
-        }
-        if (lighting != null) {
-            lighting.flashAimAligned();
+        // Re-arm once we've been out of the ready window for long enough
+        if (readyLossTimer.milliseconds() >= READY_LOSS_DEBOUNCE_MS) {
+            feedbackTriggered = false;
         }
     }
 
