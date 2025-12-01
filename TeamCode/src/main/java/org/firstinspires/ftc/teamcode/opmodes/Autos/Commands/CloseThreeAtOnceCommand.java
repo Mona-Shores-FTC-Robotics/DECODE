@@ -148,9 +148,9 @@ public class CloseThreeAtOnceCommand {
         }
 
         Command mainSequence = new SequentialGroup(
+                // Launch Preloads
 
                 new ParallelDeadlineGroup(
-                    // Launch Preloads
                     firstPathBuilder
                         .to(launchClose1())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
@@ -158,7 +158,7 @@ public class CloseThreeAtOnceCommand {
                     launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
                 ),
 
-                new AimAtGoalCommand(robot.drive, robot.vision),
+//                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Artifact Set 1
@@ -176,7 +176,7 @@ public class CloseThreeAtOnceCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-                new AimAtGoalCommand(robot.drive, robot.vision),
+//                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Artifact Set 2
@@ -195,7 +195,7 @@ public class CloseThreeAtOnceCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-                new AimAtGoalCommand(robot.drive, robot.vision),
+//                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Artifact Set 3
@@ -214,7 +214,7 @@ public class CloseThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-                new AimAtGoalCommand(robot.drive, robot.vision),
+//                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Get Ready to Open Gate and Get Off Launch Line
