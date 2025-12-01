@@ -126,11 +126,14 @@ public class FarThreeAtOnceCommand {
 
         Command mainSequence = new SequentialGroup(
             // Launch Preloads
-            firstPathBuilder
-                .to(launchFar())
-                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                .build(config.maxPathPower),
+                new ParallelDeadlineGroup(
+                firstPathBuilder
+                    .to(launchFar())
+                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                    .build(config.maxPathPower),
 
+                    launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
+                ),
             new TryRelocalizeForShotCommand(robot.drive, robot.vision),
             new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
@@ -202,9 +205,7 @@ public class FarThreeAtOnceCommand {
 
         return new ParallelDeadlineGroup(
                 mainSequence,
-                autoSmartIntake, // Run the smart intake the whole time
-//                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null) //don't actually pass controller since its auto
-                launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
+                autoSmartIntake // Run the smart intake the whole time
         );
     }
 

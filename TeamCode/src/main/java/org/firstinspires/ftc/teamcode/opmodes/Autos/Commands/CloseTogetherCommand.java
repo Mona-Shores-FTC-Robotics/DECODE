@@ -158,11 +158,15 @@ public class CloseTogetherCommand {
         }
 
         Command mainSequence = new SequentialGroup(
-                // Launch Preloads
-                firstPathBuilder
-                    .to(launchClose1())
-                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                    .build(config.maxPathPower),
+
+                new ParallelDeadlineGroup(
+                        // Launch Preloads
+                        firstPathBuilder
+                                .to(launchClose1())
+                                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                .build(config.maxPathPower),
+                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
+                ),
 
                 new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
@@ -245,9 +249,7 @@ public class CloseTogetherCommand {
 
         return new ParallelDeadlineGroup(
                 mainSequence,
-                autoSmartIntake, // Run the smart intake the whole time
-//                launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, null) //don't actually pass controller since its auto
-                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
+                autoSmartIntake // Run the smart intake the whole time
         );
     }
 

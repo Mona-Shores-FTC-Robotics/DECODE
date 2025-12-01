@@ -57,14 +57,14 @@ public class DistanceBasedSpinCommand2 extends Command {
     @Configurable
     public static class DistanceCalibration {
         /** Distance in inches for short range reference point */
-        public double shortRangeDistanceIn = 36.0;
+        public double shortRangeDistanceIn = 18.4;
 
         /** Distance in inches for mid range reference point */
-        public double midRangeDistanceIn = 90.0;
+        public double midRangeDistanceIn = 96.0;
 
         /** Distance in inches for long range reference point */
-        public double longRangeMinDistanceIn = 118;
-        public double longRangeMaxDistanceIn = 130;
+        public double longRangeMinDistanceIn = 125.4;
+        public double longRangeMaxDistanceIn = 153;
     }
 
     @Configurable
@@ -128,10 +128,10 @@ public class DistanceBasedSpinCommand2 extends Command {
 
         // Set initial RPMs to mid-range values so launcher starts spinning immediately
         // update() will refine these based on actual distance calculations
-        launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().midLeftRpm);
-        launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().midCenterRpm);
-        launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().midRightRpm);
-        launcher.setAllHoodPositions(rangeConfig().midHoodPosition);
+        launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().shortLeftRpm);
+        launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().shortCenterRpm);
+        launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().shortRightRpm);
+        launcher.setAllHoodPositions(rangeConfig().shortHoodPosition);
         launcher.spinUpAllLanesToLaunch();
     }
 

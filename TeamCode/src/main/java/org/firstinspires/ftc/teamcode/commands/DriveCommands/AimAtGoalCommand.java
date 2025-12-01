@@ -33,7 +33,7 @@ public class AimAtGoalCommand extends Command {
         public int settledLoops = 3;
 
         /** Maximum time to spend aiming before giving up (milliseconds) */
-        public double timeoutMs = 3000.0;
+        public double timeoutMs = 5000;
     }
 
     public static Config config = new Config();
@@ -60,6 +60,8 @@ public class AimAtGoalCommand extends Command {
         if (drive.getFollower().isBusy()) {
             drive.getFollower().breakFollowing();
         }
+        // Ensure Pedro is in teleop mode so setTeleOpDrive commands actually move the robot (auto init disables it)
+        drive.getFollower().startTeleopDrive(true);
     }
 
     @Override

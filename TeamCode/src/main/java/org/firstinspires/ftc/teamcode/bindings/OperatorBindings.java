@@ -103,7 +103,7 @@ public class OperatorBindings {
                 .whenBecomesFalse(robot.drive::tryRelocalizeForShot);
 
         PresetRangeSpinCommand spinFarCommand = robot.launcherCommands.presetRangeSpinUp(LauncherRange.LONG, false);
-        launchMid
+        launchFar
                 .whenBecomesTrue(spinFarCommand)
                 .whenBecomesFalse(launchCommand)
                 .whenBecomesFalse(robot.drive::tryRelocalizeForShot);
