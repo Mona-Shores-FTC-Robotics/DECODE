@@ -926,6 +926,8 @@ public class LauncherSubsystem implements Subsystem {
             launchCommandActive = false;
             launchTimer.reset();
             if (motor != null) {
+                // Re-apply direction/config each init so late robot-name detection picks up correct lane reversal
+                configureMotor();
                 motor.setPower(0.0);
             }
         }

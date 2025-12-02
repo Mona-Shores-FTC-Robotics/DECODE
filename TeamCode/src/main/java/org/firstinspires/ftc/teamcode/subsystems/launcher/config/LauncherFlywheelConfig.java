@@ -60,7 +60,7 @@ public class LauncherFlywheelConfig {
 
     private static LauncherFlywheelConfig createFlywheelConfig19429() {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
-        config.flywheelLeft.reversed = true;
+        config.flywheelLeft.reversed = false;
         config.flywheelLeft.idleRpm = 1500;
         config.flywheelLeft.kS = 0.10;
         config.flywheelLeft.kV = 0.0002;
@@ -72,7 +72,7 @@ public class LauncherFlywheelConfig {
         config.flywheelCenter.kV = 0.0002;
         config.flywheelCenter.kP = .001;
 
-        config.flywheelRight.reversed = false;
+        config.flywheelRight.reversed = true;
         config.flywheelRight.idleRpm = 1500;
         config.flywheelRight.kS = 0.10;
         config.flywheelRight.kV = 0.0002;

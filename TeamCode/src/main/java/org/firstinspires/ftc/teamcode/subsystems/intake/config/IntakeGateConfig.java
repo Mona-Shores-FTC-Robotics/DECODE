@@ -34,9 +34,9 @@ public class IntakeGateConfig {
      */
     private static IntakeGateConfig createGateConfig20245() {
         IntakeGateConfig config = new IntakeGateConfig();
-        config.preventArtifacts = .7;
-        config.allowArtifacts = .3;
-        config.reverseConfig = 1.0;
+        config.preventArtifacts = .3;
+        config.allowArtifacts = 0;
+        config.reverseConfig = .8;
         return config;
     }
 }

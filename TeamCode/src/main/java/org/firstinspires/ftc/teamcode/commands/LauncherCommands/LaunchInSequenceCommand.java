@@ -245,8 +245,11 @@ public class LaunchInSequenceCommand extends Command {
             List<LauncherLane> matchingLanes = findUnusedLanesWithColor(neededColor, neededCount);
 
             if (matchingLanes.isEmpty()) {
-                // Can't match this group - continue to try remaining groups
-                continue;
+                // Sensors failed for this color - fall back to any unused lane(s)
+                matchingLanes = findUnusedLanesIgnoringColor(neededCount);
+                if (matchingLanes.isEmpty()) {
+                    continue;
+                }
             }
 
             // Fire ALL lanes in this group SIMULTANEOUSLY at currentDelay
@@ -267,10 +270,7 @@ public class LaunchInSequenceCommand extends Command {
         List<LauncherLane> remainingLanes = new ArrayList<>();
         for (LauncherLane lane : LauncherLane.values()) {
             if (!usedLanes.contains(lane)) {
-                ArtifactColor laneColor = intake.getLaneColor(lane);
-                if (laneColor != null && laneColor.isArtifact()) {
-                    remainingLanes.add(lane);
-                }
+                remainingLanes.add(lane);
             }
         }
 
@@ -370,6 +370,31 @@ public class LaunchInSequenceCommand extends Command {
         });
 
         // Return up to maxCount lanes
+        return matching.subList(0, Math.min(maxCount, matching.size()));
+    }
+
+    /**
+     * Returns unused lanes without checking colors, prioritized by readiness.
+     */
+    private List<LauncherLane> findUnusedLanesIgnoringColor(int maxCount) {
+        List<LauncherLane> matching = new ArrayList<>();
+        for (LauncherLane lane : LauncherLane.values()) {
+            if (usedLanes.contains(lane)) {
+                continue;
+            }
+            matching.add(lane);
+        }
+        matching.sort((lane1, lane2) -> {
+            boolean ready1 = launcher.isLaneReady(lane1);
+            boolean ready2 = launcher.isLaneReady(lane2);
+            if (ready1 && !ready2) {
+                return -1;
+            }
+            if (!ready1 && ready2) {
+                return 1;
+            }
+            return 0;
+        });
         return matching.subList(0, Math.min(maxCount, matching.size()));
     }
 }

@@ -132,10 +132,10 @@ public class DistanceBasedSpinCommand extends Command {
 
         // Set initial RPMs to mid-range values so launcher starts spinning immediately
         // update() will refine these based on actual distance calculations
-        launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().shortLeftRpm);
-        launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().shortCenterRpm);
-        launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().shortRightRpm);
-        launcher.setAllHoodPositions(rangeConfig().shortHoodPosition);
+        launcher.setLaunchRpm(LauncherLane.LEFT, rangeConfig().midLeftRpm);
+        launcher.setLaunchRpm(LauncherLane.CENTER, rangeConfig().midCenterRpm);
+        launcher.setLaunchRpm(LauncherLane.RIGHT, rangeConfig().midRightRpm);
+        launcher.setAllHoodPositions(rangeConfig().midHoodPosition);
         launcher.spinUpAllLanesToLaunch();
     }
 

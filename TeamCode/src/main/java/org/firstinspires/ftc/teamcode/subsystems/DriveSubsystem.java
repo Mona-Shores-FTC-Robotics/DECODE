@@ -71,9 +71,9 @@ public class DriveSubsystem implements Subsystem {
      */
     private static DriveFixedAngleAimConfig createFixedAngleAimConfig19429() {
         DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
-        config.blueHeadingDeg = 133.9;
+        config.blueHeadingDeg = 135.2; // Match 20245 (closer to tuned value)
         config.redHeadingDeg = 45.2;
-        config.kP = 0.7;
+        config.kP = 0.5;               // Match 20245 for more predictable aim response
         config.kMaxTurn = 0.7;
         return config;
     }
@@ -283,6 +283,15 @@ public class DriveSubsystem implements Subsystem {
             double yMeters = pose.getY() * 0.0254;
             double headingRadians = follower.getHeading();
 //            KoalaLog.logPose2d("Robot/Pose", xMeters, yMeters, headingRadians, true);
+        }
+
+        // Heading diagnostics for waggle investigation (follower target vs current)
+        if (pose != null) {
+            // Pedro follower doesn't expose target heading directly; approximate using current path heading
+            double currentHeading = follower.getHeading();
+            RobotState.packet.put("HeadingDiag/current_deg", Math.toDegrees(currentHeading));
+            RobotState.packet.put("HeadingDiag/mode", follower.isBusy() ? "path_follow" : "idle/hold");
+            RobotState.packet.put("HeadingDiag/speed_ips", getRobotSpeedInchesPerSecond());
         }
     }
 

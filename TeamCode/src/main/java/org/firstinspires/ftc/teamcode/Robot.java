@@ -33,6 +33,12 @@ public class Robot {
         // Note: setRobotName() is now called from OpMode.onInit() BEFORE attachPedroFollower()
         // to give WiFi more time to initialize on first boot
         telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
+
+        // Ensure robot identity is resolved before subsystems pull config defaults (motor directions, etc.)
+        if ("UNKNOWN".equals(RobotState.getRobotName())) {
+            ControlHubIdentifierUtil.setRobotName(hardwareMap, null);
+        }
+
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision);
         launcher = new LauncherSubsystem(hardwareMap);

@@ -96,6 +96,11 @@ public class AimAtGoalCommand extends Command {
         } else {
             loopsSettled = 0;
         }
+
+        // If follower reports done (e.g., holdPoint finished), force a settle to avoid immediate exit
+        if (!drive.getFollower().isBusy() && loopsSettled == 0) {
+            loopsSettled = 1;
+        }
     }
 
     @Override
@@ -105,10 +110,8 @@ public class AimAtGoalCommand extends Command {
             return true;
         }
 
-        // Complete when settled OR follower reports not busy
-        boolean followerDone = !drive.getFollower().isBusy();
-        boolean settledDone = loopsSettled >= config.settledLoops;
-        return followerDone || settledDone;
+        // Complete only when settled; follower busy flag alone is noisy for holdPoint
+        return loopsSettled >= config.settledLoops;
     }
 
     @Override

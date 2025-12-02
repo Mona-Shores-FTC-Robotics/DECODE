@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos;
 
+import com.bylazar.configurables.PanelsConfigurables;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
@@ -87,6 +88,8 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
                 new SubsystemComponent(robot.lighting),
                 new SubsystemComponent(robot.vision)
         );
+        PanelsConfigurables.INSTANCE.refreshClass(Constants.followerConstants19429);
+        PanelsConfigurables.INSTANCE.refreshClass(Constants.followerConstants20245);
     }
 
     @Override

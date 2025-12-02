@@ -176,8 +176,8 @@ public class IntakeLaneSensorConfig {
     private static LanePresenceConfig createLanePresenceConfig20245() {
         LanePresenceConfig config = new LanePresenceConfig();
         // Start with the same defaults; tune via Dashboard per robot
-        config.leftEnterDistanceCm = 3.8;
-        config.leftExitDistanceCm = 3.5;
+        config.leftEnterDistanceCm = 4.0;
+        config.leftExitDistanceCm = 4.1;
         config.centerEnterDistanceCm = 5.0;
         config.centerExitDistanceCm = 5.5;
         config.rightEnterDistanceCm = 5.5;

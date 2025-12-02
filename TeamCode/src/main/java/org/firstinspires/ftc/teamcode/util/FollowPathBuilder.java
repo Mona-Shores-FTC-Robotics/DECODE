@@ -109,11 +109,22 @@ public class FollowPathBuilder {
         if (pts.size() == 2) {
             builder.addPath(new BezierLine(start, end));
         } else {
-            for (int i = 0; i < pts.size() - 2; i++) {
-                Pose a = pts.get(i);
-                Pose b = pts.get(i + 1);
-                Pose c = pts.get(i + 2);
-                builder.addPath(new BezierCurve(a, b, c));
+            // Keep continuity when multiple control points are supplied: each curve starts where the
+            // previous one ended, instead of jumping back to earlier controls.
+            Pose segmentStart = start;
+            for (int i = 0; i < pts.size() - 1; i++) {
+                Pose control = pts.get(i + 1);
+                Pose segmentEnd = (i + 2 < pts.size()) ? pts.get(i + 2) : end;
+                // Avoid degenerate curves when the last control equals the end point
+                if (control.equals(segmentEnd)) {
+                    builder.addPath(new BezierLine(segmentStart, segmentEnd));
+                } else {
+                    builder.addPath(new BezierCurve(segmentStart, control, segmentEnd));
+                }
+                segmentStart = segmentEnd;
+                if (segmentEnd == end) {
+                    break;
+                }
             }
         }
 
