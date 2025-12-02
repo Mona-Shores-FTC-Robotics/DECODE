@@ -327,6 +327,12 @@ public class DistanceBasedSpinCommand extends Command {
         launcher.setLaunchRpm(LauncherLane.CENTER, centerRpm);
         launcher.setLaunchRpm(LauncherLane.RIGHT, rightRpm);
 
+        // Re-command flywheels to apply the updated RPM targets
+        // Without this, the motors stay at the initial mid RPM and never update
+        launcher.spinUpLaneToLaunch(LauncherLane.LEFT);
+        launcher.spinUpLaneToLaunch(LauncherLane.CENTER);
+        launcher.spinUpLaneToLaunch(LauncherLane.RIGHT);
+
         // Update diagnostics
         diagnostics.lastLeftTargetRpm = leftRpm;
         diagnostics.lastCenterTargetRpm = centerRpm;
