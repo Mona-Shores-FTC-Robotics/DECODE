@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 @Configurable
 public class DecodeTeleOp extends NextFTCOpMode {
 
-    @Configurable
     public static class EndgameConfig {
         /** Seconds remaining when auto-switch to DECODE mode triggers */
         public double decodeModeSwitchSecondsRemaining = 30.0;

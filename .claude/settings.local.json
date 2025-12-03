@@ -12,7 +12,8 @@
       "WebFetch(domain:www.chiefdelphi.com)",
       "Bash(git checkout:*)",
       "Bash(git pull:*)",
-      "WebFetch(domain:docs.limelightvision.io)"
+      "WebFetch(domain:docs.limelightvision.io)",
+      "WebFetch(domain:panels.bylazar.com)"
     ],
     "deny": [],
     "ask": []

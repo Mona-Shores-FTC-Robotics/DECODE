@@ -31,7 +31,6 @@ import dev.nextftc.core.commands.Command;
 @Configurable
 public class DistanceBasedSpinCommand extends Command {
 
-    @Configurable
     public static class DiagnosticData {
         /** Last calculated distance to goal in inches (updates every loop) */
         public double lastCalculatedDistanceIn = 0.0;
@@ -55,7 +54,6 @@ public class DistanceBasedSpinCommand extends Command {
 
     public static DiagnosticData diagnostics = new DiagnosticData();
 
-    @Configurable
     public static class DistanceCalibration {
         /** Distance in inches for short range reference point */
         public double shortRangeDistanceIn = 18.4;
@@ -68,7 +66,6 @@ public class DistanceBasedSpinCommand extends Command {
         public double longRangeMaxDistanceIn = 153;
     }
 
-    @Configurable
     public static class HoodThresholds {
         /** Distance threshold (inches) between short and mid range */
         public double shortRangeDistanceIn = 0;

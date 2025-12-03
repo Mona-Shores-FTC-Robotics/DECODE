@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Voltage compensation configuration for consistent launcher performance.
  * Adjusts motor power based on battery voltage to maintain consistent RPM.
  */
-@Configurable
 public class LauncherVoltageCompensationConfig {
     /** Enable battery voltage compensation for consistent motor performance */
     public boolean enabled = true;

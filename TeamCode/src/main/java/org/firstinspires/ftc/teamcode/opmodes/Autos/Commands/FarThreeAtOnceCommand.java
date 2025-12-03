@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
@@ -13,6 +14,7 @@ import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import dev.nextftc.core.commands.Command;
+import dev.nextftc.core.commands.conditionals.IfElseCommand;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
@@ -27,13 +29,13 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 @Configurable
 public class FarThreeAtOnceCommand {
 
-    @Configurable
     public static class Config {
         public double maxPathPower = 0.65;
         public double endTimeForLinearHeadingInterpolation = .7;
+        public double autoDurationSeconds = 30.0;
+        public double minTimeForFinalLaunchSeconds = 5.0;
     }
 
-    @Configurable
     public static class Waypoints {
         public double startX = 56;
         public double startY = 5;
@@ -99,7 +101,7 @@ public class FarThreeAtOnceCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance) {
-        return create(robot, alliance, null);
+        return create(robot, alliance, null, null);
     }
 
     /**
@@ -110,8 +112,24 @@ public class FarThreeAtOnceCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
+        return create(robot, alliance, startOverride, null);
+    }
+
+    /**
+     * Creates the autonomous command sequence with optional start pose override and auto timer.
+     * @param robot Robot instance with all subsystems
+     * @param alliance Current alliance (BLUE or RED)
+     * @param startOverride Vision-detected start pose (or null to use waypoints)
+     * @param autoTimer Timer tracking elapsed auto time (will start if null)
+     * @return Complete autonomous command
+     */
+    public static Command create(Robot robot, Alliance alliance, Pose startOverride, ElapsedTime autoTimer) {
         LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
         AutoSmartIntakeCommand autoSmartIntake = new AutoSmartIntakeCommand(robot.intake);
+        ElapsedTime timer = autoTimer != null ? autoTimer : new ElapsedTime();
+        if (autoTimer == null) {
+            timer.reset();
+        }
 
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
@@ -183,23 +201,35 @@ public class FarThreeAtOnceCommand {
                     .withConstantHeading(artifactsSet2().getHeading())
                     .build(config.maxPathPower),
 
-            // Return, final launch, and park
-            new FollowPathBuilder(robot, alliance)
-                .from(artifactsSet2())
-                .to(launchFar())
-                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                .build(config.maxPathPower),
+            new IfElseCommand(
+                    () -> hasTimeForFinalLaunch(timer),
+                    new SequentialGroup(
+                            // Return, final launch, and park
+                            new FollowPathBuilder(robot, alliance)
+                                    .from(artifactsSet2())
+                                    .to(launchFar())
+                                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                    .build(config.maxPathPower),
 
-            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//            new AimAtGoalCommand(robot.drive, robot.vision),
-            launcherCommands.launchAccordingToMode(false),
+                            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
+//                            new AimAtGoalCommand(robot.drive, robot.vision),
+                            launcherCommands.launchAccordingToMode(false),
 
-            // Get Ready to Open Gate
-            new FollowPathBuilder(robot, alliance)
-                    .from(launchFar())
-                    .to(readyForTeleop())
-                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                    .build(config.maxPathPower)
+                            // Get Ready to Open Gate
+                            new FollowPathBuilder(robot, alliance)
+                                    .from(launchFar())
+                                    .to(readyForTeleop())
+                                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                    .build(config.maxPathPower)
+                    ),
+                    new SequentialGroup(
+                            new FollowPathBuilder(robot, alliance)
+                                    .from(artifactsSet2())
+                                    .to(readyForTeleop())
+                                    .withConstantHeading(90)
+                                    .build(config.maxPathPower)
+                    )
+            )
         );
 
         return new ParallelDeadlineGroup(
@@ -245,4 +275,8 @@ public class FarThreeAtOnceCommand {
         return new Pose(waypoints.readyForTeleopX , waypoints.readyForTeleopY , Math.toRadians(waypoints.readyForTeleopHeading));
     }
 
+    private static boolean hasTimeForFinalLaunch(ElapsedTime timer) {
+        double timeRemaining = config.autoDurationSeconds - timer.seconds();
+        return timeRemaining >= config.minTimeForFinalLaunchSeconds;
+    }
 }

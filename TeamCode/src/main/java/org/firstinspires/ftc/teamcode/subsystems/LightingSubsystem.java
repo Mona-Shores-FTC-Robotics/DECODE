@@ -59,6 +59,9 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         ALLIANCE
     }
 
+    // Active robot indicator
+    public static String ACTIVE_ROBOT = RobotState.getRobotName();
+
     // Global configuration instances
     public static LightingIndicatorConfig indicatorConfig = new LightingIndicatorConfig();
     public static LightingColorPositionConfig colorPositionConfig = new LightingColorPositionConfig();
@@ -416,7 +419,6 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             case PURPLE:  return clamp01(colorPositionConfig.purplePosition);
             case UNKNOWN: return clamp01(colorPositionConfig.whitePosition);
             case NONE:
-            case BACKGROUND:
             default:      return followSensorColors ? clamp01(colorPositionConfig.offPosition) : fallbackPosition();
         }
     }
