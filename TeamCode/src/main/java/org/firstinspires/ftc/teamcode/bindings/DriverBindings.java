@@ -21,11 +21,11 @@ public class DriverBindings {
     private final Range fieldY;
     private final Range rotationCcw;
     private final Button slowHold;
-    private final Button aimHold;
+    private final Button aimAtGoal;
     private final Button relocalizeRequest;
     private final Button headingResetRequest;
-    private final Button aimFixedAngle;
-    private final Button aimRightTrigger;
+    private final Button aimFixedAngleGoal;
+    private final Button aimRightTriggerPark;
 
     Command defaultDrive;
     Command aimAndDrive;
@@ -37,9 +37,9 @@ public class DriverBindings {
         fieldY = driver.leftStickY().deadZone(TRANSLATION_DEADBAND);
         rotationCcw = driver.rightStickX().deadZone(ROTATION_DEADBAND);
         slowHold = driver.rightBumper();
-        aimFixedAngle = driver.triangle();
-        aimHold = driver.circle();
-        aimRightTrigger = driver.rightTrigger().greaterThan(TRIGGER_THRESHOLD);
+        aimFixedAngleGoal = driver.triangle();
+        aimAtGoal = driver.circle();
+        aimRightTriggerPark = driver.rightTrigger().greaterThan(TRIGGER_THRESHOLD);
 
         relocalizeRequest = driver.cross();
         headingResetRequest = driver.square();
@@ -69,7 +69,7 @@ public class DriverBindings {
         );
         robot.drive.setDefaultCommand(defaultDrive);
 
-        aimHold.whenBecomesTrue(aimAndDrive)
+        aimAtGoal.whenBecomesTrue(aimAndDrive)
                 .whenBecomesFalse(aimAndDrive::cancel);
 
         Command aimFixedAngleCmd = new AimAndDriveFixedAngleCommand(
@@ -78,7 +78,7 @@ public class DriverBindings {
                 slowHold::get,
                 robot.drive
         );
-        aimFixedAngle.whenBecomesTrue(aimFixedAngleCmd)
+        aimFixedAngleGoal.whenBecomesTrue(aimFixedAngleCmd)
                 .whenBecomesFalse(aimFixedAngleCmd::cancel);
 
         Command aimRightTriggerCmd = new AimAndDriveRightTriggerCommand(
@@ -87,7 +87,7 @@ public class DriverBindings {
                 slowHold::get,
                 robot.drive
         );
-        aimRightTrigger.whenBecomesTrue(aimRightTriggerCmd)
+        aimRightTriggerPark.whenBecomesTrue(aimRightTriggerCmd)
                 .whenBecomesFalse(aimRightTriggerCmd::cancel);
 
         if (robot.vision != null) {
@@ -108,7 +108,7 @@ public class DriverBindings {
                 rotationCcw.get(),
                 slowHold.get(),
                 false,  // rampMode disabled
-                aimHold.get()
+                aimAtGoal.get()
         );
     }
 

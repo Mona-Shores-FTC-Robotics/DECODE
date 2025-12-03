@@ -9,9 +9,9 @@ import com.bylazar.configurables.annotations.Configurable;
 @Configurable
 public class DriveRightTriggerFixedAngleConfig {
     /** Fixed target heading for blue alliance (degrees, 0=forward, 90=left) */
-    public double blueHeadingDeg = 265.0;
+    public double blueParkHeadingDeg = 264.0;
     /** Fixed target heading for red alliance (degrees, 0=forward, 90=left) */
-    public double redHeadingDeg = 275.0;
+    public double redParkHeadingDeg = 274.0;
     /** Proportional gain for right trigger fixed-angle aiming */
     public double kP = 0.5;
     /** Max turn speed when aiming (0.0-1.0) */

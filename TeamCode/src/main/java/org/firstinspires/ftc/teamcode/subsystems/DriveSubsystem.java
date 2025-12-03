@@ -108,8 +108,8 @@ public class DriveSubsystem implements Subsystem {
      */
     private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig19429() {
         DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
-        config.blueHeadingDeg = 265.0;
-        config.redHeadingDeg = 275.0;
+        config.blueParkHeadingDeg = 265.0;
+        config.redParkHeadingDeg = 275.0;
         config.kP = 0.5;
         config.kMaxTurn = 0.7;
         return config;
@@ -120,8 +120,8 @@ public class DriveSubsystem implements Subsystem {
      */
     private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig20245() {
         DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
-        config.blueHeadingDeg = 265.0;
-        config.redHeadingDeg = 275.0;
+        config.blueParkHeadingDeg = 265.0;
+        config.redParkHeadingDeg = 275.0;
         config.kP = 0.5;
         config.kMaxTurn = 0.7;
         return config;
@@ -727,8 +727,8 @@ public class DriveSubsystem implements Subsystem {
         // Get right trigger fixed target heading based on alliance
         DriveRightTriggerFixedAngleConfig aimConfig = rightTriggerFixedAngleConfig();
         double targetHeadingDeg = (alliance == Alliance.RED)
-            ? aimConfig.redHeadingDeg
-            : aimConfig.blueHeadingDeg;
+            ? aimConfig.redParkHeadingDeg
+            : aimConfig.blueParkHeadingDeg;
         double targetHeadingRad = Math.toRadians(targetHeadingDeg);
 
         // Calculate heading error
