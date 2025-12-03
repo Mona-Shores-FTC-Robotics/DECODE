@@ -170,6 +170,69 @@ public class FullPanelsFormatter {
         publishColorSensorData(panels, "colorSensor/left", data.intake.laneLeftSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.LEFT));
         publishColorSensorData(panels, "colorSensor/center", data.intake.laneCenterSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.CENTER));
         publishColorSensorData(panels, "colorSensor/right", data.intake.laneRightSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.RIGHT));
+
+        // =====================================================================
+        // SECTION: LIGHTING STATE
+        // Publishes current lighting state for the Panels Lights widget.
+        // The Lights plugin can visualize goBILDA RGB indicators.
+        // =====================================================================
+        publishLightingState(panels, data);
+    }
+
+    /**
+     * Publish lighting state for the Panels Lights widget.
+     * The widget mirrors the robot's goBILDA RGB indicator lights.
+     *
+     * <p>To use the Lights widget in Panels:</p>
+     * <ol>
+     *   <li>Open Panels and add the Lights plugin</li>
+     *   <li>Configure 3 lights (Left, Center, Right) matching your robot</li>
+     *   <li>The colors will automatically sync with robot state</li>
+     * </ol>
+     */
+    private void publishLightingState(TelemetryManager panels, RobotTelemetryData data) {
+        if (data.lighting == null) {
+            return;
+        }
+
+        // Current pattern being displayed
+        panels.debug("lights/pattern", data.lighting.currentPattern);
+        panels.debug("lights/goalPattern", data.lighting.goalPattern);
+        panels.debug("lights/baseMode", data.lighting.baseMode);
+
+        // Per-lane colors (what's actually being shown)
+        panels.debug("lights/left/color", data.lighting.leftColor);
+        panels.debug("lights/center/color", data.lighting.centerColor);
+        panels.debug("lights/right/color", data.lighting.rightColor);
+
+        // Per-lane servo positions (for Lights widget synchronization)
+        // The Panels Lights widget uses servo positions to determine color
+        panels.debug("lights/left/position", data.lighting.leftPosition);
+        panels.debug("lights/center/position", data.lighting.centerPosition);
+        panels.debug("lights/right/position", data.lighting.rightPosition);
+
+        // Hex colors for visual display (easier to read in telemetry)
+        panels.debug("lights/left/hex", artifactColorToHex(data.lighting.leftColor));
+        panels.debug("lights/center/hex", artifactColorToHex(data.lighting.centerColor));
+        panels.debug("lights/right/hex", artifactColorToHex(data.lighting.rightColor));
+    }
+
+    /**
+     * Convert ArtifactColor to hex color string for display.
+     */
+    private String artifactColorToHex(String colorName) {
+        if (colorName == null) return "#000000";
+        switch (colorName) {
+            case "GREEN":   return "#00FF00";
+            case "PURPLE":  return "#9C27B0";
+            case "RED":     return "#FF0000";
+            case "BLUE":    return "#2196F3";
+            case "WHITE":   return "#FFFFFF";
+            case "YELLOW":  return "#FFEB3B";
+            case "UNKNOWN": return "#FFFFFF"; // White for unknown detected
+            case "NONE":
+            default:        return "#000000"; // Off
+        }
     }
 
     /**
