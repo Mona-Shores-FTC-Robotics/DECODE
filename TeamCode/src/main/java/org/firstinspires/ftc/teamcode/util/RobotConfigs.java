@@ -8,6 +8,7 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRa
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRightTriggerFixedAngleConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeLaneSensorConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
@@ -100,6 +101,20 @@ public class RobotConfigs {
             return DriveSubsystem.fixedAngleAimConfig19429;
         } else {
             return DriveSubsystem.fixedAngleAimConfig20245;
+        }
+    }
+
+    /**
+     * Gets the active RightTriggerFixedAngleConfig for the current robot.
+     * Returns the static instance from DriveSubsystem so Dashboard edits are applied.
+     * @return rightTriggerFixedAngleConfig19429 or rightTriggerFixedAngleConfig20245 based on robot name
+     */
+    public static DriveRightTriggerFixedAngleConfig getRightTriggerFixedAngleConfig() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_19429".equals(robotName)) {
+            return DriveSubsystem.rightTriggerFixedAngleConfig19429;
+        } else {
+            return DriveSubsystem.rightTriggerFixedAngleConfig20245;
         }
     }
 

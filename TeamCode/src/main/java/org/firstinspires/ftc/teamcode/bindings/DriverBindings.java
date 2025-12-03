@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.bindings;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveFixedAngleCommand;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAndDriveRightTriggerCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.DefaultDriveCommand;
 
 import dev.nextftc.bindings.Button;
@@ -14,6 +15,7 @@ public class DriverBindings {
 
     private static final double TRANSLATION_DEADBAND = 0.05;
     private static final double ROTATION_DEADBAND = 0.05;
+    private static final double TRIGGER_THRESHOLD = 0.5;
 
     private final Range fieldX;
     private final Range fieldY;
@@ -23,6 +25,7 @@ public class DriverBindings {
     private final Button relocalizeRequest;
     private final Button headingResetRequest;
     private final Button aimFixedAngle;
+    private final Button aimRightTrigger;
 
     Command defaultDrive;
     Command aimAndDrive;
@@ -36,6 +39,7 @@ public class DriverBindings {
         slowHold = driver.rightBumper();
         aimFixedAngle = driver.triangle();
         aimHold = driver.circle();
+        aimRightTrigger = driver.rightTrigger().greaterThan(TRIGGER_THRESHOLD);
 
         relocalizeRequest = driver.cross();
         headingResetRequest = driver.square();
@@ -68,7 +72,7 @@ public class DriverBindings {
         aimHold.whenBecomesTrue(aimAndDrive)
                 .whenBecomesFalse(aimAndDrive::cancel);
 
-          Command aimFixedAngleCmd = new AimAndDriveFixedAngleCommand(
+        Command aimFixedAngleCmd = new AimAndDriveFixedAngleCommand(
                 fieldX::get,
                 fieldY::get,
                 slowHold::get,
@@ -76,6 +80,15 @@ public class DriverBindings {
         );
         aimFixedAngle.whenBecomesTrue(aimFixedAngleCmd)
                 .whenBecomesFalse(aimFixedAngleCmd::cancel);
+
+        Command aimRightTriggerCmd = new AimAndDriveRightTriggerCommand(
+                fieldX::get,
+                fieldY::get,
+                slowHold::get,
+                robot.drive
+        );
+        aimRightTrigger.whenBecomesTrue(aimRightTriggerCmd)
+                .whenBecomesFalse(aimRightTriggerCmd::cancel);
 
         if (robot.vision != null) {
             relocalizeRequest.whenBecomesTrue(robot.drive::tryRelocalize);
@@ -134,6 +147,7 @@ public class DriverBindings {
                 "Left stick: Drive (X/Y)",
                 "Right stick X: Rotate",
                 "Right bumper: Slow mode (hold)",
+                "Right trigger: Fixed heading (265\u00b0 blue / 275\u00b0 red)",
                 "Circle: Aim+drive (hold)",
                 "Triangle: Fixed-angle aim (hold)",
                 "Cross: Vision relocalize",

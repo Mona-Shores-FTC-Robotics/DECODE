@@ -94,11 +94,17 @@ public class Constants {
                 .useSecondaryTranslationalPIDF(true)
                 .useSecondaryHeadingPIDF(true)
                 .useSecondaryDrivePIDF(true)
-                .translationalPIDFCoefficients(new PIDFCoefficients(.030, 0, .0001, .08))
-                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.01, 0, 0.0001, .05))
+//                .translationalPIDFCoefficients(new PIDFCoefficients(.030, 0, .0001, .08))
+//                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.01, 0, 0.0001, .05))
+                .translationalPIDFCoefficients(new PIDFCoefficients(.06, 0, .0001, .08)) // TODO: Tune for 20245
+                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.03, 0, 0.0001, .08))
+
                 // Sharper but damped heading response for aiming
+//                .headingPIDFCoefficients(new PIDFCoefficients(.9, 0, .02, .05))
+//                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.55, 0, .02, .05))
                 .headingPIDFCoefficients(new PIDFCoefficients(.9, 0, .02, .05))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.55, 0, .02, .05))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.8, .001, .025, .05))
+
                 .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) //was .005p
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
                 .centripetalScaling(0.00005)
@@ -131,8 +137,11 @@ public class Constants {
     private static MecanumConstants createDriveConstants19429() {
         return new MecanumConstants()
                 .maxPower(1.0)
-                .xVelocity(72.58829912801427) ///19429
-                .yVelocity(43.5633) //19429
+//                .xVelocity(72.58829912801427) ///19429
+//                .yVelocity(43.5633) //19429
+                .xVelocity(59.1365506697527) //20245 59.1365506697527
+                .yVelocity(53.16551100362942) //20245 53.16551100362942
+
                 .rightFrontMotorName(HardwareNames.RF)
                 .rightRearMotorName(HardwareNames.RB)
                 .leftRearMotorName(HardwareNames.LB)
@@ -166,12 +175,12 @@ public class Constants {
     private static PinpointConstants createPinpointConstants19429() {
         return new PinpointConstants()
                 .forwardPodY(6.25) //19429
-                .strafePodX(6.25) //19429
+                .strafePodX(0) //19429
                 .distanceUnit(DistanceUnit.INCH)
                 .hardwareMapName(HardwareNames.PINPOINT)
                 .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
                 .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
-                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
 
     private static PinpointConstants createPinpointConstants20245() {

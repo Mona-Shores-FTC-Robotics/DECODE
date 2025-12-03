@@ -28,6 +28,7 @@ import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveAimAssistConf
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRampConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRightTriggerFixedAngleConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveTeleOpConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionCenteredAimConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionRelocalizeConfig;
@@ -96,6 +97,42 @@ public class DriveSubsystem implements Subsystem {
      */
     public static DriveFixedAngleAimConfig fixedAngleAimConfig() {
         return org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
+    }
+
+    // Robot-specific configs for right trigger fixed angle aiming - visible in Panels for tuning
+    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig19429 = createRightTriggerFixedAngleConfig19429();
+    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig20245 = createRightTriggerFixedAngleConfig20245();
+
+    /**
+     * Helper to create 19429-specific right trigger fixed angle aim configuration.
+     */
+    private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig19429() {
+        DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
+        config.blueHeadingDeg = 265.0;
+        config.redHeadingDeg = 275.0;
+        config.kP = 0.5;
+        config.kMaxTurn = 0.7;
+        return config;
+    }
+
+    /**
+     * Helper to create 20245-specific right trigger fixed angle aim configuration.
+     */
+    private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig20245() {
+        DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
+        config.blueHeadingDeg = 265.0;
+        config.redHeadingDeg = 275.0;
+        config.kP = 0.5;
+        config.kMaxTurn = 0.7;
+        return config;
+    }
+
+    /**
+     * Gets the robot-specific RightTriggerFixedAngleConfig based on RobotState.getRobotName().
+     * @return rightTriggerFixedAngleConfig19429 or rightTriggerFixedAngleConfig20245
+     */
+    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig() {
+        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getRightTriggerFixedAngleConfig();
     }
 
     /**
@@ -640,6 +677,55 @@ public class DriveSubsystem implements Subsystem {
 
         // Get fixed target heading based on alliance
         DriveFixedAngleAimConfig aimConfig = fixedAngleAimConfig();
+        double targetHeadingDeg = (alliance == Alliance.RED)
+            ? aimConfig.redHeadingDeg
+            : aimConfig.blueHeadingDeg;
+        double targetHeadingRad = Math.toRadians(targetHeadingDeg);
+
+        // Calculate heading error
+        double headingError = normalizeAngle(targetHeadingRad - follower.getHeading());
+        lastAimErrorRad = headingError;
+
+        // Simple P controller
+        double maxTurn = Math.max(0.0, aimConfig.kMaxTurn);
+        double turn = Range.clip(aimConfig.kP * headingError, -maxTurn, maxTurn);
+
+        lastCommandForward = forward;
+        lastCommandStrafeLeft = strafeLeft;
+        lastCommandTurn = turn;
+        lastRequestRotation = turn;
+
+        follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
+    }
+
+    /**
+     * Right trigger fixed-angle aiming: Rotates to a fixed heading based on alliance.
+     * Uses different target angles than triangle button (265° blue / 275° red).
+     * Driver retains full translation control while holding right trigger.
+     *
+     * @param fieldX Driver's X input (strafe)
+     * @param fieldY Driver's Y input (forward)
+     * @param slowMode Whether slow mode is active
+     */
+    public void aimAndDriveRightTriggerFixedAngle(double fieldX , double fieldY , boolean slowMode) {
+        // Invert controls for Red alliance so driver perspective matches their side of field
+        Alliance alliance = vision.getAlliance();
+        if (alliance == Alliance.RED) {
+            fieldX = -fieldX;
+            fieldY = -fieldY;
+        }
+
+        lastRequestFieldX = fieldX;
+        lastRequestFieldY = fieldY;
+        lastRequestSlowMode = slowMode;
+        double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
+        double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
+        double multiplier = slowMode ? slowMultiplier : normalMultiplier;
+        double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
+        double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
+
+        // Get right trigger fixed target heading based on alliance
+        DriveRightTriggerFixedAngleConfig aimConfig = rightTriggerFixedAngleConfig();
         double targetHeadingDeg = (alliance == Alliance.RED)
             ? aimConfig.redHeadingDeg
             : aimConfig.blueHeadingDeg;
