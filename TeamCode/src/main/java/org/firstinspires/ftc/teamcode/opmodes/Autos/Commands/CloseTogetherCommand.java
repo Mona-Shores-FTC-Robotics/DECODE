@@ -27,9 +27,9 @@ public class CloseTogetherCommand {
 
     @Configurable
     public static class Config {
-        public double maxPathPower = .65;
+        public double maxPathPower = .8;
         public double endTimeForLinearHeadingInterpolation = .7;
-        public double secondsOpeningGate = 2.0;
+        public double secondsOpeningGate = .5;
     }
 
     @Configurable
@@ -53,20 +53,25 @@ public class CloseTogetherCommand {
         public double artifactsSet1Control0Y = 113;
 
         // OpenGate
-        public double openGateX = 20.0;
-        public double openGateY = 75.0;
-        public double openGateHeading = 180;
+        public double openGateX = 17;
+        public double openGateY = 81;
+        public double openGateHeading = 270;
 
         public double openGateControlX = 27;
-        public double openGateControlY = 77;
+        public double openGateControlY = 81;
+
+        // OpenGate
+        public double openGateStrafeX = 30;
+        public double openGateStrafeY = 81;
+        public double openGateStrafeHeading = 270;
 
         // LaunchClose2
         public double launchClose2X = 30.0;
         public double launchClose2Y = 113.0;
         public double launchClose2Heading = 134.0;
 
-        public double launchClose2ControlX = 38.4;
-        public double launchClose2ControlY = 72;
+        public double launchClose2ControlX = 47;
+        public double launchClose2ControlY = 80;
 
         // ArtifactsSet2
         public double artifactsSet2X = 23.75;
@@ -203,8 +208,14 @@ public class CloseTogetherCommand {
                 // Return and Launch Set 1
                 new FollowPathBuilder(robot, alliance)
                         .from(openGate())
+                        .to(openGateStrafePoint())
+                        .withConstantHeading(270)
+                        .build(config.maxPathPower),
+
+                // Return and Launch Set 1
+                new FollowPathBuilder(robot, alliance)
+                        .from(openGateStrafePoint())
                         .to(launchClose2())
-                        .withControl(launchClose2Control())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
@@ -235,7 +246,7 @@ public class CloseTogetherCommand {
                         .from(launchClose3())
                         .to(artifactsSet3())
                         .withControl(artifactsSet3Control0())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .withConstantHeading(270)
                         .build(config.maxPathPower),
 
                 // Return and Launch Set 3
@@ -286,6 +297,10 @@ public class CloseTogetherCommand {
 
     private static Pose openGateControl() {
         return new Pose(waypoints.openGateControlX, waypoints.openGateControlY, 0);
+    }
+
+    private static Pose openGateStrafePoint() {
+        return new Pose(waypoints.openGateStrafeX, waypoints.openGateStrafeY, Math.toRadians(waypoints.openGateStrafeHeading));
     }
 
     private static Pose launchClose2() {

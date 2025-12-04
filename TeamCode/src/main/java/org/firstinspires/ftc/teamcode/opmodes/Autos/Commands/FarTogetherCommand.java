@@ -58,14 +58,6 @@ public class FarTogetherCommand {
         public double wallControlPointX = 27.5;
         public double wallControlPointY = 18;
 
-        // ArtifactsSet3
-        public double artifactsSet3X = 24;
-        public double artifactsSet3Y = 38.5;
-        public double artifactsSet3Heading = 90;
-
-        // Control point for segment: ArtifactsSet3
-        public double artifactSet3ControlPointX = 19;
-        public double artifactSet3ControlPointY = 3;
 
         // Chute Released Artifacts Try 1
         public double releasedTry1X = 13;
@@ -183,25 +175,6 @@ public class FarTogetherCommand {
                 new Delay(config.delayForGateToOpen),
                 launcherCommands.launchAccordingToMode(false),
 
-                // Pickup Artifact Set 3
-                new FollowPathBuilder(robot, alliance)
-                        .from(launchFar())
-                        .withControl(artifactsSet3Control0())
-                        .to(artifactsSet3())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower),
-
-                // Return and Launch Set 3
-                new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet3())
-                        .to(launchFar())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower),
-
-                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
-
                 // Pickup Released Artifacts Try 1
                 new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
@@ -229,7 +202,36 @@ public class FarTogetherCommand {
                         .build(config.maxPathPower),
 
                 // Conditionally return and launch if time permits, otherwise go straight to park
-                new ConditionalFinalLaunchCommand(robot, alliance, timer, launcherCommands)
+                new ConditionalFinalLaunchCommand(
+                        timer,
+                        config.autoDurationSeconds,
+                        config.minTimeForFinalLaunchSeconds,
+                        // If enough time: return to launch, shoot, then park
+                        new SequentialGroup(
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(releasedArtifacts2())
+                                        .to(launchFar())
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .build(config.maxPathPower),
+
+                                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
+                                launcherCommands.launchAccordingToMode(false),
+
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(launchFar())
+                                        .to(readyForTeleop())
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .build(config.maxPathPower)
+                        ),
+                        // If not enough time: go straight to park
+                        new SequentialGroup(
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(releasedArtifacts2())
+                                        .to(readyForTeleop())
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .build(config.maxPathPower)
+                        )
+                )
         );
 
         return new ParallelDeadlineGroup(
@@ -242,7 +244,7 @@ public class FarTogetherCommand {
         return new Pose(waypoints.startX, waypoints.startY, Math.toRadians(waypoints.startHeading));
     }
 
-    static Pose launchFar() {
+    private static Pose launchFar() {
         return new Pose(waypoints.launchFarX, waypoints.launchFarY, Math.toRadians(waypoints.launchFarHeadingDeg));
     }
 
@@ -254,19 +256,11 @@ public class FarTogetherCommand {
         return new Pose(waypoints.wallControlPointX , waypoints.wallControlPointY , 0);
     }
 
-    private static Pose artifactsSet3() {
-        return new Pose(waypoints.artifactsSet3X, waypoints.artifactsSet3Y, Math.toRadians(waypoints.artifactsSet3Heading));
-    }
-
-    private static Pose artifactsSet3Control0() {
-        return new Pose(waypoints.artifactSet3ControlPointX, waypoints.artifactSet3ControlPointY, 0);
-    }
-
     private static Pose releasedArtifacts1() {
         return new Pose(waypoints.releasedTry1X , waypoints.releasedTry1Y , Math.toRadians(waypoints.releasedTry1Heading));
     }
 
-    static Pose releasedArtifacts2() {
+    private static Pose releasedArtifacts2() {
         return new Pose(waypoints.releasedTry2X , waypoints.releasedTry2Y , Math.toRadians(waypoints.releasedTry2Heading));
     }
 
@@ -274,7 +268,7 @@ public class FarTogetherCommand {
         return new Pose(waypoints.releasedTry2controlX, waypoints.releasedTry2controlY, 0);
     }
 
-    static Pose readyForTeleop() {
+    private static Pose readyForTeleop() {
         return new Pose(waypoints.readyForTeleopX, waypoints.readyForTeleopY, Math.toRadians(waypoints.readyForTeleopHeading));
     }
 

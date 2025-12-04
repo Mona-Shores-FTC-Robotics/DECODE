@@ -146,14 +146,14 @@ public class CommandRangeConfig {
         config.midHoodPosition = 0.05;
         config.longHoodPosition = .05;
 
-        config.shortAutoHoodPosition = .38; // Starts matching SHORT
+        config.shortAutoHoodPosition = .41; // Starts matching SHORT
         config.farAutoHoodPosition = .05; // Starts matching LONG
 
 
         /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
-        config.shortAutoLeftRpm = 1950;
-        config.shortAutoCenterRpm = 1900;
-        config.shortAutoRightRpm = 1900;
+        config.shortAutoLeftRpm = 2017;
+        config.shortAutoCenterRpm = 2017;
+        config.shortAutoRightRpm = 2017;
 
         /** Far Auto range RPMs (starts matching LONG, tune independently for auto) */
         config.farAutoLeftRpm = 2786;
