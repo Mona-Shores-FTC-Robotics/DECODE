@@ -47,7 +47,7 @@ public class FarTogetherCommand {
         // LaunchFar
         public double launchFarX = 58;
         public double launchFarY = 11;
-        public double launchFarHeadingDeg = 109;
+        public double launchFarHeadingDeg = 108;
 
         // Artifacts at Alliance Wall)
         public double artifactsWallX = 13;
@@ -56,7 +56,7 @@ public class FarTogetherCommand {
 
         // Control point for segment: leavewall
         public double wallControlPointX = 27.5;
-        public double wallControlPointY = 18;
+        public double wallControlPointY = 10;
 
 
         // Chute Released Artifacts Try 1
@@ -158,7 +158,7 @@ public class FarTogetherCommand {
                         .from(launchFar())
                         .to(artifactsAllianceWall())
                         .withControl(wallControl())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
 
                 // Return and launch alliance wall artifacts
@@ -179,7 +179,7 @@ public class FarTogetherCommand {
                         .from(launchFar())
                         .to(artifactsAllianceWall())
                         .withControl(wallControl())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
 
                 // Return and Launch
@@ -187,7 +187,6 @@ public class FarTogetherCommand {
                     .from(artifactsAllianceWall())
                     .to(launchFar())
                         .withControl(wallControl())
-
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
@@ -200,7 +199,7 @@ public class FarTogetherCommand {
                         .from(launchFar())
                         .to(artifactsAllianceWall())
                         .withControl(wallControl())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
 
                 // Conditionally return and launch if time permits, otherwise go straight to park
