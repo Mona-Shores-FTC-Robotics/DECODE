@@ -158,11 +158,12 @@ public class TelemetryService {
             fullPanelsFormatter.publish(panelsTelemetry, data);
         }
 
-        // 3. Panels Field drawing (always active when session is active)
-        // This draws the robot pose on the Panels Field plugin
-        if (sessionActive && drive != null) {
-            publishPanelsFieldDrawing(drive, data);
-        }
+        // 3. Panels Field drawing - DISABLED
+        // This was causing Panels to take 3-6 minutes to load due to high WiFi traffic
+        // from sending robot pose drawings every loop. Re-enable if needed for debugging.
+        // if (sessionActive && drive != null) {
+        //     publishPanelsFieldDrawing(drive, data);
+        // }
 
         // 4. Driver station telemetry (skip if autonomous and driver controls hidden)
         if (dsTelemetry != null && !isAutonomous) {
