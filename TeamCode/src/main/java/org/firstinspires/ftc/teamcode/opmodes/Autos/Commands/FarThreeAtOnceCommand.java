@@ -29,6 +29,8 @@ public class FarThreeAtOnceCommand {
     public static class Config {
         public double maxPathPower = 0.65;
         public double endTimeForLinearHeadingInterpolation = .7;
+        public double autoDurationSeconds = 30.0;
+        public double minTimeForFinalLaunchSeconds = 5.0;
     }
 
     public static class Waypoints {

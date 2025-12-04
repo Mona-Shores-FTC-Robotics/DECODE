@@ -216,15 +216,15 @@ public class CloseThreeAtOnceCommand {
                         new SequentialGroup(
                                 new FollowPathBuilder(robot, alliance)
                                         .from(artifactsSet3())
-                                        .to(launchOffLine())
-                                        .withControl(launchOffLineControl0())
+                                        .to(launchClose4())
+                                        .withControl(launchClose4Control0())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower),
 
                                 launcherCommands.launchAccordingToMode(false),
 
                                 new FollowPathBuilder(robot, alliance)
-                                        .from(launchOffLine())
+                                        .from(launchClose4())
                                         .to(nearGate())
                                         .withControl(nearGateControl0())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
