@@ -108,6 +108,9 @@ public class Constants {
                 .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) //was .005p
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
                 .centripetalScaling(0.00005)
+                .drivePIDFSwitch(20) // default 20
+                .headingPIDFSwitch( Math.PI / 20)  // default  Math.PI / 20
+
                 .mass(15.4221); //34 pounds 11/16/25
     }
 
@@ -192,7 +195,17 @@ public class Constants {
                 .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
                 .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
+
+    public static PathConstraints pathConstraints = new PathConstraints(
+            0.995,
+            0.1,
+            0.1,
+            0.007,
+            100,
+            1,
+            10,
+            1);
+
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants(), hardwareMap)
