@@ -49,8 +49,8 @@ public class FarTogetherCommand {
         /** Translational constraint in inches for path end (default 3.0) */
         public double translationalConstraint = 3.0;
 
-        /** Heading constraint in radians for path end (default 2.0) */
-        public double headingConstraint = 2.0;
+        /** Heading constraint in radians for path end (default 0.1 = ~5.7 degrees) */
+        public double headingConstraint = 0.1;
 
         /** Timeout in milliseconds for final path corrections (default 0 = disabled) */
         public double timeoutConstraintMs = 0.0;
