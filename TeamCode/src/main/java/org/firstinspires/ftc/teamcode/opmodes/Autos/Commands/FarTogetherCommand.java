@@ -2,10 +2,8 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.TryRelocalizeForShotCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
@@ -14,7 +12,6 @@ import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.commands.conditionals.IfElseCommand;
 import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
@@ -98,7 +95,7 @@ public class FarTogetherCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance) {
-        return create(robot, alliance, null, null);
+        return create(robot, alliance, null);
     }
 
     /**
@@ -109,24 +106,8 @@ public class FarTogetherCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
-        return create(robot, alliance, startOverride, null);
-    }
-
-    /**
-     * Creates the autonomous command sequence with optional start pose override and auto timer.
-     * @param robot Robot instance with all subsystems
-     * @param alliance Current alliance (BLUE or RED)
-     * @param startOverride Vision-detected start pose (or null to use waypoints)
-     * @param autoTimer Timer tracking elapsed auto time (will start if null)
-     * @return Complete autonomous command
-     */
-    public static Command create(Robot robot, Alliance alliance, Pose startOverride, ElapsedTime autoTimer) {
         LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
         AutoSmartIntakeCommand autoSmartIntake = new AutoSmartIntakeCommand(robot.intake);
-        ElapsedTime timer = autoTimer != null ? autoTimer : new ElapsedTime();
-        if (autoTimer == null) {
-            timer.reset();
-        }
 
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
@@ -139,6 +120,9 @@ public class FarTogetherCommand {
         }
 
         Command mainSequence = new SequentialGroup(
+                // Reset timer when auto actually starts (not when command is created)
+                ConditionalFinalLaunchCommand.createTimerReset(),
+
                 // Launch Preloads
                 new ParallelDeadlineGroup(
                         firstPathBuilder
@@ -202,7 +186,6 @@ public class FarTogetherCommand {
 
                 // Conditionally return and launch if time permits, otherwise go straight to park
                 new ConditionalFinalLaunchCommand(
-                        timer,
                         config.autoDurationSeconds,
                         config.minTimeForFinalLaunchSeconds,
                         // If enough time: return to launch, shoot, then park
@@ -270,10 +253,5 @@ public class FarTogetherCommand {
 
     private static Pose readyForTeleop() {
         return new Pose(waypoints.readyForTeleopX, waypoints.readyForTeleopY, Math.toRadians(waypoints.readyForTeleopHeading));
-    }
-
-    private static boolean hasTimeForFinalLaunch(ElapsedTime timer) {
-        double timeRemaining = config.autoDurationSeconds - timer.seconds();
-        return timeRemaining >= config.minTimeForFinalLaunchSeconds;
     }
 }

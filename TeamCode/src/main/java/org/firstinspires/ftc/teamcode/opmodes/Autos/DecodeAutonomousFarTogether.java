@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.FarTogetherCommand;
@@ -45,8 +44,6 @@ import dev.nextftc.ftc.components.BulkReadComponent;
 public class DecodeAutonomousFarTogether extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
-
-    private final ElapsedTime autoTimer = new ElapsedTime();
 
     private Robot robot;
     private AllianceSelector allianceSelector;
@@ -347,8 +344,7 @@ public class DecodeAutonomousFarTogether extends NextFTCOpMode {
                 ? lastAppliedStartPosePedro
                 : null;
 
-        autoTimer.reset();
-        Command autoRoutine = FarTogetherCommand.create(robot, activeAlliance, startPoseOverride, autoTimer);
+        Command autoRoutine = FarTogetherCommand.create(robot, activeAlliance, startPoseOverride);
 
         CommandManager.INSTANCE.scheduleCommand(autoRoutine);
 

@@ -30,6 +30,8 @@ public class CloseTogetherCommand {
         public double maxPathPower = .8;
         public double endTimeForLinearHeadingInterpolation = .7;
         public double secondsOpeningGate = .5;
+        public double autoDurationSeconds = 30.0;
+        public double minTimeForFinalLaunchSeconds = 5.0;
     }
 
     @Configurable
@@ -41,7 +43,7 @@ public class CloseTogetherCommand {
         // LaunchClose1
         public double launchClose1X = 30.0;
         public double launchClose1Y = 113.0;
-        public double launchClose1Heading = 134.0;
+        public double launchClose1Heading = 128;
 
         // ArtifactsSet1
         public double artifactsSet1X = 23.75;
@@ -54,11 +56,11 @@ public class CloseTogetherCommand {
 
         // OpenGate
         public double openGateX = 17;
-        public double openGateY = 81;
+        public double openGateY = 82;
         public double openGateHeading = 270;
 
         public double openGateControlX = 27;
-        public double openGateControlY = 81;
+        public double openGateControlY = 82;
 
         // OpenGate
         public double openGateStrafeX = 30;
@@ -174,6 +176,8 @@ public class CloseTogetherCommand {
         }
 
         Command mainSequence = new SequentialGroup(
+                // Reset timer when auto actually starts (not when command is created)
+                ConditionalFinalLaunchCommand.createTimerReset(),
 
                 new ParallelDeadlineGroup(
                         // Launch Preloads
@@ -249,25 +253,38 @@ public class CloseTogetherCommand {
                         .withConstantHeading(270)
                         .build(config.maxPathPower),
 
-                // Return and Launch Set 3
-                new FollowPathBuilder(robot, alliance)
-                    .from(artifactsSet3())
-                    .to(launchClose4())
-                    .withControl(launchClose4Control())
-                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                    .build(config.maxPathPower),
+                // Conditionally return and launch if time permits, otherwise go straight to park
+                new ConditionalFinalLaunchCommand(
+                        config.autoDurationSeconds,
+                        config.minTimeForFinalLaunchSeconds,
+                        // If enough time: return to launch, shoot, then park
+                        new SequentialGroup(
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(artifactsSet3())
+                                        .to(launchClose4())
+                                        .withControl(launchClose4Control())
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                                launcherCommands.launchAccordingToMode(false),
 
-                // Get Ready to Open Gate and Get Off Launch Line
-                new FollowPathBuilder(robot, alliance)
-                        .from(launchClose4())
-                        .to(nearGate())
-                        .withControl(nearGateControl0())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower)
-            );
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(launchClose4())
+                                        .to(nearGate())
+                                        .withControl(nearGateControl0())
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .build(config.maxPathPower)
+                        ),
+                        // If not enough time: go straight to park
+                        new SequentialGroup(
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(artifactsSet3())
+                                        .to(nearGate())
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .build(config.maxPathPower)
+                        )
+                )
+        );
 
         return new ParallelDeadlineGroup(
                 mainSequence,

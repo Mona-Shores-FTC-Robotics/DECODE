@@ -152,9 +152,9 @@ public class CommandRangeConfig {
 
 
         /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
-        config.shortAutoLeftRpm = 2117;
-        config.shortAutoCenterRpm = 2017;
-        config.shortAutoRightRpm = 2017;
+        config.shortAutoLeftRpm = 2000;
+        config.shortAutoCenterRpm = 2000;
+        config.shortAutoRightRpm = 2000;
 
         /** Far Auto range RPMs (starts matching LONG, tune independently for auto) */
         config.farAutoLeftRpm = 2786;
