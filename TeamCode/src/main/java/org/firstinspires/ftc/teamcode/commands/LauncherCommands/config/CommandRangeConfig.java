@@ -146,7 +146,7 @@ public class CommandRangeConfig {
         config.midHoodPosition = 0.05;
         config.longHoodPosition = .05;
 
-        config.shortAutoHoodPosition = .41; // Starts m
+        config.shortAutoHoodPosition = .3; // Starts m
         // atching SHORT
         config.farAutoHoodPosition = .05; // Starts matching LONG
 
