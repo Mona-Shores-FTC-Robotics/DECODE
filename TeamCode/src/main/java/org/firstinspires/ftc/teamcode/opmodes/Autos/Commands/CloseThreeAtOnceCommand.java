@@ -166,7 +166,7 @@ public class CloseThreeAtOnceCommand {
                         .from(launchClose1())
                         .to(artifactsSet1())
                         .withControl(artifactsSet1Control0())
-                        .withConstantHeading(artifactsSet1().getHeading())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
                 // Return and Launch Set 1
@@ -184,7 +184,7 @@ public class CloseThreeAtOnceCommand {
                         .from(launchClose2())
                         .to(artifactsSet2())
                         .withControl(artifactsSet2Control0())
-                        .withConstantHeading(artifactsSet2().getHeading())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
                 // Return and Launch Set 2
@@ -203,7 +203,7 @@ public class CloseThreeAtOnceCommand {
                         .from(launchClose3())
                         .to(artifactsSet3())
                         .withControl(artifactsSet3Control0())
-                        .withConstantHeading(artifactsSet3().getHeading())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
                 // Return and Launch Set 3

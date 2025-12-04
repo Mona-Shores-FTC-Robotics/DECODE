@@ -31,7 +31,7 @@ public class FarTogetherCommand {
 
     @Configurable
     public static class Config {
-        public double maxPathPower = 0.65;
+        public double maxPathPower = .85;
         public double endTimeForLinearHeadingInterpolation = .7;
         public double delayForGateToOpen = 1.0;
         public double autoDurationSeconds = 30.0;
@@ -47,11 +47,11 @@ public class FarTogetherCommand {
         // LaunchFar
         public double launchFarX = 58;
         public double launchFarY = 11;
-        public double launchFarHeadingDeg = 115;
+        public double launchFarHeadingDeg = 109;
 
         // Artifacts at Alliance Wall)
         public double artifactsWallX = 13;
-        public double artifactsWallY = 8.5;
+        public double artifactsWallY = 6.5;
         public double artifactsWallHeading = 180;
 
         // Control point for segment: leavewall
@@ -167,7 +167,7 @@ public class FarTogetherCommand {
                         .from(launchFar())
                         .to(artifactsAllianceWall())
                         .withControl(wallControl())
-                        .withConstantHeading(artifactsAllianceWall().getHeading())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
                 // Return and launch alliance wall artifacts
@@ -188,7 +188,7 @@ public class FarTogetherCommand {
                         .from(launchFar())
                         .withControl(artifactsSet3Control0())
                         .to(artifactsSet3())
-                        .withConstantHeading(artifactsSet3().getHeading())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
                 // Return and Launch Set 3
@@ -206,7 +206,7 @@ public class FarTogetherCommand {
                 new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
                         .to(releasedArtifacts1())
-                        .withConstantHeading(releasedArtifacts1().getHeading())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
                 // Return and Launch
@@ -220,7 +220,7 @@ public class FarTogetherCommand {
 //                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
-                // Pickup Released Artifacts Try 1
+                // Pickup Released Artifacts Try 2
                 new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
                         .to(releasedArtifacts2())
@@ -228,35 +228,8 @@ public class FarTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-                new IfElseCommand(
-                        () -> hasTimeForFinalLaunch(timer),
-                        new SequentialGroup(
-                                // Return and launch
-                                new FollowPathBuilder(robot, alliance)
-                                        .from(releasedArtifacts2())
-                                        .to(launchFar())
-                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                        .build(config.maxPathPower),
-
-                                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//                                new AimAtGoalCommand(robot.drive, robot.vision),
-                                launcherCommands.launchAccordingToMode(false),
-
-                                //Get Off Launch Line and Ready for Teleop
-                                new FollowPathBuilder(robot, alliance)
-                                        .from(launchFar())
-                                        .to(readyForTeleop())
-                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                        .build(config.maxPathPower)
-                        ),
-                        new SequentialGroup(
-                                new FollowPathBuilder(robot, alliance)
-                                        .from(releasedArtifacts2())
-                                        .to(readyForTeleop())
-                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                        .build(config.maxPathPower)
-                        )
-                )
+                // Conditionally return and launch if time permits, otherwise go straight to park
+                new ConditionalFinalLaunchCommand(robot, alliance, timer, launcherCommands)
         );
 
         return new ParallelDeadlineGroup(
@@ -269,7 +242,7 @@ public class FarTogetherCommand {
         return new Pose(waypoints.startX, waypoints.startY, Math.toRadians(waypoints.startHeading));
     }
 
-    private static Pose launchFar() {
+    static Pose launchFar() {
         return new Pose(waypoints.launchFarX, waypoints.launchFarY, Math.toRadians(waypoints.launchFarHeadingDeg));
     }
 
@@ -293,7 +266,7 @@ public class FarTogetherCommand {
         return new Pose(waypoints.releasedTry1X , waypoints.releasedTry1Y , Math.toRadians(waypoints.releasedTry1Heading));
     }
 
-    private static Pose releasedArtifacts2() {
+    static Pose releasedArtifacts2() {
         return new Pose(waypoints.releasedTry2X , waypoints.releasedTry2Y , Math.toRadians(waypoints.releasedTry2Heading));
     }
 
@@ -301,7 +274,7 @@ public class FarTogetherCommand {
         return new Pose(waypoints.releasedTry2controlX, waypoints.releasedTry2controlY, 0);
     }
 
-    private static Pose readyForTeleop() {
+    static Pose readyForTeleop() {
         return new Pose(waypoints.readyForTeleopX, waypoints.readyForTeleopY, Math.toRadians(waypoints.readyForTeleopHeading));
     }
 

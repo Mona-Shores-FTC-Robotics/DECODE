@@ -141,7 +141,7 @@ public class FarThreeAtOnceCommand {
             new FollowPathBuilder(robot, alliance)
                     .from(launchFar())
                     .to(artifactsAllianceWall())
-                    .withConstantHeading(artifactsAllianceWall().getHeading())
+                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
             // Return and launch alliance wall artifacts
@@ -159,9 +159,9 @@ public class FarThreeAtOnceCommand {
             // Pickup Artifact Set 3
             new FollowPathBuilder(robot, alliance)
                     .from(launchFar())
-                    .withControl(artifactsSet3Control0())
                     .to(artifactsSet3())
-                    .withConstantHeading(artifactsSet3().getHeading())
+                    .withControl(artifactsSet3Control0())
+                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
             // Return and launch set 3
@@ -180,7 +180,7 @@ public class FarThreeAtOnceCommand {
                     .from(launchFar())
                     .withControl(artifactsSet2Control0())
                     .to(artifactsSet2())
-                    .withConstantHeading(artifactsSet2().getHeading())
+                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
             // Return, final launch, and park

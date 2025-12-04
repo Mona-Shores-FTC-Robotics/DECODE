@@ -102,8 +102,8 @@ public class Constants {
                 // Sharper but damped heading response for aiming
 //                .headingPIDFCoefficients(new PIDFCoefficients(.9, 0, .02, .05))
 //                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.55, 0, .02, .05))
-                .headingPIDFCoefficients(new PIDFCoefficients(.9, 0, .02, .05))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.8, .001, .025, .05))
+                .headingPIDFCoefficients(new PIDFCoefficients(.7, 0, .02, .009))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2.8, .001, .01, .009))
 
                 .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) //was .005p
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
@@ -122,8 +122,8 @@ public class Constants {
                 .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.03, 0, 0.0001, .08))
 
                 // Match 19429 heading tuning for stability
-                .headingPIDFCoefficients(new PIDFCoefficients(.7, .001, .02, .009))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2.8, .001, .01, .009))
+                .headingPIDFCoefficients(new PIDFCoefficients(1.0, .001, .0255, .009))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2.54, .0015, .025, .012))
 
 
 

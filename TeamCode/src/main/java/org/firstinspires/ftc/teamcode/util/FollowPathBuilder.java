@@ -74,7 +74,16 @@ public class FollowPathBuilder {
 
     public FollowPathBuilder withConstantHeading(double headingDeg) {
         this.constantHeading = true;
-        this.constantHeadingDeg = headingDeg;
+        // Mirror heading for red alliance (same logic as poseForAlliance)
+        if (alliance == Alliance.RED) {
+            double headingRad = Math.toRadians(headingDeg);
+            double mirroredRad = Math.PI - headingRad;
+            // Normalize to 0-360 range
+            double mirroredDeg = Math.toDegrees(mirroredRad);
+            this.constantHeadingDeg = (mirroredDeg % 360 + 360) % 360;
+        } else {
+            this.constantHeadingDeg = headingDeg;
+        }
         return this;
     }
 
@@ -129,7 +138,7 @@ public class FollowPathBuilder {
         }
 
         if (constantHeading) {
-            builder.setConstantHeadingInterpolation(constantHeadingDeg);
+            builder.setConstantHeadingInterpolation(Math.toRadians(constantHeadingDeg));
         } else {
             builder.setLinearHeadingInterpolation(
                     start.getHeading(),
