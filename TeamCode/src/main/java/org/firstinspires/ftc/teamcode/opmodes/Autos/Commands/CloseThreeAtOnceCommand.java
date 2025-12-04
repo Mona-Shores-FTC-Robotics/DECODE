@@ -41,7 +41,7 @@ public class CloseThreeAtOnceCommand {
         // LaunchClose1
         public double launchClose1X = 30.0;
         public double launchClose1Y = 113.0;
-        public double launchClose1Heading = 134.0;
+        public double launchClose1Heading = 128;
 
         // ArtifactsSet1
         public double artifactsSet1X = 23.75;
@@ -183,7 +183,7 @@ public class CloseThreeAtOnceCommand {
                         .from(launchClose1())
                         .to(artifactsSet1())
                         .withControl(artifactsSet1Control0())
-                        .withConstantHeading(artifactsSet1().getHeading())
+                        .withConstantHeading(270)
                         .build(config.maxPathPower),
 
                 // Return and Launch Set 1
@@ -201,7 +201,7 @@ public class CloseThreeAtOnceCommand {
                         .from(launchClose2())
                         .to(artifactsSet2())
                         .withControl(artifactsSet2Control0())
-                        .withConstantHeading(artifactsSet2().getHeading())
+                        .withConstantHeading(270)
                         .build(config.maxPathPower),
 
                 // Return and Launch Set 2
@@ -220,7 +220,7 @@ public class CloseThreeAtOnceCommand {
                         .from(launchClose3())
                         .to(artifactsSet3())
                         .withControl(artifactsSet3Control0())
-                        .withConstantHeading(artifactsSet3().getHeading())
+                        .withConstantHeading(270)
                         .build(config.maxPathPower),
 
                 new IfElseCommand(

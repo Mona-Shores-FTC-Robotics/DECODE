@@ -102,8 +102,8 @@ public class Constants {
                 // Sharper but damped heading response for aiming
 //                .headingPIDFCoefficients(new PIDFCoefficients(.9, 0, .02, .05))
 //                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.55, 0, .02, .05))
-                .headingPIDFCoefficients(new PIDFCoefficients(.9, 0, .02, .05))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.8, .001, .025, .05))
+                .headingPIDFCoefficients(new PIDFCoefficients(.85, 0, .001, .02))  // Increased P and D, reduced F
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.3, 0, .001, .02))
 
                 .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) //was .005p
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
@@ -118,13 +118,12 @@ public class Constants {
                 .useSecondaryTranslationalPIDF(true)
                 .useSecondaryHeadingPIDF(true)
                 .useSecondaryDrivePIDF(true)
-                .translationalPIDFCoefficients(new PIDFCoefficients(.06, 0, .0001, .08)) // TODO: Tune for 20245
-                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.03, 0, 0.0001, .08))
+                .translationalPIDFCoefficients(new PIDFCoefficients(.065, 0, .0001, .08)) // TODO: Tune for 20245
+                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.035, 0, 0.0001, .08))
 
                 // Match 19429 heading tuning for stability
-                .headingPIDFCoefficients(new PIDFCoefficients(.7, .001, .02, .009))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2.8, .001, .01, .009))
-
+                .headingPIDFCoefficients(new PIDFCoefficients(.7, 0, .001, .025))  // Increased P and D, reduced F
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.2, 0, .001, .025))
 
 
                 .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) // TODO: Tune for 20245

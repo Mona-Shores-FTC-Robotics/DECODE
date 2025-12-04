@@ -30,7 +30,7 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 public class FarTogetherCommand {
 
     public static class Config {
-        public double maxPathPower = 0.65;
+        public double maxPathPower = .85;
         public double endTimeForLinearHeadingInterpolation = .7;
         public double delayForGateToOpen = 1.0;
         public double autoDurationSeconds = 30.0;
@@ -45,25 +45,17 @@ public class FarTogetherCommand {
         // LaunchFar
         public double launchFarX = 58;
         public double launchFarY = 11;
-        public double launchFarHeadingDeg = 115;
+        public double launchFarHeadingDeg = 108;
 
         // Artifacts at Alliance Wall)
         public double artifactsWallX = 13;
-        public double artifactsWallY = 8.5;
+        public double artifactsWallY = 6.5;
         public double artifactsWallHeading = 180;
 
         // Control point for segment: leavewall
         public double wallControlPointX = 27.5;
-        public double wallControlPointY = 18;
+        public double wallControlPointY = 10;
 
-        // ArtifactsSet3
-        public double artifactsSet3X = 24;
-        public double artifactsSet3Y = 38.5;
-        public double artifactsSet3Heading = 90;
-
-        // Control point for segment: ArtifactsSet3
-        public double artifactSet3ControlPointX = 19;
-        public double artifactSet3ControlPointY = 3;
 
         // Chute Released Artifacts Try 1
         public double releasedTry1X = 13;
@@ -151,8 +143,7 @@ public class FarTogetherCommand {
                 new ParallelDeadlineGroup(
                         firstPathBuilder
                                 .to(launchFar())
-                                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                .build(config.maxPathPower),
+                                .withConstantHeading(waypoints.launchFarHeadingDeg)                                .build(config.maxPathPower),
                         launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
 
@@ -165,7 +156,7 @@ public class FarTogetherCommand {
                         .from(launchFar())
                         .to(artifactsAllianceWall())
                         .withControl(wallControl())
-                        .withConstantHeading(artifactsAllianceWall().getHeading())
+                        .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
 
                 // Return and launch alliance wall artifacts
@@ -181,75 +172,61 @@ public class FarTogetherCommand {
                 new Delay(config.delayForGateToOpen),
                 launcherCommands.launchAccordingToMode(false),
 
-                // Pickup Artifact Set 3
-                new FollowPathBuilder(robot, alliance)
-                        .from(launchFar())
-                        .withControl(artifactsSet3Control0())
-                        .to(artifactsSet3())
-                        .withConstantHeading(artifactsSet3().getHeading())
-                        .build(config.maxPathPower),
-
-                // Return and Launch Set 3
-                new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet3())
-                        .to(launchFar())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower),
-
-                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
-
                 // Pickup Released Artifacts Try 1
                 new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
-                        .to(releasedArtifacts1())
-                        .withConstantHeading(releasedArtifacts1().getHeading())
+                        .to(artifactsAllianceWall())
+                        .withControl(wallControl())
+                        .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
 
                 // Return and Launch
                 new FollowPathBuilder(robot, alliance)
-                    .from(releasedArtifacts1())
+                    .from(artifactsAllianceWall())
                     .to(launchFar())
-                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .withControl(wallControl())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
                 new TryRelocalizeForShotCommand(robot.drive, robot.vision),
 //                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
-                // Pickup Released Artifacts Try 1
+                // Pickup Released Artifacts Try 2
                 new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
-                        .to(releasedArtifacts2())
-                        .withControl(releasedArtifacts2Control0())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .to(artifactsAllianceWall())
+                        .withControl(wallControl())
+                        .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
 
-                new IfElseCommand(
-                        () -> hasTimeForFinalLaunch(timer),
+                // Conditionally return and launch if time permits, otherwise go straight to park
+                new ConditionalFinalLaunchCommand(
+                        timer,
+                        config.autoDurationSeconds,
+                        config.minTimeForFinalLaunchSeconds,
+                        // If enough time: return to launch, shoot, then park
                         new SequentialGroup(
-                                // Return and launch
                                 new FollowPathBuilder(robot, alliance)
-                                        .from(releasedArtifacts2())
+                                        .from(artifactsAllianceWall())
                                         .to(launchFar())
+                                        .withControl(wallControl())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower),
 
                                 new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//                                new AimAtGoalCommand(robot.drive, robot.vision),
                                 launcherCommands.launchAccordingToMode(false),
 
-                                //Get Off Launch Line and Ready for Teleop
                                 new FollowPathBuilder(robot, alliance)
                                         .from(launchFar())
                                         .to(readyForTeleop())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower)
                         ),
+                        // If not enough time: go straight to park
                         new SequentialGroup(
                                 new FollowPathBuilder(robot, alliance)
-                                        .from(releasedArtifacts2())
+                                        .from(artifactsAllianceWall())
                                         .to(readyForTeleop())
                                         .withConstantHeading(90)
                                         .build(config.maxPathPower)
@@ -277,14 +254,6 @@ public class FarTogetherCommand {
 
     private static Pose wallControl() {
         return new Pose(waypoints.wallControlPointX , waypoints.wallControlPointY , 0);
-    }
-
-    private static Pose artifactsSet3() {
-        return new Pose(waypoints.artifactsSet3X, waypoints.artifactsSet3Y, Math.toRadians(waypoints.artifactsSet3Heading));
-    }
-
-    private static Pose artifactsSet3Control0() {
-        return new Pose(waypoints.artifactSet3ControlPointX, waypoints.artifactSet3ControlPointY, 0);
     }
 
     private static Pose releasedArtifacts1() {
