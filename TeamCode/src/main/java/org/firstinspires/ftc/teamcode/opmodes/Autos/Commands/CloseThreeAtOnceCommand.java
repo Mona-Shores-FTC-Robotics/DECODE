@@ -241,6 +241,15 @@ public class CloseThreeAtOnceCommand {
      */
     private static Command buildPath(Robot robot, Pose start, Pose end, Pose control,
                                      boolean constantHeading, double maxPower) {
+        return buildPath(robot, start, end, control, constantHeading, maxPower, -1);
+    }
+
+    /**
+     * Build a path with optional per-path timeout override.
+     * @param timeoutMs Per-path timeout in milliseconds. Use -1 to use config default.
+     */
+    private static Command buildPath(Robot robot, Pose start, Pose end, Pose control,
+                                     boolean constantHeading, double maxPower, double timeoutMs) {
         PathBuilder builder = robot.drive.getFollower().pathBuilder();
 
         // Add path geometry
@@ -271,7 +280,11 @@ public class CloseThreeAtOnceCommand {
         if (config.headingConstraint >= 0) {
             builder.setHeadingConstraint(config.headingConstraint);
         }
-        if (config.timeoutConstraintMs >= 0) {
+
+        // Per-path timeout override takes precedence over config default
+        if (timeoutMs >= 0) {
+            builder.setTimeoutConstraint(timeoutMs);
+        } else if (config.timeoutConstraintMs >= 0) {
             builder.setTimeoutConstraint(config.timeoutConstraintMs);
         }
 
