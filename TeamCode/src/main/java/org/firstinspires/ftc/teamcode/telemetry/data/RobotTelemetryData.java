@@ -33,6 +33,7 @@ public class RobotTelemetryData {
     public final IntakeTelemetryData intake;
     public final GamepadTelemetryData gamepad;
     public final LoopTimingTelemetryData timing;
+    public final LightingTelemetryData lighting;
 
     public RobotTelemetryData(
             MatchContextData context,
@@ -42,7 +43,8 @@ public class RobotTelemetryData {
             VisionTelemetryData vision,
             IntakeTelemetryData intake,
             GamepadTelemetryData gamepad,
-            LoopTimingTelemetryData timing
+            LoopTimingTelemetryData timing,
+            LightingTelemetryData lighting
     ) {
         this.context = context;
         this.pose = pose;
@@ -52,6 +54,7 @@ public class RobotTelemetryData {
         this.intake = intake;
         this.gamepad = gamepad;
         this.timing = timing;
+        this.lighting = lighting;
     }
 
     /**
@@ -147,6 +150,9 @@ public class RobotTelemetryData {
                 vision
         );
 
+        // Capture lighting data
+        LightingTelemetryData lightingData = LightingTelemetryData.capture(lighting);
+
         return new RobotTelemetryData(
                 context,
                 poseData,
@@ -155,7 +161,8 @@ public class RobotTelemetryData {
                 visionData,
                 intakeData,
                 gamepadData,
-                timingData
+                timingData,
+                lightingData
         );
     }
 }

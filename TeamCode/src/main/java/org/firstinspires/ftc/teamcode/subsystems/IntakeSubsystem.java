@@ -52,11 +52,24 @@ public class IntakeSubsystem implements Subsystem {
         STOPPED
     }
 
+    // Active robot indicator
+    public static String ACTIVE_ROBOT = RobotState.getRobotName();
+
     // Global configuration instances
     public static IntakeLaneSensorConfig laneSensorConfig = new IntakeLaneSensorConfig();
     public static IntakeMotorConfig motorConfig = new IntakeMotorConfig();
     public static IntakeRollerConfig rollerConfig = new IntakeRollerConfig();
     public static IntakeManualModeConfig manualModeConfig = new IntakeManualModeConfig();
+
+    // Robot-specific gate configs
+    public static IntakeGateConfig gateConfig_Robot19429 = IntakeGateConfig.gateConfig19429;
+    public static IntakeGateConfig gateConfig_Robot20245 = IntakeGateConfig.gateConfig20245;
+    public static IntakeGateConfig gateConfig_ACTIVE = RobotConfigs.getGateConfig();
+
+    // Robot-specific lane presence configs (distance thresholds for artifact detection)
+    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_Robot19429 = IntakeLaneSensorConfig.lanePresenceConfig19429;
+    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_Robot20245 = IntakeLaneSensorConfig.lanePresenceConfig20245;
+    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_ACTIVE = RobotConfigs.getLanePresenceConfig();
 
     /**
      * Gets the robot-specific GateConfig based on RobotState.getRobotName().
@@ -803,29 +816,6 @@ public class IntakeSubsystem implements Subsystem {
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
 
-        // Multi-factor presence detection - diagnostics only (distance already gated)
-        if (laneSensorConfig.presence.enablePresenceScoring) {
-            double presenceScore = computePresenceScore(saturation, value, totalIntensity, distanceCm, withinDistance);
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_score", presenceScore);
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_distance_valid", !Double.isNaN(distanceCm));
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_within_distance", withinDistance);
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_total_intensity", totalIntensity);
-        }
-
-        // Background similarity check - does this look like empty space / field mat?
-        if (laneSensorConfig.background.enableBackgroundDetection) {
-            double backgroundDistance = computeBackgroundDistance(hue, saturation, value);
-            if (backgroundDistance < laneSensorConfig.background.maxBackgroundDistance) {
-                // Looks like background, not an artifact
-                double confidence = 1.0 - (backgroundDistance / laneSensorConfig.background.maxBackgroundDistance);
-                reason = "background";
-                RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
-                RobotState.packet.put("intake/classifier/" + lanePrefix + "/background_distance", backgroundDistance);
-                return new ClassificationResult(ArtifactColor.BACKGROUND, confidence);
-            }
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/background_distance", backgroundDistance);
-        }
-
         // Parse classifier mode
         ClassifierMode mode;
         try {
@@ -838,9 +828,6 @@ public class IntakeSubsystem implements Subsystem {
         // Route to appropriate color classifier (GREEN vs PURPLE)
         ClassificationResult result;
         switch (mode) {
-            case RANGE_BASED:
-                result = classifyColorRangeBased(hue, saturation, value, hasSignal, lanePrefix);
-                break;
             case DECISION_BOUNDARY:
                 result = classifyColorDecisionBoundary(hue, saturation, value, hasSignal, lanePrefix);
                 break;
@@ -848,7 +835,8 @@ public class IntakeSubsystem implements Subsystem {
                 result = classifyColorDistanceBased(hue, saturation, value, hasSignal, lanePrefix);
                 break;
             default:
-                result = new ClassificationResult(ArtifactColor.NONE, 0.0);
+                // Fallback to decision boundary if mode is invalid
+                result = classifyColorDecisionBoundary(hue, saturation, value, hasSignal, lanePrefix);
                 break;
         }
 
@@ -857,99 +845,6 @@ public class IntakeSubsystem implements Subsystem {
         RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
 
         return result;
-    }
-
-    /**
-     * Compute presence score - how confident are we that an artifact is actually present?
-     * Combines distance, saturation, value, and total intensity.
-     *
-     * @return Presence score 0.0-1.0 (higher = more confident artifact is present)
-     */
-    private double computePresenceScore(float saturation, float value, int totalIntensity,
-                                        double distanceCm, boolean withinDistance) {
-        double score = 0.0;
-
-        // Distance factor - is something close enough?
-        if (!Double.isNaN(distanceCm) && laneSensorConfig.presence.useDistance) {
-            if (withinDistance) {
-                // Linear scoring: closer = higher score
-                double distanceFactor = 1.0 - (distanceCm / laneSensorConfig.presence.presenceDistanceCm);
-                score += laneSensorConfig.presence.presenceDistanceWeight * Math.max(0.0, distanceFactor);
-            }
-            // else: distance factor contributes 0 (too far)
-        } else {
-            // No distance sensor or not using it - assume distance is OK
-            score += laneSensorConfig.presence.presenceDistanceWeight;
-        }
-
-        // Saturation factor - artifacts have more saturated colors than background
-        if (saturation > laneSensorConfig.quality.minSaturation) {
-            double saturationFactor = Math.min(1.0, saturation / 0.5);  // Scale: 0-0.5 sat → 0-1 factor
-            score += laneSensorConfig.presence.presenceSaturationWeight * saturationFactor;
-        }
-
-        // Value factor - artifacts reflect more light than empty space
-        if (value > laneSensorConfig.quality.minValue) {
-            double valueFactor = Math.min(1.0, value / 0.5);  // Scale: 0-0.5 val → 0-1 factor
-            score += laneSensorConfig.presence.presenceValueWeight * valueFactor;
-        }
-
-        // Intensity factor - total RGB brightness
-        if (totalIntensity > laneSensorConfig.presence.minTotalIntensity) {
-            double intensityFactor = Math.min(1.0, totalIntensity / 200.0);  // Scale: 0-200 → 0-1
-            score += laneSensorConfig.presence.presenceIntensityWeight * intensityFactor;
-        }
-
-        return Math.min(1.0, score);  // Clamp to 0-1
-    }
-
-    /**
-     * Compute weighted distance to background characteristics in HSV space.
-     * Lower distance = more similar to background.
-     *
-     * @return Weighted distance to background (lower = more like background)
-     */
-    private double computeBackgroundDistance(float hue, float saturation, float value) {
-        return hsvDistance(hue, saturation, value,
-                laneSensorConfig.background.backgroundHue,
-                laneSensorConfig.background.backgroundSaturation,
-                laneSensorConfig.background.backgroundValue);
-    }
-
-    /**
-     * RANGE_BASED classifier: Independent hue ranges for green and purple (legacy).
-     * Returns UNKNOWN if hue is outside both ranges.
-     */
-    private ClassificationResult classifyColorRangeBased(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
-        if (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation) {
-            return new ClassificationResult(ArtifactColor.NONE, 0.0);
-        }
-
-        // Check green range
-        if (hue >= laneSensorConfig.classifier.range.greenHueMin && hue <= laneSensorConfig.classifier.range.greenHueMax) {
-            // Confidence based on how far from range edges
-            double distFromMin = hue - laneSensorConfig.classifier.range.greenHueMin;
-            double distFromMax = laneSensorConfig.classifier.range.greenHueMax - hue;
-            double distFromEdge = Math.min(distFromMin, distFromMax);
-            double confidence = Math.min(1.0, distFromEdge / 20.0); // 20° margin
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_result", "GREEN");
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_confidence", confidence);
-            return new ClassificationResult(ArtifactColor.GREEN, confidence);
-        }
-
-        // Check purple range (with wrap-around)
-        if ((hue >= laneSensorConfig.classifier.range.purpleHueMin && hue <= laneSensorConfig.classifier.range.purpleHueMax)
-                || hue <= laneSensorConfig.classifier.range.purpleHueWrapMax) {
-            double confidence = 0.7; // Fixed confidence for purple (wrap makes it harder to compute)
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_result", "PURPLE");
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_confidence", confidence);
-            return new ClassificationResult(ArtifactColor.PURPLE, confidence);
-        }
-
-        // Outside both ranges
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_result", "UNKNOWN");
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/range_confidence", 0.0);
-        return new ClassificationResult(ArtifactColor.UNKNOWN, 0.0);
     }
 
     /**

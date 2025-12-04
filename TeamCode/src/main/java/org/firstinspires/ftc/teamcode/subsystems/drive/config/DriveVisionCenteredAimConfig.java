@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.drive.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Vision-centered aim configuration.
  * Controls how the robot rotates to center a vision target using camera feedback (tx).
  */
-@Configurable
 public class DriveVisionCenteredAimConfig {
     /** Proportional gain for vision-centered aiming (motor power per radian) */
     public double kP = 1.7;  // Equivalent to 0.03 per degree

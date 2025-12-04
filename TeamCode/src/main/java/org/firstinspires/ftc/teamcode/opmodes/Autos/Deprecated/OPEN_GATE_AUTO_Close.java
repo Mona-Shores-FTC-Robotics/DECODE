@@ -63,7 +63,6 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
-    @Configurable
     public static class AutoMotionConfig {
         public double maxPathPower = .79;
         public double intakeDelaySeconds = .1;

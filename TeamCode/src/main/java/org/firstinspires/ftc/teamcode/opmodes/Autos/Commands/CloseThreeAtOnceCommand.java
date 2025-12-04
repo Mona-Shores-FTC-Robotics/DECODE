@@ -24,7 +24,6 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 @Configurable
 public class CloseThreeAtOnceCommand {
 
-    @Configurable
     public static class Config {
         public double maxPathPower = 0.75;
         public double endTimeForLinearHeadingInterpolation = .7;
@@ -32,7 +31,6 @@ public class CloseThreeAtOnceCommand {
         public double minTimeForFinalLaunchSeconds = 6.2;
     }
 
-    @Configurable
     public static class Waypoints {
         public double startX = 26.5;
         public double startY = 130;
@@ -85,13 +83,13 @@ public class CloseThreeAtOnceCommand {
         public double artifactsSet3Control0Y = 72;
 
         // LaunchClose4
-        public double launchOffLineX = 30;
-        public double launchOffLineY = 113.0;
-        public double launchOffLineHeading = 134.0;
+        public double launchClose4X = 30;
+        public double launchClose4Y = 113.0;
+        public double launchClose4Heading = 134.0;
 
         // Control point for segment: LaunchOffLine
-        public double launchOffLineControl0X = 44.5;
-        public double launchOffLineControl0Y = 73.5;
+        public double launchClose4Control0X = 44.5;
+        public double launchClose4Control0Y = 73.5;
 
         // NearGate
         public double nearGateX = 35;
@@ -218,15 +216,15 @@ public class CloseThreeAtOnceCommand {
                         new SequentialGroup(
                                 new FollowPathBuilder(robot, alliance)
                                         .from(artifactsSet3())
-                                        .to(launchOffLine())
-                                        .withControl(launchOffLineControl0())
+                                        .to(launchClose4())
+                                        .withControl(launchClose4Control0())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower),
 
                                 launcherCommands.launchAccordingToMode(false),
 
                                 new FollowPathBuilder(robot, alliance)
-                                        .from(launchOffLine())
+                                        .from(launchClose4())
                                         .to(nearGate())
                                         .withControl(nearGateControl0())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
@@ -301,12 +299,12 @@ public class CloseThreeAtOnceCommand {
 //        return new Pose(waypoints.artifactsSet3Control1X, waypoints.artifactsSet3Control1Y, 0);
 //    }
 
-    private static Pose launchOffLine() {
-        return new Pose(waypoints.launchOffLineX, waypoints.launchOffLineY, Math.toRadians(waypoints.launchOffLineHeading));
+    private static Pose launchClose4() {
+        return new Pose(waypoints.launchClose4X , waypoints.launchClose4Y , Math.toRadians(waypoints.launchClose4Heading));
     }
 
-    private static Pose launchOffLineControl0() {
-        return new Pose(waypoints.launchOffLineControl0X, waypoints.launchOffLineControl0Y, 0);
+    private static Pose launchClose4Control0() {
+        return new Pose(waypoints.launchClose4Control0X , waypoints.launchClose4Control0Y , 0);
     }
 
     private static Pose nearGate() {

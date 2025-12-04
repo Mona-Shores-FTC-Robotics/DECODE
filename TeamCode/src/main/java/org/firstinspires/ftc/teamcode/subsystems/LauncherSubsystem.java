@@ -37,10 +37,34 @@ import java.util.Set;
 @Configurable
 public class LauncherSubsystem implements Subsystem {
 
+    // Active robot indicator
+    public static String ACTIVE_ROBOT = RobotState.getRobotName();
+
     // Global configuration instances
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
 
+    // Robot-specific timing configs
+    public static LauncherTimingConfig timingConfig_Robot19429 = LauncherTimingConfig.timing19429;
+    public static LauncherTimingConfig timingConfig_Robot20245 = LauncherTimingConfig.timing20245;
+    public static LauncherTimingConfig timingConfig_ACTIVE = RobotConfigs.getTiming();
+
+    // Robot-specific flywheel configs
+    public static LauncherFlywheelConfig flywheelConfig_Robot19429 = LauncherFlywheelConfig.flywheelConfig19429;
+    public static LauncherFlywheelConfig flywheelConfig_Robot20245 = LauncherFlywheelConfig.flywheelConfig20245;
+    public static LauncherFlywheelConfig flywheelConfig_ACTIVE = RobotConfigs.getFlywheelConfig();
+
+    // Robot-specific feeder configs
+    public static LauncherFeederConfig feederConfig_Robot19429 = LauncherFeederConfig.feederConfig19429;
+    public static LauncherFeederConfig feederConfig_Robot20245 = LauncherFeederConfig.feederConfig20245;
+    public static LauncherFeederConfig feederConfig_ACTIVE = RobotConfigs.getFeederConfig();
+
+    // Robot-specific hood configs
+    public static LauncherHoodConfig hoodConfig_Robot19429 = LauncherHoodConfig.hoodConfig19429;
+    public static LauncherHoodConfig hoodConfig_Robot20245 = LauncherHoodConfig.hoodConfig20245;
+    public static LauncherHoodConfig hoodConfig_ACTIVE = RobotConfigs.getHoodConfig();
+
+    // Legacy method accessors (kept for backwards compatibility)
     public static LauncherTimingConfig timingConfig() {
         return RobotConfigs.getTiming();
     }

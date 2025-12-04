@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.lighting.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Lighting color position configuration.
  * Maps colors to servo positions for goBILDA RGB Indicator Lights.
  */
-@Configurable
 public class LightingColorPositionConfig {
     /** Servo position for green color */
     public double greenPosition = 0.500;

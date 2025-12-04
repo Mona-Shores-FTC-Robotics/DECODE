@@ -26,7 +26,6 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 @Configurable
 public class FarTogetherCommand {
 
-    @Configurable
     public static class Config {
         public double maxPathPower = .85;
         public double endTimeForLinearHeadingInterpolation = .7;
@@ -35,7 +34,6 @@ public class FarTogetherCommand {
         public double minTimeForFinalLaunchSeconds = 5.0;
     }
 
-    @Configurable
     public static class Waypoints {
         public double startX = 56;
         public double startY = 5;
@@ -213,7 +211,7 @@ public class FarTogetherCommand {
                                 new FollowPathBuilder(robot, alliance)
                                         .from(artifactsAllianceWall())
                                         .to(readyForTeleop())
-                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .withConstantHeading(90)
                                         .build(config.maxPathPower)
                         )
                 )
