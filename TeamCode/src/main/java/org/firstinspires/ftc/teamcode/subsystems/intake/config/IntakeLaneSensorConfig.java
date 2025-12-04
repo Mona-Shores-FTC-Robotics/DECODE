@@ -47,7 +47,7 @@ public class IntakeLaneSensorConfig {
 
     public static class Polling {
         public boolean enablePolling = true;
-        public double samplePeriodMs = 200.0;
+        public double samplePeriodMs = 150;
         public String leftSensor = "lane_left_color";
         public String centerSensor = "lane_center_color";
         public String rightSensor = "lane_right_color";
@@ -64,9 +64,15 @@ public class IntakeLaneSensorConfig {
 
     public static class Gating {
         /** Minimum confidence required to accept a new artifact color classification */
-        public double minConfidenceToAccept = 0.4;
+        public double minConfidenceToAccept = .2;
         /** Number of consecutive confident samples required before updating lane color */
-        public int consecutiveConfirmationsRequired = 2;
+        public int consecutiveConfirmationsRequired = 1;
+        /** Number of consecutive non-artifact samples required before clearing lane color (helps with whiffle ball holes) */
+        public int consecutiveClearConfirmationsRequired = 2;
+        /** Keep-alive duration (ms) - keep artifact detection alive after last good reading (helps with whiffle ball holes) */
+        public double keepAliveMs = 400.0;
+        /** Distance clearance margin (cm) - how far beyond exit threshold to instantly clear (helps artifacts clear quickly when removed) */
+        public double distanceClearanceMarginCm = .7;
     }
 
     public static class Quality {
@@ -160,11 +166,11 @@ public class IntakeLaneSensorConfig {
         LanePresenceConfig config = new LanePresenceConfig();
         // Start with the same defaults; tune via Dashboard per robot
         config.leftEnterDistanceCm = 4.0;
-        config.leftExitDistanceCm = 4.1;
-        config.centerEnterDistanceCm = 5.0;
+        config.leftExitDistanceCm = 4.5;
+        config.centerEnterDistanceCm = 3.9;
         config.centerExitDistanceCm = 5.5;
-        config.rightEnterDistanceCm = 5.5;
-        config.rightExitDistanceCm = 6.0;
+        config.rightEnterDistanceCm = 4.2;
+        config.rightExitDistanceCm = 4.6;
         return config;
     }
 }

@@ -28,7 +28,7 @@ public class CloseThreeAtOnceCommand {
         public double maxPathPower = 0.75;
         public double endTimeForLinearHeadingInterpolation = .7;
         public double autoDurationSeconds = 30.0;
-        public double minTimeForFinalLaunchSeconds = 5.0;
+        public double minTimeForFinalLaunchSeconds = 6.2;
     }
 
     public static class Waypoints {
@@ -39,15 +39,15 @@ public class CloseThreeAtOnceCommand {
         // LaunchClose1
         public double launchClose1X = 30.0;
         public double launchClose1Y = 113.0;
-        public double launchClose1Heading = 128;
+        public double launchClose1Heading = 134.0;
 
         // ArtifactsSet1
-        public double artifactsSet1X = 23.75;
+        public double artifactsSet1X = 24;
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet1Control0X = 23.75;
+        public double artifactsSet1Control0X = 24;
         public double artifactsSet1Control0Y = 113;
 
         // LaunchClose2
@@ -56,12 +56,12 @@ public class CloseThreeAtOnceCommand {
         public double launchClose2Heading = 134.0;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 23.75;
+        public double artifactsSet2X = 24;
         public double artifactsSet2Y = 61.0;
         public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 23.75;
+        public double artifactsSet2Control0X = 24;
         public double artifactsSet2Control0Y = 70;
 
         // LaunchClose3
@@ -74,12 +74,12 @@ public class CloseThreeAtOnceCommand {
         public double launchClose3Control0Y = 72;
 
         // ArtifactsSet3
-        public double artifactsSet3X = 23.75;
+        public double artifactsSet3X = 24;
         public double artifactsSet3Y = 35.5;
         public double artifactsSet3Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet3Control0X = 23.75;
+        public double artifactsSet3Control0X = 24;
         public double artifactsSet3Control0Y = 72;
 
         // LaunchClose4

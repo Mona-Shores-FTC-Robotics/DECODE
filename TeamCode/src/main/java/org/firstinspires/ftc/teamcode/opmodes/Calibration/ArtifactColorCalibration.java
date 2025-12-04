@@ -33,7 +33,6 @@ import java.util.List;
  * - X: Clear all samples and start over
  * - Y: Toggle continuous sampling mode
  */
-@Disabled
 @TeleOp(name = "Artifact Color Calibration", group = "Tuning")
 public class ArtifactColorCalibration extends LinearOpMode {
 
