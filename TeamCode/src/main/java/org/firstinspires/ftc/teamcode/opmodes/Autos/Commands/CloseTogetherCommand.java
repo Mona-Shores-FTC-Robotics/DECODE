@@ -74,12 +74,12 @@ public class CloseTogetherCommand {
         public double launchClose2ControlY = 80;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 23.75;
+        public double artifactsSet2X = 23.25;
         public double artifactsSet2Y = 61.0;
         public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 23.75;
+        public double artifactsSet2Control0X = 23.25;
         public double artifactsSet2Control0Y = 70;
 
         // LaunchClose3

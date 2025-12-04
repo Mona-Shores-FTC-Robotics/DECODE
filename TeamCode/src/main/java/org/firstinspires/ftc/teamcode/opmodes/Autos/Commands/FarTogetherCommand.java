@@ -145,8 +145,7 @@ public class FarTogetherCommand {
                 new ParallelDeadlineGroup(
                         firstPathBuilder
                                 .to(launchFar())
-                                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                .build(config.maxPathPower),
+                                .withConstantHeading(waypoints.launchFarHeadingDeg)                                .build(config.maxPathPower),
                         launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
 
@@ -178,15 +177,18 @@ public class FarTogetherCommand {
                 // Pickup Released Artifacts Try 1
                 new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
-                        .to(releasedArtifacts1())
+                        .to(artifactsAllianceWall())
+                        .withControl(wallControl())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
                 // Return and Launch
                 new FollowPathBuilder(robot, alliance)
-                    .from(releasedArtifacts1())
+                    .from(artifactsAllianceWall())
                     .to(launchFar())
-                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .withControl(wallControl())
+
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
                 new TryRelocalizeForShotCommand(robot.drive, robot.vision),
@@ -196,8 +198,8 @@ public class FarTogetherCommand {
                 // Pickup Released Artifacts Try 2
                 new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
-                        .to(releasedArtifacts2())
-                        .withControl(releasedArtifacts2Control0())
+                        .to(artifactsAllianceWall())
+                        .withControl(wallControl())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
@@ -209,8 +211,9 @@ public class FarTogetherCommand {
                         // If enough time: return to launch, shoot, then park
                         new SequentialGroup(
                                 new FollowPathBuilder(robot, alliance)
-                                        .from(releasedArtifacts2())
+                                        .from(artifactsAllianceWall())
                                         .to(launchFar())
+                                        .withControl(wallControl())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower),
 
@@ -226,7 +229,7 @@ public class FarTogetherCommand {
                         // If not enough time: go straight to park
                         new SequentialGroup(
                                 new FollowPathBuilder(robot, alliance)
-                                        .from(releasedArtifacts2())
+                                        .from(artifactsAllianceWall())
                                         .to(readyForTeleop())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower)
