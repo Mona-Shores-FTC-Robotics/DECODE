@@ -37,20 +37,22 @@ public class CloseThreeAtOnceCommand {
         public double minTimeForFinalLaunchSeconds = 5.0;
 
         // Pedro PathBuilder constraints (now exposed for tuning!)
-        /** Braking strength multiplier for deceleration (default 1.0) */
-        public double brakingStrength = 1.0;
+        // Set to -1 to use Pedro's built-in defaults, or set explicit value to override
 
-        /** When braking starts along path (0.0-1.0, default 0.7) */
-        public double brakingStart = 0.7;
+        /** Braking strength multiplier (default -1 = use Pedro default of 1.0) */
+        public double brakingStrength = -1;
 
-        /** Translational constraint in inches for path end (default 3.0) */
-        public double translationalConstraint = 3.0;
+        /** When braking starts 0.0-1.0 (default -1 = use Pedro default of 1.0) */
+        public double brakingStart = -1;
 
-        /** Heading constraint in radians for path end (default 0.1 = ~5.7 degrees) */
-        public double headingConstraint = 0.1;
+        /** Translational constraint in inches (default -1 = use Pedro default of 0.1") */
+        public double translationalConstraint = -1;
 
-        /** Timeout in milliseconds for final path corrections (default 0 = disabled) */
-        public double timeoutConstraintMs = 0.0;
+        /** Heading constraint in radians (default -1 = use Pedro default of 0.007 rad = ~0.4°) */
+        public double headingConstraint = -1;
+
+        /** Timeout in ms for final corrections (default -1 = use Pedro default of 100ms) */
+        public double timeoutConstraintMs = -1;
     }
 
     @Configurable
@@ -256,13 +258,20 @@ public class CloseThreeAtOnceCommand {
                     config.endTimeForLinearHeadingInterpolation);
         }
 
-        // Apply Pedro path constraints (now fully configurable!)
-        builder.setBrakingStrength(config.brakingStrength);
-        builder.setBrakingStart(config.brakingStart);
-        builder.setTranslationalConstraint(config.translationalConstraint);
-        builder.setHeadingConstraint(config.headingConstraint);
-
-        if (config.timeoutConstraintMs > 0) {
+        // Apply Pedro path constraints only if explicitly overridden (not -1)
+        if (config.brakingStrength >= 0) {
+            builder.setBrakingStrength(config.brakingStrength);
+        }
+        if (config.brakingStart >= 0) {
+            builder.setBrakingStart(config.brakingStart);
+        }
+        if (config.translationalConstraint >= 0) {
+            builder.setTranslationalConstraint(config.translationalConstraint);
+        }
+        if (config.headingConstraint >= 0) {
+            builder.setHeadingConstraint(config.headingConstraint);
+        }
+        if (config.timeoutConstraintMs >= 0) {
             builder.setTimeoutConstraint(config.timeoutConstraintMs);
         }
 
