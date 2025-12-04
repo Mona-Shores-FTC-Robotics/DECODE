@@ -9,7 +9,7 @@ import com.bylazar.configurables.annotations.Configurable;
 @Configurable
 public class LaunchInSequenceConfig {
     /** Milliseconds between shots in sequence */
-    public double shotSpacingMs = 500;
+    public double shotSpacingMs = 525;
 
     /** Timeout in seconds before giving up on spin-up */
     public double timeoutSeconds = 4.0;

@@ -113,21 +113,36 @@ public class Constants {
 
     private static FollowerConstants createFollowerConstants20245() {
         return new FollowerConstants()
-                .forwardZeroPowerAcceleration(-27.104224075758907) //20245
-                .lateralZeroPowerAcceleration(-87.36247959701339) //20245
+                .forwardZeroPowerAcceleration(-31.2) //20245
+                .lateralZeroPowerAcceleration(-82) //20245
                 .useSecondaryTranslationalPIDF(true)
                 .useSecondaryHeadingPIDF(true)
                 .useSecondaryDrivePIDF(true)
-                .translationalPIDFCoefficients(new PIDFCoefficients(.065, 0, .0001, .08)) // TODO: Tune for 20245
-                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.035, 0, 0.0001, .08))
-
-                // Match 19429 heading tuning for stability
-                .headingPIDFCoefficients(new PIDFCoefficients(.7, 0, .001, .025))  // Increased P and D, reduced F
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.2, 0, .001, .025))
 
 
-                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) // TODO: Tune for 20245
-                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
+                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0042, 0, 0.0005, 0.6, .0001)) // tuned 12/4
+                .drivePIDFSwitch(10)
+                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.045, 0, 0, 0.6, .0001))
+
+                .headingPIDFCoefficients(new PIDFCoefficients(.6, 0.01, .0001, .0005))  // Increased P and D, reduced F
+                .headingPIDFSwitch(Math.toRadians(15))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.932, 0.0001, .03, .0003))
+
+                .translationalPIDFCoefficients(new PIDFCoefficients(
+                        0.8,
+                        0,
+                        0,
+                        .05)) // TODO: Tune for 20245
+                .translationalPIDFSwitch(5)
+                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(
+                        0.05,
+                        0.0001,
+                        .0006,
+                        .00015))
+
+
+
+
                 .centripetalScaling(0.00005)
                 .mass(15.4221); // TODO: Update mass for 20245
     }
@@ -136,11 +151,10 @@ public class Constants {
     private static MecanumConstants createDriveConstants19429() {
         return new MecanumConstants()
                 .maxPower(1.0)
-//                .xVelocity(72.58829912801427) ///19429
-//                .yVelocity(43.5633) //19429
-                .xVelocity(59.1365506697527) //20245 59.1365506697527
-                .yVelocity(53.16551100362942) //20245 53.16551100362942
-
+//                .xVelocity(72.58829912801427) ///19429 old
+//                .yVelocity(43.5633) //19429 old
+                .xVelocity(59.1365506697527)
+                .yVelocity(53.16551100362942)
                 .rightFrontMotorName(HardwareNames.RF)
                 .rightRearMotorName(HardwareNames.RB)
                 .leftRearMotorName(HardwareNames.LB)
@@ -155,8 +169,8 @@ public class Constants {
     private static MecanumConstants createDriveConstants20245() {
         return new MecanumConstants()
                 .maxPower(1.0)
-                .xVelocity(59.1365506697527) //20245 59.1365506697527
-                .yVelocity(53.16551100362942) //20245 53.16551100362942
+                .xVelocity(58.5) //tuned 12/4
+                .yVelocity(50.4) //tuned 12/4
                 .rightFrontMotorName(HardwareNames.RF)
                 .rightRearMotorName(HardwareNames.RB)
                 .leftRearMotorName(HardwareNames.LB)
@@ -192,7 +206,15 @@ public class Constants {
                 .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
                 .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(
+            0.995,
+            0.1,
+            1,
+            Math.toRadians(2.0),
+            150,
+            .9,
+            10,
+            1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants(), hardwareMap)

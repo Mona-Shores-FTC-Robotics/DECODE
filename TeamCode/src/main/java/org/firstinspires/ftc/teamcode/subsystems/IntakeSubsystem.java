@@ -153,6 +153,8 @@ public class IntakeSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, Boolean> lanePresenceState = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneCandidateColor = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Integer> laneCandidateCount = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, Double> laneLastGoodDetectionMs = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, Integer> laneClearCandidateCount = new EnumMap<>(LauncherLane.class);
     private final float[] hsvBuffer = new float[3];
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
     private boolean anyLaneSensorsPresent = false;
@@ -204,6 +206,8 @@ public class IntakeSubsystem implements Subsystem {
             lanePresenceState.put(lane, false);
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
+            laneLastGoodDetectionMs.put(lane, 0.0);
+            laneClearCandidateCount.put(lane, 0);
         }
         bindLaneSensors(hardwareMap);
     }
@@ -216,6 +220,8 @@ public class IntakeSubsystem implements Subsystem {
             lanePresenceState.put(lane, false);
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
+            laneLastGoodDetectionMs.put(lane, 0.0);
+            laneClearCandidateCount.put(lane, 0);
         }
         sensorTimer.reset();
         intakeMode = IntakeMode.STOPPED;
@@ -436,6 +442,7 @@ public class IntakeSubsystem implements Subsystem {
 
     /**
      * Applies debounce + confidence gating before updating lane color to reduce flicker from holes/background.
+     * Includes temporal hysteresis (keep-alive) to handle whiffle ball holes.
      */
     private void applyGatedLaneColor(LauncherLane lane, LaneSample sample) {
         if (lane == null || sample == null) {
@@ -443,36 +450,93 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         ArtifactColor candidate = sample.color == null ? ArtifactColor.NONE : sample.color;
+        ArtifactColor currentLaneColor = laneColors.getOrDefault(lane, ArtifactColor.NONE);
+        double currentTimeMs = sensorTimer.milliseconds();
 
-        // Non-artifact classifications clear immediately (no debounce) to prevent stale colors.
-        if (!candidate.isArtifact()) {
+        // --- CHECK IF ARTIFACT IS CLEARLY GONE (distance-based override) ---
+        // If distance shows artifact is WAY beyond exit threshold, it's definitely gone - clear immediately
+        if (currentLaneColor.isArtifact() && sample.distanceAvailable && !Double.isNaN(sample.distanceCm)) {
+            IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
+            double exitThreshold = getExitThreshold(presenceCfg, lane);
+            double clearanceMargin = laneSensorConfig.gating.distanceClearanceMarginCm;
+
+            if (sample.distanceCm > exitThreshold + clearanceMargin) {
+                // Artifact is definitely gone - clear immediately regardless of keep-alive
+                laneCandidateColor.put(lane, ArtifactColor.NONE);
+                laneCandidateCount.put(lane, 0);
+                laneClearCandidateCount.put(lane, 0);
+                laneLastGoodDetectionMs.put(lane, 0.0);
+                updateLaneColor(lane, ArtifactColor.NONE);
+                return;
+            }
+        }
+
+        // --- ARTIFACT DETECTION PATH ---
+        if (candidate.isArtifact() && sample.confidence >= laneSensorConfig.gating.minConfidenceToAccept) {
+            // Good artifact reading - record timestamp ONLY if not currently in clearing process
+            int clearCount = laneClearCandidateCount.getOrDefault(lane, 0);
+
+            // If we're already trying to clear (clearCount > 0), don't reset the timer
+            // This prevents a whiffle ball from "reviving" detection after we've started clearing
+            if (clearCount == 0) {
+                laneLastGoodDetectionMs.put(lane, currentTimeMs);
+            }
+
+            // Standard debounce logic for artifact confirmation
+            ArtifactColor previousCandidate = laneCandidateColor.getOrDefault(lane, ArtifactColor.NONE);
+            int count = laneCandidateCount.getOrDefault(lane, 0);
+
+            if (candidate == previousCandidate) {
+                count++;
+            } else {
+                previousCandidate = candidate;
+                count = 1;
+            }
+
+            laneCandidateColor.put(lane, previousCandidate);
+            laneCandidateCount.put(lane, count);
+
+            if (count >= Math.max(1, laneSensorConfig.gating.consecutiveConfirmationsRequired)) {
+                updateLaneColor(lane, previousCandidate);
+                // Reset clear counter when we successfully detect/confirm
+                laneClearCandidateCount.put(lane, 0);
+            }
+            return;
+        }
+
+        // --- NON-ARTIFACT / CLEARING PATH ---
+        // We got a bad reading (NONE, BACKGROUND, UNKNOWN, or low confidence)
+
+        // If we currently have an artifact detected, check keep-alive window
+        if (currentLaneColor.isArtifact()) {
+            double lastGoodMs = laneLastGoodDetectionMs.getOrDefault(lane, 0.0);
+            double timeSinceGoodMs = currentTimeMs - lastGoodMs;
+
+            // Within keep-alive window? Keep current detection alive (likely just hit a hole)
+            if (timeSinceGoodMs < laneSensorConfig.gating.keepAliveMs) {
+                // Keep alive - don't clear, don't update counters
+                return;
+            }
+
+            // Outside keep-alive window - start counting consecutive clear confirmations
+            int clearCount = laneClearCandidateCount.getOrDefault(lane, 0);
+            clearCount++;
+            laneClearCandidateCount.put(lane, clearCount);
+
+            // Only clear after N consecutive bad samples (symmetric with detection)
+            if (clearCount >= Math.max(1, laneSensorConfig.gating.consecutiveClearConfirmationsRequired)) {
+                // Confirmed absent - clear detection
+                laneCandidateColor.put(lane, ArtifactColor.NONE);
+                laneCandidateCount.put(lane, 0);
+                laneClearCandidateCount.put(lane, 0);
+                laneLastGoodDetectionMs.put(lane, 0.0);
+                updateLaneColor(lane, ArtifactColor.NONE);
+            }
+        } else {
+            // No artifact currently detected - just clear counters
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
-            updateLaneColor(lane, ArtifactColor.NONE);
-            return;
-        }
-
-        // Require minimum confidence for artifact candidates.
-        if (sample.confidence < laneSensorConfig.gating.minConfidenceToAccept) {
-            laneCandidateCount.put(lane, 0);
-            return;
-        }
-
-        ArtifactColor previousCandidate = laneCandidateColor.getOrDefault(lane, ArtifactColor.NONE);
-        int count = laneCandidateCount.getOrDefault(lane, 0);
-
-        if (candidate == previousCandidate) {
-            count++;
-        } else {
-            previousCandidate = candidate;
-            count = 1;
-        }
-
-        laneCandidateColor.put(lane, previousCandidate);
-        laneCandidateCount.put(lane, count);
-
-        if (count >= Math.max(1, laneSensorConfig.gating.consecutiveConfirmationsRequired)) {
-            updateLaneColor(lane, previousCandidate);
+            laneClearCandidateCount.put(lane, 0);
         }
     }
 
@@ -1013,11 +1077,17 @@ public class IntakeSubsystem implements Subsystem {
             updateLaneColor(lane, ArtifactColor.NONE);
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
+            laneLastGoodDetectionMs.put(lane, 0.0);
+            laneClearCandidateCount.put(lane, 0);
         }
     }
 
     public void clearLaneColor(LauncherLane lane) {
         updateLaneColor(lane, ArtifactColor.NONE);
+        laneCandidateColor.put(lane, ArtifactColor.NONE);
+        laneCandidateCount.put(lane, 0);
+        laneLastGoodDetectionMs.put(lane, 0.0);
+        laneClearCandidateCount.put(lane, 0);
     }
 
     public void updateLaneColor(LauncherLane lane, ArtifactColor color) {
