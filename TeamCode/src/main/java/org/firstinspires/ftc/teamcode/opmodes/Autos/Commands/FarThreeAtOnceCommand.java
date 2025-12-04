@@ -4,7 +4,6 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.TryRelocalizeForShotCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
@@ -13,7 +12,6 @@ import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.commands.delays.Delay;
 import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
 
@@ -31,6 +29,8 @@ public class FarThreeAtOnceCommand {
     public static class Config {
         public double maxPathPower = 0.65;
         public double endTimeForLinearHeadingInterpolation = .7;
+        public double autoDurationSeconds = 30.0;
+        public double minTimeForFinalLaunchSeconds = 5.0;
     }
 
     @Configurable
@@ -124,7 +124,10 @@ public class FarThreeAtOnceCommand {
         }
 
         Command mainSequence = new SequentialGroup(
-            // Launch Preloads
+                // Reset timer when auto actually starts (not when command is created)
+                ConditionalFinalLaunchCommand.createTimerReset(),
+
+                // Launch Preloads
                 new ParallelDeadlineGroup(
                 firstPathBuilder
                     .to(launchFar())
@@ -183,23 +186,36 @@ public class FarThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-            // Return, final launch, and park
-            new FollowPathBuilder(robot, alliance)
-                .from(artifactsSet2())
-                .to(launchFar())
-                .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                .build(config.maxPathPower),
+            // Conditionally return and launch if time permits, otherwise go straight to park
+            new ConditionalFinalLaunchCommand(
+                    config.autoDurationSeconds,
+                    config.minTimeForFinalLaunchSeconds,
+                    // If enough time: return to launch, shoot, then park
+                    new SequentialGroup(
+                            new FollowPathBuilder(robot, alliance)
+                                    .from(artifactsSet2())
+                                    .to(launchFar())
+                                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                    .build(config.maxPathPower),
 
-            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//            new AimAtGoalCommand(robot.drive, robot.vision),
-            launcherCommands.launchAccordingToMode(false),
+                            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
+                            launcherCommands.launchAccordingToMode(false),
 
-            // Get Ready to Open Gate
-            new FollowPathBuilder(robot, alliance)
-                    .from(launchFar())
-                    .to(readyForTeleop())
-                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                    .build(config.maxPathPower)
+                            new FollowPathBuilder(robot, alliance)
+                                    .from(launchFar())
+                                    .to(readyForTeleop())
+                                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                    .build(config.maxPathPower)
+                    ),
+                    // If not enough time: go straight to park
+                    new SequentialGroup(
+                            new FollowPathBuilder(robot, alliance)
+                                    .from(artifactsSet2())
+                                    .to(readyForTeleop())
+                                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                    .build(config.maxPathPower)
+                    )
+            )
         );
 
         return new ParallelDeadlineGroup(

@@ -4,7 +4,6 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -29,6 +28,8 @@ public class CloseThreeAtOnceCommand {
     public static class Config {
         public double maxPathPower = 0.75;
         public double endTimeForLinearHeadingInterpolation = .7;
+        public double autoDurationSeconds = 30.0;
+        public double minTimeForFinalLaunchSeconds = 5.0;
     }
 
     @Configurable
@@ -148,8 +149,10 @@ public class CloseThreeAtOnceCommand {
         }
 
         Command mainSequence = new SequentialGroup(
-                // Launch Preloads
+                // Reset timer when auto actually starts (not when command is created)
+                ConditionalFinalLaunchCommand.createTimerReset(),
 
+                // Launch Preloads
                 new ParallelDeadlineGroup(
                     firstPathBuilder
                         .to(launchClose1())
@@ -206,25 +209,39 @@ public class CloseThreeAtOnceCommand {
                         .withConstantHeading(270)
                         .build(config.maxPathPower),
 
-                // Return and Launch Set 3
-                new FollowPathBuilder(robot, alliance)
-                    .from(artifactsSet3())
-                    .to(launchOffLine())
-                    .withControl(launchOffLineControl0())
-                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                    .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                // Conditionally return and launch if time permits, otherwise go straight to park
+                new ConditionalFinalLaunchCommand(
+                        config.autoDurationSeconds,
+                        config.minTimeForFinalLaunchSeconds,
+                        // If enough time: return to launch, shoot, then park
+                        new SequentialGroup(
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(artifactsSet3())
+                                        .to(launchOffLine())
+                                        .withControl(launchOffLineControl0())
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .build(config.maxPathPower),
 
-                // Get Ready to Open Gate and Get Off Launch Line
-                new FollowPathBuilder(robot, alliance)
-                        .from(launchOffLine())
-                        .to(nearGate())
-                        .withControl(nearGateControl0())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower)
-            );
+                                launcherCommands.launchAccordingToMode(false),
+
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(launchOffLine())
+                                        .to(nearGate())
+                                        .withControl(nearGateControl0())
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .build(config.maxPathPower)
+                        ),
+                        // If not enough time: go straight to park
+                        new SequentialGroup(
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(artifactsSet3())
+                                        .to(nearGate())
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .build(config.maxPathPower)
+                        )
+                )
+        );
 
         return new ParallelDeadlineGroup(
                 mainSequence,

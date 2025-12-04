@@ -24,7 +24,7 @@ public class AutoSmartIntakeCommand extends IntakeCommand {
         /** Count threshold to resume forward after auto-reverse */
         public int resumeCountThreshold = 2;
         /** Debounce before switching to reverse after full (ms) */
-        public double fullDebounceMs = 450;
+        public double fullDebounceMs = 750;
         /** Debounce before returning to forward after dropping below resume threshold (ms) */
         public double resumeDebounceMs = 200.0;
         /** Enable telemetry in RobotState.packet */
