@@ -66,13 +66,13 @@ public class IntakeLaneSensorConfig {
         /** Minimum confidence required to accept a new artifact color classification */
         public double minConfidenceToAccept = .2;
         /** Number of consecutive confident samples required before updating lane color */
-        public int consecutiveConfirmationsRequired = 1;
+        public int consecutiveConfirmationsRequired = 2;
         /** Number of consecutive non-artifact samples required before clearing lane color (helps with whiffle ball holes) */
         public int consecutiveClearConfirmationsRequired = 2;
         /** Keep-alive duration (ms) - keep artifact detection alive after last good reading (helps with whiffle ball holes) */
-        public double keepAliveMs = 400.0;
+        public double keepAliveMs = 150.0;
         /** Distance clearance margin (cm) - how far beyond exit threshold to instantly clear (helps artifacts clear quickly when removed) */
-        public double distanceClearanceMarginCm = .7;
+        public double distanceClearanceMarginCm = .45;
     }
 
     public static class Quality {
