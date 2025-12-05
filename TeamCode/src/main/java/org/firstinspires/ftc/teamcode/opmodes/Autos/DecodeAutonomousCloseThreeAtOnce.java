@@ -152,15 +152,14 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+        // Save final pose for TeleOp transition
+        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
         allianceSelector.unlockSelection();
         modeSelector.unlockSelection();
         BindingManager.reset();
         robot.launcher.abort();
         robot.drive.stop();
         robot.vision.stop();
-
-        // Save final pose for TeleOp transition
-        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
     }
 
 

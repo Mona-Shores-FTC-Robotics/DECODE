@@ -150,6 +150,9 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+
+        // Save final pose for TeleOp transition
+        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
         allianceSelector.unlockSelection();
         modeSelector.unlockSelection();
         BindingManager.reset();
@@ -157,8 +160,6 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
         robot.drive.stop();
         robot.vision.stop();
 
-        // Save final pose for TeleOp transition
-        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
     }
 
 

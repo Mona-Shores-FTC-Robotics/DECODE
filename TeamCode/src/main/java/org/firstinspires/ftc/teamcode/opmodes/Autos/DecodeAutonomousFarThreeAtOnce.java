@@ -367,14 +367,15 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+
+        // Save final pose for TeleOp transition
+        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
         allianceSelector.unlockSelection();
         BindingManager.reset();
         robot.launcher.abort();
         robot.drive.stop();
         robot.vision.stop();
 
-        // Save final pose for TeleOp transition
-        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
     }
 
     private void applyAlliance(Alliance alliance, Pose startOverride) {
