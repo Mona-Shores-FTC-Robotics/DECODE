@@ -24,7 +24,6 @@ import java.util.Objects;
 @Configurable
 public class AimAtGoalCommand extends Command {
 
-    @Configurable
     public static class Config {
         /** Heading tolerance in degrees - command completes when within this error */
         public double headingToleranceDeg = 2.0;

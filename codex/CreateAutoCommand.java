@@ -119,14 +119,12 @@ public class CreateAutoCommand {
         code.append("public class ").append(className).append(" {\n\n");
 
         // Config class
-        code.append("    @Configurable\n");
         code.append("    public static class Config {\n");
         code.append("        public double maxPathPower = 0.79;\n");
         code.append("        public double intakeDelaySeconds = 2.5;\n");
         code.append("    }\n\n");
 
         // Waypoints config
-        code.append("    @Configurable\n");
         code.append("    public static class Waypoints {\n");
         code.append("        public double startX = ").append(start.x).append(";\n");
         code.append("        public double startY = ").append(start.y).append(";\n");

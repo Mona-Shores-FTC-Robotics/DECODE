@@ -13,6 +13,18 @@ import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
  * Note: "debug" here refers to the FullPanels API method name, not debugging level.
  * FullPanels telemetry is only active in DEBUG mode (disabled in MATCH/PRACTICE for performance).
  * </p>
+ * <p>
+ * <b>Panels Plugin Reference:</b>
+ * <ul>
+ *   <li><b>Telemetry</b> - Text values from debug() calls, organized hierarchically by "/" paths</li>
+ *   <li><b>Graph</b> - Line graphs for numeric debug() values (configure in Panels UI)</li>
+ *   <li><b>Field</b> - 2D robot visualization (see PanelsBridge.java)</li>
+ *   <li><b>Configurables</b> - Live-tune @Configurable parameters</li>
+ *   <li><b>Limelight Proxy</b> - Enable in Panels to see camera feed (no code needed)</li>
+ *   <li><b>OpMode Control</b> - Start/stop OpModes from Panels (no code needed)</li>
+ *   <li><b>Theme</b> - UI appearance customization (no code needed)</li>
+ * </ul>
+ * </p>
  */
 public class FullPanelsFormatter {
 
@@ -25,7 +37,35 @@ public class FullPanelsFormatter {
             return;
         }
 
-        // Mode and context
+        // =====================================================================
+        // SECTION 1: SYSTEM STATUS SUMMARY (High-Priority Overview)
+        // These are the most critical values drivers/pit crew need at a glance
+        // =====================================================================
+        publishSystemSummary(panels, data);
+
+        // =====================================================================
+        // SECTION 2: MATCH CONTEXT
+        // =====================================================================
+        panels.debug("match/alliance", data.context.alliance.name());
+        panels.debug("match/opMode", data.context.opMode);
+        panels.debug("match/runtime_sec", String.format("%.1f", data.context.runtimeSec));
+        panels.debug("match/matchTime_sec", String.format("%.1f", data.context.matchTimeSec));
+        panels.debug("match/robotConfig", data.context.robotConfig);
+        panels.debug("match/launcherMode", data.context.launcherMode);
+        panels.debug("match/isAutonomous", data.context.isAutonomous);
+
+        // =====================================================================
+        // SECTION 3: LOOP TIMING (Performance Diagnostics)
+        // =====================================================================
+        panels.debug("timing/mainLoop_ms", String.format("%.2f", data.timing.mainLoopMs));
+        panels.debug("timing/drive_ms", String.format("%.2f", data.timing.driveMs));
+        panels.debug("timing/intake_ms", String.format("%.2f", data.timing.intakeMs));
+        panels.debug("timing/launcher_ms", String.format("%.2f", data.timing.launcherMs));
+        panels.debug("timing/vision_ms", String.format("%.2f", data.timing.visionMs));
+        panels.debug("timing/lighting_ms", String.format("%.2f", data.timing.lightingMs));
+        panels.debug("timing/subsystems_total_ms", String.format("%.2f", data.timing.totalSubsystemMs()));
+
+        // Mode and context (legacy paths maintained for compatibility)
         panels.debug("mode/label", data.context.opMode.toLowerCase());
         panels.debug("mode/drive", data.drive.driveMode);
         panels.debug("mode/aim/enabled", data.drive.aimMode);
@@ -87,7 +127,7 @@ public class FullPanelsFormatter {
         panels.debug("drive/yIn", data.pose.poseYIn);
         panels.debug("drive/headingDeg", data.pose.headingDeg);
 
-        // Vision
+        // Vision - basic tag detection
         panels.debug("vision/tag/visible", data.vision.hasTag);
         panels.debug("vision/tag/id", data.vision.tagId);
         panels.debug("vision/tag/rangeIn", data.vision.rangeIn);
@@ -95,15 +135,26 @@ public class FullPanelsFormatter {
         panels.debug("vision/tag/yawDeg", data.vision.yawDeg);
         panels.debug("vision/odometryPending", data.vision.odometryPending);
 
-        // Launcher control (feedforward + proportional per lane)
+        // Vision - raw Limelight values (useful for aim debugging)
+        panels.debug("vision/limelight/txDeg", data.vision.txDeg);
+        panels.debug("vision/limelight/tyDeg", data.vision.tyDeg);
+        panels.debug("vision/limelight/areaPct", data.vision.targetAreaPercent);
 
-        // Launcher per-lane (left)
+        // Vision - pose from AprilTag
+        panels.debug("vision/pose/xIn", data.vision.poseXIn);
+        panels.debug("vision/pose/yIn", data.vision.poseYIn);
+        panels.debug("vision/pose/headingDeg", Double.isNaN(data.vision.headingRad) ? Double.NaN : Math.toDegrees(data.vision.headingRad));
+
+        // =====================================================================
+        // SECTION: LAUNCHER RPM GRAPHS
+        // These are formatted for easy graphing in the Panels Graph plugin.
+        // Configure Graph plugin to show these keys for real-time RPM visualization.
+        // =====================================================================
+        publishLauncherGraphData(panels, data);
+
+        // Launcher per-lane detailed data
         publishLaneData(panels, "launcher/lanes/left", data.launcher.left);
-
-        // Launcher per-lane (center)
         publishLaneData(panels, "launcher/lanes/center", data.launcher.center);
-
-        // Launcher per-lane (right)
         publishLaneData(panels, "launcher/lanes/right", data.launcher.right);
 
         // Intake
@@ -119,6 +170,69 @@ public class FullPanelsFormatter {
         publishColorSensorData(panels, "colorSensor/left", data.intake.laneLeftSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.LEFT));
         publishColorSensorData(panels, "colorSensor/center", data.intake.laneCenterSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.CENTER));
         publishColorSensorData(panels, "colorSensor/right", data.intake.laneRightSummary, data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.RIGHT));
+
+        // =====================================================================
+        // SECTION: LIGHTING STATE
+        // Publishes current lighting state for the Panels Lights widget.
+        // The Lights plugin can visualize goBILDA RGB indicators.
+        // =====================================================================
+        publishLightingState(panels, data);
+    }
+
+    /**
+     * Publish lighting state for the Panels Lights widget.
+     * The widget mirrors the robot's goBILDA RGB indicator lights.
+     *
+     * <p>To use the Lights widget in Panels:</p>
+     * <ol>
+     *   <li>Open Panels and add the Lights plugin</li>
+     *   <li>Configure 3 lights (Left, Center, Right) matching your robot</li>
+     *   <li>The colors will automatically sync with robot state</li>
+     * </ol>
+     */
+    private void publishLightingState(TelemetryManager panels, RobotTelemetryData data) {
+        if (data.lighting == null) {
+            return;
+        }
+
+        // Current pattern being displayed
+        panels.debug("lights/pattern", data.lighting.currentPattern);
+        panels.debug("lights/goalPattern", data.lighting.goalPattern);
+        panels.debug("lights/baseMode", data.lighting.baseMode);
+
+        // Per-lane colors (what's actually being shown)
+        panels.debug("lights/left/color", data.lighting.leftColor);
+        panels.debug("lights/center/color", data.lighting.centerColor);
+        panels.debug("lights/right/color", data.lighting.rightColor);
+
+        // Per-lane servo positions (for Lights widget synchronization)
+        // The Panels Lights widget uses servo positions to determine color
+        panels.debug("lights/left/position", data.lighting.leftPosition);
+        panels.debug("lights/center/position", data.lighting.centerPosition);
+        panels.debug("lights/right/position", data.lighting.rightPosition);
+
+        // Hex colors for visual display (easier to read in telemetry)
+        panels.debug("lights/left/hex", artifactColorToHex(data.lighting.leftColor));
+        panels.debug("lights/center/hex", artifactColorToHex(data.lighting.centerColor));
+        panels.debug("lights/right/hex", artifactColorToHex(data.lighting.rightColor));
+    }
+
+    /**
+     * Convert ArtifactColor to hex color string for display.
+     */
+    private String artifactColorToHex(String colorName) {
+        if (colorName == null) return "#000000";
+        switch (colorName) {
+            case "GREEN":   return "#00FF00";
+            case "PURPLE":  return "#9C27B0";
+            case "RED":     return "#FF0000";
+            case "BLUE":    return "#2196F3";
+            case "WHITE":   return "#FFFFFF";
+            case "YELLOW":  return "#FFEB3B";
+            case "UNKNOWN": return "#FFFFFF"; // White for unknown detected
+            case "NONE":
+            default:        return "#000000"; // Off
+        }
     }
 
     /**
@@ -171,5 +285,92 @@ public class FullPanelsFormatter {
             panels.debug(prefix + "/distance/available", sample.distanceAvailable);
             panels.debug(prefix + "/distance/withinRange", sample.withinDistance);
         }
+    }
+
+    // =========================================================================
+    // HELPER METHODS FOR ORGANIZED TELEMETRY SECTIONS
+    // =========================================================================
+
+    /**
+     * Publish system status summary - the most critical at-a-glance info.
+     * This is designed to give drivers and pit crew immediate insight into robot state.
+     *
+     * <p>These widgets should be pinned to the top of the Panels Telemetry view.</p>
+     */
+    private void publishSystemSummary(TelemetryManager panels, RobotTelemetryData data) {
+        // Launcher ready summary (most important for drivers)
+        boolean leftReady = data.launcher.left.ready;
+        boolean centerReady = data.launcher.center.ready;
+        boolean rightReady = data.launcher.right.ready;
+        boolean allReady = leftReady && centerReady && rightReady;
+        int readyCount = (leftReady ? 1 : 0) + (centerReady ? 1 : 0) + (rightReady ? 1 : 0);
+
+        panels.debug("status/launcher/allReady", allReady);
+        panels.debug("status/launcher/readyCount", readyCount);
+        panels.debug("status/launcher/summary", readyCount + "/3 READY");
+        panels.debug("status/launcher/left", leftReady ? "✓" : "○");
+        panels.debug("status/launcher/center", centerReady ? "✓" : "○");
+        panels.debug("status/launcher/right", rightReady ? "✓" : "○");
+
+        // Intake/artifact status
+        panels.debug("status/artifacts/count", data.intake.artifactCount);
+        panels.debug("status/artifacts/state", data.intake.artifactState);
+        panels.debug("status/intake/mode", data.intake.mode);
+
+        // Gate status (roller/prefeed)
+        panels.debug("status/gate/rollerActive", data.intake.rollerActive);
+        panels.debug("status/gate/position", String.format("%.2f", data.intake.rollerPosition));
+
+        // Vision status
+        panels.debug("status/vision/tagVisible", data.vision.hasTag);
+        panels.debug("status/vision/tagId", data.vision.hasTag ? data.vision.tagId : -1);
+        panels.debug("status/vision/rangeIn", data.vision.hasTag ? String.format("%.1f", data.vision.rangeIn) : "---");
+
+        // Drive status
+        panels.debug("status/drive/mode", data.drive.driveMode);
+        panels.debug("status/drive/aimActive", data.drive.aimMode);
+
+        // Distance to goal
+        panels.debug("status/drive/distanceToGoal_in", String.format("%.1f", data.drive.distanceToGoalIn));
+
+        // Alliance (critical for autonomous)
+        panels.debug("status/alliance", data.context.alliance.name());
+    }
+
+    /**
+     * Publish launcher RPM data formatted for graphing.
+     *
+     * <p>To visualize these in Panels:</p>
+     * <ol>
+     *   <li>Open the Graph plugin in Panels</li>
+     *   <li>Add a new graph</li>
+     *   <li>Select "graph/launcher/left/targetRpm" and "graph/launcher/left/currentRpm"</li>
+     *   <li>Repeat for center and right lanes as needed</li>
+     * </ol>
+     *
+     * <p>The target/current pairs allow you to see how well the flywheel is tracking setpoint.</p>
+     */
+    private void publishLauncherGraphData(TelemetryManager panels, RobotTelemetryData data) {
+        // Left lane - graphable
+        panels.debug("graph/launcher/left/targetRpm", data.launcher.left.targetRpm);
+        panels.debug("graph/launcher/left/currentRpm", data.launcher.left.currentRpm);
+        panels.debug("graph/launcher/left/errorRpm", data.launcher.left.targetRpm - data.launcher.left.currentRpm);
+
+        // Center lane - graphable
+        panels.debug("graph/launcher/center/targetRpm", data.launcher.center.targetRpm);
+        panels.debug("graph/launcher/center/currentRpm", data.launcher.center.currentRpm);
+        panels.debug("graph/launcher/center/errorRpm", data.launcher.center.targetRpm - data.launcher.center.currentRpm);
+
+        // Right lane - graphable
+        panels.debug("graph/launcher/right/targetRpm", data.launcher.right.targetRpm);
+        panels.debug("graph/launcher/right/currentRpm", data.launcher.right.currentRpm);
+        panels.debug("graph/launcher/right/errorRpm", data.launcher.right.targetRpm - data.launcher.right.currentRpm);
+
+        // All lanes combined (average) - useful for overall spin-up visualization
+        double avgTarget = (data.launcher.left.targetRpm + data.launcher.center.targetRpm + data.launcher.right.targetRpm) / 3.0;
+        double avgCurrent = (data.launcher.left.currentRpm + data.launcher.center.currentRpm + data.launcher.right.currentRpm) / 3.0;
+        panels.debug("graph/launcher/avg/targetRpm", avgTarget);
+        panels.debug("graph/launcher/avg/currentRpm", avgCurrent);
+        panels.debug("graph/launcher/avg/errorRpm", avgTarget - avgCurrent);
     }
 }

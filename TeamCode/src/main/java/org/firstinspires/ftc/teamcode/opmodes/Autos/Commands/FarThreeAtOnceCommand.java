@@ -4,6 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.TryRelocalizeForShotCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
@@ -25,7 +26,6 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 @Configurable
 public class FarThreeAtOnceCommand {
 
-    @Configurable
     public static class Config {
         public double maxPathPower = 0.65;
         public double endTimeForLinearHeadingInterpolation = .7;
@@ -33,7 +33,6 @@ public class FarThreeAtOnceCommand {
         public double minTimeForFinalLaunchSeconds = 5.0;
     }
 
-    @Configurable
     public static class Waypoints {
         public double startX = 56;
         public double startY = 5;
@@ -220,6 +219,9 @@ public class FarThreeAtOnceCommand {
 
         return new ParallelDeadlineGroup(
                 mainSequence,
+
+//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
+//                new InstantCommand(()-> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 autoSmartIntake // Run the smart intake the whole time
         );
     }

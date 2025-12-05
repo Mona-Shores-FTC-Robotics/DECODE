@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.drive.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Vision relocalization agreement thresholds (MT1 vs MT2).
  * Kept separate from aim assist so tuning stays discoverable.
  */
-@Configurable
 public class DriveVisionRelocalizeConfig {
     /** Distance threshold for MT1 vs MT2 agreement (inches) */
     public double MT2DistanceThreshold = 12.0;

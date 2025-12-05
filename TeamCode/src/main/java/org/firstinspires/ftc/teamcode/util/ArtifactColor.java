@@ -10,13 +10,11 @@ public enum ArtifactColor {
     GREEN,
     /** Purple artifact detected */
     PURPLE,
-    /** Unknown artifact color (for range-based classifier gap zones) */
-    UNKNOWN,
-    /** Background/empty space detected (sensor working, no artifact present) */
-    BACKGROUND;
+    /** Unknown artifact color (legacy - kept for compatibility) */
+    UNKNOWN;
 
     public boolean isKnown() {
-        return this != NONE && this != UNKNOWN && this != BACKGROUND;
+        return this != NONE && this != UNKNOWN;
     }
 
     /**

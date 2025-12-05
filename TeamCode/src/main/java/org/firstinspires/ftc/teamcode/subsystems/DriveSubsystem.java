@@ -56,6 +56,9 @@ public class DriveSubsystem implements Subsystem {
     }
     private VisionCalibrationState visionState = HEADING_UNKNOWN;
 
+    // Active robot indicator
+    public static String ACTIVE_ROBOT = RobotState.getRobotName();
+
     // Global configuration instances
     public static DriveTeleOpConfig teleOpDriveConfig = new DriveTeleOpConfig();
     public static DriveAimAssistConfig aimAssistConfig = new DriveAimAssistConfig();
@@ -63,31 +66,28 @@ public class DriveSubsystem implements Subsystem {
     public static DriveRampConfig rampConfig = new DriveRampConfig();
     public static DriveVisionRelocalizeConfig visionRelocalizeConfig = new DriveVisionRelocalizeConfig();
 
-    // Robot-specific configs - visible in Panels for tuning
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig19429 = createFixedAngleAimConfig19429();
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig20245 = createFixedAngleAimConfig20245();
+    // Robot-specific fixed angle aim configs - visible in Panels for tuning
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig_Robot19429 = createFixedAngleAimConfig19429();
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig_Robot20245 = createFixedAngleAimConfig20245();
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
 
     /**
      * Helper to create 19429-specific fixed angle aim configuration.
+     * Currently uses all default values - both robots have identical aiming tuning.
      */
     private static DriveFixedAngleAimConfig createFixedAngleAimConfig19429() {
         DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
-        config.blueHeadingDeg = 135.2; // Match 20245 (closer to tuned value)
-        config.redHeadingDeg = 45.2;
-        config.kP = 0.5;               // Match 20245 for more predictable aim response
-        config.kMaxTurn = 0.7;
+        // No overrides needed - using shared defaults
         return config;
     }
 
     /**
      * Helper to create 20245-specific fixed angle aim configuration.
+     * Currently uses all default values - both robots have identical aiming tuning.
      */
     private static DriveFixedAngleAimConfig createFixedAngleAimConfig20245() {
         DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
-        config.blueHeadingDeg = 135.2;
-        config.redHeadingDeg = 45.2;
-        config.kP = 0.5;
-        config.kMaxTurn = 0.7;
+        // No overrides needed - using shared defaults
         return config;
     }
 
@@ -99,31 +99,28 @@ public class DriveSubsystem implements Subsystem {
         return org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
     }
 
-    // Robot-specific configs for right trigger fixed angle aiming - visible in Panels for tuning
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig19429 = createRightTriggerFixedAngleConfig19429();
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig20245 = createRightTriggerFixedAngleConfig20245();
+    // Robot-specific right trigger fixed angle aim configs - visible in Panels for tuning
+    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_Robot19429 = createRightTriggerFixedAngleConfig19429();
+    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_Robot20245 = createRightTriggerFixedAngleConfig20245();
+    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotConfigs.getRightTriggerFixedAngleConfig();
 
     /**
      * Helper to create 19429-specific right trigger fixed angle aim configuration.
+     * Currently uses all default values - both robots have identical tuning.
      */
     private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig19429() {
         DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
-        config.blueParkHeadingDeg = 265.0;
-        config.redParkHeadingDeg = 275.0;
-        config.kP = 0.5;
-        config.kMaxTurn = 0.7;
+        // No overrides needed - using shared defaults
         return config;
     }
 
     /**
      * Helper to create 20245-specific right trigger fixed angle aim configuration.
+     * Currently uses all default values - both robots have identical tuning.
      */
     private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig20245() {
         DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
-        config.blueParkHeadingDeg = 265.0;
-        config.redParkHeadingDeg = 275.0;
-        config.kP = 0.5;
-        config.kMaxTurn = 0.7;
+        // No overrides needed - using shared defaults
         return config;
     }
 

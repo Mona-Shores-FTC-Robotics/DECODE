@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 @Configurable
 public class DecodeTeleOp extends NextFTCOpMode {
 
-    @Configurable
     public static class EndgameConfig {
         /** Seconds remaining when auto-switch to DECODE mode triggers */
         public double decodeModeSwitchSecondsRemaining = 30.0;
@@ -74,6 +73,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         robot = new Robot(hardwareMap);
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
+        robot.telemetry.startSession();
 
         // Apply alliance from previous OpMode (auto) before initializing
         // so lighting subsystem shows correct color from the start
@@ -195,12 +195,16 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+        // Cancel all scheduled commands first to prevent them from running during cleanup
+        CommandManager.INSTANCE.cancelAll();
+
         BindingManager.reset();
         robot.drive.stop();
         robot.launcher.abort();
         robot.intake.stop();
         robot.intake.deactivateRoller();
-        robot.lighting.indicateIdle();
+        robot.vision.stop();
+        robot.lighting.stop();
         if (allianceSelector != null) {
             allianceSelector.unlockSelection();
         }

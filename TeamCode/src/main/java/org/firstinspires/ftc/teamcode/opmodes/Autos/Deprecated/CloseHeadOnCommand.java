@@ -35,14 +35,12 @@ import dev.nextftc.extensions.pedro.FollowPath;
 @Configurable
 public class CloseHeadOnCommand {
 
-    @Configurable
     public static class Config {
         public double maxPathPower = 0.79;
         public double intakeDelaySeconds = 2.5;
         public double endTimeForLinearHeadingInterpolation = .7;
     }
 
-    @Configurable
     public static class Waypoints {
         public double startX = 27.5;
         public double startY = 128.5;

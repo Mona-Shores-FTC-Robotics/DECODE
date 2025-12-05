@@ -360,11 +360,16 @@ public class DecodeAutonomousFarTogether extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+        // Cancel all scheduled commands first to prevent them from running during cleanup
+        CommandManager.INSTANCE.cancelAll();
+
         allianceSelector.unlockSelection();
         BindingManager.reset();
         robot.launcher.abort();
         robot.drive.stop();
+        robot.intake.stop();
         robot.vision.stop();
+        robot.lighting.stop();
 
         // Save final pose for TeleOp transition
         RobotState.setHandoffPose(robot.drive.getFollower().getPose());

@@ -98,9 +98,9 @@ public class RobotConfigs {
     public static DriveFixedAngleAimConfig getFixedAngleAimConfig() {
         String robotName = RobotState.getRobotName();
         if ("DECODE_19429".equals(robotName)) {
-            return DriveSubsystem.fixedAngleAimConfig19429;
+            return DriveSubsystem.fixedAngleAimConfig_Robot19429;
         } else {
-            return DriveSubsystem.fixedAngleAimConfig20245;
+            return DriveSubsystem.fixedAngleAimConfig_Robot20245;
         }
     }
 
@@ -112,9 +112,9 @@ public class RobotConfigs {
     public static DriveRightTriggerFixedAngleConfig getRightTriggerFixedAngleConfig() {
         String robotName = RobotState.getRobotName();
         if ("DECODE_19429".equals(robotName)) {
-            return DriveSubsystem.rightTriggerFixedAngleConfig19429;
+            return DriveSubsystem.rightTriggerFixedAngleConfig_Robot19429;
         } else {
-            return DriveSubsystem.rightTriggerFixedAngleConfig20245;
+            return DriveSubsystem.rightTriggerFixedAngleConfig_Robot20245;
         }
     }
 

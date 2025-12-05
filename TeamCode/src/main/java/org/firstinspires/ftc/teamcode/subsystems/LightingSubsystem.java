@@ -59,6 +59,9 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         ALLIANCE
     }
 
+    // Active robot indicator
+    public static String ACTIVE_ROBOT = RobotState.getRobotName();
+
     // Global configuration instances
     public static LightingIndicatorConfig indicatorConfig = new LightingIndicatorConfig();
     public static LightingColorPositionConfig colorPositionConfig = new LightingColorPositionConfig();
@@ -122,6 +125,19 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         renderCurrentPattern(nowMs);
 
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    /**
+     * Stops the lighting subsystem and turns off all indicators.
+     * Should be called when the OpMode ends to ensure clean shutdown.
+     */
+    public void stop() {
+        currentPattern = LightingPattern.OFF;
+        goalPattern = LightingPattern.OFF;
+        patternExpirationMs = 0L;
+        followSensorColors = false;
+        resetLaneColors();
+        renderOff();
     }
 
     /**
@@ -416,7 +432,6 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             case PURPLE:  return clamp01(colorPositionConfig.purplePosition);
             case UNKNOWN: return clamp01(colorPositionConfig.whitePosition);
             case NONE:
-            case BACKGROUND:
             default:      return followSensorColors ? clamp01(colorPositionConfig.offPosition) : fallbackPosition();
         }
     }

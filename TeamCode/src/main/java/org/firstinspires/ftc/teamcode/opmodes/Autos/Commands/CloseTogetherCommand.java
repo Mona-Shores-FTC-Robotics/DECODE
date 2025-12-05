@@ -288,6 +288,9 @@ public class CloseTogetherCommand {
 
         return new ParallelDeadlineGroup(
                 mainSequence,
+
+//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
+//                new InstantCommand(()-> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 autoSmartIntake // Run the smart intake the whole time
         );
     }

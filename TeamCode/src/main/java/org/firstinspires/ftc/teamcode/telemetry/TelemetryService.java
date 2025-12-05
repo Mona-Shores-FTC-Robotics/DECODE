@@ -5,6 +5,7 @@ import android.os.SystemClock;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.bylazar.telemetry.TelemetryManager;
+import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
@@ -157,10 +158,48 @@ public class TelemetryService {
             fullPanelsFormatter.publish(panelsTelemetry, data);
         }
 
-        // 3. Driver station telemetry (skip if autonomous and driver controls hidden)
+        // 3. Panels Field drawing - DISABLED
+        // This was causing Panels to take 3-6 minutes to load due to high WiFi traffic
+        // from sending robot pose drawings every loop. Re-enable if needed for debugging.
+        // if (sessionActive && drive != null) {
+        //     publishPanelsFieldDrawing(drive, data);
+        // }
+
+        // 4. Driver station telemetry (skip if autonomous and driver controls hidden)
         if (dsTelemetry != null && !isAutonomous) {
             publishDriverStationTelemetry(dsTelemetry, data, level);
         }
+    }
+
+    /**
+     * Draw robot pose(s) on the Panels Field plugin.
+     * Shows odometry pose (blue), vision pose (green), and pose history.
+     */
+    private void publishPanelsFieldDrawing(DriveSubsystem drive, RobotTelemetryData data) {
+        Follower follower = drive.getFollower();
+        if (follower == null) {
+            return;
+        }
+
+        // Get odometry pose
+        Pose odometryPose = follower.getPose();
+
+        // Get vision pose (if available)
+        Pose visionPose = null;
+        if (data.pose.visionPoseValid) {
+            visionPose = new Pose(
+                    data.pose.visionPoseXIn,
+                    data.pose.visionPoseYIn,
+                    data.pose.visionHeadingRad
+            );
+        }
+
+        // Draw based on telemetry level
+        TelemetrySettings.TelemetryLevel level = TelemetrySettings.config.level;
+        boolean includeHistory = (level == TelemetrySettings.TelemetryLevel.DEBUG);
+
+        // Use the comprehensive field view drawing
+        PanelsBridge.drawFieldView(odometryPose, visionPose, includeHistory, follower);
     }
 
     /**

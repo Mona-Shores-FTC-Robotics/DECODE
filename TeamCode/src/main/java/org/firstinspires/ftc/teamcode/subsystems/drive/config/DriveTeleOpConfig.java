@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.drive.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * TeleOp drive control configuration.
  * Controls drive power multipliers and turn rates for normal and slow modes.
  */
-@Configurable
 public class DriveTeleOpConfig {
     /** Max power multiplier for normal (non-slow) teleop driving (0.0-1.0) */
     public double normalMultiplier = 0.7;
