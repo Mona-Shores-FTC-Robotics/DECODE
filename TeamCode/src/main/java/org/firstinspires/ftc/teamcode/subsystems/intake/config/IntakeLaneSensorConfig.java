@@ -170,12 +170,12 @@ public class IntakeLaneSensorConfig {
 
     private static LanePresenceConfig createLanePresenceConfig19429() {
         LanePresenceConfig config = new LanePresenceConfig();
-        config.leftEnterDistanceCm = 4.9;
-        config.leftExitDistanceCm = 5.3;
+        config.leftEnterDistanceCm = 8;
+        config.leftExitDistanceCm = 10;
         config.centerEnterDistanceCm = 6.7;
         config.centerExitDistanceCm = 7.3;
-        config.rightEnterDistanceCm = 10;
-        config.rightExitDistanceCm = 11;
+        config.rightEnterDistanceCm = 5.3;
+        config.rightExitDistanceCm = 4.8;
         return config;
     }
 
