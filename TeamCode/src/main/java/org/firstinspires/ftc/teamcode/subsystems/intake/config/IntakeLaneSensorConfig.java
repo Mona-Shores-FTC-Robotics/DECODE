@@ -66,13 +66,13 @@ public class IntakeLaneSensorConfig {
         /** Minimum confidence required to accept a new artifact color classification */
         public double minConfidenceToAccept = .2;
         /** Number of consecutive confident samples required before updating lane color */
-        public int consecutiveConfirmationsRequired = 1;
+        public int consecutiveConfirmationsRequired = 2;
         /** Number of consecutive non-artifact samples required before clearing lane color (helps with whiffle ball holes) */
         public int consecutiveClearConfirmationsRequired = 2;
         /** Keep-alive duration (ms) - keep artifact detection alive after last good reading (helps with whiffle ball holes) */
-        public double keepAliveMs = 400.0;
+        public double keepAliveMs = 150.0;
         /** Distance clearance margin (cm) - how far beyond exit threshold to instantly clear (helps artifacts clear quickly when removed) */
-        public double distanceClearanceMarginCm = .7;
+        public double distanceClearanceMarginCm = .45;
     }
 
     public static class Quality {
@@ -153,12 +153,12 @@ public class IntakeLaneSensorConfig {
 
     private static LanePresenceConfig createLanePresenceConfig19429() {
         LanePresenceConfig config = new LanePresenceConfig();
-        config.leftEnterDistanceCm = 4.5;
-        config.leftExitDistanceCm = 5.1;
-        config.centerEnterDistanceCm = 8.2;
-        config.centerExitDistanceCm = 9.2;
-        config.rightEnterDistanceCm = 12.5;
-        config.rightExitDistanceCm = 13.3;
+        config.leftEnterDistanceCm = 4.9;
+        config.leftExitDistanceCm = 5.3;
+        config.centerEnterDistanceCm = 6.7;
+        config.centerExitDistanceCm = 7.3;
+        config.rightEnterDistanceCm = 10;
+        config.rightExitDistanceCm = 11;
         return config;
     }
 

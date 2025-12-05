@@ -19,7 +19,7 @@ public class AutoSmartIntakeCommand extends IntakeCommand {
 
     public static class AutoSmartIntakeConfig {
         /** Count (or isFull) threshold to consider intake full */
-        public int fullCountThreshold = 2;
+        public int fullCountThreshold = 3;
         /** Count threshold to resume forward after auto-reverse */
         public int resumeCountThreshold = 1;
         /** Debounce before switching to reverse after full (ms) */
