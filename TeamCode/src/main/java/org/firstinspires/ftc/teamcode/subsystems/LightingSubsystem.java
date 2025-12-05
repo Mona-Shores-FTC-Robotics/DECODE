@@ -128,6 +128,19 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     /**
+     * Stops the lighting subsystem and turns off all indicators.
+     * Should be called when the OpMode ends to ensure clean shutdown.
+     */
+    public void stop() {
+        currentPattern = LightingPattern.OFF;
+        goalPattern = LightingPattern.OFF;
+        patternExpirationMs = 0L;
+        followSensorColors = false;
+        resetLaneColors();
+        renderOff();
+    }
+
+    /**
      * Updates the goal pattern based on current robot state.
      * Does NOT directly change what's displayed - priority resolution handles that.
      */

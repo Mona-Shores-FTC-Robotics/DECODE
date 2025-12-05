@@ -195,12 +195,16 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+        // Cancel all scheduled commands first to prevent them from running during cleanup
+        CommandManager.INSTANCE.cancelAll();
+
         BindingManager.reset();
         robot.drive.stop();
         robot.launcher.abort();
         robot.intake.stop();
         robot.intake.deactivateRoller();
-        robot.lighting.indicateIdle();
+        robot.vision.stop();
+        robot.lighting.stop();
         if (allianceSelector != null) {
             allianceSelector.unlockSelection();
         }
