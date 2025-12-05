@@ -29,7 +29,6 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 @Configurable
 public class SmartIntakeCommand extends IntakeCommand {
 
-    @Configurable
     public static class SmartIntakeConfig {
         /**
          * Continue intaking for this duration AFTER isFull() becomes true.

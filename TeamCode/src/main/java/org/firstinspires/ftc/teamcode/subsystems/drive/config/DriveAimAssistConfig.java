@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.drive.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Aim assist configuration for geometry-based targeting.
  * Controls how the robot rotates to face a target based on field position.
  */
-@Configurable
 public class DriveAimAssistConfig {
     /** Proportional gain for geometry-based aiming when error is large */
     public double kP = .65;

@@ -44,6 +44,13 @@ public final class TelemetrySettings {
         /** Active telemetry level - change via FTC Dashboard */
         public TelemetryLevel level = TelemetryLevel.DEBUG;
 
+        /**
+         * KILL SWITCH: Set to false to completely disable all Panels debug() calls.
+         * Use this if Panels is slow to connect or causing performance issues.
+         * This overrides all other settings.
+         */
+        public boolean enablePanelsDebugCalls = true;
+
         /** Enable FTC Dashboard packet sending (overridden by level) */
         public boolean enableDashboardPackets = true;
 
@@ -78,8 +85,13 @@ public final class TelemetrySettings {
 
     /**
      * Get effective FullPanels telemetry state based on telemetry level.
+     * Check enablePanelsDebugCalls first as a kill switch.
      */
     public static boolean shouldSendFullPanels() {
+        // Kill switch - if disabled, never send
+        if (!config.enablePanelsDebugCalls) {
+            return false;
+        }
         if (config.level == TelemetryLevel.MATCH) {
             return false; // Never send in MATCH mode
         }
