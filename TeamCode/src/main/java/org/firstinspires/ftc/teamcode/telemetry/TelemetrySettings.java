@@ -42,7 +42,7 @@ public final class TelemetrySettings {
     @Configurable
     public static class Config {
         /** Active telemetry level - change via FTC Dashboard */
-        public TelemetryLevel level = TelemetryLevel.MATCH;
+        public TelemetryLevel level = TelemetryLevel.PRACTICE;
 
         /**
          * KILL SWITCH: Set to false to completely disable all Panels debug() calls.

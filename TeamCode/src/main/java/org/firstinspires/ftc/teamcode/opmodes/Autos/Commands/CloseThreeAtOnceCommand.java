@@ -6,6 +6,7 @@ import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -13,6 +14,7 @@ import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.core.commands.utility.InstantCommand;
 
 /**
  * Generated autonomous command from Pedro Pathing .pp file
@@ -243,6 +245,8 @@ public class CloseThreeAtOnceCommand {
 
         return new ParallelDeadlineGroup(
                 mainSequence,
+//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
+//                new InstantCommand(()-> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
                 autoSmartIntake // Run the smart intake the whole time
         );
     }
