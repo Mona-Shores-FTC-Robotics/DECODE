@@ -8,7 +8,7 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 
 /**
  * Autonomous-oriented smart intake:
- * - Run forward until 3 artifacts are detected
+ * - Run forward until 2 artifacts are detected
  * - Debounce, then auto-reverse to avoid jamming
  * - When count drops below the resume threshold, debounce and return to forward
  *
@@ -20,7 +20,7 @@ public class AutoSmartIntakeCommand extends IntakeCommand {
     @Configurable
     public static class AutoSmartIntakeConfig {
         /** Count (or isFull) threshold to consider intake full */
-        public int fullCountThreshold = 3;
+        public int fullCountThreshold = 2;
         /** Count threshold to resume forward after auto-reverse */
         public int resumeCountThreshold = 1;
         /** Debounce before switching to reverse after full (ms) */
