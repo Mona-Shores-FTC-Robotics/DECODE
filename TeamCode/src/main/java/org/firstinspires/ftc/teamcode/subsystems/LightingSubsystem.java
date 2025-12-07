@@ -135,7 +135,13 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         patternExpirationMs = 0L;
         followSensorColors = false;
         resetLaneColors();
-        renderOff();
+        // Wrap hardware operations in try-catch to prevent "expansion hub stopped responding"
+        // errors during OpMode shutdown when the hub communication is already terminating
+        try {
+            renderOff();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
     }
 
     /**
