@@ -147,7 +147,15 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
 
     @Override
     public void onStop() {
-        // Cancel all scheduled commands first to prevent them from running during cleanup
+        // Save final pose for TeleOp transition FIRST, before any shutdown operations
+        // This gives us the best chance of capturing the pose before hub communication issues
+        try {
+            RobotState.setHandoffPose(robot.drive.getFollower().getPose());
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+
+        // Cancel all scheduled commands to prevent them from running during cleanup
         CommandManager.INSTANCE.cancelAll();
 
         allianceSelector.unlockSelection();
@@ -178,13 +186,6 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
         }
         try {
             robot.lighting.stop();
-        } catch (Exception ignored) {
-            // Ignore exceptions during shutdown
-        }
-
-        // Save final pose for TeleOp transition
-        try {
-            RobotState.setHandoffPose(robot.drive.getFollower().getPose());
         } catch (Exception ignored) {
             // Ignore exceptions during shutdown
         }
