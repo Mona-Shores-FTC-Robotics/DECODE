@@ -35,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.util.MovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -161,6 +162,7 @@ public class IntakeSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, NormalizedColorSensor> laneSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, DistanceSensor> laneDistanceSensors = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, MovingAverageFilter> laneDistanceFilters = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, LaneSample> laneSamples = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Boolean> lanePresenceState = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneCandidateColor = new EnumMap<>(LauncherLane.class);
@@ -220,6 +222,8 @@ public class IntakeSubsystem implements Subsystem {
             laneCandidateCount.put(lane, 0);
             laneLastGoodDetectionMs.put(lane, 0.0);
             laneClearCandidateCount.put(lane, 0);
+            // Initialize distance filters with configured window size
+            laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
         }
         bindLaneSensors(hardwareMap);
     }
@@ -234,6 +238,8 @@ public class IntakeSubsystem implements Subsystem {
             laneCandidateCount.put(lane, 0);
             laneLastGoodDetectionMs.put(lane, 0.0);
             laneClearCandidateCount.put(lane, 0);
+            // Reset distance filters (recreate with current config in case window size changed)
+            laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
         }
         sensorTimer.reset();
         intakeMode = IntakeMode.STOPPED;
@@ -682,9 +688,21 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         boolean distanceAvailable = distanceSensor != null;
+        double rawDistanceCm = Double.NaN;
         double distanceCm = Double.NaN;
         if (distanceAvailable) {
-            distanceCm = distanceSensor.getDistance(DistanceUnit.CM);
+            rawDistanceCm = distanceSensor.getDistance(DistanceUnit.CM);
+            // Apply moving average filter if enabled
+            if (laneSensorConfig.distanceFilter.enableFilter) {
+                MovingAverageFilter filter = laneDistanceFilters.get(lane);
+                if (filter != null) {
+                    distanceCm = filter.calculate(rawDistanceCm);
+                } else {
+                    distanceCm = rawDistanceCm;
+                }
+            } else {
+                distanceCm = rawDistanceCm;
+            }
         }
 
         boolean distanceValid = distanceAvailable && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
@@ -755,6 +773,7 @@ public class IntakeSubsystem implements Subsystem {
 
         // Publish raw sensor metrics every poll so we can see empty vs artifact behavior even when classification fails
         RobotState.packet.put("intake/sample/" + lanePrefix + "/sensor_present", true);
+        RobotState.packet.put("intake/sample/" + lanePrefix + "/distance_raw_cm", distanceAvailable ? rawDistanceCm : Double.NaN);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/distance_cm", distanceValid ? distanceCm : Double.NaN);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/within_distance", withinDistance);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_r", scaledRed);

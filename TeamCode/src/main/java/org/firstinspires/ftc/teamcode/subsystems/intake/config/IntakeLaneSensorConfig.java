@@ -21,6 +21,7 @@ public class IntakeLaneSensorConfig {
     // Groups below are shown as collapsible sections in @Configurable UI
     public Polling polling = new Polling();
     public Hardware hardware = new Hardware();
+    public DistanceFilter distanceFilter = new DistanceFilter();
     public Gating gating = new Gating();
     public Quality quality = new Quality();
     public Presence presence = new Presence();
@@ -44,6 +45,18 @@ public class IntakeLaneSensorConfig {
         public boolean overrideSensorGain = true;
         /** Gain applied when overrideSensorGain is true (REV Color Sensor V3 typical range ~1-10) */
         public double sensorGain = 20.0;
+    }
+
+    public static class DistanceFilter {
+        /** Enable moving average filtering for distance sensor readings */
+        public boolean enableFilter = true;
+        /**
+         * Number of samples to average for the moving average filter.
+         * Higher values = more smoothing but slower response.
+         * Recommended: 3-5 for good balance of smoothing and responsiveness.
+         * At 150ms sample period: 3 samples = 450ms window, 5 samples = 750ms window.
+         */
+        public int windowSize = 4;
     }
 
     public static class Gating {
