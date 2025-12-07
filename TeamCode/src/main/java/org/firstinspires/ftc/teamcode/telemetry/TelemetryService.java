@@ -4,14 +4,11 @@ import android.os.SystemClock;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import com.bylazar.telemetry.TelemetryManager;
-import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
-import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -20,7 +17,6 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.formatters.DashboardFormatter;
 import org.firstinspires.ftc.teamcode.telemetry.formatters.DriverStationFormatter;
-import org.firstinspires.ftc.teamcode.telemetry.formatters.FullPanelsFormatter;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -42,9 +38,7 @@ public class TelemetryService {
     private final FtcDashboard dashboard;
     private final DriverStationFormatter driverStationFormatter;
     private final DashboardFormatter dashboardFormatter;
-    private final FullPanelsFormatter fullPanelsFormatter;
 
-    private TelemetryManager panelsTelemetry;
     private boolean sessionActive = false;
     private long lastDashboardPacketMs = 0L;
 
@@ -55,7 +49,6 @@ public class TelemetryService {
         this.dashboard = TelemetrySettings.enableDashboardTelemetry ? safelyGetDashboard() : null;
         this.driverStationFormatter = new DriverStationFormatter();
         this.dashboardFormatter = new DashboardFormatter();
-        this.fullPanelsFormatter = new FullPanelsFormatter();
     }
 
     /**
@@ -63,7 +56,6 @@ public class TelemetryService {
      */
     public void startSession() {
         if (!sessionActive) {
-            panelsTelemetry = PanelsBridge.preparePanels();
             sessionActive = true;
         }
     }
@@ -73,7 +65,6 @@ public class TelemetryService {
      */
     public void stopSession() {
         if (sessionActive) {
-            panelsTelemetry = null;
             sessionActive = false;
         }
     }
@@ -92,7 +83,6 @@ public class TelemetryService {
      * @param intake Intake subsystem
      * @param vision Vision subsystem
      * @param lighting Lighting subsystem (may be null)
-     * @param launcherCoordinator Launcher coordinator (for artifact tracking)
      * @param driveRequest Current drive request from bindings (may be null)
      * @param gamepad1 Driver gamepad (may be null)
      * @param gamepad2 Operator gamepad (may be null)
@@ -153,53 +143,10 @@ public class TelemetryService {
         // 1. FTC Dashboard packets (throttled based on level)
         publishDashboardTelemetry(data, level);
 
-        // 2. FullPanels telemetry (DEBUG mode only)
-        if (TelemetrySettings.shouldSendFullPanels() && panelsTelemetry != null) {
-            fullPanelsFormatter.publish(panelsTelemetry, data);
-        }
-
-        // 3. Panels Field drawing - DISABLED
-        // This was causing Panels to take 3-6 minutes to load due to high WiFi traffic
-        // from sending robot pose drawings every loop. Re-enable if needed for debugging.
-        // if (sessionActive && drive != null) {
-        //     publishPanelsFieldDrawing(drive, data);
-        // }
-
-        // 4. Driver station telemetry (skip if autonomous and driver controls hidden)
+        // 3. Driver station telemetry (skip if autonomous and driver controls hidden)
         if (dsTelemetry != null && !isAutonomous) {
             publishDriverStationTelemetry(dsTelemetry, data, level);
         }
-    }
-
-    /**
-     * Draw robot pose(s) on the Panels Field plugin.
-     * Shows odometry pose (blue), vision pose (green), and pose history.
-     */
-    private void publishPanelsFieldDrawing(DriveSubsystem drive, RobotTelemetryData data) {
-        Follower follower = drive.getFollower();
-        if (follower == null) {
-            return;
-        }
-
-        // Get odometry pose
-        Pose odometryPose = follower.getPose();
-
-        // Get vision pose (if available)
-        Pose visionPose = null;
-        if (data.pose.visionPoseValid) {
-            visionPose = new Pose(
-                    data.pose.visionPoseXIn,
-                    data.pose.visionPoseYIn,
-                    data.pose.visionHeadingRad
-            );
-        }
-
-        // Draw based on telemetry level
-        TelemetrySettings.TelemetryLevel level = TelemetrySettings.config.level;
-        boolean includeHistory = (level == TelemetrySettings.TelemetryLevel.DEBUG);
-
-        // Use the comprehensive field view drawing
-        PanelsBridge.drawFieldView(odometryPose, visionPose, includeHistory, follower);
     }
 
     /**

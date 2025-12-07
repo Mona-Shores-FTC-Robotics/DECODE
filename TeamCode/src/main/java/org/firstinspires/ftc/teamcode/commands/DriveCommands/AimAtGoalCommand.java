@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.DriveCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import dev.nextftc.core.commands.Command;
 
 import com.pedropathing.geometry.Pose;
@@ -21,7 +20,6 @@ import java.util.Objects;
  * Unlike CaptureAndAimCommand which uses Pedro's turnTo() (which can get stuck),
  * this uses a proven continuous tracking approach that's already working in TeleOp.
  */
-@Configurable
 public class AimAtGoalCommand extends Command {
 
     public static class Config {

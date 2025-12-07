@@ -2,16 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 
 /**
  * Feeder (kicker) configuration for launcher servos.
- *
- * Configuration Pattern:
- * - Values with defaults are SHARED across both robots (same hardware/behavior)
- * - Values without defaults are ROBOT-SPECIFIC (tune per robot in Dashboard)
- * - If you edit a value with a default here and nothing changes, check if it's
- *   being overridden in the robot-specific create methods below
- *
- * This config CORRECTLY follows best practices:
- * - Hardware names and timing have defaults (shared)
- * - Servo positions have NO defaults (robot-specific - vary significantly)
+ * Contains base configuration and robot-specific instances.
  */
 public class LauncherFeederConfig {
     public LeftFeederConfig left = new LeftFeederConfig();
@@ -19,66 +10,32 @@ public class LauncherFeederConfig {
     public RightFeederConfig right = new RightFeederConfig();
 
     public static class CenterFeederConfig {
-        // SHARED - hardware name same for both robots
         public String servoName = "feeder_center";
-
-        // SHARED - servo direction same for both robots (based on mounting)
         public boolean reversed = false;
-
-        // SHARED - hold time same for both robots
         public double holdMs = 1000;
 
-        // ROBOT-SPECIFIC - servo positions differ significantly between robots
-        /** Servo position for loading artifact into feeder */
         public double loadPosition;
-
-        /** Servo position for pinching artifact (pre-fire) */
         public double pinchPosition;
-
-        /** Servo position for firing artifact */
         public double firePosition;
     }
 
-
     public static class LeftFeederConfig {
-        // SHARED - hardware name same for both robots
         public String servoName = "feeder_left";
-
-        // SHARED - servo direction same for both robots (based on mounting)
         public boolean reversed = false;
-
-        // SHARED - hold time same for both robots
         public double holdMs = 1000;
 
-        // ROBOT-SPECIFIC - servo positions differ significantly between robots
-        /** Servo position for loading artifact into feeder */
         public double loadPosition;
-
-        /** Servo position for pinching artifact (pre-fire) */
         public double pinchPosition;
-
-        /** Servo position for firing artifact */
         public double firePosition;
     }
 
     public static class RightFeederConfig {
-        // SHARED - hardware name same for both robots
         public String servoName = "feeder_right";
-
-        // SHARED - servo direction same for both robots (based on mounting)
         public boolean reversed = false;
-
-        // SHARED - hold time same for both robots
         public double holdMs = 1000;
 
-        // ROBOT-SPECIFIC - servo positions differ significantly between robots
-        /** Servo position for loading artifact into feeder */
         public double loadPosition;
-
-        /** Servo position for pinching artifact (pre-fire) */
         public double pinchPosition;
-
-        /** Servo position for firing artifact */
         public double firePosition;
     }
 

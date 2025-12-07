@@ -4,7 +4,6 @@ import static org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.IntakeMo
 
 import android.graphics.Color;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -43,7 +42,6 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * Hardware-facing intake wrapper. Handles motor power, roller servo, and lane sensor sampling
  * while higher-level coordinators decide what the subsystem should do.
  */
-@Configurable
 public class IntakeSubsystem implements Subsystem {
 
     public enum IntakeMode {

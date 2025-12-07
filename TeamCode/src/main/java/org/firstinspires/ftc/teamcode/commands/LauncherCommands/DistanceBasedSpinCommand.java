@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.Range;
@@ -28,7 +27,6 @@ import dev.nextftc.core.commands.Command;
  * Uses AprilTag vision for distance measurement, falls back to odometry if unavailable.
  * RPM is interpolated using the shared preset short/mid/long RPM anchors and configurable distance breakpoints.
  */
-@Configurable
 public class DistanceBasedSpinCommand extends Command {
 
     public static class DiagnosticData {

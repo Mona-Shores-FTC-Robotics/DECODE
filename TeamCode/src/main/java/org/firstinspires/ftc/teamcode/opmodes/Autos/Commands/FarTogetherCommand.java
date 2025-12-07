@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -23,7 +22,6 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
  *   CommandManager.INSTANCE.scheduleCommand(auto);
  * 
  */
-@Configurable
 public class FarTogetherCommand {
 
     public static class Config {

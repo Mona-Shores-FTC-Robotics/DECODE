@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.util;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -12,7 +11,6 @@ import java.util.EnumMap;
  * Shared field geometry used by autonomous routines. Provides Pedro-aligned poses for key waypoints
  * and mirrors them automatically for the red alliance.
  */
-@Configurable
 public final class AutoField {
 
     private AutoField() {
@@ -38,8 +36,6 @@ public final class AutoField {
         MOVE_TO_GATE
         }
 
-
-@Configurable
 public static class Waypoints {
 
         public double startFarX = 56;

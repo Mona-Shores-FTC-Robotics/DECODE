@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Deprecated;
 
 import static org.firstinspires.ftc.teamcode.util.AutoField.poseForAlliance;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
@@ -14,7 +13,6 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.pedroPathing.PanelsBridge;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
@@ -57,7 +55,6 @@ import dev.nextftc.ftc.components.BulkReadComponent;
  * - Sequential scoring and collection routines
  */
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "OPEN GATE Auto - Close", group = "Command")
-@Configurable
 @Disabled
 public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
 
@@ -414,12 +411,6 @@ public class OPEN_GATE_AUTO_Close extends NextFTCOpMode {
         Pose startPose = currentLayout.pose(FieldPoint.START_CLOSE);
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
-    }
-
-    private void drawPreviewForAlliance(Alliance alliance) {
-        FieldLayout layout = AutoField.layoutForAlliance(alliance);
-        // Preview paths would be drawn here using PanelsBridge
-        PanelsBridge.drawPreview(new PathChain[0], layout.pose(FieldPoint.START_CLOSE), alliance == Alliance.RED);
     }
 
     /**

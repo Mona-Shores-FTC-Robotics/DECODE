@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode.telemetry;
 
-import com.bylazar.configurables.annotations.Configurable;
-
-@Configurable
 public final class TelemetrySettings {
     private TelemetrySettings() {}
 
@@ -39,7 +36,6 @@ public final class TelemetrySettings {
         DEBUG
     }
 
-    @Configurable
     public static class Config {
         /** Active telemetry level - change via FTC Dashboard */
         public TelemetryLevel level = TelemetryLevel.PRACTICE;

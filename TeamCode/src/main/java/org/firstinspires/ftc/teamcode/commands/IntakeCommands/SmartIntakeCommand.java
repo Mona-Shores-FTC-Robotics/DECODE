@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.IntakeCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -26,7 +25,6 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * runIntake.whenBecomesFalse(reverseCommand);
  * </pre>
  */
-@Configurable
 public class SmartIntakeCommand extends IntakeCommand {
 
     public static class SmartIntakeConfig {

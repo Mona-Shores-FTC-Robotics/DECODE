@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import dev.nextftc.core.commands.Command;
@@ -50,7 +49,6 @@ import java.util.Objects;
  * - Groups: [[P], [G], [P]]
  * - Fires Purple, wait 500ms, Green, wait 500ms, Purple (no simultaneous optimization for PGP)
  */
-@Configurable
 public class LaunchInSequenceCommand extends Command {
 
     public static LaunchInSequenceConfig sequenceConfig = new LaunchInSequenceConfig();

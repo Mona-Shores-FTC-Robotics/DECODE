@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems.lighting.config;
 
+
 /**
  * Lighting indicator servo configuration.
  * Controls servo names for left, center, and right lane indicators.
