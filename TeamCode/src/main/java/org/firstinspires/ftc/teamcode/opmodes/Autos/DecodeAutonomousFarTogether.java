@@ -358,19 +358,47 @@ public class DecodeAutonomousFarTogether extends NextFTCOpMode {
 
     @Override
     public void onStop() {
-        // Cancel all scheduled commands first to prevent them from running during cleanup
+        // Save final pose for TeleOp transition FIRST, before any shutdown operations
+        // This gives us the best chance of capturing the pose before hub communication issues
+        try {
+            RobotState.setHandoffPose(robot.drive.getFollower().getPose());
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+
+        // Cancel all scheduled commands to prevent them from running during cleanup
         CommandManager.INSTANCE.cancelAll();
 
         allianceSelector.unlockSelection();
         BindingManager.reset();
-        robot.launcher.abort();
-        robot.drive.stop();
-        robot.intake.stop();
-        robot.vision.stop();
-        robot.lighting.stop();
 
-        // Save final pose for TeleOp transition
-        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
+        // Wrap all subsystem stop calls in try-catch to prevent "expansion hub stopped responding"
+        // errors during OpMode shutdown when the hub communication is already terminating
+        try {
+            robot.launcher.abort();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.drive.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.intake.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.vision.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.lighting.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
     }
 
     private void applyAlliance(Alliance alliance, Pose startOverride) {

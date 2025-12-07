@@ -46,6 +46,7 @@ public class IntakeSubsystem implements Subsystem {
 
     public enum IntakeMode {
         PASSIVE_REVERSE,
+        AGGRESSIVE_REVERSE,
         ACTIVE_FORWARD,
         STOPPED
     }
@@ -277,8 +278,18 @@ public class IntakeSubsystem implements Subsystem {
 
     public void stop() {
         setMode(IntakeMode.STOPPED);
-        setManualPower(0.0);
-        deactivateRoller();
+        // Wrap hardware operations in try-catch to prevent "expansion hub stopped responding"
+        // errors during OpMode shutdown when the hub communication is already terminating
+        try {
+            setManualPower(0.0);
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            deactivateRoller();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
     }
 
     public void setAlliance(Alliance alliance) {
@@ -365,6 +376,8 @@ public class IntakeSubsystem implements Subsystem {
 
     public void startForward() { setMode(IntakeMode.ACTIVE_FORWARD); }
     public void startReverseIntakeMotor() { setMode(IntakeMode.PASSIVE_REVERSE); }
+    public void startEject() { setMode(IntakeMode.AGGRESSIVE_REVERSE); }
+
 
     public IntakeMode getResolvedMode() {
         return resolveMode();
@@ -425,6 +438,9 @@ public class IntakeSubsystem implements Subsystem {
                 break;
             case PASSIVE_REVERSE:
                 setManualPower(motorConfig.defaultReversePower);
+                break;
+            case AGGRESSIVE_REVERSE:
+                setManualPower(motorConfig.aggressiveReversePower);
                 break;
             default:
                 break;

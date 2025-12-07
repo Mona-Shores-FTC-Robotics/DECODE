@@ -91,11 +91,13 @@ public final class AllianceSelector {
 
     /**
      * Applies the current selected alliance to the robot containers and lighting.
+     * Never applies UNKNOWN - defaults to BLUE if no valid alliance is selected.
      */
     public void applySelection(Robot robot, LightingSubsystem lighting) {
         Alliance allianceToApply = selectedAlliance != Alliance.UNKNOWN ? selectedAlliance : defaultAlliance;
-        if (allianceToApply == null) {
-            allianceToApply = Alliance.UNKNOWN;
+        // Never apply UNKNOWN - default to BLUE as a safety net
+        if (allianceToApply == null || allianceToApply == Alliance.UNKNOWN) {
+            allianceToApply = Alliance.BLUE;
         }
         if (robot != null) {
             robot.setAlliance(allianceToApply);

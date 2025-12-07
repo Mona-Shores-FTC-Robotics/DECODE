@@ -335,10 +335,24 @@ public class LauncherSubsystem implements Subsystem {
         for (LauncherLane lane : LauncherLane.values()) {
             laneLaunchHoldDeadlineMs.put(lane, 0.0);
             laneRecoveryDeadlineMs.put(lane, now + timingConfig().recoveryMs);
-            feeders.get(lane).stop();
-            flywheels.get(lane).stop();
+            // Wrap hardware operations in try-catch to prevent "expansion hub stopped responding"
+            // errors during OpMode shutdown when the hub communication is already terminating
+            try {
+                feeders.get(lane).stop();
+            } catch (Exception ignored) {
+                // Ignore exceptions during shutdown
+            }
+            try {
+                flywheels.get(lane).stop();
+            } catch (Exception ignored) {
+                // Ignore exceptions during shutdown
+            }
         }
-        stopAllLanes();
+        try {
+            stopAllLanes();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
     }
 
     public void homeFeeder(LauncherLane lane) {

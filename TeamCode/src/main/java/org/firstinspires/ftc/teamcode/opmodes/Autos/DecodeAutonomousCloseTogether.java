@@ -148,16 +148,36 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+        // Save final pose for TeleOp transition FIRST, before any shutdown operations
+        // This gives us the best chance of capturing the pose before hub communication issues
+        try {
+            RobotState.setHandoffPose(robot.drive.getFollower().getPose());
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+
         CommandManager.INSTANCE.cancelAll();
         allianceSelector.unlockSelection();
         modeSelector.unlockSelection();
         BindingManager.reset();
-        robot.launcher.abort();
-        robot.drive.stop();
-        robot.vision.stop();
 
-        // Save final pose for TeleOp transition
-        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
+        // Wrap all subsystem stop calls in try-catch to prevent "expansion hub stopped responding"
+        // errors during OpMode shutdown when the hub communication is already terminating
+        try {
+            robot.launcher.abort();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.drive.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.vision.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
     }
 
 

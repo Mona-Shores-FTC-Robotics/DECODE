@@ -330,13 +330,24 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public void stop() {
-        if (teleOpControlEnabled) {
-            follower.startTeleopDrive(true);
-            follower.setTeleOpDrive(0 , 0 , 0 , robotCentric);
-        } else {
-            follower.breakFollowing();
+        // Wrap hardware operations in try-catch to prevent "expansion hub stopped responding"
+        // errors during OpMode shutdown when the hub communication is already terminating
+        try {
+            if (teleOpControlEnabled) {
+                follower.startTeleopDrive(true);
+                follower.setTeleOpDrive(0 , 0 , 0 , robotCentric);
+            } else {
+                follower.breakFollowing();
+            }
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown - hub may already be disconnecting
         }
-        driveMotors.stop();
+
+        try {
+            driveMotors.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
 
         activeMode = DriveMode.NORMAL;
         lastCommandForward = 0.0;
