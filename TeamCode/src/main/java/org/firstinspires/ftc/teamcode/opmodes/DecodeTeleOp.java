@@ -75,16 +75,25 @@ public class DecodeTeleOp extends NextFTCOpMode {
         robot.telemetry.startSession();
 
         // Apply alliance from previous OpMode (auto) before initializing
-        // so lighting subsystem shows correct color from the start
+        // so lighting subsystem shows correct color from the start.
+        // Default to BLUE if no valid alliance from auto (never leave as UNKNOWN)
         Alliance persistedAlliance = RobotState.getAlliance();
         if (persistedAlliance != null && persistedAlliance != Alliance.UNKNOWN) {
             robot.setAlliance(persistedAlliance);
             selectedAlliance = persistedAlliance;
+        } else {
+            // No valid handoff from auto - default to BLUE so we can always shoot
+            robot.setAlliance(Alliance.BLUE);
+            selectedAlliance = Alliance.BLUE;
         }
         updateAllianceLighting();
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.initializeForTeleOp();
-        allianceSelector = new AllianceSelector(driverPad, RobotState.getAlliance());
+        // Use persisted alliance if valid, otherwise default to BLUE (not UNKNOWN)
+        Alliance selectorDefault = (persistedAlliance != null && persistedAlliance != Alliance.UNKNOWN)
+                ? persistedAlliance
+                : Alliance.BLUE;
+        allianceSelector = new AllianceSelector(driverPad, selectorDefault);
 
         addComponents(
                 new SubsystemComponent(robot.drive),
