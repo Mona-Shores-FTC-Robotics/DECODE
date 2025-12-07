@@ -487,13 +487,13 @@ public class IntakeSubsystem implements Subsystem {
         double currentTimeMs = sensorTimer.milliseconds();
 
         // --- CHECK IF ARTIFACT IS CLEARLY GONE (distance-based override) ---
-        // If distance shows artifact is WAY beyond exit threshold, it's definitely gone - clear immediately
+        // If distance shows artifact is beyond threshold + margin, it's definitely gone - clear immediately
         if (currentLaneColor.isArtifact() && sample.distanceAvailable && !Double.isNaN(sample.distanceCm)) {
             IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
-            double exitThreshold = getExitThreshold(presenceCfg, lane);
+            double threshold = getThreshold(presenceCfg, lane);
             double clearanceMargin = laneSensorConfig.gating.distanceClearanceMarginCm;
 
-            if (sample.distanceCm > exitThreshold + clearanceMargin) {
+            if (sample.distanceCm > threshold + clearanceMargin) {
                 // Artifact is definitely gone - clear immediately regardless of keep-alive
                 laneCandidateColor.put(lane, ArtifactColor.NONE);
                 laneCandidateCount.put(lane, 0);
@@ -654,29 +654,16 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
-    private static double getEnterThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
+    private static double getThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return config.leftEnterDistanceCm;
+                return config.leftThresholdCm;
             case CENTER:
-                return config.centerEnterDistanceCm;
+                return config.centerThresholdCm;
             case RIGHT:
-                return config.rightEnterDistanceCm;
+                return config.rightThresholdCm;
             default:
-                return config.centerEnterDistanceCm;
-        }
-    }
-
-    private static double getExitThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
-        switch (lane) {
-            case LEFT:
-                return config.leftExitDistanceCm;
-            case CENTER:
-                return config.centerExitDistanceCm;
-            case RIGHT:
-                return config.rightExitDistanceCm;
-            default:
-                return config.centerExitDistanceCm;
+                return config.centerThresholdCm;
         }
     }
 
@@ -708,19 +695,13 @@ public class IntakeSubsystem implements Subsystem {
         boolean distanceValid = distanceAvailable && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
         boolean withinDistance = false;
 
-        // Per-lane hysteresis: distance-only presence
-        boolean previousPresence = lanePresenceState.getOrDefault(lane, false);
+        // Simple threshold check - moving average filter handles noise smoothing
         if (!distanceAvailable || !laneSensorConfig.presence.useDistance || !distanceValid) {
             withinDistance = false;
         } else {
             IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
-            double enter = getEnterThreshold(presenceCfg, lane);
-            double exit = getExitThreshold(presenceCfg, lane);
-            if (previousPresence) {
-                withinDistance = distanceCm <= exit;
-            } else {
-                withinDistance = distanceCm <= enter;
-            }
+            double threshold = getThreshold(presenceCfg, lane);
+            withinDistance = distanceCm <= threshold;
         }
         lanePresenceState.put(lane, withinDistance);
 
