@@ -21,9 +21,11 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 public class OperatorBindings {
     private static final double MOTIF_TAIL_STICK_THRESHOLD = 0.6;
     private final Button distanceBasedLaunch;
-    private final Button runIntakeButton;
-    private final Button runIntakeTrigger;
-    private final Range runIntakeTriggerRange;
+    private final Button smartIntakeButton;
+    private final Button smartIntakeTrigger;
+    private final Range smartIntakeTriggerRange;
+    private final Button regularIntakeTrigger;
+    private final Range regularIntakeTriggerRange;
     private final Button humanLoading;
     private final Button ejectButton;
 
@@ -42,10 +44,14 @@ public class OperatorBindings {
 
     public OperatorBindings(GamepadEx operator) {
 
-        //Ground Intake
-        runIntakeButton = operator.rightBumper();
-        runIntakeTriggerRange = operator.rightTrigger();
-        runIntakeTrigger = runIntakeTriggerRange.greaterThan(0.2);
+        //Smart Ground Intake (right bumper and right trigger)
+        smartIntakeButton = operator.rightBumper();
+        smartIntakeTriggerRange = operator.rightTrigger();
+        smartIntakeTrigger = smartIntakeTriggerRange.greaterThan(0.2);
+
+        //Regular Ground Intake (left trigger)
+        regularIntakeTriggerRange = operator.leftTrigger();
+        regularIntakeTrigger = regularIntakeTriggerRange.greaterThan(0.2);
 
         //Human Player Intake
         humanLoading = operator.triangle();
@@ -156,18 +162,25 @@ public class OperatorBindings {
 
     private void configureGroundIntakeBindings(Robot robot, Gamepad rawOperatorGamepad) {
         // Intake control commands
-        SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
-        SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+        SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
+        SetIntakeModeCommand intakeReverseCommand = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+        SetIntakeModeCommand intakeReverseCommand2 = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+        SetIntakeModeCommand intakeReverseCommand3 = new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
 
-        SmartIntakeCommand smartIntakeCommand = new SmartIntakeCommand(robot.intake, rawOperatorGamepad );
+        SmartIntakeCommand smartIntakeCommandButton = new SmartIntakeCommand(robot.intake, rawOperatorGamepad);
+        SmartIntakeCommand smartIntakeCommandTrigger = new SmartIntakeCommand(robot.intake, rawOperatorGamepad);
 
-        // Intake control
-        runIntakeButton.whenBecomesTrue(intakeForwardCommand);
-        runIntakeButton.whenBecomesFalse(intakeReverseCommand);
+        // Smart intake on right bumper
+        smartIntakeButton.whenBecomesTrue(smartIntakeCommandButton);
+        smartIntakeButton.whenBecomesFalse(intakeReverseCommand);
 
-        // Allow right trigger to start smart intake as well
-        runIntakeTrigger.whenBecomesTrue(smartIntakeCommand);
-        runIntakeTrigger.whenBecomesFalse(intakeReverseCommand);
+        // Smart intake on right trigger
+        smartIntakeTrigger.whenBecomesTrue(smartIntakeCommandTrigger);
+        smartIntakeTrigger.whenBecomesFalse(intakeReverseCommand2);
+
+        // Regular (non-smart) intake on left trigger
+        regularIntakeTrigger.whenBecomesTrue(intakeForwardCommand);
+        regularIntakeTrigger.whenBecomesFalse(intakeReverseCommand3);
     }
 
     private void setMotifTailWithFeedback(Robot robot, int value) {
@@ -193,8 +206,9 @@ public class OperatorBindings {
      */
     public static String[] controlsSummary() {
         return new String[]{
-                "Right bumper: Ground intake (hold)",
+                "Right bumper: Smart ground intake (hold)",
                 "Right trigger: Smart ground intake (hold)",
+                "Left trigger: Regular ground intake (hold)",
                 "Triangle: Human loading (hold)",
                 "Square: Eject (hold)",
                 "Cross: Distance-based spin (hold), release to launch all",
