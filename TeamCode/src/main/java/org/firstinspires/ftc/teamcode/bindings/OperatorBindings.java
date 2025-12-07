@@ -25,6 +25,7 @@ public class OperatorBindings {
     private final Button runIntakeTrigger;
     private final Range runIntakeTriggerRange;
     private final Button humanLoading;
+    private final Button ejectButton;
 
     private final Button launchShort;
     private final Button launchMid;
@@ -48,6 +49,9 @@ public class OperatorBindings {
 
         //Human Player Intake
         humanLoading = operator.triangle();
+
+        //Eject Button
+        ejectButton = operator.square();
 
         //Distance Based Launching
         distanceBasedLaunch = operator.cross();
@@ -74,6 +78,7 @@ public class OperatorBindings {
 
         configureGroundIntakeBindings(robot, operatorGamepad);
         configureHumanIntakeBindings(robot);
+        configureEjectBindings(robot);
         configureDistanceBasedLaunchBindings(robot);
         configurePresetRangeLaunchBindings(robot);
 
@@ -137,6 +142,15 @@ public class OperatorBindings {
                 .whenBecomesFalse(robot.intake::forwardRoller);
     }
 
+    private void configureEjectBindings(Robot robot) {
+        // Eject button: Run intake motor in reverse and reverse the roller
+        ejectButton
+                .whenBecomesTrue(robot.intake::startReverseIntakeMotor)
+                .whenBecomesTrue(robot.intake::reverseRoller)
+                .whenBecomesFalse(robot.intake::startReverseIntakeMotor)
+                .whenBecomesFalse(robot.intake::deactivateRoller);
+    }
+
     private void configureGroundIntakeBindings(Robot robot, Gamepad rawOperatorGamepad) {
         // Intake control commands
         SetIntakeModeCommand intakeForwardCommand = new SetIntakeModeCommand(robot.intake , IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
@@ -179,6 +193,7 @@ public class OperatorBindings {
                 "Right bumper: Ground intake (hold)",
                 "Right trigger: Smart ground intake (hold)",
                 "Triangle: Human loading (hold)",
+                "Square: Eject (hold)",
                 "Cross: Distance-based spin (hold), release to launch all",
                 "D-pad Down: Preset SHORT spin (hold), release to launch all",
                 "D-pad Left: Preset MID spin (hold), release to launch all",
