@@ -68,7 +68,7 @@ public class IntakeLaneSensorConfig {
         public int consecutiveClearConfirmationsRequired = 2;
         /** Keep-alive duration (ms) - keep artifact detection alive after last good reading (helps with whiffle ball holes) */
         public double keepAliveMs = 400.0;
-        /** Distance clearance margin (cm) - how far beyond exit threshold to instantly clear (helps artifacts clear quickly when removed) */
+        /** Distance clearance margin (cm) - how far beyond threshold to instantly clear (helps artifacts clear quickly when removed) */
         public double distanceClearanceMarginCm = .7;
     }
 
@@ -102,13 +102,10 @@ public class IntakeLaneSensorConfig {
     }
 
     public static class LanePresenceConfig {
-        /** Enter/exit distance thresholds per lane (cm) with hysteresis */
-        public double leftEnterDistanceCm;
-        public double leftExitDistanceCm;
-        public double centerEnterDistanceCm;
-        public double centerExitDistanceCm;
-        public double rightEnterDistanceCm;
-        public double rightExitDistanceCm;
+        /** Distance threshold per lane (cm) - artifact detected when distance <= threshold */
+        public double leftThresholdCm;
+        public double centerThresholdCm;
+        public double rightThresholdCm;
     }
 
     public static class Background {
@@ -169,24 +166,17 @@ public class IntakeLaneSensorConfig {
 
     private static LanePresenceConfig createLanePresenceConfig19429() {
         LanePresenceConfig config = new LanePresenceConfig();
-        config.leftEnterDistanceCm = 8;
-        config.leftExitDistanceCm = 10;
-        config.centerEnterDistanceCm = 6.7;
-        config.centerExitDistanceCm = 7.3;
-        config.rightEnterDistanceCm = 5.3;
-        config.rightExitDistanceCm = 4.8;
+        config.leftThresholdCm = 9.0;
+        config.centerThresholdCm = 7.0;
+        config.rightThresholdCm = 5.0;
         return config;
     }
 
     private static LanePresenceConfig createLanePresenceConfig20245() {
         LanePresenceConfig config = new LanePresenceConfig();
-        // Start with the same defaults; tune via Dashboard per robot
-        config.leftEnterDistanceCm = 6;
-        config.leftExitDistanceCm = 6.3;
-        config.centerEnterDistanceCm = 2.8;
-        config.centerExitDistanceCm = 3.7;
-        config.rightEnterDistanceCm = 3.6;
-        config.rightExitDistanceCm = 4;
+        config.leftThresholdCm = 6.0;
+        config.centerThresholdCm = 3.2;
+        config.rightThresholdCm = 3.8;
         return config;
     }
 }
