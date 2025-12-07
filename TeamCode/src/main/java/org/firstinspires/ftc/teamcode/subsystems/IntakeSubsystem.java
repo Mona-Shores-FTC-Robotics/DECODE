@@ -46,6 +46,7 @@ public class IntakeSubsystem implements Subsystem {
 
     public enum IntakeMode {
         PASSIVE_REVERSE,
+        AGGRESSIVE_REVERSE,
         ACTIVE_FORWARD,
         STOPPED
     }
@@ -365,6 +366,8 @@ public class IntakeSubsystem implements Subsystem {
 
     public void startForward() { setMode(IntakeMode.ACTIVE_FORWARD); }
     public void startReverseIntakeMotor() { setMode(IntakeMode.PASSIVE_REVERSE); }
+    public void startEject() { setMode(IntakeMode.AGGRESSIVE_REVERSE); }
+
 
     public IntakeMode getResolvedMode() {
         return resolveMode();
@@ -425,6 +428,9 @@ public class IntakeSubsystem implements Subsystem {
                 break;
             case PASSIVE_REVERSE:
                 setManualPower(motorConfig.defaultReversePower);
+                break;
+            case AGGRESSIVE_REVERSE:
+                setManualPower(motorConfig.aggressiveReversePower);
                 break;
             default:
                 break;

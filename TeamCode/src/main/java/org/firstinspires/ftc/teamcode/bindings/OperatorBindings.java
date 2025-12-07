@@ -145,10 +145,10 @@ public class OperatorBindings {
     private void configureEjectBindings(Robot robot) {
         // Eject button: Run intake motor in reverse and reverse the roller
         ejectButton
-                .whenBecomesTrue(robot.intake::startReverseIntakeMotor)
+                .whenBecomesTrue(robot.intake::startEject)
                 .whenBecomesTrue(robot.intake::reverseRoller)
                 .whenBecomesFalse(robot.intake::startReverseIntakeMotor)
-                .whenBecomesFalse(robot.intake::deactivateRoller);
+                .whenBecomesFalse(robot.intake::forwardRoller);
     }
 
     private void configureGroundIntakeBindings(Robot robot, Gamepad rawOperatorGamepad) {
