@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.drive.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Fixed angle aim configuration.
  * Controls aiming at fixed alliance-specific target headings.
  */
-@Configurable
 public class DriveFixedAngleAimConfig {
     /** Fixed target heading for blue alliance (degrees, 0=forward, 90=left) */
     public double blueHeadingDeg = 133.9;

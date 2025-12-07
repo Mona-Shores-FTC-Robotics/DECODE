@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -34,7 +33,6 @@ import java.util.Set;
  * Callers queue individual shots or bursts while this class coordinates spin-up,
  * feed timing, and recovery delays.
  */
-@Configurable
 public class LauncherSubsystem implements Subsystem {
 
     // Global configuration instances

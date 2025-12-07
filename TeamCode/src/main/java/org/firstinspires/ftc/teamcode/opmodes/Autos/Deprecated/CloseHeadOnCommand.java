@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Deprecated;
 
 import static org.firstinspires.ftc.teamcode.util.AutoField.poseForAlliance;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
@@ -32,17 +31,14 @@ import dev.nextftc.extensions.pedro.FollowPath;
  * 
  * TODO: Fill in robot actions at each segment (search for TODO comments)
  */
-@Configurable
 public class CloseHeadOnCommand {
 
-    @Configurable
     public static class Config {
         public double maxPathPower = 0.79;
         public double intakeDelaySeconds = 2.5;
         public double endTimeForLinearHeadingInterpolation = .7;
     }
 
-    @Configurable
     public static class Waypoints {
         public double startX = 27.5;
         public double startY = 128.5;

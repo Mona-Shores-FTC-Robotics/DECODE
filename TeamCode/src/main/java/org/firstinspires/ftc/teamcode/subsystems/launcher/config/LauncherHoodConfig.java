@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Hood configuration for launcher angle adjustment.
  * Contains base configuration and robot-specific instances.
  */
-@Configurable
 public class LauncherHoodConfig {
     public double retractedPosition = 1;
     public double extendedPosition = 0;
@@ -15,7 +12,6 @@ public class LauncherHoodConfig {
     public CenterHoodConfig hoodCenter = new CenterHoodConfig();
     public RightHoodConfig hoodRight = new RightHoodConfig();
 
-    @Configurable
     public static class LeftHoodConfig {
         public String servoName = "hood_left";
         public double shortPosition = .3;
@@ -23,7 +19,6 @@ public class LauncherHoodConfig {
         public double longPosition = 0;
     }
 
-    @Configurable
     public static class CenterHoodConfig {
         public String servoName = "hood_center";
         public double shortPosition = .3;
@@ -31,7 +26,6 @@ public class LauncherHoodConfig {
         public double longPosition = 0;
     }
 
-    @Configurable
     public static class RightHoodConfig {
         public String servoName = "hood_right";
         public double shortPosition =.3;

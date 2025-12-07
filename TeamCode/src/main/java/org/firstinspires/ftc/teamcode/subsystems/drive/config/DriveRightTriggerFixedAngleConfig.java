@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.drive.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Right trigger fixed angle aim configuration.
  * Controls aiming at fixed alliance-specific target headings when right trigger is held.
  */
-@Configurable
 public class DriveRightTriggerFixedAngleConfig {
     /** Fixed target heading for blue alliance (degrees, 0=forward, 90=left) */
     public double blueParkHeadingDeg = 264.0;

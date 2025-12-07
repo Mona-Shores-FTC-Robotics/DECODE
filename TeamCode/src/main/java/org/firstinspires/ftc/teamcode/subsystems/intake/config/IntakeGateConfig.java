@@ -1,13 +1,10 @@
 package org.firstinspires.ftc.teamcode.subsystems.intake.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Intake gate servo configuration.
  * Controls the gate that prevents/allows artifacts to flow into launcher.
  * Contains base configuration and robot-specific instances.
  */
-@Configurable
 public class IntakeGateConfig {
     public String servoName = "gate";
     public double preventArtifacts;

@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import dev.nextftc.bindings.BindingManager;
@@ -29,10 +28,9 @@ import java.util.concurrent.TimeUnit;
 
 
 @TeleOp(name = "Decode TeleOp", group = "TeleOp")
-@Configurable
+
 public class DecodeTeleOp extends NextFTCOpMode {
 
-    @Configurable
     public static class EndgameConfig {
         /** Seconds remaining when auto-switch to DECODE mode triggers */
         public double decodeModeSwitchSecondsRemaining = 30.0;

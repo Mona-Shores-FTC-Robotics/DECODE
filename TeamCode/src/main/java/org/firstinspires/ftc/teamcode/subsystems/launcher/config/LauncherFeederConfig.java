@@ -1,18 +1,14 @@
 package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Feeder (kicker) configuration for launcher servos.
  * Contains base configuration and robot-specific instances.
  */
-@Configurable
 public class LauncherFeederConfig {
     public LeftFeederConfig left = new LeftFeederConfig();
     public CenterFeederConfig center = new CenterFeederConfig();
     public RightFeederConfig right = new RightFeederConfig();
 
-    @Configurable
     public static class CenterFeederConfig {
         public String servoName = "feeder_center";
         public boolean reversed = false;
@@ -23,8 +19,6 @@ public class LauncherFeederConfig {
         public double firePosition;
     }
 
-
-    @Configurable
     public static class LeftFeederConfig {
         public String servoName = "feeder_left";
         public boolean reversed = false;
@@ -35,7 +29,6 @@ public class LauncherFeederConfig {
         public double firePosition;
     }
 
-    @Configurable
     public static class RightFeederConfig {
         public String servoName = "feeder_right";
         public boolean reversed = false;

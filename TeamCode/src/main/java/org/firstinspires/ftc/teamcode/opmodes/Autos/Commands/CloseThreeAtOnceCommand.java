@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -21,10 +20,8 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
  *   CommandManager.INSTANCE.scheduleCommand(auto);
  * 
  */
-@Configurable
 public class CloseThreeAtOnceCommand {
 
-    @Configurable
     public static class Config {
         public double maxPathPower = 0.75;
         public double endTimeForLinearHeadingInterpolation = .7;
@@ -32,7 +29,6 @@ public class CloseThreeAtOnceCommand {
         public double minTimeForFinalLaunchSeconds = 6.2;
     }
 
-    @Configurable
     public static class Waypoints {
         public double startX = 26.5;
         public double startY = 130;

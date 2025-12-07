@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -29,7 +28,6 @@ import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Close Together", group = "Auto")
-@Configurable
 public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
@@ -150,6 +148,7 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
 
     @Override
     public void onStop() {
+        CommandManager.INSTANCE.cancelAll();
         allianceSelector.unlockSelection();
         modeSelector.unlockSelection();
         BindingManager.reset();

@@ -1,16 +1,12 @@
 package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Flywheel configuration for launcher motors.
  * Contains base configuration and robot-specific instances.
  */
-@Configurable
 public class LauncherFlywheelConfig {
     public FlywheelParameters parameters = new FlywheelParameters();
 
-    @Configurable
     public static class FlywheelParameters {
         /** Encoder ticks per motor revolution (adjust for the selected motor). */
         public double ticksPerRev = 28;
@@ -24,7 +20,6 @@ public class LauncherFlywheelConfig {
     public CenterFlywheelConfig flywheelCenter = new CenterFlywheelConfig();
     public RightFlywheelConfig flywheelRight = new RightFlywheelConfig();
 
-    @Configurable
     public static class LeftFlywheelConfig {
         public String motorName = "launcher_left";
         public double idleRpm;
@@ -34,7 +29,6 @@ public class LauncherFlywheelConfig {
         public double kP;
     }
 
-    @Configurable
     public static class CenterFlywheelConfig {
         public String motorName = "launcher_center";
         public boolean reversed;
@@ -44,7 +38,6 @@ public class LauncherFlywheelConfig {
         public double kP;
     }
 
-    @Configurable
     public static class RightFlywheelConfig { //actually left
         public String motorName = "launcher_right";
         public boolean reversed;

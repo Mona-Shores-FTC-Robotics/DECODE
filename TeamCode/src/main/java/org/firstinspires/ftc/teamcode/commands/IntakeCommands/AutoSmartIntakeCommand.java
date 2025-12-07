@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.IntakeCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -14,10 +13,8 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  *
  * Runs continuously; never finishes on its own.
  */
-@Configurable
 public class AutoSmartIntakeCommand extends IntakeCommand {
 
-    @Configurable
     public static class AutoSmartIntakeConfig {
         /** Count (or isFull) threshold to consider intake full */
         public int fullCountThreshold = 3;

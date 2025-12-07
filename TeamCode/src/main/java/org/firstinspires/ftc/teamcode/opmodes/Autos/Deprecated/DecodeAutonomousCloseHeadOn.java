@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos.Deprecated;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -25,7 +24,6 @@ import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Close Head On", group = "Command")
-@Configurable
 public class DecodeAutonomousCloseHeadOn extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;

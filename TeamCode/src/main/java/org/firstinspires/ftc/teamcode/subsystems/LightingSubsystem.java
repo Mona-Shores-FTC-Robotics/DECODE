@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -29,7 +28,6 @@ import java.util.Optional;
  * - Current pattern: What's actively being displayed (may differ temporarily)
  * - Priority resolution: Higher priority patterns override lower ones
  */
-@Configurable
 public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorListener {
 
     /**

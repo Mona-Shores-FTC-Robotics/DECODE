@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.util;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.util.Range;
 
@@ -11,7 +10,6 @@ import com.qualcomm.robotcore.util.Range;
  */
 public class PoseFusion {
 
-    @Configurable
     public static class Config {
         /** Base trust assigned to any AprilTag measurement before scaling. */
         public static double visionBaseTrust = 0.35;

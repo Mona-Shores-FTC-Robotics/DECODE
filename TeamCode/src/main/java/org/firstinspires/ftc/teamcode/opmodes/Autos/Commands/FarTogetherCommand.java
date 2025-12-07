@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -23,10 +22,8 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
  *   CommandManager.INSTANCE.scheduleCommand(auto);
  * 
  */
-@Configurable
 public class FarTogetherCommand {
 
-    @Configurable
     public static class Config {
         public double maxPathPower = .85;
         public double endTimeForLinearHeadingInterpolation = .7;
@@ -35,7 +32,6 @@ public class FarTogetherCommand {
         public double minTimeForFinalLaunchSeconds = 5.0;
     }
 
-    @Configurable
     public static class Waypoints {
         public double startX = 56;
         public double startY = 5;

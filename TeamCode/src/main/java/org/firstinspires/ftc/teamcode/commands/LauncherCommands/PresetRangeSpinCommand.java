@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -22,7 +21,6 @@ import java.util.Objects;
  * Uses the shared CommandRangeConfig so dashboard-tuned short/mid/long values carry across
  * both preset and distance-based flows.
  */
-@Configurable
 public class PresetRangeSpinCommand extends Command {
 
     private final LauncherSubsystem launcher;

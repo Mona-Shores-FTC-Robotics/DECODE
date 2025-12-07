@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.intake.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Lane sensor configuration for artifact color detection.
  * Configures color sensors, classification algorithms, and presence detection.
  */
-@Configurable
 public class IntakeLaneSensorConfig {
     /**
      * Artifact color classifier mode.
@@ -32,7 +29,6 @@ public class IntakeLaneSensorConfig {
     public static LanePresenceConfig lanePresenceConfig19429 = createLanePresenceConfig19429();
     public static LanePresenceConfig lanePresenceConfig20245 = createLanePresenceConfig20245();
 
-    @Configurable
     public static class Polling {
         public boolean enablePolling = true;
         public double samplePeriodMs = 150;
@@ -41,7 +37,6 @@ public class IntakeLaneSensorConfig {
         public String rightSensor = "lane_right_color";
     }
 
-    @Configurable
     public static class Hardware {
         /** Turn the onboard white LED on/off (applied at bind time) */
         public boolean enableSensorLight = true;
@@ -51,7 +46,6 @@ public class IntakeLaneSensorConfig {
         public double sensorGain = 20.0;
     }
 
-    @Configurable
     public static class Gating {
         /** Minimum confidence required to accept a new artifact color classification */
         public double minConfidenceToAccept = .2;
@@ -65,14 +59,12 @@ public class IntakeLaneSensorConfig {
         public double distanceClearanceMarginCm = .7;
     }
 
-    @Configurable
     public static class Quality {
         // Quality thresholds (used by all classifiers)
         public double minValue = 0.02;
         public double minSaturation = 0.15;
     }
 
-    @Configurable
     public static class Presence {
         // Distance gating (used by all classifiers)
         public boolean useDistance = true;
@@ -96,7 +88,6 @@ public class IntakeLaneSensorConfig {
         public double minPresenceScore = .25;
     }
 
-    @Configurable
     public static class LanePresenceConfig {
         /** Enter/exit distance thresholds per lane (cm) with hysteresis */
         public double leftEnterDistanceCm;
@@ -107,7 +98,6 @@ public class IntakeLaneSensorConfig {
         public double rightExitDistanceCm;
     }
 
-    @Configurable
     public static class Background {
         // Background detection - distinguishes empty space from artifacts
         /** Enable background similarity checking */
@@ -122,7 +112,6 @@ public class IntakeLaneSensorConfig {
         public double maxBackgroundDistance = 40.0;
     }
 
-    @Configurable
     public static class Classifier {
         // Classifier mode selector
         public String mode = ClassifierMode.DECISION_BOUNDARY.name();
@@ -132,7 +121,6 @@ public class IntakeLaneSensorConfig {
         public DistanceBased distance = new DistanceBased();
     }
 
-    @Configurable
     public static class DecisionBoundary {
         /** Hue decision boundary - classify as GREEN if hue < boundary, PURPLE otherwise */
         public double hueDecisionBoundary = 175.0;
@@ -140,7 +128,6 @@ public class IntakeLaneSensorConfig {
         public double lowConfidenceMargin = 15.0;
     }
 
-    @Configurable
     public static class Range {
         /** Range-based mode parameters (legacy) */
         public double greenHueMin = 80.0;
@@ -150,7 +137,6 @@ public class IntakeLaneSensorConfig {
         public double purpleHueWrapMax = 40.0;
     }
 
-    @Configurable
     public static class DistanceBased {
         /** Weight for hue component in distance calculation */
         public double hueWeight = 2.0;

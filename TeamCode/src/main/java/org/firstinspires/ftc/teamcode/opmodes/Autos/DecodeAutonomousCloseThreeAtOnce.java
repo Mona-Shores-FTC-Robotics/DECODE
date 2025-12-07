@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos;
 
-import com.bylazar.configurables.PanelsConfigurables;
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -30,7 +28,6 @@ import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Close Three At Once", group = "Auto")
-@Configurable
 public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
@@ -88,8 +85,6 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
                 new SubsystemComponent(robot.lighting),
                 new SubsystemComponent(robot.vision)
         );
-        PanelsConfigurables.INSTANCE.refreshClass(Constants.followerConstants19429);
-        PanelsConfigurables.INSTANCE.refreshClass(Constants.followerConstants20245);
     }
 
     @Override

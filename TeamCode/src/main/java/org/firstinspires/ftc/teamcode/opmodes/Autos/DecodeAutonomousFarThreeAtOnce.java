@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
@@ -46,7 +45,6 @@ import static org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.FarThreeAtOn
  * - Sequential scoring and collection routines
  */
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Far Three At Once", group = "Auto")
-@Configurable
 public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;

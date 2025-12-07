@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 import com.qualcomm.robotcore.hardware.Gamepad;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -17,7 +15,6 @@ import dev.nextftc.core.commands.Command;
  * legacy binding paths.
  */
 @SuppressWarnings("UnusedReturnValue")
-@Configurable
 public class LauncherCommands {
 
     public static final double DEFAULT_BURST_SPACING_MS = 300;

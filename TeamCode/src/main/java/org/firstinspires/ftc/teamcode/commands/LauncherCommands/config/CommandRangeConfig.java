@@ -1,13 +1,10 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Shared tunable RPM and hood positions for SHORT/MID/LONG ranges.
  * Both distance-based and preset-based commands should reference this single
  * config so field tuning only needs to happen in one place.
  */
-@Configurable
 public class CommandRangeConfig {
     /** Short range RPMs */
     public double shortLeftRpm;

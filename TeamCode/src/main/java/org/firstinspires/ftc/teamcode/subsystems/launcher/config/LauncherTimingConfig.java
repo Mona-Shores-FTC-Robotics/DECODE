@@ -1,12 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Timing configuration for launcher operations.
  * Contains base configuration and robot-specific instances.
  */
-@Configurable
 public class LauncherTimingConfig {
     /** Minimum time the wheel should be commanded at launch speed before trusting fallback readiness. */
     public double minimalSpinUpMs = 500;
