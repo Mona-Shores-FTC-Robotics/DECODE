@@ -87,6 +87,8 @@ public class LauncherSubsystem implements Subsystem {
 
     private double lastPeriodicMs = 0.0;
     private boolean reverseFlywheelsActive = false;
+    /** Tracks which lanes have had their hoods retracted during human loading (speed-gated) */
+    private final EnumSet<LauncherLane> hoodsRetractedForHumanLoading = EnumSet.noneOf(LauncherLane.class);
 
     /**
      * Safely retrieves a motor from the hardware map. Returns null if the motor
@@ -136,6 +138,7 @@ public class LauncherSubsystem implements Subsystem {
         clock.reset();
         shotQueue.clear();
         reverseFlywheelsActive = false;
+        hoodsRetractedForHumanLoading.clear();
 
         for (Map.Entry<LauncherLane, Flywheel> entry : flywheels.entrySet()) {
             entry.getValue().initialize();
@@ -185,6 +188,13 @@ public class LauncherSubsystem implements Subsystem {
                 RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_power", totalPower);
             }
         }
+
+        // Speed-gated hood retraction for human loading
+        // Each lane's hood retracts independently when its flywheel reaches the threshold
+        if (reverseFlywheelsActive) {
+            updateHumanLoadingHoods();
+        }
+
         updateStateMachine(now);
         updateLaneRecovery(now);
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
@@ -522,9 +532,11 @@ public class LauncherSubsystem implements Subsystem {
     /**
      * Runs all launcher motors in reverse at low speed for human player intake.
      * This allows game pieces to be fed into the launcher from above.
+     * Hoods will retract per-lane as each flywheel reaches the threshold speed.
      */
     public void runReverseFlywheelForHumanLoading() {
         reverseFlywheelsActive = true;
+        hoodsRetractedForHumanLoading.clear();  // Start fresh tracking for this session
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel != null) {
@@ -535,9 +547,11 @@ public class LauncherSubsystem implements Subsystem {
 
     /**
      * Stops the reverse intake mode and returns motors to normal control.
+     * Clears the hood tracking so next human loading session starts fresh.
      */
     public void stopReverseFlywheelForHumanLoading() {
         reverseFlywheelsActive = false;
+        hoodsRetractedForHumanLoading.clear();
         for (LauncherLane lane : LauncherLane.values()) {
             Flywheel flywheel = flywheels.get(lane);
             if (flywheel != null) {
@@ -641,6 +655,46 @@ public class LauncherSubsystem implements Subsystem {
             double recoveryDeadline = laneRecoveryDeadlineMs.getOrDefault(lane, 0.0);
             if (recoveryDeadline > 0.0 && now >= recoveryDeadline) {
                 laneRecoveryDeadlineMs.put(lane, 0.0);
+            }
+        }
+    }
+
+    /**
+     * Updates hood positions during human loading based on flywheel speed.
+     * Each lane's hood retracts independently when its flywheel reaches the threshold RPM.
+     * This provides graceful degradation - if one lane is jammed, other lanes still work.
+     */
+    private void updateHumanLoadingHoods() {
+        double threshold = LauncherReverseIntakeConfig.reverseRpmThreshold;
+
+        // If threshold is 0, skip speed-gating (hoods controlled elsewhere)
+        if (threshold <= 0.0) {
+            return;
+        }
+
+        for (LauncherLane lane : LauncherLane.values()) {
+            // Skip lanes that already had their hood retracted this session
+            if (hoodsRetractedForHumanLoading.contains(lane)) {
+                continue;
+            }
+
+            Flywheel flywheel = flywheels.get(lane);
+            if (flywheel == null) {
+                continue;
+            }
+
+            // Check if this lane's flywheel has reached the threshold speed
+            double currentRpm = flywheel.getCurrentRpm();
+            if (currentRpm >= threshold) {
+                // Retract this lane's hood
+                Hood hood = hoods.get(lane);
+                if (hood != null) {
+                    hood.setPosition(hoodConfig().retractedPosition);
+                }
+                hoodsRetractedForHumanLoading.add(lane);
+
+                // Log for debugging
+                RobotState.packet.put("launcher/humanLoading/" + lane.name() + "_hoodRetracted", true);
             }
         }
     }

@@ -128,11 +128,14 @@ public class OperatorBindings {
 
     private void configureHumanIntakeBindings(Robot robot) {
         // Human Loading
+        // NOTE: Hood retraction is now speed-gated per-lane in LauncherSubsystem.periodic()
+        // Each lane's hood retracts independently when its flywheel reaches threshold RPM
+        // This allows graceful degradation - if one lane is jammed, other lanes still work
         humanLoading
                 .whenBecomesTrue(robot.launcher::runReverseFlywheelForHumanLoading)
                 .whenBecomesTrue(robot.intake::setGateReverseConfig)
                 .whenBecomesTrue(robot.intake::startForward)
-                .whenBecomesTrue(robot.launcher::setAllHoodsRetracted)
+                // Hood retraction removed - now happens automatically when flywheel reaches speed
                 .whenBecomesTrue(robot.intake::deactivateRoller)
 
                 .whenBecomesFalse(robot.intake::startReverseIntakeMotor)
