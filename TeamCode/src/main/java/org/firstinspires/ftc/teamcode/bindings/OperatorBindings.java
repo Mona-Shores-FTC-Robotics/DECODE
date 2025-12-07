@@ -52,8 +52,6 @@ public class OperatorBindings {
         //Distance Based Launching
         distanceBasedLaunch = operator.cross();
 
-        eject = operator.cross();
-
         //Preset Range Launching
         launchFar = operator.dpadUp();  // FAR range for close shots (if vision is broken)
         launchMid = operator.dpadLeft(); // MID range for far shots (if vision is broken)
