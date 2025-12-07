@@ -1,9 +1,12 @@
 package org.firstinspires.ftc.teamcode.subsystems.intake.config;
 
+import com.acmerobotics.dashboard.config.Config;
+
 /**
  * Lane sensor configuration for artifact color detection.
  * Configures color sensors, classification algorithms, and presence detection.
  */
+@Config
 public class IntakeLaneSensorConfig {
     /**
      * Artifact color classifier mode.

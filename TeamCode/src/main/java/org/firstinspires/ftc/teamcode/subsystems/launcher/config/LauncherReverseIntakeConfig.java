@@ -17,5 +17,5 @@ public class LauncherReverseIntakeConfig {
      * This allows graceful degradation - if one lane is jammed, other lanes still work.
      * Set to 0 to disable speed-gating (hoods retract immediately like before).
      */
-    public static double reverseRpmThreshold = 400.0;
+    public static double reverseRpmThreshold = 2500;
 }

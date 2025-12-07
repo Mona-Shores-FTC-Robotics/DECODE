@@ -141,11 +141,11 @@ public class CommandRangeConfig {
         /** Per-range hood positions (applied uniformly to all lanes) */
         config.shortHoodPosition = .46;
         config.midHoodPosition = 0.05;
-        config.longHoodPosition = .05;
+        config.longHoodPosition = 0;
 
         config.shortAutoHoodPosition = .3; // Starts m
         // atching SHORT
-        config.farAutoHoodPosition = .05; // Starts matching LONG
+        config.farAutoHoodPosition = 0; // Starts matching LONG
 
 
         /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
