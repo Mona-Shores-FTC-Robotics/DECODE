@@ -157,8 +157,14 @@ public class VisionSubsystemLimelight implements Subsystem {
     }
 
     public void stop() {
-        if (limelightAvailable && limelight != null) {
-            limelight.stop();
+        // Wrap hardware operations in try-catch to prevent "expansion hub stopped responding"
+        // errors during OpMode shutdown when the hub communication is already terminating
+        try {
+            if (limelightAvailable && limelight != null) {
+                limelight.stop();
+            }
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
         }
         state = VisionState.OFF;
         clearSnapshot();

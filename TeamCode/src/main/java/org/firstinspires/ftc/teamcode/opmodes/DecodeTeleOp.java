@@ -198,12 +198,40 @@ public class DecodeTeleOp extends NextFTCOpMode {
         CommandManager.INSTANCE.cancelAll();
 
         BindingManager.reset();
-        robot.drive.stop();
-        robot.launcher.abort();
-        robot.intake.stop();
-        robot.intake.deactivateRoller();
-        robot.vision.stop();
-        robot.lighting.stop();
+
+        // Wrap all subsystem stop calls in try-catch to prevent "expansion hub stopped responding"
+        // errors during OpMode shutdown. The individual subsystem stop methods also have
+        // their own try-catch blocks, but this provides an extra layer of protection.
+        try {
+            robot.drive.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.launcher.abort();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.intake.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.intake.deactivateRoller();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.vision.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.lighting.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
         if (allianceSelector != null) {
             allianceSelector.unlockSelection();
         }
