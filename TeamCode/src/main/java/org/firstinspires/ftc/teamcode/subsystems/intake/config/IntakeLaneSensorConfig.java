@@ -74,7 +74,7 @@ public class IntakeLaneSensorConfig {
          * At 50ms sample period: 3 samples = 150ms window, 4 samples = 200ms window.
          * Uses circular averaging to properly handle purple wrap-around (270°-30°).
          */
-        public int windowSize = 3;
+        public int windowSize = 10;
     }
 
     public static class Gating {
@@ -151,9 +151,9 @@ public class IntakeLaneSensorConfig {
 
     public static class DecisionBoundary {
         /** Hue decision boundary - classify as GREEN if hue < boundary, PURPLE otherwise */
-        public double hueDecisionBoundary = 175.0;
+        public double hueDecisionBoundary = 165.0; //20245
         /** Distance from boundary for low confidence warning (degrees) */
-        public double lowConfidenceMargin = 15.0;
+        public double lowConfidenceMargin = 8.0;
     }
 
     public static class Range {
