@@ -5,7 +5,10 @@ import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.TryRelocalizeForShotCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
+import org.firstinspires.ftc.teamcode.commands.IntakeCommands.TimedEjectCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -30,6 +33,7 @@ public class FarTogetherCommand {
         public double delayForGateToOpen = 1.0;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.0;
+        public double ejectTime = 1000;
     }
 
     public static class Waypoints {
@@ -125,7 +129,9 @@ public class FarTogetherCommand {
                 new ParallelDeadlineGroup(
                         firstPathBuilder
                                 .to(launchFar())
-                                .withConstantHeading(waypoints.launchFarHeadingDeg)                                .build(config.maxPathPower),
+                                .withConstantHeading(waypoints.launchFarHeadingDeg)
+                                .build(config.maxPathPower),
+                        new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
                         launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
 
@@ -134,12 +140,18 @@ public class FarTogetherCommand {
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Alliance Wall Artifacts
-                new FollowPathBuilder(robot, alliance)
+                new ParallelDeadlineGroup(
+                    new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
                         .to(artifactsAllianceWall())
                         .withControl(wallControl())
                         .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
+                        new SequentialGroup(
+                                new TimedEjectCommand(robot.intake, config.ejectTime),
+                                new AutoSmartIntakeCommand(robot.intake)
+                        )
+                ),
 
                 // Return and launch alliance wall artifacts
                 new FollowPathBuilder(robot, alliance)
@@ -155,12 +167,18 @@ public class FarTogetherCommand {
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Released Artifacts Try 1
-                new FollowPathBuilder(robot, alliance)
-                        .from(launchFar())
-                        .to(artifactsAllianceWall())
-                        .withControl(wallControl())
-                        .withConstantHeading(waypoints.artifactsWallHeading)
-                        .build(config.maxPathPower),
+                new ParallelDeadlineGroup(
+                    new FollowPathBuilder(robot, alliance)
+                            .from(launchFar())
+                            .to(artifactsAllianceWall())
+                            .withControl(wallControl())
+                            .withConstantHeading(waypoints.artifactsWallHeading)
+                            .build(config.maxPathPower),
+                        new SequentialGroup(
+                                new TimedEjectCommand(robot.intake, config.ejectTime),
+                                new AutoSmartIntakeCommand(robot.intake)
+                        )
+                ),
 
                 // Return and Launch
                 new FollowPathBuilder(robot, alliance)
@@ -175,12 +193,18 @@ public class FarTogetherCommand {
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Released Artifacts Try 2
-                new FollowPathBuilder(robot, alliance)
-                        .from(launchFar())
-                        .to(artifactsAllianceWall())
-                        .withControl(wallControl())
-                        .withConstantHeading(waypoints.artifactsWallHeading)
-                        .build(config.maxPathPower),
+                new ParallelDeadlineGroup(
+                        new FollowPathBuilder(robot, alliance)
+                                .from(launchFar())
+                                .to(artifactsAllianceWall())
+                                .withControl(wallControl())
+                                .withConstantHeading(waypoints.artifactsWallHeading)
+                                .build(config.maxPathPower),
+                        new SequentialGroup(
+                                new TimedEjectCommand(robot.intake, config.ejectTime),
+                                new AutoSmartIntakeCommand(robot.intake)
+                        )
+                ),
 
                 // Conditionally return and launch if time permits, otherwise go straight to park
                 new ConditionalFinalLaunchCommand(
@@ -198,11 +222,17 @@ public class FarTogetherCommand {
                                 new TryRelocalizeForShotCommand(robot.drive, robot.vision),
                                 launcherCommands.launchAccordingToMode(false),
 
-                                new FollowPathBuilder(robot, alliance)
-                                        .from(launchFar())
-                                        .to(readyForTeleop())
-                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                        .build(config.maxPathPower)
+                                new ParallelDeadlineGroup(
+                                        new FollowPathBuilder(robot, alliance)
+                                            .from(launchFar())
+                                            .to(readyForTeleop())
+                                            .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                            .build(config.maxPathPower),
+                                        new SequentialGroup(
+                                                new TimedEjectCommand(robot.intake, config.ejectTime),
+                                                new AutoSmartIntakeCommand(robot.intake)
+                                        )
+                                )
                         ),
                         // If not enough time: go straight to park
                         new SequentialGroup(
@@ -215,12 +245,12 @@ public class FarTogetherCommand {
                 )
         );
 
-        return new ParallelDeadlineGroup(
-                mainSequence,
+        return
+                mainSequence;
 //todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
 //                new InstantCommand(()-> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                autoSmartIntake // Run the smart intake the whole time
-        );
+//                autoSmartIntake
+
     }
 
     private static Pose start() {

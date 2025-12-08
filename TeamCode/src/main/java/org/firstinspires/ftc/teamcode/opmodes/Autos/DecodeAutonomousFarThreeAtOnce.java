@@ -16,7 +16,8 @@ import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
-
+import org.firstinspires.ftc.teamcode.util.LauncherMode;
+import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
@@ -51,6 +52,7 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
 
     private Robot robot;
     private AllianceSelector allianceSelector;
+    private LauncherModeSelector modeSelector;
     private Alliance activeAlliance = Alliance.BLUE;
     private FieldLayout currentLayout;
 
@@ -84,12 +86,17 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
         robot.initializeForAuto();
 
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
+        GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
+
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
+        modeSelector = new LauncherModeSelector(operatorPad, LauncherMode.THROUGHPUT);
+
         activeAlliance = allianceSelector.getSelectedAlliance();
 
         applyAlliance(activeAlliance, FarThreeAtOnceCommand.getDefaultStartPose());
 
         allianceSelector.applySelection(robot, robot.lighting);
+        modeSelector.applySelection(robot.lighting);
         prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
 
         addComponents(
@@ -107,7 +114,9 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
         AutoPrestartHelper.InitStatus initStatus = prestartHelper.update(activeAlliance);
         applyInitSelections(initStatus);
 
-//        updateProximityFeedback();
+        // Update launcher mode selection (operator dpad left/right)
+        modeSelector.updateDuringInit(robot.lighting);
+
         updateInitTelemetry(initStatus);
         updateDriverStationTelemetry(initStatus);
         robot.telemetry.publishLoopTelemetry(
@@ -334,7 +343,10 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
 
         telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
         telemetry.addLine();
-        telemetry.addLine("D-pad Left/Right override alliance");
+        telemetry.addData("Launcher Mode", modeSelector.getDisplayText());
+        telemetry.addLine();
+        telemetry.addLine("Driver D-pad: Alliance (L=BLUE R=RED)");
+        telemetry.addLine("Operator D-pad: Mode (L=THRU R=SEQ)");
         telemetry.addLine("Press START when ready");
         telemetry.update();
     }
@@ -342,6 +354,7 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
     public void onStartButtonPressed() {
         BindingManager.reset();
         allianceSelector.lockSelection();
+        modeSelector.lockSelection();
 
         // Build auto with vision-detected start pose (or null to use LocalizeCommand defaults)
         // Use follower's current pose as the source of truth (it was set from vision if available)
@@ -377,6 +390,7 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
         CommandManager.INSTANCE.cancelAll();
 
         allianceSelector.unlockSelection();
+        modeSelector.unlockSelection();
         BindingManager.reset();
 
         // Wrap all subsystem stop calls in try-catch to prevent "expansion hub stopped responding"
@@ -426,7 +440,9 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
     }
 
     /**
-     * Validates that a detected pose is reasonable before applying it
+     * Validates that a detected pose is reasonable before applying it.
+     * Only checks that pose is on the field - no distance restrictions.
+     * This allows students to adjust robot placement without getting locked to a bad pose.
      */
     private boolean shouldUpdateStartPose(Pose candidate) {
         if (candidate == null) {
@@ -434,21 +450,18 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
         }
 
         // Sanity check: pose should be on the field
-        double fieldWidthIn = FieldConstants.FIELD_WIDTH_INCHES ;
+        double fieldWidthIn = FieldConstants.FIELD_WIDTH_INCHES;
         if (candidate.getX() < 0 || candidate.getX() > fieldWidthIn ||
             candidate.getY() < 0 || candidate.getY() > fieldWidthIn) {
             return false;
         }
 
-        // Additional check: if we have an applied pose, the detected pose shouldn't be wildly different
+        // Log delta for diagnostics (if we have a previous pose)
         if (lastAppliedStartPosePedro != null) {
             double deltaX = Math.abs(candidate.getX() - lastAppliedStartPosePedro.getX());
             double deltaY = Math.abs(candidate.getY() - lastAppliedStartPosePedro.getY());
-            double maxDelta = 12.0; // 12 inches tolerance
-
-            if (deltaX > maxDelta || deltaY > maxDelta) {
-                return false; // Detected pose too different from expected
-            }
+            RobotState.packet.put("init/deltaX", deltaX);
+            RobotState.packet.put("init/deltaY", deltaY);
         }
 
         return true;

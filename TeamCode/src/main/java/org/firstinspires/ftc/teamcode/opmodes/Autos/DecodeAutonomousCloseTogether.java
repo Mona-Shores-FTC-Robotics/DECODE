@@ -156,7 +156,9 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
             // Ignore exceptions during shutdown
         }
 
+        // Cancel all scheduled commands to prevent them from running during cleanup
         CommandManager.INSTANCE.cancelAll();
+
         allianceSelector.unlockSelection();
         modeSelector.unlockSelection();
         BindingManager.reset();
@@ -174,7 +176,17 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
             // Ignore exceptions during shutdown
         }
         try {
+            robot.intake.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
             robot.vision.stop();
+        } catch (Exception ignored) {
+            // Ignore exceptions during shutdown
+        }
+        try {
+            robot.lighting.stop();
         } catch (Exception ignored) {
             // Ignore exceptions during shutdown
         }
