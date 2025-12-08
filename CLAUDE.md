@@ -165,7 +165,7 @@ DECODE uses a **tiered telemetry system** to balance performance and visibility.
 1. **MATCH Mode** (default) - Minimal telemetry for competition matches
    - Target: <10ms telemetry overhead
    - Driver station: Pose, alliance, launcher ready status, artifact count
-   - FTC Dashboard: **Server not started** (no overhead)
+   - FTC Dashboard: **No packets sent** (server runs for config access)
    - FullPanels: **Disabled**
    - **Use for:** Qualification and elimination matches
    - **Safe by default** - no need to remember to switch before matches

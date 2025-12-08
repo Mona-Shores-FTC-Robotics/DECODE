@@ -70,14 +70,14 @@ public final class TelemetrySettings {
     public static boolean enableDashboardTelemetry = true;
 
     /**
-     * Returns true if FTC Dashboard should be initialized at all.
-     * When COMPETITION_MODE is true or level is MATCH, dashboard server won't start.
+     * Returns true if FTC Dashboard should be initialized.
+     * Dashboard is needed for changing settings at runtime, so it starts unless
+     * COMPETITION_MODE is true (which requires recompile to change).
      */
     public static boolean shouldInitializeDashboard() {
-        if (COMPETITION_MODE) {
-            return false;
-        }
-        return config.level != TelemetryLevel.MATCH;
+        // Only COMPETITION_MODE completely disables Dashboard
+        // In MATCH mode, Dashboard still starts (for config access) but no packets are sent
+        return !COMPETITION_MODE;
     }
 
     /**
