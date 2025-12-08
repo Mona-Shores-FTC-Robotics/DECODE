@@ -26,6 +26,7 @@ public class IntakeLaneSensorConfig {
     public static Polling polling = new Polling();
     public Hardware hardware = new Hardware();
     public static DistanceFilter distanceFilter = new DistanceFilter();
+    public static HueFilter hueFilter = new HueFilter();
     public static Gating gating = new Gating();
     public static Quality quality = new Quality();
     public static Presence presence = new Presence();
@@ -61,6 +62,19 @@ public class IntakeLaneSensorConfig {
          * At 150ms sample period: 3 samples = 450ms window, 5 samples = 750ms window.
          */
         public int windowSize = 4;
+    }
+
+    public static class HueFilter {
+        /** Enable circular moving average filtering for hue values (helps stabilize purple vs green classification) */
+        public boolean enableFilter = true;
+        /**
+         * Number of samples to average for the moving average filter.
+         * Higher values = more smoothing but slower response.
+         * Recommended: 3-4 for good balance of smoothing and responsiveness.
+         * At 50ms sample period: 3 samples = 150ms window, 4 samples = 200ms window.
+         * Uses circular averaging to properly handle purple wrap-around (270°-30°).
+         */
+        public int windowSize = 3;
     }
 
     public static class Gating {

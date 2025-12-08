@@ -35,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.util.CircularMovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.MovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -163,6 +164,7 @@ public class IntakeSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, NormalizedColorSensor> laneSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, DistanceSensor> laneDistanceSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, MovingAverageFilter> laneDistanceFilters = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, CircularMovingAverageFilter> laneHueFilters = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, LaneSample> laneSamples = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Boolean> lanePresenceState = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneCandidateColor = new EnumMap<>(LauncherLane.class);
@@ -224,6 +226,8 @@ public class IntakeSubsystem implements Subsystem {
             laneClearCandidateCount.put(lane, 0);
             // Initialize distance filters with configured window size
             laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
+            // Initialize hue filters with configured window size
+            laneHueFilters.put(lane, new CircularMovingAverageFilter(laneSensorConfig.hueFilter.windowSize));
         }
         bindLaneSensors(hardwareMap);
     }
@@ -240,6 +244,8 @@ public class IntakeSubsystem implements Subsystem {
             laneClearCandidateCount.put(lane, 0);
             // Reset distance filters (recreate with current config in case window size changed)
             laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
+            // Reset hue filters (recreate with current config in case window size changed)
+            laneHueFilters.put(lane, new CircularMovingAverageFilter(laneSensorConfig.hueFilter.windowSize));
         }
         sensorTimer.reset();
         intakeMode = IntakeMode.STOPPED;
@@ -721,15 +727,24 @@ public class IntakeSubsystem implements Subsystem {
         int scaledBlue = Math.round(scaledBlueFloat);
 
         float maxComponent = Math.max(scaledRedFloat, Math.max(scaledGreenFloat, scaledBlueFloat));
-        float hue = 0.0f;
+        float rawHue = 0.0f;
         float saturation = 0.0f;
         float value = 0.0f;
 
         if (maxComponent > 0) {
             Color.RGBToHSV(scaledRed, scaledGreen, scaledBlue, hsvBuffer);
-            hue = hsvBuffer[0];
+            rawHue = hsvBuffer[0];
             saturation = hsvBuffer[1];
             value = hsvBuffer[2];
+        }
+
+        // Apply circular moving average filter to hue for smoother classification
+        float filteredHue = rawHue;
+        if (laneSensorConfig.hueFilter.enableFilter && maxComponent > 0) {
+            CircularMovingAverageFilter hueFilter = laneHueFilters.get(lane);
+            if (hueFilter != null) {
+                filteredHue = (float) hueFilter.calculate(rawHue);
+            }
         }
 
         // Compute total RGB intensity for presence detection (preserve fractional contribution)
@@ -738,8 +753,9 @@ public class IntakeSubsystem implements Subsystem {
         String lanePrefix = lane == null ? "unknown" : lane.name().toLowerCase(Locale.US);
 
         // Classify color using selected classifier mode with enhanced presence/background detection
+        // Use filtered hue for stable classification
         ClassificationResult result = classifyColor(
-                hue, saturation, value,
+                filteredHue, saturation, value,
                 maxComponent > 0,
                 totalIntensity,
                 distanceValid ? distanceCm : Double.NaN,
@@ -763,7 +779,8 @@ public class IntakeSubsystem implements Subsystem {
         RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_r", normalizedRed);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_g", normalizedGreen);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_b", normalizedBlue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/hue", hue);
+        RobotState.packet.put("intake/sample/" + lanePrefix + "/hue_raw", rawHue);
+        RobotState.packet.put("intake/sample/" + lanePrefix + "/hue", filteredHue);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/sat", saturation);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/val", value);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/total_intensity", totalIntensity);
@@ -774,7 +791,7 @@ public class IntakeSubsystem implements Subsystem {
                 withinDistance,
                 scaledRed, scaledGreen, scaledBlue,
                 normalizedRed, normalizedGreen, normalizedBlue,
-                hue, saturation, value,
+                filteredHue, saturation, value,
                 hsvColor,
                 finalColor,
                 confidence
