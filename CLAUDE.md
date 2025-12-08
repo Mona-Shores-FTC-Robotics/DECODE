@@ -160,55 +160,37 @@ The robot uses Limelight's MegaTag2 algorithm for improved AprilTag-based locali
 
 DECODE uses a **tiered telemetry system** to balance performance and visibility. Loop timing is heavily impacted by telemetry overhead, so different telemetry levels are provided for different operational contexts.
 
-**Telemetry Levels** (configurable via FTC Dashboard → Config → TelemetrySettings):
+**Telemetry Levels** (in `TelemetrySettings.java` - requires recompile to change):
 
-1. **MATCH Mode** (default) - Minimal telemetry for competition matches
-   - Target: <10ms telemetry overhead
-   - Driver station: Pose, alliance, launcher ready status, artifact count
-   - FTC Dashboard: **No packets sent** (server runs for config access)
-   - FullPanels: **Disabled**
-   - **Use for:** Qualification and elimination matches
-   - **Safe by default** - no need to remember to switch before matches
-
-2. **PRACTICE Mode** - Moderate telemetry for tuning
-   - Target: <20ms telemetry overhead
-   - Driver station: Pose, alliance, drive/launcher state, vision, artifacts
-   - FTC Dashboard: Basic metrics (throttled to 100ms / 10 Hz)
-   - FullPanels: Configurable (can be enabled/disabled)
-   - **Use for:** Practice sessions, parameter tuning, debugging on practice field
-
-3. **DEBUG Mode** - Full telemetry for development
-   - FTC Dashboard: Complete packets (50ms / 20 Hz)
-   - FullPanels: Full diagnostics
-   - Driver station: Detailed per-lane launcher metrics, heading diagnostics
-   - **Use for:** Development, bench testing, detailed diagnostics
-
-**COMPETITION_MODE Flag** (in `TelemetrySettings.java`):
-
-For absolute safety during competition, set `COMPETITION_MODE = true`:
 ```java
-public static final boolean COMPETITION_MODE = true;  // Set before competition day
+public static final TelemetryLevel LEVEL = TelemetryLevel.MATCH;  // Change this line
 ```
-When enabled:
-- FTC Dashboard server **never starts** (zero network overhead)
-- All telemetry packet sending is disabled
-- Cannot be overridden at runtime
-- Requires recompile to change (intentionally hard to accidentally disable)
+
+1. **MATCH** (default) - Safe for competition
+   - FTC Dashboard: **Does not start**
+   - No telemetry packets sent
+   - Driver station only: Pose, alliance, launcher ready status
+   - **Use for:** All competition matches
+
+2. **PRACTICE** - For tuning on practice field
+   - FTC Dashboard: Starts, packets throttled to 10 Hz
+   - FullPanels: Configurable
+   - **Use for:** Practice sessions, parameter tuning
+
+3. **DEBUG** - Full telemetry for development
+   - FTC Dashboard: Full packets at 20 Hz
+   - FullPanels: Full diagnostics
+   - **Use for:** Development, bench testing, pit diagnostics
 
 **Changing Telemetry Level:**
 
-During operation (no recompile needed, only works if `COMPETITION_MODE = false`):
-1. Connect to FTC Dashboard: `http://192.168.49.1:8080/dash`
-2. Navigate to **Config** tab
-3. Find **TelemetrySettings** → **config**
-4. Change **level** dropdown to MATCH, PRACTICE, or DEBUG
-5. Changes take effect immediately on next loop
+1. Open `TelemetrySettings.java`
+2. Change `LEVEL = TelemetryLevel.MATCH` to `PRACTICE` or `DEBUG`
+3. Recompile and deploy
 
 **Competition Strategy:**
-- **Qualification matches:** Leave at default MATCH mode (safe, no action needed)
-- **Practice field:** Switch to PRACTICE mode via Dashboard for tuning visibility
-- **Pit testing:** Switch to DEBUG mode for full diagnostics
-- **Competition day:** Optionally set `COMPETITION_MODE = true` in code for extra safety
+- Leave at `MATCH` for all competition matches (safe by default)
+- Switch to `PRACTICE` only when you need to tune, then switch back
 
 **Performance Impact:**
 - MATCH mode: ~15-25ms total loop time (vs 50-100ms in DEBUG)
