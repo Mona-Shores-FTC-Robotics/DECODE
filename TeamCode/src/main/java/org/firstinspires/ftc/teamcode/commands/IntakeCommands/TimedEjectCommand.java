@@ -49,7 +49,7 @@ public class TimedEjectCommand extends IntakeCommand {
     }
 
     @Override
-    public void end(boolean interrupted) {
+    public void stop(boolean interrupted) {
         getIntake().setMode(IntakeSubsystem.IntakeMode.STOPPED);
     }
 }

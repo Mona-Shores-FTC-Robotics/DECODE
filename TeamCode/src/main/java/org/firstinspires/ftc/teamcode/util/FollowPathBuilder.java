@@ -170,7 +170,7 @@ public class FollowPathBuilder {
 
         double clippedPower = Range.clip(maxPower, 0.0, 1.0);
 
-        return new FollowPath(chain, false, clippedPower);
+        return new FollowPath(chain, true, clippedPower);
     }
 
     // ---------------------------

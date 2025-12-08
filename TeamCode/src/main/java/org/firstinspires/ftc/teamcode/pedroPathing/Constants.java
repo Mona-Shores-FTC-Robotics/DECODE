@@ -120,13 +120,13 @@ public class Constants {
                 .useSecondaryDrivePIDF(true)
 
 
-                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0042, 0, 0.0005, 0.6, .0001)) // tuned 12/4
-                .drivePIDFSwitch(10)
+                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.006, 0, 0.0005, 0.6, .0001)) // tuned 12/4
+                .drivePIDFSwitch(3)
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.045, 0, 0, 0.6, .0001))
 
                 .headingPIDFCoefficients(new PIDFCoefficients(.6, 0.01, .0001, .0005))  // Increased P and D, reduced F
-                .headingPIDFSwitch(Math.toRadians(15))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.932, 0.0001, .03, .0003))
+                .headingPIDFSwitch(Math.toRadians(3))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.75, 0.0001, .03, .0003))
 
                 .translationalPIDFCoefficients(new PIDFCoefficients(
                         0.8,
@@ -209,10 +209,10 @@ public class Constants {
     public static PathConstraints pathConstraints = new PathConstraints(
             0.995,
             0.1,
-            1,
-            Math.toRadians(2.0),
-            150,
-            .9,
+            .5,
+            Math.toRadians(.5),
+            250,
+            1.0,
             10,
             1);
 
