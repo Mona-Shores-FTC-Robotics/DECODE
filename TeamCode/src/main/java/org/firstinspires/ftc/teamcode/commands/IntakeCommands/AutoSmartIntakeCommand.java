@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands.IntakeCommands;
 
+import com.acmerobotics.dashboard.config.Config;
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -13,6 +15,7 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  *
  * Runs continuously; never finishes on its own.
  */
+@Configurable
 public class AutoSmartIntakeCommand extends IntakeCommand {
 
     public static class AutoSmartIntakeConfig {

@@ -1,12 +1,13 @@
 package org.firstinspires.ftc.teamcode.subsystems.intake.config;
 
 import com.acmerobotics.dashboard.config.Config;
+import com.bylazar.configurables.annotations.Configurable;
 
 /**
  * Lane sensor configuration for artifact color detection.
  * Configures color sensors, classification algorithms, and presence detection.
  */
-@Config
+@Configurable
 public class IntakeLaneSensorConfig {
     /**
      * Artifact color classifier mode.
@@ -22,20 +23,20 @@ public class IntakeLaneSensorConfig {
     }
 
     // Groups below are shown as collapsible sections in @Configurable UI
-    public Polling polling = new Polling();
+    public static Polling polling = new Polling();
     public Hardware hardware = new Hardware();
-    public DistanceFilter distanceFilter = new DistanceFilter();
-    public Gating gating = new Gating();
-    public Quality quality = new Quality();
-    public Presence presence = new Presence();
-    public Background background = new Background();
-    public Classifier classifier = new Classifier();
+    public static DistanceFilter distanceFilter = new DistanceFilter();
+    public static Gating gating = new Gating();
+    public static Quality quality = new Quality();
+    public static Presence presence = new Presence();
+    public static Background background = new Background();
+    public static Classifier classifier = new Classifier();
     public static LanePresenceConfig lanePresenceConfig19429 = createLanePresenceConfig19429();
     public static LanePresenceConfig lanePresenceConfig20245 = createLanePresenceConfig20245();
 
     public static class Polling {
         public boolean enablePolling = true;
-        public double samplePeriodMs = 150;
+        public double samplePeriodMs = 50;
         public String leftSensor = "lane_left_color";
         public String centerSensor = "lane_center_color";
         public String rightSensor = "lane_right_color";
@@ -70,9 +71,9 @@ public class IntakeLaneSensorConfig {
         /** Number of consecutive non-artifact samples required before clearing lane color (helps with whiffle ball holes) */
         public int consecutiveClearConfirmationsRequired = 2;
         /** Keep-alive duration (ms) - keep artifact detection alive after last good reading (helps with whiffle ball holes) */
-        public double keepAliveMs = 400.0;
+        public double keepAliveMs = 0;
         /** Distance clearance margin (cm) - how far beyond threshold to instantly clear (helps artifacts clear quickly when removed) */
-        public double distanceClearanceMarginCm = .7;
+        public double distanceClearanceMarginCm = .5;
     }
 
     public static class Quality {
@@ -177,9 +178,9 @@ public class IntakeLaneSensorConfig {
 
     private static LanePresenceConfig createLanePresenceConfig20245() {
         LanePresenceConfig config = new LanePresenceConfig();
-        config.leftThresholdCm = 6.0;
-        config.centerThresholdCm = 3.2;
-        config.rightThresholdCm = 3.8;
+        config.leftThresholdCm = 4.0;
+        config.centerThresholdCm = 3.5;
+        config.rightThresholdCm = 4.5;
         return config;
     }
 }
