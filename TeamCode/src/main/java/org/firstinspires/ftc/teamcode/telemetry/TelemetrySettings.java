@@ -36,15 +36,22 @@ public final class TelemetrySettings {
         DEBUG
     }
 
+    /**
+     * Set to true for competition builds to completely disable all dashboard/telemetry overhead.
+     * When true, FTC Dashboard server won't start, no packets sent, minimal CPU usage.
+     * Change this to false when you need to tune on the practice field.
+     */
+    public static final boolean COMPETITION_MODE = false;
+
     public static class Config {
-        /** Active telemetry level - change via FTC Dashboard */
-        public TelemetryLevel level = TelemetryLevel.PRACTICE;
+        /** Active telemetry level - change via FTC Dashboard (ignored if COMPETITION_MODE=true) */
+        public TelemetryLevel level = TelemetryLevel.MATCH;
 
         /** Enable FTC Dashboard packet sending (overridden by level) */
         public boolean enableDashboardPackets = true;
 
         /** Enable FullPanels telemetry (overridden by level) */
-        public boolean enableFullPanels = true;
+        public boolean enableFullPanels = false;
 
         /** AutoLogManager sampling interval in milliseconds */
         public long autoLogIntervalMs = 50L;
@@ -63,11 +70,22 @@ public final class TelemetrySettings {
     public static boolean enableDashboardTelemetry = true;
 
     /**
+     * Returns true if FTC Dashboard should be initialized at all.
+     * When COMPETITION_MODE is true or level is MATCH, dashboard server won't start.
+     */
+    public static boolean shouldInitializeDashboard() {
+        if (COMPETITION_MODE) {
+            return false;
+        }
+        return config.level != TelemetryLevel.MATCH;
+    }
+
+    /**
      * Get effective dashboard packet sending state based on telemetry level.
      */
     public static boolean shouldSendDashboardPackets() {
-        if (config.level == TelemetryLevel.MATCH) {
-            return false; // Never send in MATCH mode
+        if (COMPETITION_MODE || config.level == TelemetryLevel.MATCH) {
+            return false; // Never send in MATCH mode or competition builds
         }
         return config.enableDashboardPackets;
     }
@@ -76,8 +94,8 @@ public final class TelemetrySettings {
      * Get effective FullPanels telemetry state based on telemetry level.
      */
     public static boolean shouldSendFullPanels() {
-        if (config.level == TelemetryLevel.MATCH) {
-            return false; // Never send in MATCH mode
+        if (COMPETITION_MODE || config.level == TelemetryLevel.MATCH) {
+            return false; // Never send in MATCH mode or competition builds
         }
         if (config.level == TelemetryLevel.PRACTICE) {
             return config.enableFullPanels; // Configurable in PRACTICE

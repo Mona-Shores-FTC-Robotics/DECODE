@@ -162,14 +162,15 @@ DECODE uses a **tiered telemetry system** to balance performance and visibility.
 
 **Telemetry Levels** (configurable via FTC Dashboard → Config → TelemetrySettings):
 
-1. **MATCH Mode** - Minimal telemetry for competition matches
+1. **MATCH Mode** (default) - Minimal telemetry for competition matches
    - Target: <10ms telemetry overhead
    - Driver station: Pose, alliance, launcher ready status, artifact count
-   - FTC Dashboard: **Disabled** (no packets sent)
+   - FTC Dashboard: **Server not started** (no overhead)
    - FullPanels: **Disabled**
    - **Use for:** Qualification and elimination matches
+   - **Safe by default** - no need to remember to switch before matches
 
-2. **PRACTICE Mode** (default) - Moderate telemetry for tuning
+2. **PRACTICE Mode** - Moderate telemetry for tuning
    - Target: <20ms telemetry overhead
    - Driver station: Pose, alliance, drive/launcher state, vision, artifacts
    - FTC Dashboard: Basic metrics (throttled to 100ms / 10 Hz)
@@ -182,9 +183,21 @@ DECODE uses a **tiered telemetry system** to balance performance and visibility.
    - Driver station: Detailed per-lane launcher metrics, heading diagnostics
    - **Use for:** Development, bench testing, detailed diagnostics
 
+**COMPETITION_MODE Flag** (in `TelemetrySettings.java`):
+
+For absolute safety during competition, set `COMPETITION_MODE = true`:
+```java
+public static final boolean COMPETITION_MODE = true;  // Set before competition day
+```
+When enabled:
+- FTC Dashboard server **never starts** (zero network overhead)
+- All telemetry packet sending is disabled
+- Cannot be overridden at runtime
+- Requires recompile to change (intentionally hard to accidentally disable)
+
 **Changing Telemetry Level:**
 
-During operation (no recompile needed):
+During operation (no recompile needed, only works if `COMPETITION_MODE = false`):
 1. Connect to FTC Dashboard: `http://192.168.49.1:8080/dash`
 2. Navigate to **Config** tab
 3. Find **TelemetrySettings** → **config**
@@ -192,10 +205,10 @@ During operation (no recompile needed):
 5. Changes take effect immediately on next loop
 
 **Competition Strategy:**
-- **Qualification matches:** MATCH mode (performance critical, 15-25ms loop times)
-- **Practice field:** PRACTICE mode (good visibility for quick adjustments)
-- **Pit testing:** DEBUG mode (full diagnostics to find issues)
-- **Between matches:** Switch via FTC Dashboard (instant, no code changes)
+- **Qualification matches:** Leave at default MATCH mode (safe, no action needed)
+- **Practice field:** Switch to PRACTICE mode via Dashboard for tuning visibility
+- **Pit testing:** Switch to DEBUG mode for full diagnostics
+- **Competition day:** Optionally set `COMPETITION_MODE = true` in code for extra safety
 
 **Performance Impact:**
 - MATCH mode: ~15-25ms total loop time (vs 50-100ms in DEBUG)

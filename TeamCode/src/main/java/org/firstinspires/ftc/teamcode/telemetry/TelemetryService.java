@@ -35,7 +35,8 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  */
 public class TelemetryService {
 
-    private final FtcDashboard dashboard;
+    private FtcDashboard dashboard;
+    private boolean dashboardInitialized = false;
     private final DriverStationFormatter driverStationFormatter;
     private final DashboardFormatter dashboardFormatter;
 
@@ -44,11 +45,25 @@ public class TelemetryService {
 
     /**
      * Create a new telemetry service.
+     * Dashboard is lazily initialized only when needed (not in MATCH mode or COMPETITION_MODE).
      */
     public TelemetryService() {
-        this.dashboard = TelemetrySettings.enableDashboardTelemetry ? safelyGetDashboard() : null;
+        // Don't initialize dashboard in constructor - do it lazily when first needed
+        this.dashboard = null;
         this.driverStationFormatter = new DriverStationFormatter();
         this.dashboardFormatter = new DashboardFormatter();
+    }
+
+    /**
+     * Lazily initialize FTC Dashboard only when actually needed.
+     * This avoids starting the dashboard server in MATCH mode.
+     */
+    private FtcDashboard getDashboardIfNeeded() {
+        if (!dashboardInitialized && TelemetrySettings.shouldInitializeDashboard()) {
+            dashboard = safelyGetDashboard();
+            dashboardInitialized = true;
+        }
+        return dashboard;
     }
 
     /**
@@ -176,7 +191,13 @@ public class TelemetryService {
      * Publish FTC Dashboard telemetry based on level (with throttling).
      */
     private void publishDashboardTelemetry(RobotTelemetryData data, TelemetrySettings.TelemetryLevel level) {
-        if (!TelemetrySettings.shouldSendDashboardPackets() || dashboard == null) {
+        if (!TelemetrySettings.shouldSendDashboardPackets()) {
+            return;
+        }
+
+        // Lazily initialize dashboard only when we actually need to send
+        FtcDashboard dash = getDashboardIfNeeded();
+        if (dash == null) {
             return;
         }
 
@@ -186,8 +207,8 @@ public class TelemetryService {
         // Throttle based on configured interval
         if (dashboardInterval > 0 && (nowMs - lastDashboardPacketMs >= dashboardInterval)) {
             TelemetryPacket packet = dashboardFormatter.createPacket(data, level);
-            if (packet  != null) {
-                dashboard.sendTelemetryPacket(packet);
+            if (packet != null) {
+                dash.sendTelemetryPacket(packet);
                 RobotState.packet = new TelemetryPacket();
                 lastDashboardPacketMs = nowMs;
             }
