@@ -23,10 +23,9 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 /**
  * Centralized telemetry service for DECODE robot.
  * <p>
- * Provides tiered telemetry output (MATCH/PRACTICE/DEBUG) to multiple destinations:
+ * Provides telemetry output (MATCH/DEBUG) to multiple destinations:
  * - Driver Station (FTC telemetry)
- * - FTC Dashboard (web dashboard + AdvantageScope)
- * - FullPanels (FTControl panels)
+ * - FTC Dashboard (web dashboard)
  * </p>
  * <p>
  * This service acts as a thin orchestrator - all formatting logic is delegated to
@@ -34,6 +33,8 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * </p>
  */
 public class TelemetryService {
+
+    private static final long DASHBOARD_INTERVAL_MS = 50L; // 20 Hz in DEBUG mode
 
     private FtcDashboard dashboard;
     private boolean dashboardInitialized = false;
@@ -45,7 +46,7 @@ public class TelemetryService {
 
     /**
      * Create a new telemetry service.
-     * Dashboard is lazily initialized only when needed (not in MATCH mode or COMPETITION_MODE).
+     * Dashboard is lazily initialized only when needed (not in MATCH mode).
      */
     public TelemetryService() {
         // Don't initialize dashboard in constructor - do it lazily when first needed
@@ -87,30 +88,10 @@ public class TelemetryService {
     /**
      * Publish telemetry for the current loop to all available outputs.
      * <p>
-     * Telemetry verbosity is controlled by TelemetrySettings.config.level:
-     * - MATCH: Minimal telemetry (<10ms target)
-     * - PRACTICE: Moderate telemetry (<20ms target)
-     * - DEBUG: Full telemetry (all diagnostics)
+     * Telemetry verbosity is controlled by TelemetrySettings.LEVEL:
+     * - MATCH: Minimal telemetry, no dashboard
+     * - DEBUG: Full telemetry with dashboard
      * </p>
-     *
-     * @param drive Drive subsystem
-     * @param launcher Launcher subsystem
-     * @param intake Intake subsystem
-     * @param vision Vision subsystem
-     * @param lighting Lighting subsystem (may be null)
-     * @param driveRequest Current drive request from bindings (may be null)
-     * @param gamepad1 Driver gamepad (may be null)
-     * @param gamepad2 Operator gamepad (may be null)
-     * @param alliance Current alliance
-     * @param runtimeSec OpMode runtime in seconds
-     * @param matchTimeSec Match time remaining in seconds
-     * @param dsTelemetry Driver station telemetry object (may be null)
-     * @param opMode OpMode name (e.g., "TeleOp", "Autonomous")
-     * @param isAutonomous Whether this is autonomous mode (hides driver controls)
-     * @param poseOverride Optional pose override for autonomous routines (may be null)
-     * @param prevMainLoopMs Main loop overhead from previous iteration (0 if not available)
-     * @param telemetryStartNs Telemetry overhead from previous iteration (0 if not available)
-
      */
     public void publishLoopTelemetry(
             DriveSubsystem drive,
@@ -151,46 +132,35 @@ public class TelemetryService {
                 telemetryStartNs
         );
 
-        TelemetrySettings.TelemetryLevel level = TelemetrySettings.config.level;
+        // FTC Dashboard packets (only in DEBUG mode)
+        publishDashboardTelemetry(data);
 
-
-
-        // 1. FTC Dashboard packets (throttled based on level)
-        publishDashboardTelemetry(data, level);
-
-        // 3. Driver station telemetry (skip if autonomous and driver controls hidden)
+        // Driver station telemetry (skip if autonomous and driver controls hidden)
         if (dsTelemetry != null && !isAutonomous) {
-            publishDriverStationTelemetry(dsTelemetry, data, level);
+            publishDriverStationTelemetry(dsTelemetry, data);
         }
     }
 
     /**
      * Publish driver station telemetry based on level.
      */
-    private void publishDriverStationTelemetry(Telemetry telemetry, RobotTelemetryData data, TelemetrySettings.TelemetryLevel level) {
-        switch (level) {
-            case MATCH:
-                driverStationFormatter.publishMatch(telemetry, data);
-                break;
-            case PRACTICE:
-                driverStationFormatter.publishPractice(telemetry, data);
-                break;
-            case DEBUG:
-            default:
-                // Handle page navigation from driver gamepad dpad
-                driverStationFormatter.handlePageNavigation(
-                        data.gamepad.driver.dpadUp,
-                        data.gamepad.driver.dpadDown
-                );
-                driverStationFormatter.publishDebug(telemetry, data);
-                break;
+    private void publishDriverStationTelemetry(Telemetry telemetry, RobotTelemetryData data) {
+        if (TelemetrySettings.LEVEL == TelemetrySettings.TelemetryLevel.MATCH) {
+            driverStationFormatter.publishMatch(telemetry, data);
+        } else {
+            // DEBUG mode - handle page navigation from driver gamepad dpad
+            driverStationFormatter.handlePageNavigation(
+                    data.gamepad.driver.dpadUp,
+                    data.gamepad.driver.dpadDown
+            );
+            driverStationFormatter.publishDebug(telemetry, data);
         }
     }
 
     /**
-     * Publish FTC Dashboard telemetry based on level (with throttling).
+     * Publish FTC Dashboard telemetry (only in DEBUG mode).
      */
-    private void publishDashboardTelemetry(RobotTelemetryData data, TelemetrySettings.TelemetryLevel level) {
+    private void publishDashboardTelemetry(RobotTelemetryData data) {
         if (!TelemetrySettings.shouldSendDashboardPackets()) {
             return;
         }
@@ -202,11 +172,10 @@ public class TelemetryService {
         }
 
         long nowMs = SystemClock.uptimeMillis();
-        long dashboardInterval = TelemetrySettings.getDashboardInterval();
 
-        // Throttle based on configured interval
-        if (dashboardInterval > 0 && (nowMs - lastDashboardPacketMs >= dashboardInterval)) {
-            TelemetryPacket packet = dashboardFormatter.createPacket(data, level);
+        // Throttle to 20 Hz
+        if (nowMs - lastDashboardPacketMs >= DASHBOARD_INTERVAL_MS) {
+            TelemetryPacket packet = dashboardFormatter.createPacket(data, TelemetrySettings.LEVEL);
             if (packet != null) {
                 dash.sendTelemetryPacket(packet);
                 RobotState.packet = new TelemetryPacket();

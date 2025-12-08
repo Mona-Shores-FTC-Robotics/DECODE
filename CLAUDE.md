@@ -156,45 +156,22 @@ The robot uses Limelight's MegaTag2 algorithm for improved AprilTag-based locali
 
 ## Logging and Telemetry
 
-### Tiered Telemetry System
+### Telemetry Levels
 
-DECODE uses a **tiered telemetry system** to balance performance and visibility. Loop timing is heavily impacted by telemetry overhead, so different telemetry levels are provided for different operational contexts.
+DECODE uses two telemetry levels controlled by a compile-time setting. This prevents accidentally leaving debug telemetry on during competition.
 
-**Telemetry Levels** (in `TelemetrySettings.java` - requires recompile to change):
+**Setting** (in `TelemetrySettings.java` - requires recompile to change):
 
 ```java
-public static final TelemetryLevel LEVEL = TelemetryLevel.MATCH;  // Change this line
+public static final TelemetryLevel LEVEL = TelemetryLevel.MATCH;  // Change to DEBUG when tuning
 ```
 
-1. **MATCH** (default) - Safe for competition
-   - FTC Dashboard: **Does not start**
-   - No telemetry packets sent
-   - Driver station only: Pose, alliance, launcher ready status
-   - **Use for:** All competition matches
+| Level | Dashboard | Packets | Use For |
+|-------|-----------|---------|---------|
+| **MATCH** (default) | Does not start | None | Competition |
+| **DEBUG** | Starts | Full (20 Hz) | Tuning & development |
 
-2. **PRACTICE** - For tuning on practice field
-   - FTC Dashboard: Starts, packets throttled to 10 Hz
-   - FullPanels: Configurable
-   - **Use for:** Practice sessions, parameter tuning
-
-3. **DEBUG** - Full telemetry for development
-   - FTC Dashboard: Full packets at 20 Hz
-   - FullPanels: Full diagnostics
-   - **Use for:** Development, bench testing, pit diagnostics
-
-**Changing Telemetry Level:**
-
-1. Open `TelemetrySettings.java`
-2. Change `LEVEL = TelemetryLevel.MATCH` to `PRACTICE` or `DEBUG`
-3. Recompile and deploy
-
-**Competition Strategy:**
-- Leave at `MATCH` for all competition matches (safe by default)
-- Switch to `PRACTICE` only when you need to tune, then switch back
-
-**Performance Impact:**
-- MATCH mode: ~15-25ms total loop time (vs 50-100ms in DEBUG)
-- All modes preserve critical telemetry for analysis
+**To tune:** Change `MATCH` to `DEBUG`, recompile, tune, then change back to `MATCH`.
 
 ### Live Telemetry (During Matches)
 

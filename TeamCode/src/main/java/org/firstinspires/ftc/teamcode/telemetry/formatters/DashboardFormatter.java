@@ -17,9 +17,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * Formats telemetry packets for FTC Dashboard.
  * Uses hierarchical field naming with underscores for alphabetical grouping.
- * Provides tiered output based on telemetry level (PRACTICE/DEBUG).
  * <p>
- * Note: MATCH mode does not send dashboard packets for performance.
+ * Note: MATCH mode does not send dashboard packets. DEBUG mode sends full diagnostics.
  * </p>
  */
 public class DashboardFormatter {
@@ -27,62 +26,17 @@ public class DashboardFormatter {
     /**
      * Create a telemetry packet based on the current telemetry level.
      * MATCH mode returns null (no packets sent).
-     * PRACTICE mode includes essential metrics for tuning.
      * DEBUG mode includes comprehensive diagnostics.
      */
     public TelemetryPacket createPacket(RobotTelemetryData data, TelemetrySettings.TelemetryLevel level) {
-        switch (level) {
-            case MATCH:
-                return null; // No packets in MATCH mode
-            case PRACTICE:
-                return createPracticePacket(data);
-            case DEBUG:
-            default:
-                return createDebugPacket(data);
+        if (level == TelemetrySettings.TelemetryLevel.MATCH) {
+            return null;
         }
-    }
-
-    /**
-     * Create PRACTICE level packet - essential metrics for tuning.
-     * Target: 10 Hz / 100ms interval, ~20 fields
-     */
-    private TelemetryPacket createPracticePacket(RobotTelemetryData data) {
-        TelemetryPacket packet = RobotState.packet;
-
-        // Context
-        packet.put("context/alliance", data.context.alliance.name());
-        packet.put("context/match_time_sec", data.context.matchTimeSec);
-        packet.put("context/runtime_sec", data.context.runtimeSec);
-
-        // Pose (always critical)
-        addPoseData(packet, data);
-
-        // Drive essentials
-        packet.put("drive/aim_mode", data.drive.aimMode);
-        packet.put("drive/mode", data.drive.driveMode);
-        packet.put("drive/distance_to_goal_in", data.drive.distanceToGoalIn);
-
-        // Launcher control (feedforward + proportional per lane)
-
-        // Vision essentials
-        packet.put("vision/has_tag", data.vision.hasTag);
-        packet.put("vision/range_in", data.vision.rangeIn);
-        packet.put("vision/tag_id", data.vision.tagId);
-
-        // Intake
-        packet.put("intake/artifact_count", data.intake.artifactCount);
-        packet.put("intake/mode", data.intake.mode);
-        addPracticeLaneSummaries(packet, data.intake);
-
-        // Field overlay
-        addFieldOverlay(packet, data, false);
-
-        return packet;
+        return createDebugPacket(data);
     }
 
     /**
      * Create DEBUG level packet - comprehensive diagnostics.
-     * Target: 20 Hz / 50ms interval, ~80 fields
      */
     private TelemetryPacket createDebugPacket(RobotTelemetryData data) {
         TelemetryPacket packet = RobotState.packet;
@@ -157,26 +111,6 @@ public class DashboardFormatter {
         addFieldOverlay(packet, data, true);
 
         return packet;
-    }
-
-    private void addPracticeLaneSummaries(TelemetryPacket packet, IntakeTelemetryData intake) {
-        if (intake == null) {
-            return;
-        }
-
-        addLaneSummary(packet, "intake/lane_left", intake.laneLeftSummary);
-        addLaneSummary(packet, "intake/lane_center", intake.laneCenterSummary);
-        addLaneSummary(packet, "intake/lane_right", intake.laneRightSummary);
-    }
-
-    private void addLaneSummary(TelemetryPacket packet, String prefix, IntakeTelemetryData.LaneTelemetrySummary summary) {
-        if (summary == null) {
-            return;
-        }
-
-        packet.put(prefix + "/present", summary.detected);
-        packet.put(prefix + "/distance_cm-2", summary.distanceCm);
-        packet.put(prefix + "/color", summary.color);
     }
 
     private void addDebugLaneSamples(TelemetryPacket packet, IntakeTelemetryData intake) {

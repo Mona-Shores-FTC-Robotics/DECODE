@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Formats telemetry for the driver station display.
- * Provides tiered output based on telemetry level (MATCH/PRACTICE/DEBUG).
+ * Provides tiered output based on telemetry level (MATCH/DEBUG).
  * <p>
  * In DEBUG mode, supports multiple pages (switch with dpad up/down):
  * - Page 1: Overview (alliance, time, pose, launcher, artifacts)
@@ -130,61 +130,6 @@ public class DriverStationFormatter {
 
         // Artifact count (critical for match strategy)
         telemetry.addData("Artifacts", "%d", data.intake.artifactCount);
-
-        telemetry.update();
-    }
-
-    /**
-     * Publish PRACTICE level telemetry - moderate detail for tuning.
-     * Target: <20ms overhead
-     */
-    public void publishPractice(Telemetry telemetry, RobotTelemetryData data) {
-        if (telemetry == null) {
-            return;
-        }
-
-        // Alliance
-        telemetry.addData("Alliance", data.context.alliance.displayName());
-
-        // Robot config (which robot - 19429 or 20245)
-        telemetry.addData("Robot", data.context.robotConfig);
-
-        // Match time
-        telemetry.addData("Match Time", formatMatchTime(data.context.matchTimeSec));
-
-        // Pose
-        if (data.pose.poseValid) {
-            telemetry.addData("Pose", "x=%.1f in  y=%.1f in  h=%.1f°",
-                    data.pose.poseXIn,
-                    data.pose.poseYIn,
-                    data.pose.headingDeg);
-        } else {
-            telemetry.addData("Pose", "(unavailable)");
-        }
-
-        // Drive state
-        telemetry.addData("Drive", "%s | aim=%s | slow=%s",
-                data.drive.driveMode,
-                data.drive.aimMode ? "ON" : "OFF",
-                data.drive.slowMode ? "ON" : "OFF");
-
-        // Launcher per-lane readiness
-        telemetry.addData("Launcher", "L:%s C:%s R:%s",
-                data.launcher.left.ready ? "✓" : "✗",
-                data.launcher.center.ready ? "✓" : "✗",
-                data.launcher.right.ready ? "✓" : "✗");
-
-        // Vision
-        if (data.vision.hasTag) {
-            telemetry.addData("Vision", "Tag %d @ %.1f in",
-                    data.vision.tagId,
-                    data.vision.rangeIn);
-        }
-
-        // Intake
-        telemetry.addData("Intake", "%s | artifacts=%d",
-                data.intake.mode,
-                data.intake.artifactCount);
 
         telemetry.update();
     }
