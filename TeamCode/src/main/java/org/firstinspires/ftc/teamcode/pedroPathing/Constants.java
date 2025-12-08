@@ -94,19 +94,19 @@ public class Constants {
                 .useSecondaryTranslationalPIDF(true)
                 .useSecondaryHeadingPIDF(true)
                 .useSecondaryDrivePIDF(true)
-//                .translationalPIDFCoefficients(new PIDFCoefficients(.030, 0, .0001, .08))
-//                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.01, 0, 0.0001, .05))
+
+                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.005, 0, 0.0005, 0.6, 0.0001)) //was .005p
+                .drivePIDFSwitch(5)
+                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.02, 0, 0, 0.6, 0.0001))
+
+                .headingPIDFCoefficients(new PIDFCoefficients(.9, .001, .0001, .0005))  // Increased P and D, reduced F
+                .headingPIDFSwitch(Math.toRadians(5))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.75, 0.0001, .03, .0003))
+
                 .translationalPIDFCoefficients(new PIDFCoefficients(.06, 0, .0001, .08)) // TODO: Tune for 20245
-                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.03, 0, 0.0001, .08))
+                .translationalPIDFSwitch(5)
+                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.1, 0, 0.0001, .08))
 
-                // Sharper but damped heading response for aiming
-//                .headingPIDFCoefficients(new PIDFCoefficients(.9, 0, .02, .05))
-//                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(.55, 0, .02, .05))
-                .headingPIDFCoefficients(new PIDFCoefficients(.85, 0, .001, .02))  // Increased P and D, reduced F
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.3, 0, .001, .02))
-
-                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.0058, 0, .001, 0.6, .075)) //was .005p
-                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.0002, 0.01, 0.001, 0.6, 0.001))
                 .centripetalScaling(0.00005)
                 .mass(15.4221); //34 pounds 11/16/25
     }
