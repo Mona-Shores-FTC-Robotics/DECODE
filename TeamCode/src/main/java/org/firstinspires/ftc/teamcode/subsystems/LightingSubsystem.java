@@ -40,7 +40,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         LANE_TRACKING(2),            // Default - show artifact presence/colors
         RELOCALIZE_WARNING(3),       // Warning pulse when no relocalization for >15s
         LAUNCH_READY(4),             // White blink when RPM ready + goal aligned + stationary
-        DECODE_SWITCH(5);            // Endgame switch to DECODE mode (fast yellow blink)
+        DECODE_SWITCH(5);            // Endgame switch to DECODE mode (continuous rainbow)
 
         public final int priority;
         LightingPattern(int priority) {
@@ -366,8 +366,8 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     /**
      * Visual cue when switching to DECODE mode.
-     * Shows yellow blink (2Hz, 6 blinks total) for 3 seconds.
-     * Yellow chosen because it's not an artifact or alliance color.
+     * Shows continuous rainbow cycle (red→yellow→green→blue→purple) for 3 seconds.
+     * Never goes dark or white, always lit with color.
      */
     public void showDecodeModeSwitchNotification() {
         requestPattern(LightingPattern.DECODE_SWITCH, 3000L);
@@ -459,15 +459,27 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     private void renderDecodeSwitch(long nowMs) {
-        // Yellow blink for DECODE mode switch notification
-        // Blinks yellow on/off at 2Hz (250ms intervals) for 3 seconds = 6 complete blinks
-        // Yellow is distinctive - not an artifact color (green/purple) or alliance color (red/blue)
-        long blinkInterval = 250L; // 250ms on, 250ms off = 2Hz blink rate (visible to human eye and servos)
-        boolean isOn = (nowMs % (blinkInterval * 2)) < blinkInterval;
+        // Continuous rainbow cycle for DECODE mode switch notification
+        // Cycles through 5 colors (red/yellow/green/blue/purple) - never goes dark or white
+        // Each color shows for 500ms, full cycle = 2.5s, repeats during 3-second duration
+        long colorDuration = 500L; // 500ms per color
+        long cycleTime = colorDuration * 5; // 5 colors = 2.5 second full cycle
+        long elapsed = nowMs % cycleTime;
 
-        double position = isOn ? colorPositionConfig.yellowPosition : colorPositionConfig.offPosition;
+        double position;
+        if (elapsed < colorDuration) {
+            position = colorPositionConfig.redPosition;
+        } else if (elapsed < colorDuration * 2) {
+            position = colorPositionConfig.yellowPosition;
+        } else if (elapsed < colorDuration * 3) {
+            position = colorPositionConfig.greenPosition;
+        } else if (elapsed < colorDuration * 4) {
+            position = colorPositionConfig.bluePosition;
+        } else {
+            position = colorPositionConfig.purplePosition;
+        }
 
-        // Apply same pattern to all lanes for unified effect
+        // Apply same color to all lanes for unified rainbow effect
         applySolidPosition(clamp01(position));
     }
 
