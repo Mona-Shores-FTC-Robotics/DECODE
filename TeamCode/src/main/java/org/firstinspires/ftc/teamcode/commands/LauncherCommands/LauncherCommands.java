@@ -54,13 +54,16 @@ public class LauncherCommands {
     }
 
     /**
-     * Mode-aware launch: DECODE uses sequence, THROUGHPUT uses all-at-once.
+     * Mode-aware launch: checks mode at RUNTIME (when command starts), not at binding time.
+     *
+     * - DECODE mode: Fires in pattern sequence with motif tail offset
+     * - THROUGHPUT mode: Fires all lanes as soon as ready
+     *
+     * @param spinDownAfterShot Whether to spin down flywheels after shooting
+     * @return Command that adapts to current launcher mode when executed
      */
     public Command launchAccordingToMode(boolean spinDownAfterShot) {
-        if (org.firstinspires.ftc.teamcode.util.RobotState.getLauncherMode() == org.firstinspires.ftc.teamcode.util.LauncherMode.DECODE) {
-            return new LaunchInSequenceCommand(launcher, intake, spinDownAfterShot);
-        }
-        return new LaunchAllCommand(launcher, intake, spinDownAfterShot);
+        return new ModeAwareLaunchCommand(launcher, intake, spinDownAfterShot);
     }
 
     /**
