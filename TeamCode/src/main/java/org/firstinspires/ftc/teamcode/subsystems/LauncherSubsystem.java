@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.util.Range;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherConfigTest;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
@@ -43,6 +44,10 @@ public class LauncherSubsystem implements Subsystem {
     // Global configuration instances
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
+
+    // TEST: Single static instance for @Configurable pattern verification
+    // Change values in Dashboard under "LauncherConfigTest" and watch telemetry
+    public static LauncherConfigTest testConfig = new LauncherConfigTest();
 
 //    // Robot-specific timing configs
 //    public static LauncherTimingConfig timingConfig_Robot19429 = LauncherTimingConfig.timing19429;
@@ -158,6 +163,11 @@ public class LauncherSubsystem implements Subsystem {
     public void periodic() {
         long start = System.nanoTime();
         double now = clock.milliseconds();
+
+        // TEST: Log configurable test values - change in Dashboard and watch these update!
+        RobotState.packet.put("launcher/TEST_CONFIG/testRpm", testConfig.testRpm);
+        RobotState.packet.put("launcher/TEST_CONFIG/testKp", testConfig.testKp);
+        RobotState.packet.put("launcher/TEST_CONFIG/testEnabled", testConfig.testEnabled);
 
         for (Feeder feeder : feeders.values()) {
             feeder.update();
