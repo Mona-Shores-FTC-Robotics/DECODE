@@ -237,11 +237,6 @@ public class OperatorBindings {
             if (rawGamepad != null) {
                 rawGamepad.rumble(200);
             }
-        } else {
-            // No tag detected - error rumble (two short pulses)
-            if (rawGamepad != null) {
-                rawGamepad.rumble(100);
-            }
         }
     }
 

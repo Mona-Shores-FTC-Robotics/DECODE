@@ -36,7 +36,7 @@ public class IntakeLaneSensorConfig {
 
     public static class Polling {
         public boolean enablePolling = true;
-        public double samplePeriodMs = 200;
+        public double samplePeriodMs = 100;
         public String leftSensor = "lane_left_color";
         public String centerSensor = "lane_center_color";
         public String rightSensor = "lane_right_color";
@@ -192,7 +192,7 @@ public class IntakeLaneSensorConfig {
     private static LanePresenceConfig createLanePresenceConfig20245() {
         LanePresenceConfig config = new LanePresenceConfig();
         config.leftThresholdCm = 4.0;
-        config.centerThresholdCm = 3.5;
+        config.centerThresholdCm = 4.0;
         config.rightThresholdCm = 4.5;
         return config;
     }
