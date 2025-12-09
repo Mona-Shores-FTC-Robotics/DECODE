@@ -92,6 +92,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
         updateAllianceLighting();
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.initializeForTeleOp();
+        // Wire up drive subsystem for relocalization warning checks
+        robot.lighting.setDriveSubsystem(robot.drive);
         // Use persisted alliance if valid, otherwise default to BLUE (not UNKNOWN)
         Alliance selectorDefault = (persistedAlliance != null && persistedAlliance != Alliance.UNKNOWN)
                 ? persistedAlliance
