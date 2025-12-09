@@ -10,7 +10,7 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
  */
 public class TimedEjectCommand extends IntakeCommand {
 
-    private static final double DEFAULT_DURATION_MS = 400.0;
+    private static final double DEFAULT_DURATION_MS = 1200;
 
     private final double durationMs;
     private final ElapsedTime timer = new ElapsedTime();

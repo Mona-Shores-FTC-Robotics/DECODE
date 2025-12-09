@@ -28,7 +28,6 @@ import dev.nextftc.extensions.pedro.FollowPath;
  *   CommandManager.INSTANCE.scheduleCommand(auto);
  * 
  */
-@Configurable
 public class CloseThreeAtOnceCommand {
 
     public static class Config {
@@ -37,7 +36,7 @@ public class CloseThreeAtOnceCommand {
         public double endTimeForLinearHeadingInterpolation = .7;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.8;
-        public double ejectTime = 1000;
+        public double ejectTime = 1200;
     }
 
     public static class Waypoints {
@@ -143,7 +142,6 @@ public class CloseThreeAtOnceCommand {
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
         LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
-        AutoSmartIntakeCommand autoSmartIntake = new AutoSmartIntakeCommand(robot.intake);
 
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);

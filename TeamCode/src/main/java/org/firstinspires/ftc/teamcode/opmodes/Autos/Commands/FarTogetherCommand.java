@@ -47,7 +47,7 @@ public class FarTogetherCommand {
         public double launchFarHeadingDeg = 108;
 
         // Artifacts at Alliance Wall)
-        public double artifactsWallX = 13;
+        public double artifactsWallX = 10;
         public double artifactsWallY = 6.5;
         public double artifactsWallHeading = 180;
 
@@ -57,12 +57,12 @@ public class FarTogetherCommand {
 
 
         // Chute Released Artifacts Try 1
-        public double releasedTry1X = 13;
+        public double releasedTry1X = 10;
         public double releasedTry1Y = 23;
         public double releasedTry1Heading = 180;
 
         // Chute Released Artifacts Try 1
-        public double releasedTry2X = 13;
+        public double releasedTry2X = 10;
         public double releasedTry2Y = 37;
         public double releasedTry2Heading = 180;
 
@@ -141,16 +141,13 @@ public class FarTogetherCommand {
 
                 // Pickup Alliance Wall Artifacts
                 new ParallelDeadlineGroup(
-                    new FollowPathBuilder(robot, alliance)
-                        .from(launchFar())
-                        .to(artifactsAllianceWall())
-                        .withControl(wallControl())
-                        .withConstantHeading(waypoints.artifactsWallHeading)
-                        .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new TimedEjectCommand(robot.intake, config.ejectTime),
-                                new AutoSmartIntakeCommand(robot.intake)
-                        )
+                        new FollowPathBuilder(robot, alliance)
+                            .from(launchFar())
+                            .to(artifactsAllianceWall())
+                            .withControl(wallControl())
+                            .withConstantHeading(waypoints.artifactsWallHeading)
+                            .build(config.maxPathPower),
+                        new AutoSmartIntakeCommand(robot.intake)
                 ),
 
                 // Return and launch alliance wall artifacts
@@ -174,10 +171,7 @@ public class FarTogetherCommand {
                             .withControl(wallControl())
                             .withConstantHeading(waypoints.artifactsWallHeading)
                             .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new TimedEjectCommand(robot.intake, config.ejectTime),
-                                new AutoSmartIntakeCommand(robot.intake)
-                        )
+                        new AutoSmartIntakeCommand(robot.intake)
                 ),
 
                 // Return and Launch
@@ -200,10 +194,7 @@ public class FarTogetherCommand {
                                 .withControl(wallControl())
                                 .withConstantHeading(waypoints.artifactsWallHeading)
                                 .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new TimedEjectCommand(robot.intake, config.ejectTime),
-                                new AutoSmartIntakeCommand(robot.intake)
-                        )
+                        new AutoSmartIntakeCommand(robot.intake)
                 ),
 
                 // Conditionally return and launch if time permits, otherwise go straight to park
@@ -228,10 +219,7 @@ public class FarTogetherCommand {
                                             .to(readyForTeleop())
                                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                             .build(config.maxPathPower),
-                                        new SequentialGroup(
-                                                new TimedEjectCommand(robot.intake, config.ejectTime),
-                                                new AutoSmartIntakeCommand(robot.intake)
-                                        )
+                                        new AutoSmartIntakeCommand(robot.intake)
                                 )
                         ),
                         // If not enough time: go straight to park

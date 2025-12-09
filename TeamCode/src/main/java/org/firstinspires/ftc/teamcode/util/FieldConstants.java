@@ -17,7 +17,6 @@ import java.util.List;
  * as the point to aim at when shooting. The incenter is equidistant from all sides of the
  * triangular opening and gives a more centered and safer aim point than the centroid.
  */
-@Configurable
 public final class FieldConstants {
 
     private FieldConstants() {
@@ -25,7 +24,6 @@ public final class FieldConstants {
     }
     public static BasketTargetOffsets  basketTargetOffsets = new BasketTargetOffsets();
 
-    @Configurable
     public static class BasketTargetOffsets {
         /** Blue basket X offset from incenter (inches). Negative = left toward corner */
         public double blueDeltaX = 0;

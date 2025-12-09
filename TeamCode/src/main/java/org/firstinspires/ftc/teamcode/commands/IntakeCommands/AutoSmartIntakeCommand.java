@@ -15,7 +15,6 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  *
  * Runs continuously; never finishes on its own.
  */
-@Configurable
 public class AutoSmartIntakeCommand extends IntakeCommand {
 
     public static class AutoSmartIntakeConfig {

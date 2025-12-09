@@ -458,6 +458,7 @@ public class DecodeAutonomousFarTogether extends NextFTCOpMode {
             RobotState.packet.put("init/deltaY", deltaY);
         }
 
+
         return true;
     }
 

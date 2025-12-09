@@ -97,15 +97,15 @@ public class Constants {
 
                 .drivePIDFCoefficients(new FilteredPIDFCoefficients(.005, 0, 0.0005, 0.6, 0.0001)) //was .005p
                 .drivePIDFSwitch(5)
-                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.02, 0, 0, 0.6, 0.0001))
+                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.015, 0, .0001, 0.6, 0.0001))
 
-                .headingPIDFCoefficients(new PIDFCoefficients(.9, .001, .0001, .0005))  // Increased P and D, reduced F
+                .headingPIDFCoefficients(new PIDFCoefficients(.6, .001, .0003, .0005))  // Increased P and D, reduced F
                 .headingPIDFSwitch(Math.toRadians(5))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.75, 0.0001, .03, .0003))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2.2, 0.0001, .03, .0003))
 
-                .translationalPIDFCoefficients(new PIDFCoefficients(.06, 0, .0001, .08)) // TODO: Tune for 20245
+                .translationalPIDFCoefficients(new PIDFCoefficients(.045, 0, .0001, .025)) // TODO: Tune for 20245
                 .translationalPIDFSwitch(5)
-                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.1, 0, 0.0001, .08))
+                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.1, 0, 0.0001, .015))
 
                 .centripetalScaling(0.00005)
                 .mass(15.4221); //34 pounds 11/16/25
@@ -139,9 +139,6 @@ public class Constants {
                         0.0001,
                         .0006,
                         .00015))
-
-
-
 
                 .centripetalScaling(0.00005)
                 .mass(15.4221); // TODO: Update mass for 20245
@@ -210,7 +207,7 @@ public class Constants {
             0.995,
             0.1,
             .5,
-            Math.toRadians(.5),
+            Math.toRadians(1.0),
             250,
             1.0,
             10,

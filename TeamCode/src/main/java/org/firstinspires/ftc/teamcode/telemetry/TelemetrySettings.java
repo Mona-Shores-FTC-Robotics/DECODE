@@ -47,10 +47,4 @@ public final class TelemetrySettings {
         return LEVEL == TelemetryLevel.DEBUG;
     }
 
-    /**
-     * Returns true if FullPanels telemetry should be sent.
-     */
-    public static boolean shouldSendFullPanels() {
-        return LEVEL == TelemetryLevel.DEBUG;
-    }
 }

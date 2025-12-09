@@ -32,7 +32,7 @@ public class CloseTogetherCommand {
         public double endTimeForLinearHeadingInterpolation = .7;
         public double secondsOpeningGate = .5;
         public double autoDurationSeconds = 30.0;
-        public double minTimeForFinalLaunchSeconds = 5.0;
+        public double minTimeForFinalLaunchSeconds = 5;
         public double ejectTime = 1000;
     }
 
@@ -44,7 +44,7 @@ public class CloseTogetherCommand {
         // LaunchClose1
         public double launchClose1X = 30.0;
         public double launchClose1Y = 113.0;
-        public double launchClose1Heading = 128;
+        public double launchClose1Heading = 134;
 
         // ArtifactsSet1
         public double artifactsSet1X = 23.75;
@@ -57,11 +57,11 @@ public class CloseTogetherCommand {
 
         // OpenGate
         public double openGateX = 17;
-        public double openGateY = 82;
+        public double openGateY = 80;
         public double openGateHeading = 270;
 
-        public double openGateControlX = 27;
-        public double openGateControlY = 82;
+        public double openGateControlX = 25;
+        public double openGateControlY = 80;
 
         // OpenGate
         public double openGateStrafeX = 30;
@@ -77,13 +77,13 @@ public class CloseTogetherCommand {
         public double launchClose2ControlY = 80;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 23.25;
+        public double artifactsSet2X = 23.75;
         public double artifactsSet2Y = 61.0;
         public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 23.25;
-        public double artifactsSet2Control0Y = 70;
+        public double artifactsSet2Control0X = 23.75;
+        public double artifactsSet2Control0Y = 100;
 
         // LaunchClose3
         public double launchClose3X = 30.0;
@@ -93,15 +93,6 @@ public class CloseTogetherCommand {
         // Control point for segment: LaunchClose3
         public double launchClose3Control0X = 50.5;
         public double launchClose3Control0Y = 72;
-
-//        // ReleasedArtifacts
-//        public double releasedArtifactsX = 13;
-//        public double releasedArtifactsY = 54.25;
-//        public double releasedArtifactsHeading = 180;
-//
-//        // Control point for segment: ArtifactsSet3
-//        public double releasedArtifactsControlX = 51;
-//        public double releasedArtifactsControlY = 59;
 
         // ArtifactsSet3
         public double artifactsSet3X = 23.75;
