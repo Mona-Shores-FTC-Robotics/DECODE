@@ -12,7 +12,6 @@ import com.bylazar.configurables.annotations.Configurable;
  * - If you edit a value with a default here and nothing changes, check if it's
  *   being overridden in the robot-specific create methods below
  */
-@Configurable
 public class LauncherFlywheelConfig {
     public FlywheelParameters parameters = new FlywheelParameters();
 

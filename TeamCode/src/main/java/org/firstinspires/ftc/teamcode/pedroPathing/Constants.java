@@ -103,10 +103,17 @@ public class Constants {
                 .headingPIDFSwitch(Math.toRadians(5))
                 .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2.2, 0.0001, .03, .0003))
 
-                .translationalPIDFCoefficients(new PIDFCoefficients(.045, 0, .0001, .025)) // TODO: Tune for 20245
+                .translationalPIDFCoefficients(new PIDFCoefficients(
+                        0.8,
+                        0,
+                        0,
+                        .05))
                 .translationalPIDFSwitch(5)
-                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.1, 0, 0.0001, .015))
-
+                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(
+                        0.05,
+                        0.0001,
+                        .0006,
+                        .00015))
                 .centripetalScaling(0.00005)
                 .mass(15.4221); //34 pounds 11/16/25
     }
@@ -206,9 +213,9 @@ public class Constants {
     public static PathConstraints pathConstraints = new PathConstraints(
             0.995,
             0.1,
-            .5,
+            .1,
             Math.toRadians(1.0),
-            250,
+            150,
             1.0,
             10,
             1);

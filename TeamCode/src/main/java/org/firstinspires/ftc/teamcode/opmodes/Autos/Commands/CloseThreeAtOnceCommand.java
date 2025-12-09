@@ -31,11 +31,11 @@ import dev.nextftc.extensions.pedro.FollowPath;
 public class CloseThreeAtOnceCommand {
 
     public static class Config {
-        public double maxPathPower = .75;
+        public double maxPathPower = .8;
         public double lastPathsMaxPower = 1;
         public double endTimeForLinearHeadingInterpolation = .7;
         public double autoDurationSeconds = 30.0;
-        public double minTimeForFinalLaunchSeconds = 5.8;
+        public double minTimeForFinalLaunchSeconds = 6.8;
         public double ejectTime = 1200;
     }
 
@@ -45,8 +45,8 @@ public class CloseThreeAtOnceCommand {
         public double startHeading = 0;
 
         // LaunchClose1
-        public double launchClose1X = 30.0;
-        public double launchClose1Y = 113.0;
+        public double launchClose1X = 36;
+        public double launchClose1Y = 107.0;
         public double launchClose1Heading = 134.0;
 
         // ArtifactsSet1
@@ -59,22 +59,22 @@ public class CloseThreeAtOnceCommand {
         public double artifactsSet1Control0Y = 113;
 
         // LaunchClose2
-        public double launchClose2X = 30.0;
-        public double launchClose2Y = 113.0;
+        public double launchClose2X = 36;
+        public double launchClose2Y = 107.0;
         public double launchClose2Heading = 134.0;
 
         // ArtifactsSet2
         public double artifactsSet2X = 24;
         public double artifactsSet2Y = 61.0;
-        public double artifactsSet2Heading = 270;
+        public double artifactsSet2Heading = 260;
 
         // Control point for segment: ArtifactsSet2
         public double artifactsSet2Control0X = 24;
-        public double artifactsSet2Control0Y = 70;
+        public double artifactsSet2Control0Y = 100;
 
         // LaunchClose3
-        public double launchClose3X = 30.0;
-        public double launchClose3Y = 113.0;
+        public double launchClose3X = 36;
+        public double launchClose3Y = 107.0;
         public double launchClose3Heading = 134.0;
 
         // Control point for segment: LaunchClose3
@@ -84,15 +84,15 @@ public class CloseThreeAtOnceCommand {
         // ArtifactsSet3
         public double artifactsSet3X = 24;
         public double artifactsSet3Y = 35.5;
-        public double artifactsSet3Heading = 270.0;
+        public double artifactsSet3Heading = 260;
 
         // Control point for segment: ArtifactsSet3
         public double artifactsSet3Control0X = 24;
-        public double artifactsSet3Control0Y = 72;
+        public double artifactsSet3Control0Y = 100;
 
         // LaunchClose4
-        public double launchClose4X = 30;
-        public double launchClose4Y = 113.0;
+        public double launchClose4X = 36;
+        public double launchClose4Y = 107.0;
         public double launchClose4Heading = 134.0;
 
         // Control point for segment: LaunchOffLine

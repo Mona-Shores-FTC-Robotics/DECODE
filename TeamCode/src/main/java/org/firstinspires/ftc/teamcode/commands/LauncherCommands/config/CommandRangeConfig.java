@@ -1,10 +1,13 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands.config;
 
+import com.bylazar.configurables.annotations.Configurable;
+
 /**
  * Shared tunable RPM and hood positions for SHORT/MID/LONG ranges.
  * Both distance-based and preset-based commands should reference this single
  * config so field tuning only needs to happen in one place.
  */
+@Configurable
 public class CommandRangeConfig {
     /** Short range RPMs */
     public double shortLeftRpm;
@@ -62,19 +65,19 @@ public class CommandRangeConfig {
         CommandRangeConfig config = new CommandRangeConfig();
         // Apply 19429-specific values
         /** Short range RPMs */
-        config.shortLeftRpm = 2000;
-        config.shortCenterRpm = 2000; // Center disabled by default
-        config.shortRightRpm = 2000;
+        config.shortLeftRpm = 1900;
+        config.shortCenterRpm = 1900; // Center disabled by default
+        config.shortRightRpm = 1900;
 
         /** Mid range RPMs */
-        config.midLeftRpm = 2400;
-        config.midCenterRpm = 2400; // Center disabled by default
-        config.midRightRpm = 2400;
+        config.midLeftRpm = 2500;
+        config.midCenterRpm = 2500; // Center disabled by default
+        config.midRightRpm = 2500;
 
         /** Long range RPMs */
-        config.longLeftRpm = 2725;
-        config.longCenterRpm = 2725; // Center disabled by default
-        config.longRightRpm = 2725;
+        config.longLeftRpm = 2900;
+        config.longCenterRpm = 2900; // Center disabled by default
+        config.longRightRpm = 2900;
 
         /** Long range min dist RPMs for DISTANCEBASEDSPINCOMMADN2 */
         config.longMinLeftRpm = 2725;
@@ -97,11 +100,11 @@ public class CommandRangeConfig {
         config.farAutoRightRpm = 2725;
 
         /** Per-range hood positions (applied uniformly to all lanes) */
-        config.shortHoodPosition = 0.3;
+        config.shortHoodPosition = 1;
         config.midHoodPosition = 0.05;
         config.longHoodPosition = 0.0;
 
-        config.shortAutoHoodPosition = 0.3; // Starts matching SHORT
+        config.shortAutoHoodPosition = .58; // Starts matching SHORT
         config.farAutoHoodPosition = 0.0; // Starts matching LONG
 
         /** Timeout in seconds before giving up on spin-up */
