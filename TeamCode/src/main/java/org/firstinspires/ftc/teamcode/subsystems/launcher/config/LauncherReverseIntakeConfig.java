@@ -6,7 +6,6 @@ import com.acmerobotics.dashboard.config.Config;
  * Configuration for reverse flywheel intake mode.
  * Used when loading game pieces from human player station.
  */
-@Config
 public class LauncherReverseIntakeConfig {
     /** Power level for reverse intake (negative runs motors backward) */
     public static double reversePower = -0.7;

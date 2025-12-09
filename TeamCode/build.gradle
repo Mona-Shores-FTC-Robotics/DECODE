@@ -49,7 +49,6 @@ dependencies {
 
     //Panels
     implementation('com.bylazar:fullpanels:1.0.11')
-//    implementation('com.bylazar:configurables:1.0.5')
 
 
     //FTC Dashboard

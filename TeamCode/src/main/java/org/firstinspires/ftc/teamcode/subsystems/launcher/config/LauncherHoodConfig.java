@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 
+import com.bylazar.configurables.annotations.Configurable;
+
 /**
  * Hood configuration for launcher angle adjustment.
  *
@@ -9,6 +11,7 @@ package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
  * - If you edit a value with a default here and nothing changes, check if it's
  *   being overridden in the robot-specific create methods below
  */
+@Configurable
 public class LauncherHoodConfig {
     // ===== SHARED VALUES (same for both robots) =====
     /** Hood retracted (fully in) servo position */
@@ -25,45 +28,27 @@ public class LauncherHoodConfig {
         // SHARED - same for both robots
         /** Hardware name for left hood servo */
         public String servoName = "hood_left";
-
-        /** Short range hood angle servo position */
-        public double shortPosition = .3;
-
-        /** Mid range hood angle servo position */
-        public double midPosition = .05;
-
-        /** Long range hood angle servo position */
-        public double longPosition = 0;
+        public double shortPosition;
+        public double midPosition;
+        public double longPosition;
     }
 
     public static class CenterHoodConfig {
         // SHARED - same for both robots
         /** Hardware name for center hood servo */
         public String servoName = "hood_center";
-
-        /** Short range hood angle servo position */
-        public double shortPosition = .3;
-
-        /** Mid range hood angle servo position */
-        public double midPosition = .05;
-
-        /** Long range hood angle servo position */
-        public double longPosition = 0;
+        public double shortPosition;
+        public double midPosition;
+        public double longPosition;
     }
 
     public static class RightHoodConfig {
         // SHARED - same for both robots
         /** Hardware name for right hood servo */
         public String servoName = "hood_right";
-
-        /** Short range hood angle servo position */
-        public double shortPosition = .3;
-
-        /** Mid range hood angle servo position */
-        public double midPosition = .05;
-
-        /** Long range hood angle servo position */
-        public double longPosition = 0;
+        public double shortPosition;
+        public double midPosition;
+        public double longPosition;
     }
 
     // ===== ROBOT-SPECIFIC VALUES (no defaults - set per robot) =====
@@ -79,7 +64,21 @@ public class LauncherHoodConfig {
      */
     private static LauncherHoodConfig createHoodConfig19429() {
         LauncherHoodConfig config = new LauncherHoodConfig();
-        // No overrides needed - using shared defaults
+        /** Short range hood angle servo position */
+        config.hoodLeft.shortPosition = .3;
+        config.hoodCenter.shortPosition = .3;
+        config.hoodRight.shortPosition = .3;
+
+        /** Mid range hood angle servo position */
+        config.hoodLeft.midPosition = .05;
+        config.hoodCenter.midPosition = .05;
+        config.hoodRight.midPosition = .05;
+
+        /** Long range hood angle servo position */
+        config.hoodLeft.longPosition = 0;
+        config.hoodCenter.longPosition = 0;
+        config.hoodRight.longPosition = 0;
+
         return config;
     }
 
@@ -89,7 +88,20 @@ public class LauncherHoodConfig {
      */
     private static LauncherHoodConfig createHoodConfig20245() {
         LauncherHoodConfig config = new LauncherHoodConfig();
-        // No overrides needed - using shared defaults
+        config.hoodLeft.shortPosition = .3;
+        config.hoodCenter.shortPosition = .3;
+        config.hoodRight.shortPosition = .3;
+
+        /** Mid range hood angle servo position */
+        config.hoodLeft.midPosition = .05;
+        config.hoodCenter.midPosition = .05;
+        config.hoodRight.midPosition = .05;
+
+        /** Long range hood angle servo position */
+        config.hoodLeft.longPosition = 0;
+        config.hoodCenter.longPosition = 0;
+        config.hoodRight.longPosition = 0;
+
         return config;
     }
 }

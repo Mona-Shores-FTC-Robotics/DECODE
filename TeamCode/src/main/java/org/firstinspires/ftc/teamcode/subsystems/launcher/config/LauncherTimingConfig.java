@@ -27,9 +27,6 @@ public class LauncherTimingConfig {
     /** Servo dwell time to allow the artifact to clear before re-closing (ms). */
     public double recoveryMs = 150;
 
-    /** Delay between sequential shots when bursting all three lanes (ms). */
-    public double burstSpacingMs = 120.0;
-
     // ===== ROBOT-SPECIFIC VALUES (no defaults - set per robot) =====
     // (none currently - all values are shared)
 

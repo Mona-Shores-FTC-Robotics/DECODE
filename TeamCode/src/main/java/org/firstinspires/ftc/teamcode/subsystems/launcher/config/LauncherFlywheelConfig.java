@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 
+import com.acmerobotics.dashboard.config.Config;
+import com.bylazar.configurables.annotations.Configurable;
+
 /**
  * Flywheel configuration for launcher motors.
  *
@@ -9,6 +12,7 @@ package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
  * - If you edit a value with a default here and nothing changes, check if it's
  *   being overridden in the robot-specific create methods below
  */
+@Configurable
 public class LauncherFlywheelConfig {
     public FlywheelParameters parameters = new FlywheelParameters();
 
@@ -31,66 +35,32 @@ public class LauncherFlywheelConfig {
     public static class LeftFlywheelConfig {
         // SHARED - hardware name same for both robots
         public String motorName = "launcher_left";
-
-        // SHARED - idle RPM same for both robots
         public double idleRpm = 1500;
-
-        // SHARED - motor direction same for both robots (based on wiring)
-        public boolean reversed = false;
-
-        // SHARED - feedforward static gain same for both robots
-        public double kS = 0.10;
-
-        // SHARED - feedforward velocity gain same for both robots
-        public double kV = 0.0002;
-
-        // ROBOT-SPECIFIC - proportional gain (19429=0.003, 20245=0.001)
+        public boolean reversed;
+        public double kS;
+        public double kV;
         public double kP;
     }
 
     public static class CenterFlywheelConfig {
         // SHARED - hardware name same for both robots
         public String motorName = "launcher_center";
-
-        // SHARED - motor direction same for both robots (based on wiring)
-        public boolean reversed = false;
-
-        // SHARED - idle RPM same for both robots
         public double idleRpm = 1500;
-
-        // SHARED - feedforward static gain same for both robots
-        public double kS = 0.10;
-
-        // SHARED - feedforward velocity gain same for both robots
-        public double kV = 0.0002;
-
-        // SHARED - proportional gain same for both robots
-        public double kP = 0.001;
+        public boolean reversed;
+        public double kS;
+        public double kV;
+        public double kP;
     }
 
     public static class RightFlywheelConfig { //actually left
         // SHARED - hardware name same for both robots
         public String motorName = "launcher_right";
-
-        // SHARED - motor direction same for both robots (based on wiring)
-        public boolean reversed = true;
-
-        // SHARED - idle RPM same for both robots
         public double idleRpm = 1500;
-
-        // SHARED - feedforward static gain same for both robots
-        public double kS = 0.10;
-
-        // SHARED - feedforward velocity gain same for both robots
-        public double kV = 0.0002;
-
-        // SHARED - proportional gain same for both robots
-        public double kP = 0.001;
+        public boolean reversed;
+        public double kS;
+        public double kV;
+        public double kP;
     }
-
-    // ===== ROBOT-SPECIFIC VALUES (no defaults - set per robot) =====
-    // Only left.kP differs between robots
-
     // Robot-specific instances
     public static LauncherFlywheelConfig flywheelConfig19429 = createFlywheelConfig19429();
     public static LauncherFlywheelConfig flywheelConfig20245 = createFlywheelConfig20245();
@@ -102,8 +72,23 @@ public class LauncherFlywheelConfig {
     private static LauncherFlywheelConfig createFlywheelConfig19429() {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
         // Only override robot-specific value
-        config.flywheelLeft.kP = 0.003;
-        // Center and right use defaults (kP = 0.001)
+        config.flywheelLeft.reversed = false;
+        config.flywheelLeft.idleRpm = 1500;
+        config.flywheelLeft.kS = 0.10;
+        config.flywheelLeft.kV = 0.0002;
+        config.flywheelLeft.kP = .003;
+
+        config.flywheelCenter.reversed = false;
+        config.flywheelCenter.idleRpm = 1500;
+        config.flywheelCenter.kS = 0.10;
+        config.flywheelCenter.kV = 0.0002;
+        config.flywheelCenter.kP = .001;
+
+        config.flywheelRight.reversed = true;
+        config.flywheelRight.idleRpm = 1500;
+        config.flywheelRight.kS = 0.10;
+        config.flywheelRight.kV = 0.0002;
+        config.flywheelRight.kP = .001;
         return config;
     }
 
