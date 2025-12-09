@@ -16,7 +16,10 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinC
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
+import org.firstinspires.ftc.teamcode.util.MotifPattern;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+
+import java.util.Optional;
 
 public class OperatorBindings {
     private static final double MOTIF_TAIL_STICK_THRESHOLD = 0.6;
@@ -39,8 +42,10 @@ public class OperatorBindings {
     private final Button motifTailUp;
     private final Button motifTailRight;
     private final Button toggleLauncherMode;
+    private final Button detectMotifButton;
 
     private Gamepad rawGamepad;  // Raw gamepad for haptic feedback
+    private Robot robot;  // Store robot reference for motif detection
 
     public OperatorBindings(GamepadEx operator) {
 
@@ -76,10 +81,14 @@ public class OperatorBindings {
 
         toggleLauncherMode = operator.back();
 
+        // Detect motif from vision (dpad right - use when motif wasn't detected in auto)
+        detectMotifButton = operator.dpadRight();
+
     }
 
     public void configureTeleopBindings(Robot robot, Gamepad operatorGamepad) {
         this.rawGamepad = operatorGamepad; //Need the raw gamepad for rumble features
+        this.robot = robot;  // Store for motif detection
         robot.launcherCommands.setOperatorGamepad(operatorGamepad);
 
         configureGroundIntakeBindings(robot, operatorGamepad);
@@ -95,6 +104,9 @@ public class OperatorBindings {
 
         // Mode toggle: manually switch between THROUGHPUT and DECODE
         toggleLauncherMode.whenBecomesTrue(this::toggleLauncherMode);
+
+        // Detect motif from vision (for when auto missed it or crashed)
+        detectMotifButton.whenBecomesTrue(this::tryDetectMotif);
 
     }
 
@@ -202,6 +214,38 @@ public class OperatorBindings {
     }
 
     /**
+     * Tries to detect the motif pattern from vision.
+     * Use this when auto missed detection or you crashed during auto.
+     * Point the camera at the obelisk apriltag (21, 22, or 23) and press dpad right.
+     */
+    private void tryDetectMotif() {
+        if (robot == null || robot.vision == null) {
+            return;
+        }
+
+        Optional<Integer> motifTag = robot.vision.findMotifTagId();
+        if (motifTag.isPresent()) {
+            MotifPattern pattern = MotifPattern.fromTagId(motifTag.get());
+            RobotState.setMotif(pattern);
+
+            // Visual feedback
+            if (robot.lighting != null) {
+                robot.lighting.showMotifPattern(pattern.getLaneColors());
+            }
+
+            // Haptic feedback - success rumble
+            if (rawGamepad != null) {
+                rawGamepad.rumble(200);
+            }
+        } else {
+            // No tag detected - error rumble (two short pulses)
+            if (rawGamepad != null) {
+                rawGamepad.rumble(100);
+            }
+        }
+    }
+
+    /**
      * Human-readable control summary for driver station telemetry.
      */
     public static String[] controlsSummary() {
@@ -215,6 +259,7 @@ public class OperatorBindings {
                 "D-pad Down: Preset SHORT spin (hold), release to launch all",
                 "D-pad Left: Preset MID spin (hold), release to launch all",
                 "D-pad Up: Preset FAR spin (hold), release to launch all",
+                "D-pad Right: Detect motif from vision (press)",
                 "Left stick: Motif tail quick set (left=0, up=1, right=2)",
                 "Back: Toggle launcher mode"
         };

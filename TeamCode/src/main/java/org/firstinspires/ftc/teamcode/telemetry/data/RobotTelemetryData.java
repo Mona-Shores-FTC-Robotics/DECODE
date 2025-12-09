@@ -104,6 +104,7 @@ public class RobotTelemetryData {
                 isAutonomous,
                 org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName(),
                 RobotState.getLauncherMode().name(),
+                RobotState.getMotif().name(),
                 RobotState.getMotifTail()
         );
 

@@ -15,6 +15,7 @@ public class MatchContextData {
     public final boolean isAutonomous;
     public final String robotConfig;
     public final String launcherMode;
+    public final String motifPattern;
     public final int motifTail;
 
     public MatchContextData(Alliance alliance,
@@ -24,6 +25,7 @@ public class MatchContextData {
                             boolean isAutonomous,
                             String robotConfig,
                             String launcherMode,
+                            String motifPattern,
                             int motifTail) {
         this.alliance = alliance != null ? alliance : Alliance.UNKNOWN;
         this.runtimeSec = runtimeSec;
@@ -32,6 +34,7 @@ public class MatchContextData {
         this.isAutonomous = isAutonomous;
         this.robotConfig = robotConfig != null ? robotConfig : "Unknown";
         this.launcherMode = launcherMode != null ? launcherMode : "UNKNOWN";
+        this.motifPattern = motifPattern != null ? motifPattern : "UNKNOWN";
         this.motifTail = motifTail;
     }
 

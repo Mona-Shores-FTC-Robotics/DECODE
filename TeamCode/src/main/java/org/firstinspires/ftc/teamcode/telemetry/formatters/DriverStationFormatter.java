@@ -104,9 +104,10 @@ public class DriverStationFormatter {
         // Robot config (which robot - 19429 or 20245)
         telemetry.addData("Robot", data.context.robotConfig);
 
-        // Launcher mode and motif tail (critical for operator awareness)
-        telemetry.addData("Mode", "%s | Tail: %d",
+        // Launcher mode, motif pattern, and tail (critical for operator awareness)
+        telemetry.addData("Mode", "%s | Motif: %s | Tail: %d",
                 data.context.launcherMode,
+                data.context.motifPattern,
                 data.context.motifTail);
 
         // Match time
