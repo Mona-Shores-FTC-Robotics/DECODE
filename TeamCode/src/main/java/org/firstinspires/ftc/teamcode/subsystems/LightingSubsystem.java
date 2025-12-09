@@ -366,7 +366,7 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     /**
      * Visual cue when switching to DECODE mode.
-     * Shows fast yellow blink (5Hz) for 3 seconds.
+     * Shows yellow blink (2Hz, 6 blinks total) for 3 seconds.
      * Yellow chosen because it's not an artifact or alliance color.
      */
     public void showDecodeModeSwitchNotification() {
@@ -459,10 +459,10 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     }
 
     private void renderDecodeSwitch(long nowMs) {
-        // Fast yellow blink for DECODE mode switch notification
-        // Blinks yellow on/off rapidly (100ms intervals) for 3 seconds
+        // Yellow blink for DECODE mode switch notification
+        // Blinks yellow on/off at 2Hz (250ms intervals) for 3 seconds = 6 complete blinks
         // Yellow is distinctive - not an artifact color (green/purple) or alliance color (red/blue)
-        long blinkInterval = 100L; // 100ms on, 100ms off = 5Hz blink rate
+        long blinkInterval = 250L; // 250ms on, 250ms off = 2Hz blink rate (visible to human eye and servos)
         boolean isOn = (nowMs % (blinkInterval * 2)) < blinkInterval;
 
         double position = isOn ? colorPositionConfig.yellowPosition : colorPositionConfig.offPosition;
