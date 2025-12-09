@@ -50,10 +50,10 @@ public class MatchContextData {
     }
 
     /**
-     * Calculate match time remaining for TeleOp (150 seconds total).
+     * Calculate match time remaining for TeleOp (120 seconds total).
      */
     public static double calculateTeleOpMatchTime(double runtimeSec) {
-        return Math.max(0.0, 150.0 - runtimeSec);
+        return Math.max(0.0, 120.0 - runtimeSec);
     }
 
     /**

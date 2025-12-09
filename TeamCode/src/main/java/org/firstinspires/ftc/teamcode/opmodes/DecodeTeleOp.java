@@ -33,8 +33,11 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     public static class EndgameConfig {
         /** Seconds remaining when auto-switch to DECODE mode triggers */
-        public double decodeModeSwitchSecondsRemaining = 30.0;
+        public double decodeModeSwitchSecondsRemaining = 50.0;
     }
+
+    /** TeleOp duration in seconds (2 minutes) */
+    private static final double TELEOP_DURATION_SEC = 120.0;
 
     public static EndgameConfig endgameConfig = new EndgameConfig();
 
@@ -178,14 +181,14 @@ public class DecodeTeleOp extends NextFTCOpMode {
 
     /**
      * Automatically switches to DECODE mode when configured time threshold is reached.
-     * Default: 30 seconds remaining in match (120 seconds elapsed).
+     * Default: 50 seconds remaining in match (70 seconds elapsed).
      */
     private void checkEndgameModeSwitch() {
         if (autoSwitchedToDecodeMode) {
             return; // Already switched, don't check again
         }
 
-        double timeRemaining = Math.max(0.0, 150.0 - getRuntime());
+        double timeRemaining = Math.max(0.0, TELEOP_DURATION_SEC - getRuntime());
         if (timeRemaining <= endgameConfig.decodeModeSwitchSecondsRemaining) {
             RobotState.setLauncherMode(LauncherMode.DECODE);
             autoSwitchedToDecodeMode = true;
@@ -258,7 +261,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 gamepad2,
                 selectedAlliance,
                 getRuntime(),
-                Math.max(0.0, 150.0 - getRuntime()),
+                Math.max(0.0, TELEOP_DURATION_SEC - getRuntime()),
                 telemetry,
                 "TeleOp",
                 false,
@@ -349,7 +352,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 null,  // gamepad2 (not needed in init)
                 selectedAlliance,
                 getRuntime(),
-                150.0,  // Full TeleOp duration (match hasn't started yet)
+                TELEOP_DURATION_SEC,  // Full TeleOp duration (match hasn't started yet)
                 telemetry,
                 "TeleOpInit",
                 false,
