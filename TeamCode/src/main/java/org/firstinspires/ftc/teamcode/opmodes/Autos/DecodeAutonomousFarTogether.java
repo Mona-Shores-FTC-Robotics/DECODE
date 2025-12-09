@@ -78,6 +78,8 @@ public class DecodeAutonomousFarTogether extends NextFTCOpMode {
         robot.telemetry.startSession();
 
         robot.initializeForAuto();
+        // Wire up drive subsystem for relocalization warning checks
+        robot.lighting.setDriveSubsystem(robot.drive);
 
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         GamepadEx operatorPad = new GamepadEx(() -> gamepad2);

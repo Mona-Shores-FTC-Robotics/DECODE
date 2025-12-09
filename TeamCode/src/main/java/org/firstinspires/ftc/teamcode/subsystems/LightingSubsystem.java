@@ -38,8 +38,9 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         OFF(0),                      // Disabled/off state
         ALLIANCE(1),                 // Alliance color (used during init)
         LANE_TRACKING(2),            // Default - show artifact presence/colors
-        LAUNCH_READY(3),             // White blink when RPM ready + goal aligned + stationary
-        DECODE_SWITCH(4);            // Endgame switch to DECODE mode
+        RELOCALIZE_WARNING(3),       // Warning pulse when no relocalization for >15s
+        LAUNCH_READY(4),             // White blink when RPM ready + goal aligned + stationary
+        DECODE_SWITCH(5);            // Endgame switch to DECODE mode (rainbow)
 
         public final int priority;
         LightingPattern(int priority) {
@@ -64,6 +65,17 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     public static LightingIndicatorConfig indicatorConfig = new LightingIndicatorConfig();
     public static LightingColorPositionConfig colorPositionConfig = new LightingColorPositionConfig();
 
+    /** Configuration for relocalization warning behavior */
+    public static class RelocalizeWarningConfig {
+        /** Time since last relocalization before warning starts (ms) */
+        public double warningThresholdMs = 15000.0;  // 15 seconds
+        /** How often to pulse the warning (ms) */
+        public double pulseIntervalMs = 5000.0;      // Every 5 seconds
+        /** Duration of each warning pulse (ms) */
+        public double pulseDurationMs = 1000.0;      // 1 second pulse
+    }
+    public static RelocalizeWarningConfig relocalizeWarningConfig = new RelocalizeWarningConfig();
+
     private final EnumMap<LauncherLane, LaneIndicator> laneIndicators = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneColors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> sensorLaneColors = new EnumMap<>(LauncherLane.class);
@@ -81,6 +93,10 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
     private Alliance alliance = Alliance.UNKNOWN;
     private double lastPeriodicMs = 0.0;
     private boolean followSensorColors = true;
+
+    // Relocalization warning tracking
+    private long lastRelocalizeWarningCheckMs = 0L;
+    private DriveSubsystem driveSubsystem = null;  // Reference for checking relocalization status
 
     public LightingSubsystem(HardwareMap hardwareMap) {
         laneIndicators.put(LauncherLane.LEFT, new LaneIndicator(tryGetServo(hardwareMap, indicatorConfig.left.servoName)));
@@ -110,6 +126,9 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             currentPattern = LightingPattern.LANE_TRACKING; // Revert to normal operation
             followSensorColors = true;
         }
+
+        // Check relocalization warning condition
+        checkRelocalizeWarning(nowMs);
 
         // Update goal pattern based on robot state
         updateGoalPattern();
@@ -176,7 +195,11 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
                 break;
 
             case DECODE_SWITCH:
-                renderDecodeSwitch();
+                renderDecodeSwitch(nowMs);
+                break;
+
+            case RELOCALIZE_WARNING:
+                renderRelocalizeWarning();
                 break;
 
             case LANE_TRACKING:
@@ -343,10 +366,10 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     /**
      * Visual cue when switching to DECODE mode.
-     * Uses a short rainbow flash.
+     * Shows rainbow cycle for 3 seconds.
      */
     public void showDecodeModeSwitchNotification() {
-        requestPattern(LightingPattern.DECODE_SWITCH, 2000L);
+        requestPattern(LightingPattern.DECODE_SWITCH, 3000L);
     }
 
     /**
@@ -362,6 +385,37 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
             goalPattern = pattern;
             patternExpirationMs = (durationMs > 0) ? System.currentTimeMillis() + durationMs : 0L;
             followSensorColors = false;
+        }
+    }
+
+    /**
+     * Sets the drive subsystem reference for relocalization warning checks.
+     * Should be called during OpMode initialization.
+     */
+    public void setDriveSubsystem(DriveSubsystem drive) {
+        this.driveSubsystem = drive;
+    }
+
+    /**
+     * Checks if relocalization warning should be triggered.
+     * Shows alliance pulse for 1 second every 5 seconds if no relocalization in last 15 seconds.
+     */
+    private void checkRelocalizeWarning(long nowMs) {
+        if (driveSubsystem == null) {
+            return; // Can't check without drive subsystem reference
+        }
+
+        long timeSinceLastRelocalize = nowMs - driveSubsystem.visionRelocalizeStatusMs;
+
+        // Check if we've exceeded the warning threshold (default 15s)
+        if (timeSinceLastRelocalize > relocalizeWarningConfig.warningThresholdMs) {
+            // Check if it's time to pulse again (every 5s)
+            long timeSinceLastWarning = nowMs - lastRelocalizeWarningCheckMs;
+            if (timeSinceLastWarning >= relocalizeWarningConfig.pulseIntervalMs) {
+                // Trigger warning pulse
+                requestPattern(LightingPattern.RELOCALIZE_WARNING, (long) relocalizeWarningConfig.pulseDurationMs);
+                lastRelocalizeWarningCheckMs = nowMs;
+            }
         }
     }
 
@@ -403,12 +457,35 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         applySolidPosition(clamp01(colorPositionConfig.offPosition));
     }
 
-    private void renderDecodeSwitch() {
-        // Use all-lane rainbow indicator for DECODE mode switch
-        laneColors.put(LauncherLane.LEFT, ArtifactColor.UNKNOWN);   // Use UNKNOWN as a stand-in for rainbow
-        laneColors.put(LauncherLane.CENTER, ArtifactColor.UNKNOWN);
-        laneColors.put(LauncherLane.RIGHT, ArtifactColor.UNKNOWN);
-        updateLaneOutputs();
+    private void renderDecodeSwitch(long nowMs) {
+        // Rainbow cycle for DECODE mode switch notification
+        // Cycle through colors every 250ms for smooth rainbow effect over 2-3 seconds
+        long cycleTime = 250L; // 250ms per color
+        long elapsed = nowMs % (cycleTime * 6); // 6 colors in cycle = 1.5s full cycle
+        double position;
+
+        if (elapsed < cycleTime) {
+            position = colorPositionConfig.redPosition;
+        } else if (elapsed < cycleTime * 2) {
+            position = colorPositionConfig.yellowPosition;
+        } else if (elapsed < cycleTime * 3) {
+            position = colorPositionConfig.greenPosition;
+        } else if (elapsed < cycleTime * 4) {
+            position = colorPositionConfig.bluePosition;
+        } else if (elapsed < cycleTime * 5) {
+            position = colorPositionConfig.purplePosition;
+        } else {
+            position = colorPositionConfig.whitePosition;
+        }
+
+        // Apply same color to all lanes for unified rainbow effect
+        applySolidPosition(clamp01(position));
+    }
+
+    private void renderRelocalizeWarning() {
+        // Show solid alliance color as warning pulse
+        // This is a 1-second pulse that appears every 5 seconds when no relocalization
+        applySolidPosition(clamp01(alliancePosition()));
     }
 
     // ========== END RENDER METHODS ==========
