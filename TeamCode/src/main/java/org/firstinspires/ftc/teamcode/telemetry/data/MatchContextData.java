@@ -48,8 +48,9 @@ public class MatchContextData {
                 opMode,
                 isAutonomous,
                 RobotConfigs.getActiveConfigName(),
-                null,
-                0);
+                null,  // launcherMode
+                null,  // motifPattern
+                0);    // motifTail
     }
 
     /**
