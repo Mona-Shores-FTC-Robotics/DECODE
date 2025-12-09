@@ -366,8 +366,8 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     /**
      * Visual cue when switching to DECODE mode.
-     * Shows continuous rainbow cycle (red→yellow→green→blue→purple) for 3 seconds.
-     * Never goes dark or white, always lit with color.
+     * Shows continuous rainbow cycle (red→green→blue→purple) for 3 seconds.
+     * Skips yellow (not visible on hardware). Never goes dark or white.
      */
     public void showDecodeModeSwitchNotification() {
         requestPattern(LightingPattern.DECODE_SWITCH, 3000L);
@@ -460,20 +460,18 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
 
     private void renderDecodeSwitch(long nowMs) {
         // Continuous rainbow cycle for DECODE mode switch notification
-        // Cycles through 5 colors (red/yellow/green/blue/purple) - never goes dark or white
-        // Each color shows for 500ms, full cycle = 2.5s, repeats during 3-second duration
+        // Cycles through 4 colors (red/green/blue/purple) - skips yellow (not visible on hardware)
+        // Never goes dark or white - each color shows for 500ms, full cycle = 2s
         long colorDuration = 500L; // 500ms per color
-        long cycleTime = colorDuration * 5; // 5 colors = 2.5 second full cycle
+        long cycleTime = colorDuration * 4; // 4 colors = 2 second full cycle
         long elapsed = nowMs % cycleTime;
 
         double position;
         if (elapsed < colorDuration) {
             position = colorPositionConfig.redPosition;
         } else if (elapsed < colorDuration * 2) {
-            position = colorPositionConfig.yellowPosition;
-        } else if (elapsed < colorDuration * 3) {
             position = colorPositionConfig.greenPosition;
-        } else if (elapsed < colorDuration * 4) {
+        } else if (elapsed < colorDuration * 3) {
             position = colorPositionConfig.bluePosition;
         } else {
             position = colorPositionConfig.purplePosition;
