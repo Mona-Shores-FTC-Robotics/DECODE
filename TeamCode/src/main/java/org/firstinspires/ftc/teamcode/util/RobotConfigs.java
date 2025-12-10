@@ -4,6 +4,7 @@ import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.constants.PinpointConstants;
 
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpinCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
@@ -193,10 +194,10 @@ public class RobotConfigs {
     public static CommandRangeConfig getCommandRangeConfig() {
         String robotName = RobotState.getRobotName();
         if ("DECODE_19429".equals(robotName)) {
-            return CommandRangeConfig.commandRangeConfig19429;
+            return DistanceBasedSpinCommand.rangeConfig_Robot19429;
         } else {
             // Default to 20245 config if robot name is unknown or is 20245
-            return CommandRangeConfig.commandRangeConfig20245;
+            return DistanceBasedSpinCommand.rangeConfig_Robot20245;
         }
     }
 
