@@ -215,13 +215,11 @@ public class CloseTogetherCommand {
                                                 0.2,
                                                 HeadingInterpolator.constant(Math.toRadians(270))
                                         ),
-                                        new HeadingInterpolator.PiecewiseNode(
+                                        HeadingInterpolator.PiecewiseNode.linear(
                                                 0.2,
                                                 1.0,
-                                                HeadingInterpolator.linear(
-                                                        Math.toRadians(270),
-                                                        Math.toRadians(waypoints.launchClose2Heading)
-                                                )
+                                                Math.toRadians(270),
+                                                Math.toRadians(waypoints.launchClose2Heading)
                                         )
                                 )
                         )
