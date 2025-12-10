@@ -7,6 +7,7 @@ import com.pedropathing.ftc.localization.constants.PinpointConstants;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveAimAssistConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRightTriggerFixedAngleConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
@@ -87,6 +88,20 @@ public class RobotConfigs {
         } else {
             // Default to 19429 config if robot name is unknown or is 19429
             return Constants.driveConstants20245;
+        }
+    }
+
+    /**
+     * Gets the active AimAssistConfig for the current robot.
+     * Returns the static instance from DriveSubsystem so Dashboard edits are applied.
+     * @return aimAssistConfig19429 or aimAssistConfig20245 based on robot name
+     */
+    public static DriveAimAssistConfig getAimAssistConfig() {
+        String robotName = RobotState.getRobotName();
+        if ("DECODE_19429".equals(robotName)) {
+            return DriveSubsystem.aimAssistConfig_Robot19429;
+        } else {
+            return DriveSubsystem.aimAssistConfig_Robot20245;
         }
     }
 

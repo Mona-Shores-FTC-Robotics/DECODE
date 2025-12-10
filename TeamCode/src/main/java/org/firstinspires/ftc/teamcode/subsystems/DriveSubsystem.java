@@ -59,10 +59,42 @@ public class DriveSubsystem implements Subsystem {
 
     // Global configuration instances
     public static DriveTeleOpConfig teleOpDriveConfig = new DriveTeleOpConfig();
-    public static DriveAimAssistConfig aimAssistConfig = new DriveAimAssistConfig();
     public static DriveVisionCenteredAimConfig visionCenteredAimConfig = new DriveVisionCenteredAimConfig();
     public static DriveRampConfig rampConfig = new DriveRampConfig();
     public static DriveVisionRelocalizeConfig visionRelocalizeConfig = new DriveVisionRelocalizeConfig();
+
+    // Robot-specific aim assist configs - visible in Panels for tuning
+    public static DriveAimAssistConfig aimAssistConfig_Robot19429 = createAimAssistConfig19429();
+    public static DriveAimAssistConfig aimAssistConfig_Robot20245 = createAimAssistConfig20245();
+    public static DriveAimAssistConfig aimAssistConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotConfigs.getAimAssistConfig();
+
+    /**
+     * Helper to create 19429-specific aim assist configuration.
+     * Override values here that differ from the defaults in DriveAimAssistConfig.
+     */
+    private static DriveAimAssistConfig createAimAssistConfig19429() {
+        DriveAimAssistConfig config = new DriveAimAssistConfig();
+        // Add 19429-specific overrides here as needed
+        return config;
+    }
+
+    /**
+     * Helper to create 20245-specific aim assist configuration.
+     * Override values here that differ from the defaults in DriveAimAssistConfig.
+     */
+    private static DriveAimAssistConfig createAimAssistConfig20245() {
+        DriveAimAssistConfig config = new DriveAimAssistConfig();
+        // Add 20245-specific overrides here as needed
+        return config;
+    }
+
+    /**
+     * Gets the robot-specific AimAssistConfig based on RobotState.getRobotName().
+     * @return aimAssistConfig19429 or aimAssistConfig20245
+     */
+    public static DriveAimAssistConfig aimAssistConfig() {
+        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getAimAssistConfig();
+    }
 
     // Robot-specific fixed angle aim configs - visible in Panels for tuning
     public static DriveFixedAngleAimConfig fixedAngleAimConfig_Robot19429 = createFixedAngleAimConfig19429();
@@ -516,10 +548,13 @@ public class DriveSubsystem implements Subsystem {
             : FieldConstants.getBlueBasketTarget();
         double targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
 
+        // Get per-robot aim assist config
+        DriveAimAssistConfig aimConfig = aimAssistConfig();
+
         double headingErrorRad = normalizeAngle(targetHeading - follower.getHeading());
         double headingErrorDeg = Math.toDegrees(headingErrorRad);
         double absHeadingErrorDeg = Math.abs(headingErrorDeg);
-        boolean withinDeadband = absHeadingErrorDeg <= aimAssistConfig.deadbandDeg;
+        boolean withinDeadband = absHeadingErrorDeg <= aimConfig.deadbandDeg;
         long now = System.nanoTime();
         double dt = lastAimUpdateNs == 0L ? 0.0 : (now - lastAimUpdateNs) / 1_000_000_000.0;
 
@@ -530,26 +565,26 @@ public class DriveSubsystem implements Subsystem {
         }
 
         // PD controller with optional inner-zone P, static feedforward, and slew limit
-        double pGain = absHeadingErrorDeg <= aimAssistConfig.innerZoneDeg ? aimAssistConfig.kPInner : aimAssistConfig.kP;
+        double pGain = absHeadingErrorDeg <= aimConfig.innerZoneDeg ? aimConfig.kPInner : aimConfig.kP;
         double pTerm = pGain * headingErrorRad;
         double errorRateRadPerSec = (dt > 0.0 && !Double.isNaN(lastAimErrorRad)) ? (headingErrorRad - lastAimErrorRad) / dt : 0.0;
-        double dTerm = aimAssistConfig.kD * errorRateRadPerSec;
+        double dTerm = aimConfig.kD * errorRateRadPerSec;
         double turnRaw = pTerm + dTerm;
 
         boolean staticApplied = false;
         if (headingErrorRad != 0.0
-                && Math.abs(turnRaw) < aimAssistConfig.kStatic
-                && absHeadingErrorDeg > aimAssistConfig.staticApplyAboveDeg) {
-            turnRaw = Math.copySign(aimAssistConfig.kStatic, headingErrorRad);
+                && Math.abs(turnRaw) < aimConfig.kStatic
+                && absHeadingErrorDeg > aimConfig.staticApplyAboveDeg) {
+            turnRaw = Math.copySign(aimConfig.kStatic, headingErrorRad);
             staticApplied = true;
         }
 
-        double maxTurn = Math.max(0.0, aimAssistConfig.kMaxTurn);
+        double maxTurn = Math.max(0.0, aimConfig.kMaxTurn);
         double turnClipped = Range.clip(turnRaw, -maxTurn, maxTurn);
 
         double turn = turnClipped;
-        if (aimAssistConfig.turnSlewRatePerSec > 0.0 && dt > 0.0) {
-            double maxDelta = aimAssistConfig.turnSlewRatePerSec * dt;
+        if (aimConfig.turnSlewRatePerSec > 0.0 && dt > 0.0) {
+            double maxDelta = aimConfig.turnSlewRatePerSec * dt;
             double delta = turnClipped - lastAimTurnCommand;
             if (delta > maxDelta) {
                 turn = lastAimTurnCommand + maxDelta;
