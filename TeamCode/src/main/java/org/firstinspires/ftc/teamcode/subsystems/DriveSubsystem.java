@@ -1064,7 +1064,9 @@ public class DriveSubsystem implements Subsystem {
             return;
         }
 
-        if (forceRelocalizeFromVision()) {
+        // Use current odometry as reference - reject large jumps during automatic relocalization
+        Pose currentOdometry = follower.getPose();
+        if (forceRelocalizeFromVision(currentOdometry)) {
             // Successful re-localization already recorded inside the helper.
         }
     }
@@ -1151,7 +1153,9 @@ public class DriveSubsystem implements Subsystem {
             recordVisionAgreementTelemetry(distanceBetween(pedroPoseMT1, pedroPoseMT2), headingErrorDegrees(pedroPoseMT1, pedroPoseMT2), mt2Safe);
         }
 
-        if (forceRelocalizeFromVision()) {
+        // Use current odometry as reference - reject large jumps during shot correction
+        Pose currentOdometry = follower.getPose();
+        if (forceRelocalizeFromVision(currentOdometry)) {
             lastAutoRelocalizeMs = nowMs;
             visionRelocalizeStatus = "Re-localized on launch";
             visionRelocalizeStatusMs = nowMs;
@@ -1209,7 +1213,41 @@ public class DriveSubsystem implements Subsystem {
         visionRelocalizeStatus = "Heading reset to field-forward (square to wall)";
         visionRelocalizeStatusMs = System.currentTimeMillis();
     }
+    /**
+     * Forces relocalization from vision WITHOUT jump safeguards.
+     * Use ONLY for manual driver-initiated relocalization (X button) where the driver
+     * intentionally wants to reset pose after a crash or bad state.
+     *
+     * For all other relocalization (auto init, shot correction), use the overloaded
+     * version with a reference pose for jump safeguards.
+     *
+     * @return {@code true} when the pose was updated.
+     */
     public boolean forceRelocalizeFromVision() {
+        // No reference pose = no jump safeguards (manual recovery scenario)
+        return forceRelocalizeFromVisionInternal(null);
+    }
+
+    /**
+     * Forces relocalization from vision WITH jump safeguards.
+     * Compares the proposed vision pose against the reference pose and rejects
+     * if the jump exceeds configured thresholds.
+     *
+     * @param referencePose The pose to compare against (expected start pose or current odometry).
+     *                      If null, no jump check is performed (same as forceRelocalizeFromVision()).
+     * @return {@code true} when the pose was updated.
+     */
+    public boolean forceRelocalizeFromVision(Pose referencePose) {
+        return forceRelocalizeFromVisionInternal(referencePose);
+    }
+
+    /**
+     * Internal implementation of vision relocalization with optional jump safeguards.
+     *
+     * @param referencePose The pose to compare against for jump limits. Null to skip jump check.
+     * @return {@code true} when the pose was updated.
+     */
+    private boolean forceRelocalizeFromVisionInternal(Pose referencePose) {
         Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
         long nowMs = System.currentTimeMillis();
         if (!snapOpt.isPresent()) {
@@ -1229,6 +1267,11 @@ public class DriveSubsystem implements Subsystem {
                 return false;
             }
 
+            // Even for initial seed, apply jump check if reference provided
+            if (referencePose != null && !isPoseJumpAllowed(pedroPoseMT1, referencePose, "mt1_seed")) {
+                return false;
+            }
+
             follower.setPose(pedroPoseMT1);
             poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
             vision.markOdometryUpdated();
@@ -1242,6 +1285,11 @@ public class DriveSubsystem implements Subsystem {
         // 2. If heading is known, prefer MT2 when it agrees with MT1 (or MT1 missing)
         boolean mt2Safe = pedroPoseMT1 != null && pedroPoseMT2 != null && posesAgreeForMt2(pedroPoseMT1, pedroPoseMT2);
         if (pedroPoseMT2 != null && (mt2Safe || pedroPoseMT1 == null)) {
+            // Check jump limits against reference pose
+            if (referencePose != null && !isPoseJumpAllowed(pedroPoseMT2, referencePose, "mt2")) {
+                return false;
+            }
+
             follower.setPose(pedroPoseMT2);
             poseFusion.reset(pedroPoseMT2, System.currentTimeMillis());
             vision.markOdometryUpdated();
@@ -1251,6 +1299,11 @@ public class DriveSubsystem implements Subsystem {
 
         // 3. Fallback to MT1 if MT2 unavailable or unsafe
         if (pedroPoseMT1 != null) {
+            // Check jump limits against reference pose
+            if (referencePose != null && !isPoseJumpAllowed(pedroPoseMT1, referencePose, "mt1")) {
+                return false;
+            }
+
             follower.setPose(pedroPoseMT1);
             poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
             vision.markOdometryUpdated();
@@ -1260,6 +1313,52 @@ public class DriveSubsystem implements Subsystem {
 
         recordRelocalizeSource("none", false, nowMs, snap.tagId);
         return false;
+    }
+
+    /**
+     * Checks if a proposed vision pose is within allowed jump limits of the reference pose.
+     * Logs rejection telemetry if the jump is too large.
+     *
+     * @param proposedPose The vision-reported pose
+     * @param referencePose The pose to compare against (expected start or current odometry)
+     * @param source Label for telemetry logging (e.g., "mt1", "mt2", "mt1_seed")
+     * @return true if the jump is allowed, false if it exceeds limits
+     */
+    private boolean isPoseJumpAllowed(Pose proposedPose, Pose referencePose, String source) {
+        if (proposedPose == null || referencePose == null) {
+            return true; // Can't check, allow by default
+        }
+
+        double jumpDistance = distanceBetween(proposedPose, referencePose);
+        double jumpHeadingDeg = Math.abs(Math.toDegrees(normalizeAngle(
+                proposedPose.getHeading() - referencePose.getHeading())));
+
+        double maxDistance = visionRelocalizeConfig.maxJumpDistanceInches;
+        double maxHeadingDeg = visionRelocalizeConfig.maxJumpHeadingDeg;
+
+        boolean distanceOk = jumpDistance <= maxDistance;
+        boolean headingOk = jumpHeadingDeg <= maxHeadingDeg;
+
+        // Log jump diagnostics
+        RobotState.packet.put("/vision/relocalize/jump/distance_in", jumpDistance);
+        RobotState.packet.put("/vision/relocalize/jump/heading_deg", jumpHeadingDeg);
+        RobotState.packet.put("/vision/relocalize/jump/max_distance_in", maxDistance);
+        RobotState.packet.put("/vision/relocalize/jump/max_heading_deg", maxHeadingDeg);
+        RobotState.packet.put("/vision/relocalize/jump/distance_ok", distanceOk);
+        RobotState.packet.put("/vision/relocalize/jump/heading_ok", headingOk);
+
+        if (!distanceOk || !headingOk) {
+            String reason = !distanceOk && !headingOk ? "distance_and_heading"
+                    : !distanceOk ? "distance" : "heading";
+            recordRelocalizeSource(source + "_jump_rejected_" + reason, false,
+                    System.currentTimeMillis(), -1);
+            RobotState.packet.put("/vision/relocalize/jump/rejected", true);
+            RobotState.packet.put("/vision/relocalize/jump/reject_reason", reason);
+            return false;
+        }
+
+        RobotState.packet.put("/vision/relocalize/jump/rejected", false);
+        return true;
     }
 
     private void updatePoseFusion() {

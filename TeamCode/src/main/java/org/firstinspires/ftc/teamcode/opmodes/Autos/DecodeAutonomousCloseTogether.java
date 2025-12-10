@@ -80,6 +80,9 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
         modeSelector.applySelection(robot.lighting);
         prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
 
+        // Set expected start pose for jump safeguards during init relocalization
+        updateExpectedStartPose();
+
         addComponents(
                 new SubsystemComponent(robot.drive),
                 new SubsystemComponent(robot.launcher),
@@ -235,6 +238,26 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
 
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
+
+        // Update expected start pose for jump safeguards when alliance changes
+        updateExpectedStartPose();
+    }
+
+    /**
+     * Updates the expected start pose for vision relocalization jump safeguards.
+     * Called when alliance changes to ensure AutoPrestartHelper uses the correct reference.
+     */
+    private void updateExpectedStartPose() {
+        if (prestartHelper == null) {
+            return;
+        }
+        Pose expectedPose = AutoField.poseForAlliance(
+                CloseTogetherCommand.waypoints.startX,
+                CloseTogetherCommand.waypoints.startY,
+                CloseTogetherCommand.waypoints.startHeading,
+                activeAlliance
+        );
+        prestartHelper.setExpectedStartPose(expectedPose);
     }
 
     /**
