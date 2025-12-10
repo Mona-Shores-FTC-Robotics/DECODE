@@ -124,9 +124,9 @@ public class CommandRangeConfig {
         config.shortRightRpm = 1900;
 
         /** Mid range RPMs */
-        config.midLeftRpm = 2400;
-        config.midCenterRpm = 2400; // Center disabled by default
-        config.midRightRpm = 2400;
+        config.midLeftRpm = 2300;
+        config.midCenterRpm = 2300; // Center disabled by default
+        config.midRightRpm = 2300;
 
         /** Long range RPMs */
         config.longLeftRpm = 2900;
@@ -155,7 +155,7 @@ public class CommandRangeConfig {
 
         /** Per-range hood positions (applied uniformly to all lanes) */
         config.shortHoodPosition = 1;
-        config.midHoodPosition = 0.05;
+        config.midHoodPosition = 0;
         config.longHoodPosition = 0.0;
 
         config.shortAutoHoodPosition = .62; // Starts matching SHORT
