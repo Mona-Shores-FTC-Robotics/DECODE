@@ -30,9 +30,11 @@ import java.util.Objects;
  * 7. Spins down to idle
  *
  * KEY OPTIMIZATION: Consecutive same-color artifacts fire SIMULTANEOUSLY!
- * - PPG → Groups: [[P,P], [G]] → Fire both P at t=0, G at t=500ms (50% faster!)
- * - PGP → Groups: [[P], [G], [P]] → Fire P, wait, G, wait, P (1000ms total)
- * - GPP → Groups: [[G], [P,P]] → Fire G at t=0, both P at t=500ms (50% faster!)
+ * - PPG → Groups: [[P,P], [G]] → Fire both P at t=0, G at t=525ms (~525ms total)
+ * - PGP → Groups: [[P], [G], [P]] → Fire P, wait, G, wait, P (uses shorter 265ms spacing, ~530ms total)
+ * - GPP → Groups: [[G], [P,P]] → Fire G at t=0, both P at t=525ms (~525ms total)
+ *
+ * TIMING CONSISTENCY: PGP uses shorter spacing (alternatingSpacingMs) to match total time of other patterns.
  *
  * Lane selection prioritizes ready lanes first for additional speed optimization.
  *
@@ -47,7 +49,7 @@ import java.util.Objects;
  * - Motif tail = 1 (manually set by operator)
  * - Rotated pattern = PGP (shifted left by 1 from PPG)
  * - Groups: [[P], [G], [P]]
- * - Fires Purple, wait 500ms, Green, wait 500ms, Purple (no simultaneous optimization for PGP)
+ * - Fires Purple, wait 265ms, Green, wait 265ms, Purple (uses shorter alternating spacing)
  */
 public class LaunchInSequenceCommand extends Command {
 
@@ -223,6 +225,12 @@ public class LaunchInSequenceCommand extends Command {
         // Group consecutive same-color positions
         List<List<ArtifactColor>> groups = groupConsecutiveColors(rotatedPattern);
 
+        // Use shorter spacing for alternating patterns (3 groups = PGP-style)
+        // This keeps total sequence time consistent regardless of pattern
+        double spacingMs = (groups.size() >= 3)
+                ? sequenceConfig.alternatingSpacingMs
+                : sequenceConfig.shotSpacingMs;
+
         double currentDelay = 0.0;
 
         // Phase 1: Match and fire each group simultaneously
@@ -261,7 +269,7 @@ public class LaunchInSequenceCommand extends Command {
             }
 
             // Only increment delay AFTER the entire group (not between individual shots)
-            currentDelay += sequenceConfig.shotSpacingMs;
+            currentDelay += spacingMs;
         }
 
         // Phase 2: Fire all remaining unused lanes SIMULTANEOUSLY
