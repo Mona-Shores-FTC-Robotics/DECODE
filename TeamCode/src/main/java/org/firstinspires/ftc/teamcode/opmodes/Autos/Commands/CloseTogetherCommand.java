@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
 import com.pedropathing.geometry.Pose;
-import com.pedropathing.math.HeadingInterpolator;
+import com.pedropathing.paths.HeadingInterpolator;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
