@@ -9,7 +9,6 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
-import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
@@ -36,7 +35,6 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
     private AllianceSelector allianceSelector;
     private LauncherModeSelector modeSelector;
     private Alliance activeAlliance = Alliance.BLUE;
-    private FieldLayout currentLayout;
     private AutoPrestartHelper prestartHelper;
 
     // AprilTag-based start pose detection
@@ -79,6 +77,9 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
         allianceSelector.applySelection(robot, robot.lighting);
         modeSelector.applySelection(robot.lighting);
         prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
+
+        // Set expected start pose for jump safeguards during init relocalization
+        updateExpectedStartPose();
 
         addComponents(
                 new SubsystemComponent(robot.drive),
@@ -220,21 +221,37 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
     /**
      * Applies alliance color and start pose to robot systems.
      * @param alliance Alliance color (BLUE or RED)
-     * @param startPose Start pose (from vision or LocalizeCommand default)
+     * @param startPose Start pose (from vision or Command default)
      */
     private void applyAlliance(Alliance alliance, Pose startPose) {
         Alliance safeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
         activeAlliance = safeAlliance;
         robot.setAlliance(activeAlliance);
 
-        // Note: currentLayout is kept for proximity feedback target
-        // Eventually this can be replaced with LocalizeCommand.getDefaultStartPose()
-        currentLayout = AutoField.layoutForAlliance(activeAlliance);
-        currentLayout.overrideStart(startPose);
         lastAppliedStartPosePedro = copyPose(startPose);
 
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
+
+        // Update expected start pose for jump safeguards when alliance changes
+        updateExpectedStartPose();
+    }
+
+    /**
+     * Updates the expected start pose for vision relocalization jump safeguards.
+     * Called when alliance changes to ensure AutoPrestartHelper uses the correct reference.
+     */
+    private void updateExpectedStartPose() {
+        if (prestartHelper == null) {
+            return;
+        }
+        Pose expectedPose = AutoField.poseForAlliance(
+                CloseTogetherCommand.waypoints.startX,
+                CloseTogetherCommand.waypoints.startY,
+                CloseTogetherCommand.waypoints.startHeading,
+                activeAlliance
+        );
+        prestartHelper.setExpectedStartPose(expectedPose);
     }
 
     /**

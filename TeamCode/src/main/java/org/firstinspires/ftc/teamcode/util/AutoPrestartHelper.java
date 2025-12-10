@@ -32,9 +32,23 @@ public class AutoPrestartHelper {
     private MotifPattern observedMotif = RobotState.getMotif();
     private Integer observedMotifTagId;
 
+    /** Expected start pose in world/Pedro coordinates (alliance-mirrored).
+     *  Used as reference for jump safeguards during init relocalization. */
+    private Pose expectedStartPose;
+
     public AutoPrestartHelper(Robot robot, AllianceSelector allianceSelector) {
         this.robot = robot;
         this.allianceSelector = allianceSelector;
+    }
+
+    /**
+     * Sets the expected start pose for jump safeguards.
+     * Call this whenever alliance changes to update the mirrored pose.
+     *
+     * @param expectedPose The expected start pose in world/Pedro coordinates (already alliance-mirrored)
+     */
+    public void setExpectedStartPose(Pose expectedPose) {
+        this.expectedStartPose = expectedPose;
     }
 
     public InitStatus update(Alliance activeAlliance) {
@@ -97,7 +111,10 @@ public class AutoPrestartHelper {
             return;
         }
 
-        boolean updated = robot.drive.forceRelocalizeFromVision();
+        // Use expected start pose as reference for jump safeguards.
+        // This prevents vision from wildly jumping the pose during init.
+        // If no expected pose is set, falls back to no safeguard (not recommended).
+        boolean updated = robot.drive.forceRelocalizeFromVision(expectedStartPose);
         if (!updated) {
             return;
         }

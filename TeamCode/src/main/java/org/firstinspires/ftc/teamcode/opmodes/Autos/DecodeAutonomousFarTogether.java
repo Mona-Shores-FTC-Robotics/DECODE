@@ -9,8 +9,6 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
-import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
-import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
@@ -49,8 +47,6 @@ public class DecodeAutonomousFarTogether extends NextFTCOpMode {
     private AllianceSelector allianceSelector;
     private LauncherModeSelector modeSelector;
     private Alliance activeAlliance = Alliance.BLUE;
-    private FieldLayout currentLayout;
-
     private AutoPrestartHelper prestartHelper;
 
     // AprilTag-based start pose detection
@@ -94,6 +90,9 @@ public class DecodeAutonomousFarTogether extends NextFTCOpMode {
         allianceSelector.applySelection(robot, robot.lighting);
         modeSelector.applySelection(robot.lighting);
         prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
+
+        // Set expected start pose for jump safeguards during init relocalization
+        updateExpectedStartPose();
 
         addComponents(
                 new SubsystemComponent(robot.drive),
@@ -422,17 +421,42 @@ public class DecodeAutonomousFarTogether extends NextFTCOpMode {
         activeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
         robot.setAlliance(activeAlliance);
 
-        currentLayout = AutoField.layoutForAlliance(activeAlliance);
-
-        // Apply AprilTag-detected start pose override if provided
+        // Use vision-detected pose if provided, otherwise get default from Command waypoints
+        Pose startPose;
         if (startOverride != null) {
-            currentLayout.overrideStart(startOverride);
+            startPose = startOverride;
             lastAppliedStartPosePedro = copyPose(startOverride);
+        } else {
+            startPose = AutoField.poseForAlliance(
+                    FarTogetherCommand.waypoints.startX,
+                    FarTogetherCommand.waypoints.startY,
+                    FarTogetherCommand.waypoints.startHeading,
+                    activeAlliance
+            );
         }
 
-        Pose startPose = currentLayout.pose(FieldPoint.START_FAR);
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
+
+        // Update expected start pose for jump safeguards when alliance changes
+        updateExpectedStartPose();
+    }
+
+    /**
+     * Updates the expected start pose for vision relocalization jump safeguards.
+     * Called when alliance changes to ensure AutoPrestartHelper uses the correct reference.
+     */
+    private void updateExpectedStartPose() {
+        if (prestartHelper == null) {
+            return;
+        }
+        Pose expectedPose = AutoField.poseForAlliance(
+                FarTogetherCommand.waypoints.startX,
+                FarTogetherCommand.waypoints.startY,
+                FarTogetherCommand.waypoints.startHeading,
+                activeAlliance
+        );
+        prestartHelper.setExpectedStartPose(expectedPose);
     }
 
     /**
