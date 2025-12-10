@@ -42,17 +42,17 @@ public class CloseTogetherCommand {
         public double startHeading = 0;
 
         // LaunchClose1
-        public double launchClose1X = 30.0;
-        public double launchClose1Y = 113.0;
+        public double launchClose1X = 36;
+        public double launchClose1Y = 107;
         public double launchClose1Heading = 134;
 
         // ArtifactsSet1
-        public double artifactsSet1X = 23.75;
+        public double artifactsSet1X = 24;
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet1Control0X = 23.75;
+        public double artifactsSet1Control0X = 24;
         public double artifactsSet1Control0Y = 113;
 
         // OpenGate
@@ -69,25 +69,25 @@ public class CloseTogetherCommand {
         public double openGateStrafeHeading = 270;
 
         // LaunchClose2
-        public double launchClose2X = 30.0;
-        public double launchClose2Y = 113.0;
+        public double launchClose2X = 36;
+        public double launchClose2Y = 107;
         public double launchClose2Heading = 134.0;
 
         public double launchClose2ControlX = 47;
-        public double launchClose2ControlY = 80;
+        public double launchClose2ControlY = 90;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 23.75;
+        public double artifactsSet2X = 24;
         public double artifactsSet2Y = 61.0;
         public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 23.75;
+        public double artifactsSet2Control0X = 24;
         public double artifactsSet2Control0Y = 100;
 
         // LaunchClose3
-        public double launchClose3X = 30.0;
-        public double launchClose3Y = 113.0;
+        public double launchClose3X = 36;
+        public double launchClose3Y = 107;
         public double launchClose3Heading = 134.0;
 
         // Control point for segment: LaunchClose3
@@ -95,17 +95,17 @@ public class CloseTogetherCommand {
         public double launchClose3Control0Y = 72;
 
         // ArtifactsSet3
-        public double artifactsSet3X = 23.75;
+        public double artifactsSet3X = 24;
         public double artifactsSet3Y = 35.5;
         public double artifactsSet3Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet3Control0X = 23.75;
-        public double artifactsSet3Control0Y = 72;
+        public double artifactsSet3Control0X = 24;
+        public double artifactsSet3Control0Y = 100;
 
         // LaunchReleased
-        public double launchClose4X = 30;
-        public double launchClose4Y = 113.0;
+        public double launchClose4X = 36;
+        public double launchClose4Y = 107;
         public double launchClose4Heading = 134.0;
 
         // Control point for segment: LaunchOffLine
