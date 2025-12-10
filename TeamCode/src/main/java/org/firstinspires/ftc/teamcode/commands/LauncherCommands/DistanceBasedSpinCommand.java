@@ -32,8 +32,107 @@ import dev.nextftc.core.commands.Command;
 public class DistanceBasedSpinCommand extends Command {
 
     // Robot-specific CommandRangeConfig instances - visible in Dashboard for live tuning
-    public static CommandRangeConfig rangeConfig_Robot19429 = CommandRangeConfig.commandRangeConfig19429;
-    public static CommandRangeConfig rangeConfig_Robot20245 = CommandRangeConfig.commandRangeConfig20245;
+    // These are the PRIMARY definitions - RobotConfigs returns these
+    public static CommandRangeConfig rangeConfig_Robot19429 = createRangeConfig19429();
+    public static CommandRangeConfig rangeConfig_Robot20245 = createRangeConfig20245();
+
+    /**
+     * Creates range configuration for robot 19429.
+     */
+    private static CommandRangeConfig createRangeConfig19429() {
+        CommandRangeConfig config = new CommandRangeConfig();
+        // Short range RPMs
+        config.shortLeftRpm = 1900;
+        config.shortCenterRpm = 1900;
+        config.shortRightRpm = 1900;
+
+        // Mid range RPMs
+        config.midLeftRpm = 2500;
+        config.midCenterRpm = 2500;
+        config.midRightRpm = 2500;
+
+        // Long range RPMs
+        config.longLeftRpm = 2900;
+        config.longCenterRpm = 2900;
+        config.longRightRpm = 2900;
+
+        // Long range min/max dist RPMs for distance-based interpolation
+        config.longMinLeftRpm = 2725;
+        config.longMinCenterRpm = 2725;
+        config.longMinRightRpm = 2725;
+        config.longMaxLeftRpm = 2900;
+        config.longMaxCenterRpm = 2900;
+        config.longMaxRightRpm = 2900;
+
+        // Short Auto range RPMs
+        config.shortAutoLeftRpm = 2025;
+        config.shortAutoCenterRpm = 2025;
+        config.shortAutoRightRpm = 2025;
+
+        // Far Auto range RPMs
+        config.farAutoLeftRpm = 2725;
+        config.farAutoCenterRpm = 2725;
+        config.farAutoRightRpm = 2725;
+
+        // Hood positions
+        config.shortHoodPosition = 1;
+        config.midHoodPosition = 0.05;
+        config.longHoodPosition = 0.0;
+        config.shortAutoHoodPosition = 0.62;
+        config.farAutoHoodPosition = 0.0;
+
+        config.timeoutSeconds = 3.5;
+        return config;
+    }
+
+    /**
+     * Creates range configuration for robot 20245.
+     */
+    private static CommandRangeConfig createRangeConfig20245() {
+        CommandRangeConfig config = new CommandRangeConfig();
+        // Short range RPMs
+        config.shortLeftRpm = 1900;
+        config.shortCenterRpm = 1900;
+        config.shortRightRpm = 1900;
+
+        // Mid range RPMs
+        config.midLeftRpm = 2550;
+        config.midCenterRpm = 2550;
+        config.midRightRpm = 2550;
+
+        // Long range RPMs
+        config.longLeftRpm = 2900;
+        config.longCenterRpm = 2900;
+        config.longRightRpm = 2900;
+
+        // Long range min/max dist RPMs for distance-based interpolation
+        config.longMinLeftRpm = 2725;
+        config.longMinCenterRpm = 2725;
+        config.longMinRightRpm = 2725;
+        config.longMaxLeftRpm = 2900;
+        config.longMaxCenterRpm = 2900;
+        config.longMaxRightRpm = 2900;
+
+        // Short Auto range RPMs
+        config.shortAutoLeftRpm = 2025;
+        config.shortAutoCenterRpm = 2025;
+        config.shortAutoRightRpm = 2025;
+
+        // Far Auto range RPMs
+        config.farAutoLeftRpm = 2725;
+        config.farAutoCenterRpm = 2725;
+        config.farAutoRightRpm = 2725;
+
+        // Hood positions
+        config.shortHoodPosition = 1;
+        config.midHoodPosition = 0.05;
+        config.longHoodPosition = 0.0;
+        config.shortAutoHoodPosition = 0.62;
+        config.farAutoHoodPosition = 0.0;
+
+        config.timeoutSeconds = 3.5;
+        return config;
+    }
 
     public static class DiagnosticData {
         /** Last calculated distance to goal in inches (updates every loop) */
