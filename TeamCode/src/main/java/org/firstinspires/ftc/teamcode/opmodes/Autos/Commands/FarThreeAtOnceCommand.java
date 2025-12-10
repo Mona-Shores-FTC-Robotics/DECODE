@@ -213,6 +213,7 @@ public class FarThreeAtOnceCommand {
                                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                     .build(config.maxPathPower),
 
+                            new AimAtGoalCommand(robot.drive, robot.vision),
                             launcherCommands.launchAccordingToMode(false),
 
                             new ParallelDeadlineGroup(
