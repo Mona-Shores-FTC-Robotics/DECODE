@@ -3,10 +3,8 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.DriveCommands.TryRelocalizeForShotCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.TimedEjectCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -135,7 +133,6 @@ public class FarTogetherCommand {
                         launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
 
-                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
 //                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
@@ -158,7 +155,6 @@ public class FarTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
 //                new AimAtGoalCommand(robot.drive, robot.vision),
                 new Delay(config.delayForGateToOpen),
                 launcherCommands.launchAccordingToMode(false),
@@ -182,7 +178,6 @@ public class FarTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
 //                new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
@@ -210,7 +205,6 @@ public class FarTogetherCommand {
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower),
 
-                                new TryRelocalizeForShotCommand(robot.drive, robot.vision),
                                 launcherCommands.launchAccordingToMode(false),
 
                                 new ParallelDeadlineGroup(

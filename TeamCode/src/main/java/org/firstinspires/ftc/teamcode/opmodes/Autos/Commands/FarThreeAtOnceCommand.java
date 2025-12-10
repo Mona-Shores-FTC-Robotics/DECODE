@@ -4,7 +4,6 @@ import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
-import org.firstinspires.ftc.teamcode.commands.DriveCommands.TryRelocalizeForShotCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.TimedEjectCommand;
@@ -28,7 +27,7 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 public class FarThreeAtOnceCommand {
 
     public static class Config {
-        public double maxPathPower = 0.65;
+        public double maxPathPower = .75;
         public double endTimeForLinearHeadingInterpolation = .7;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.0;
@@ -137,21 +136,20 @@ public class FarThreeAtOnceCommand {
                     new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
                     launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
-            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//            new AimAtGoalCommand(robot.drive, robot.vision),
+            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Alliance Wall Artifacts
             new ParallelDeadlineGroup(
                 new FollowPathBuilder(robot, alliance)
-                    .from(launchFar())
-                    .to(artifactsAllianceWall())
-                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                    .build(config.maxPathPower),
-                    new SequentialGroup(
-                            new TimedEjectCommand(robot.intake, config.ejectTime),
-                            new AutoSmartIntakeCommand(robot.intake)
-                    )
+                        .from(launchFar())
+                        .to(artifactsAllianceWall())
+                        .withConstantHeading(waypoints.artifactsWallHeading)
+                        .build(config.maxPathPower),
+                        new SequentialGroup(
+                                new TimedEjectCommand(robot.intake, config.ejectTime),
+                                new AutoSmartIntakeCommand(robot.intake)
+                        )
             ),
 
             // Return and launch alliance wall artifacts
@@ -162,8 +160,7 @@ public class FarThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//            new AimAtGoalCommand(robot.drive, robot.vision),
+            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Artifact Set 3
@@ -187,8 +184,7 @@ public class FarThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
-//            new AimAtGoalCommand(robot.drive, robot.vision),
+            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Artifact Set 2
@@ -217,7 +213,6 @@ public class FarThreeAtOnceCommand {
                                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                     .build(config.maxPathPower),
 
-                            new TryRelocalizeForShotCommand(robot.drive, robot.vision),
                             launcherCommands.launchAccordingToMode(false),
 
                             new ParallelDeadlineGroup(

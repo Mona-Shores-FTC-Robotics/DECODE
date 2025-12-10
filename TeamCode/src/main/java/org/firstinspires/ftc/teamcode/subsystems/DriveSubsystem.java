@@ -74,7 +74,24 @@ public class DriveSubsystem implements Subsystem {
      */
     private static DriveAimAssistConfig createAimAssistConfig19429() {
         DriveAimAssistConfig config = new DriveAimAssistConfig();
-        // Add 19429-specific overrides here as needed
+        /** Proportional gain for geometry-based aiming when error is large */
+        config.kP = 0.35;
+        /** Inner-zone proportional gain (used when inside innerZoneDeg) to avoid overshoot */
+        config.kPInner = 2.85;
+        /** Error threshold (deg) where the controller switches to inner kP */
+       config.innerZoneDeg = 3.5;
+        /** Derivative gain on heading error rate (helps damp waggle) */
+        config.kD = 0.05;
+        /** Max turn speed when aiming (0.0-1.0) */
+        config.kMaxTurn = 0.6;
+        /** Minimum turn command to overcome drivetrain static friction */
+       config.kStatic = 0.1;
+        /** Apply kStatic only when error is above this magnitude (deg) */
+        config.staticApplyAboveDeg = 3.0;
+        /** Turn command slew rate (units per second), 0 disables slew limiting */
+        config.turnSlewRatePerSec = 8.0;
+        /** Heading deadband (degrees) where aim is considered settled */
+        config.deadbandDeg = 2.0;
         return config;
     }
 
@@ -84,8 +101,24 @@ public class DriveSubsystem implements Subsystem {
      */
     private static DriveAimAssistConfig createAimAssistConfig20245() {
         DriveAimAssistConfig config = new DriveAimAssistConfig();
-        // Add 20245-specific overrides here as needed
-        return config;
+        /** Proportional gain for geometry-based aiming when error is large */
+        config.kP = 0.35;
+        /** Inner-zone proportional gain (used when inside innerZoneDeg) to avoid overshoot */
+        config.kPInner = 2.85;
+        /** Error threshold (deg) where the controller switches to inner kP */
+        config.innerZoneDeg = 3.5;
+        /** Derivative gain on heading error rate (helps damp waggle) */
+        config.kD = 0.05;
+        /** Max turn speed when aiming (0.0-1.0) */
+        config.kMaxTurn = 0.6;
+        /** Minimum turn command to overcome drivetrain static friction */
+        config.kStatic = 0.1;
+        /** Apply kStatic only when error is above this magnitude (deg) */
+        config.staticApplyAboveDeg = 3.0;
+        /** Turn command slew rate (units per second), 0 disables slew limiting */
+        config.turnSlewRatePerSec = 8.0;
+        /** Heading deadband (degrees) where aim is considered settled */
+        config.deadbandDeg = 2.0;        return config;
     }
 
     /**
