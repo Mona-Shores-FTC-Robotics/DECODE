@@ -70,9 +70,9 @@ public class CommandRangeConfig {
         config.shortRightRpm = 1900;
 
         /** Mid range RPMs */
-        config.midLeftRpm = 2550;
-        config.midCenterRpm = 2550; // Center disabled by default
-        config.midRightRpm = 2550;
+        config.midLeftRpm = 2500;
+        config.midCenterRpm = 2500; // Center disabled by default
+        config.midRightRpm = 2500;
 
         /** Long range RPMs */
         config.longLeftRpm = 2900;

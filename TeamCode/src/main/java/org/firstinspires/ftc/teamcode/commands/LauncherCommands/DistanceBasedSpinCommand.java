@@ -85,7 +85,7 @@ public class DistanceBasedSpinCommand extends Command {
 
     private double lastSmoothedDistanceIn = 0.0;
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;  // 0-1: higher = more filtering
-    private static final double RPM_READY_THRESHOLD_PERCENT = 0.95;  // Trigger feedback at 95% of target
+    private static final double RPM_READY_THRESHOLD_PERCENT = 0.90;  // Trigger feedback at 95% of target
     private static final double READY_LOSS_DEBOUNCE_MS = 250.0;  // How long to be "not ready" before re-arming
     private boolean feedbackTriggered = false;
     private final ElapsedTime readyLossTimer = new ElapsedTime();
