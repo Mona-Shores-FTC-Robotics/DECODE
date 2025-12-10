@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands.config;
 
-import dev.nextftc.core.ftcdashboard.Configurable;
+import com.bylazar.configurables.annotations.Configurable;
 
 /**
  * Configuration for LaunchInSequenceCommand.
@@ -15,5 +15,5 @@ public class LaunchInSequenceConfig {
     public double alternatingSpacingMs = 265;
 
     /** Timeout in seconds before giving up on spin-up */
-    public double timeoutSeconds = 4.0;
+    public double timeoutSeconds = 3.0;
 }
