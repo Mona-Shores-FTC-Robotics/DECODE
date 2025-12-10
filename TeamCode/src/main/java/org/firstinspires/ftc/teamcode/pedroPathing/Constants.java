@@ -100,8 +100,13 @@ public class Constants {
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.015, 0, .0001, 0.6, 0.0001))
 
                 .headingPIDFCoefficients(new PIDFCoefficients(.6, .01, .0001, .0005))  // Increased P and D, reduced F
-                .headingPIDFSwitch(Math.toRadians(10))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.5, 0.0001, .03, .00003))
+
+                .headingPIDFSwitch(Math.toRadians(3.5))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .05, 0.0003))
+//                .headingPIDFSwitch(Math.toRadians(10))
+//                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.5, 0.0001, .03, .00003))
+
+
 
                 .translationalPIDFCoefficients(new PIDFCoefficients(
                         0.8,
@@ -132,8 +137,11 @@ public class Constants {
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.045, 0, 0, 0.6, .0001))
 
                 .headingPIDFCoefficients(new PIDFCoefficients(.6, 0.01, .0001, .0005))  // Increased P and D, reduced F
-                .headingPIDFSwitch(Math.toRadians(3))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.75, 0.0001, .03, .0003))
+//                .headingPIDFSwitch(Math.toRadians(3))
+//                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.75, 0.0001, .03, .0003))
+
+                .headingPIDFSwitch(Math.toRadians(3.5))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .05, .0003))
 
                 .translationalPIDFCoefficients(new PIDFCoefficients(
                         0.8,
