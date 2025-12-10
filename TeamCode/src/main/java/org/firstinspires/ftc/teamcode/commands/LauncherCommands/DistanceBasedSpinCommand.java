@@ -91,14 +91,14 @@ public class DistanceBasedSpinCommand extends Command {
     private static CommandRangeConfig createRangeConfig20245() {
         CommandRangeConfig config = new CommandRangeConfig();
         // Short range RPMs
-        config.shortLeftRpm = 1900;
-        config.shortCenterRpm = 1900;
-        config.shortRightRpm = 1900;
+        config.shortLeftRpm = 1800;
+        config.shortCenterRpm = 1800;
+        config.shortRightRpm = 1800;
 
         // Mid range RPMs
-        config.midLeftRpm = 2550;
-        config.midCenterRpm = 2550;
-        config.midRightRpm = 2550;
+        config.midLeftRpm = 2400;
+        config.midCenterRpm = 2400;
+        config.midRightRpm = 2400;
 
         // Long range RPMs
         config.longLeftRpm = 2900;
@@ -109,9 +109,9 @@ public class DistanceBasedSpinCommand extends Command {
         config.longMinLeftRpm = 2725;
         config.longMinCenterRpm = 2725;
         config.longMinRightRpm = 2725;
-        config.longMaxLeftRpm = 2900;
-        config.longMaxCenterRpm = 2900;
-        config.longMaxRightRpm = 2900;
+        config.longMaxLeftRpm = 2800;
+        config.longMaxCenterRpm = 2800;
+        config.longMaxRightRpm = 2800;
 
         // Short Auto range RPMs
         config.shortAutoLeftRpm = 2025;
@@ -124,8 +124,8 @@ public class DistanceBasedSpinCommand extends Command {
         config.farAutoRightRpm = 2725;
 
         // Hood positions
-        config.shortHoodPosition = 1;
-        config.midHoodPosition = 0.05;
+        config.shortHoodPosition = .95;
+        config.midHoodPosition = 0.0;
         config.longHoodPosition = 0.0;
         config.shortAutoHoodPosition = 0.62;
         config.farAutoHoodPosition = 0.0;
