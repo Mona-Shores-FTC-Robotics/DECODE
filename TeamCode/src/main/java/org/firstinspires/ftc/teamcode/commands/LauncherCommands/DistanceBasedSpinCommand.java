@@ -31,6 +31,10 @@ import dev.nextftc.core.commands.Command;
 @Configurable
 public class DistanceBasedSpinCommand extends Command {
 
+    // Robot-specific CommandRangeConfig instances - visible in Dashboard for live tuning
+    public static CommandRangeConfig rangeConfig_Robot19429 = CommandRangeConfig.commandRangeConfig19429;
+    public static CommandRangeConfig rangeConfig_Robot20245 = CommandRangeConfig.commandRangeConfig20245;
+
     public static class DiagnosticData {
         /** Last calculated distance to goal in inches (updates every loop) */
         public double lastCalculatedDistanceIn = 0.0;
