@@ -11,8 +11,6 @@ import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
-import org.firstinspires.ftc.teamcode.util.AutoField.FieldLayout;
-import org.firstinspires.ftc.teamcode.util.AutoField.FieldPoint;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
@@ -54,8 +52,6 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
     private AllianceSelector allianceSelector;
     private LauncherModeSelector modeSelector;
     private Alliance activeAlliance = Alliance.BLUE;
-    private FieldLayout currentLayout;
-
     private AutoPrestartHelper prestartHelper;
 
     // AprilTag-based start pose detection
@@ -431,15 +427,20 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
         activeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
         robot.setAlliance(activeAlliance);
 
-        currentLayout = AutoField.layoutForAlliance(activeAlliance);
-
-        // Apply AprilTag-detected start pose override if provided
+        // Use vision-detected pose if provided, otherwise get default from Command waypoints
+        Pose startPose;
         if (startOverride != null) {
-            currentLayout.overrideStart(startOverride);
+            startPose = startOverride;
             lastAppliedStartPosePedro = copyPose(startOverride);
+        } else {
+            startPose = AutoField.poseForAlliance(
+                    FarThreeAtOnceCommand.waypoints.startX,
+                    FarThreeAtOnceCommand.waypoints.startY,
+                    FarThreeAtOnceCommand.waypoints.startHeading,
+                    activeAlliance
+            );
         }
 
-        Pose startPose = currentLayout.pose(FieldPoint.START_FAR);
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
 
