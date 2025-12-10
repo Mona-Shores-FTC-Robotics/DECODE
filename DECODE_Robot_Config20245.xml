@@ -41,7 +41,7 @@
             <!-- Expansion Hub I2C (Color sensors) -->
             <RevColorSensorV3 name="lane_left_color" port="0" bus="0"/>
             <RevColorSensorV3 name="lane_center_color" port="1" bus="1"/>
-            <RevColorSensorV3 name="lane_right_color" port="3" bus="3"/>
+            <RevColorSensorV3 name="lane_right_color" port="2" bus="2"/>
         </LynxModule>
     </LynxUsbDevice>
 

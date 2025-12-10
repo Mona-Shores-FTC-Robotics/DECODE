@@ -1110,7 +1110,7 @@ public class IntakeSubsystem implements Subsystem {
         for (LauncherLane lane : LauncherLane.values()) {
             if (getLaneSample(lane).withinDistance) count++;
         }
-        return count >= 3;
+        return count >= laneSensorConfig.fullCount;
     }
 
     public interface LaneColorListener {

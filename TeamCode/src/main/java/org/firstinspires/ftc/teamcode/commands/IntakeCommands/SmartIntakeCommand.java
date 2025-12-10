@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.commands.IntakeCommands;
 
+import com.acmerobotics.dashboard.config.Config;
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -25,6 +27,7 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  * runIntake.whenBecomesFalse(reverseCommand);
  * </pre>
  */
+@Configurable
 public class SmartIntakeCommand extends IntakeCommand {
 
     public static class SmartIntakeConfig {
@@ -38,7 +41,7 @@ public class SmartIntakeCommand extends IntakeCommand {
          * - Decrease by 50ms if intake feels sluggish
          * - Typical range: 300-700ms
          */
-        public double fullDebounceMs = 0;
+        public double fullDebounceMs = 150;
 
         /**
          * Enable haptic rumble when auto-reversing.
@@ -70,9 +73,12 @@ public class SmartIntakeCommand extends IntakeCommand {
 
     @Override
     public void start() {
-        state = State.INTAKING;
-        getIntake().setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
-
+        boolean isFull = getIntake().isFull();
+        if (isFull)
+        { state= State.AUTO_REVERSED;}
+        else {
+            state = State.INTAKING;
+        }
         if (config.enableDebugTelemetry) {
             RobotState.packet.put("SmartIntake/state", state.name());
         }
@@ -93,6 +99,8 @@ public class SmartIntakeCommand extends IntakeCommand {
                         RobotState.packet.put("SmartIntake/state", state.name());
                         RobotState.packet.put("SmartIntake/fullDetectedTime", debounceTimer.milliseconds());
                     }
+                } else {
+                    getIntake().setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);
                 }
                 break;
 
@@ -127,8 +135,9 @@ public class SmartIntakeCommand extends IntakeCommand {
                 break;
 
             case AUTO_REVERSED:
-                // Stay reversed until button released
-                // (whenBecomesFalse will interrupt this command)
+                if (!isFull) {
+                    state = State.INTAKING;
+                }
                 break;
         }
 

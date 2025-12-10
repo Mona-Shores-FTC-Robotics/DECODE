@@ -7,7 +7,10 @@ import com.bylazar.configurables.annotations.Configurable;
  * Lane sensor configuration for artifact color detection.
  * Configures color sensors, classification algorithms, and presence detection.
  */
+@Configurable
 public class IntakeLaneSensorConfig {
+
+    public int fullCount = 3;
     /**
      * Artifact color classifier mode.
      * Dtermines which algorithm is used to classify GREEN vs PURPLE.
@@ -36,7 +39,7 @@ public class IntakeLaneSensorConfig {
 
     public static class Polling {
         public boolean enablePolling = true;
-        public double samplePeriodMs = 100;
+        public double samplePeriodMs = 150;
         public String leftSensor = "lane_left_color";
         public String centerSensor = "lane_center_color";
         public String rightSensor = "lane_right_color";

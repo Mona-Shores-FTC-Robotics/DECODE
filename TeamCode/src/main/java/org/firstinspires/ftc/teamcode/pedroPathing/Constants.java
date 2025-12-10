@@ -99,9 +99,9 @@ public class Constants {
                 .drivePIDFSwitch(5)
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.015, 0, .0001, 0.6, 0.0001))
 
-                .headingPIDFCoefficients(new PIDFCoefficients(.6, .001, .0003, .0005))  // Increased P and D, reduced F
-                .headingPIDFSwitch(Math.toRadians(5))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2.2, 0.0001, .03, .0003))
+                .headingPIDFCoefficients(new PIDFCoefficients(.6, .01, .0001, .0005))  // Increased P and D, reduced F
+                .headingPIDFSwitch(Math.toRadians(10))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.5, 0.0001, .03, .00003))
 
                 .translationalPIDFCoefficients(new PIDFCoefficients(
                         0.8,
@@ -214,9 +214,9 @@ public class Constants {
             0.995,
             0.1,
             .1,
-            Math.toRadians(1.0),
-            150,
-            1.0,
+            Math.toRadians(.5),
+            350,
+            1.1,
             10,
             1);
 

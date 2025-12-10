@@ -70,9 +70,9 @@ public class CommandRangeConfig {
         config.shortRightRpm = 1900;
 
         /** Mid range RPMs */
-        config.midLeftRpm = 2500;
-        config.midCenterRpm = 2500; // Center disabled by default
-        config.midRightRpm = 2500;
+        config.midLeftRpm = 2550;
+        config.midCenterRpm = 2550; // Center disabled by default
+        config.midRightRpm = 2550;
 
         /** Long range RPMs */
         config.longLeftRpm = 2900;
@@ -90,9 +90,9 @@ public class CommandRangeConfig {
         config.longMaxRightRpm = 2900;
 
         /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
-        config.shortAutoLeftRpm = 2000;
-        config.shortAutoCenterRpm = 2000;
-        config.shortAutoRightRpm = 2000;
+        config.shortAutoLeftRpm = 2025;
+        config.shortAutoCenterRpm = 2025;
+        config.shortAutoRightRpm = 2025;
 
         /** Far Auto range RPMs (starts matching LONG, tune independently for auto) */
         config.farAutoLeftRpm = 2725;
@@ -104,7 +104,7 @@ public class CommandRangeConfig {
         config.midHoodPosition = 0.05;
         config.longHoodPosition = 0.0;
 
-        config.shortAutoHoodPosition = .58; // Starts matching SHORT
+        config.shortAutoHoodPosition = .62; // Starts matching SHORT
         config.farAutoHoodPosition = 0.0; // Starts matching LONG
 
         /** Timeout in seconds before giving up on spin-up */
@@ -117,19 +117,19 @@ public class CommandRangeConfig {
         CommandRangeConfig config = new CommandRangeConfig();
         // Apply 20245-specific values
         /** Short range RPMs */
-        config.shortLeftRpm = 1870;
-        config.shortCenterRpm = 1925;
-        config.shortRightRpm = 1870;
+        config.shortLeftRpm = 1900;
+        config.shortCenterRpm = 1900; // Center disabled by default
+        config.shortRightRpm = 1900;
 
         /** Mid range RPMs */
-        config.midLeftRpm = 2400;
-        config.midCenterRpm = 2350;
-        config.midRightRpm = 2300;
+        config.midLeftRpm = 2550;
+        config.midCenterRpm = 2550; // Center disabled by default
+        config.midRightRpm = 2550;
 
         /** Long range RPMs */
-        config.longLeftRpm = 2828;
-        config.longCenterRpm = 2828;
-        config.longRightRpm = 2828;
+        config.longLeftRpm = 2900;
+        config.longCenterRpm = 2900; // Center disabled by default
+        config.longRightRpm = 2900;
 
         /** Long range min dist RPMs for DISTANCEBASEDSPINCOMMADN2 */
         config.longMinLeftRpm = 2725;
@@ -137,29 +137,27 @@ public class CommandRangeConfig {
         config.longMinRightRpm = 2725;
 
         /** Long range max dist RPMs for DISTANCEBASEDSPINCOMMADN2 */
-        config.longMaxLeftRpm = 3050;
-        config.longMaxCenterRpm = 3050; // Center disabled by default
-        config.longMaxRightRpm = 3050;
-
-        /** Per-range hood positions (applied uniformly to all lanes) */
-        config.shortHoodPosition = .46;
-        config.midHoodPosition = 0.05;
-        config.longHoodPosition = 0;
-
-        config.shortAutoHoodPosition = .3; // Starts m
-        // atching SHORT
-        config.farAutoHoodPosition = 0; // Starts matching LONG
-
+        config.longMaxLeftRpm = 2900;
+        config.longMaxCenterRpm = 2900; // Center disabled by default
+        config.longMaxRightRpm = 2900;
 
         /** Short Auto range RPMs (starts matching SHORT, tune independently for auto) */
-        config.shortAutoLeftRpm = 1850;
-        config.shortAutoCenterRpm = 1900;
-        config.shortAutoRightRpm = 1850;
+        config.shortAutoLeftRpm = 2025;
+        config.shortAutoCenterRpm = 2025;
+        config.shortAutoRightRpm = 2025;
 
         /** Far Auto range RPMs (starts matching LONG, tune independently for auto) */
-        config.farAutoLeftRpm = 2786;
-        config.farAutoCenterRpm = 2786;
-        config.farAutoRightRpm = 2786;
+        config.farAutoLeftRpm = 2725;
+        config.farAutoCenterRpm = 2725;
+        config.farAutoRightRpm = 2725;
+
+        /** Per-range hood positions (applied uniformly to all lanes) */
+        config.shortHoodPosition = 1;
+        config.midHoodPosition = 0.05;
+        config.longHoodPosition = 0.0;
+
+        config.shortAutoHoodPosition = .62; // Starts matching SHORT
+        config.farAutoHoodPosition = 0.0; // Starts matching LONG
 
         /** Timeout in seconds before giving up on spin-up */
         config.timeoutSeconds = 3.5;

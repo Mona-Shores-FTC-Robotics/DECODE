@@ -39,6 +39,7 @@ import org.firstinspires.ftc.teamcode.util.PoseFusion;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.Optional;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
+@Configurable
 public class DriveSubsystem implements Subsystem {
 
     private static final double VISION_TIMEOUT_MS = 100;
