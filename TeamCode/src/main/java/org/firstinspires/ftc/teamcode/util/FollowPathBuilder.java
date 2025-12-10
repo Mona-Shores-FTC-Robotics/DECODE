@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.util;
 
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
+import com.pedropathing.math.HeadingInterpolator;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
@@ -33,6 +34,8 @@ public class FollowPathBuilder {
     private double translationalConstraint = 3;
     private double headingConstraint = 2;
 
+    private boolean usePiecewiseHeading = false;
+    private HeadingInterpolator piecewiseInterpolator = null;
 
     private double linearInterpWeight = 0.7;
 
@@ -102,7 +105,11 @@ public class FollowPathBuilder {
         return this;
     }
 
-
+    public FollowPathBuilder withPiecewiseHeadingInterpolation(HeadingInterpolator interpolator) {
+        this.usePiecewiseHeading = true;
+        this.piecewiseInterpolator = interpolator;
+        return this;
+    }
 
     // ---------------------------
     // Build
@@ -137,7 +144,9 @@ public class FollowPathBuilder {
             }
         }
 
-        if (constantHeading) {
+        if (usePiecewiseHeading) {
+            builder.setHeadingInterpolation(piecewiseInterpolator);
+        } else if (constantHeading) {
             builder.setConstantHeadingInterpolation(Math.toRadians(constantHeadingDeg));
         } else {
             builder.setLinearHeadingInterpolation(

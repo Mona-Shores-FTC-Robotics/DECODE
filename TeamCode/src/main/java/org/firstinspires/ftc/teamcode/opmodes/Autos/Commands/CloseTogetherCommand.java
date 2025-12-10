@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.math.HeadingInterpolator;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
@@ -62,11 +63,6 @@ public class CloseTogetherCommand {
 
         public double openGateControlX = 25;
         public double openGateControlY = 80;
-
-        // OpenGate
-        public double openGateStrafeX = 30;
-        public double openGateStrafeY = 81;
-        public double openGateStrafeHeading = 270;
 
         // LaunchClose2
         public double launchClose2X = 36;
@@ -208,18 +204,27 @@ public class CloseTogetherCommand {
 
                 new Delay(config.secondsOpeningGate), //Delay to open the gate
 
-                // Return and Launch Set 1
+                // Return and Launch Set 1 - using piecewise heading interpolation
                 new FollowPathBuilder(robot, alliance)
                         .from(openGate())
-                        .to(openGateStrafePoint())
-                        .withConstantHeading(270)
-                        .build(config.maxPathPower),
-
-                // Return and Launch Set 1
-                new FollowPathBuilder(robot, alliance)
-                        .from(openGateStrafePoint())
                         .to(launchClose2())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .withPiecewiseHeadingInterpolation(
+                                HeadingInterpolator.piecewise(
+                                        new HeadingInterpolator.PiecewiseNode(
+                                                0.0,
+                                                0.2,
+                                                HeadingInterpolator.constant(Math.toRadians(270))
+                                        ),
+                                        new HeadingInterpolator.PiecewiseNode(
+                                                0.2,
+                                                1.0,
+                                                HeadingInterpolator.linear(
+                                                        Math.toRadians(270),
+                                                        Math.toRadians(waypoints.launchClose2Heading)
+                                                )
+                                        )
+                                )
+                        )
                         .build(config.maxPathPower),
 
 //                new AimAtGoalCommand(robot.drive, robot.vision),
@@ -333,10 +338,6 @@ public class CloseTogetherCommand {
 
     private static Pose openGateControl() {
         return new Pose(waypoints.openGateControlX, waypoints.openGateControlY, 0);
-    }
-
-    private static Pose openGateStrafePoint() {
-        return new Pose(waypoints.openGateStrafeX, waypoints.openGateStrafeY, Math.toRadians(waypoints.openGateStrafeHeading));
     }
 
     private static Pose launchClose2() {
