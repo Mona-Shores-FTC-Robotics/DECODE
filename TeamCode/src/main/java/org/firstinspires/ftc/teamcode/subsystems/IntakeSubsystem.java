@@ -164,12 +164,12 @@ public class IntakeSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, NormalizedColorSensor> laneSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, DistanceSensor> laneDistanceSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, MovingAverageFilter> laneDistanceFilters = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, MovingAverageFilter> laneSaturationFilters = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, CircularMovingAverageFilter> laneHueFilters = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, LaneSample> laneSamples = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Boolean> lanePresenceState = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneCandidateColor = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Integer> laneCandidateCount = new EnumMap<>(LauncherLane.class);
-    private final EnumMap<LauncherLane, Double> laneLastGoodDetectionMs = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Integer> laneClearCandidateCount = new EnumMap<>(LauncherLane.class);
     private final float[] hsvBuffer = new float[3];
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
@@ -222,11 +222,10 @@ public class IntakeSubsystem implements Subsystem {
             lanePresenceState.put(lane, false);
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
-            laneLastGoodDetectionMs.put(lane, 0.0);
             laneClearCandidateCount.put(lane, 0);
-            // Initialize distance filters with configured window size
+            // Initialize filters with configured window sizes
             laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
-            // Initialize hue filters with configured window size
+            laneSaturationFilters.put(lane, new MovingAverageFilter(laneSensorConfig.saturationFilter.windowSize));
             laneHueFilters.put(lane, new CircularMovingAverageFilter(laneSensorConfig.hueFilter.windowSize));
         }
         bindLaneSensors(hardwareMap);
@@ -240,11 +239,10 @@ public class IntakeSubsystem implements Subsystem {
             lanePresenceState.put(lane, false);
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
-            laneLastGoodDetectionMs.put(lane, 0.0);
             laneClearCandidateCount.put(lane, 0);
-            // Reset distance filters (recreate with current config in case window size changed)
+            // Reset filters (recreate with current config in case window size changed)
             laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
-            // Reset hue filters (recreate with current config in case window size changed)
+            laneSaturationFilters.put(lane, new MovingAverageFilter(laneSensorConfig.saturationFilter.windowSize));
             laneHueFilters.put(lane, new CircularMovingAverageFilter(laneSensorConfig.hueFilter.windowSize));
         }
         sensorTimer.reset();
@@ -480,8 +478,9 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     /**
-     * Applies debounce + confidence gating before updating lane color to reduce flicker from holes/background.
-     * Includes temporal hysteresis (keep-alive) to handle whiffle ball holes.
+     * Applies debounce + confidence gating before updating lane color to reduce flicker.
+     * Uses consecutive sample confirmations for both detection and clearing.
+     * Saturation filtering handles whiffle ball hole flicker before this is called.
      */
     private void applyGatedLaneColor(LauncherLane lane, LaneSample sample) {
         if (lane == null || sample == null) {
@@ -490,43 +489,29 @@ public class IntakeSubsystem implements Subsystem {
 
         ArtifactColor candidate = sample.color == null ? ArtifactColor.NONE : sample.color;
         ArtifactColor currentLaneColor = laneColors.getOrDefault(lane, ArtifactColor.NONE);
-        double currentTimeMs = sensorTimer.milliseconds();
 
-        // Get per-lane presence config
+        // Get per-lane presence config for distance threshold
         IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
 
         // --- CHECK IF ARTIFACT IS CLEARLY GONE (distance-based fast clear) ---
         // If distance shows artifact is beyond threshold + margin, it's definitely gone - clear immediately.
-        // This works even when using hue-based detection - distance provides fast clearing while hue handles detection.
-        // The hue filter can be slow to respond, but distance instantly knows when something is physically removed.
+        // This provides fast clearing even when saturation filtering might be slow to respond.
         if (currentLaneColor.isArtifact() && sample.distanceAvailable && !Double.isNaN(sample.distanceCm)) {
             double threshold = getThreshold(presenceCfg, lane);
             double clearanceMargin = laneSensorConfig.gating.distanceClearanceMarginCm;
 
             if (sample.distanceCm > threshold + clearanceMargin) {
-                // Artifact is definitely gone - clear immediately regardless of keep-alive
+                // Artifact is definitely gone - clear immediately
                 laneCandidateColor.put(lane, ArtifactColor.NONE);
                 laneCandidateCount.put(lane, 0);
                 laneClearCandidateCount.put(lane, 0);
-                laneLastGoodDetectionMs.put(lane, 0.0);
                 updateLaneColor(lane, ArtifactColor.NONE);
                 return;
             }
         }
 
-        boolean laneUseHuePresence = getUseHuePresence(presenceCfg, lane);
-
         // --- ARTIFACT DETECTION PATH ---
         if (candidate.isArtifact() && sample.confidence >= laneSensorConfig.gating.minConfidenceToAccept) {
-            // Good artifact reading - record timestamp ONLY if not currently in clearing process
-            int clearCount = laneClearCandidateCount.getOrDefault(lane, 0);
-
-            // If we're already trying to clear (clearCount > 0), don't reset the timer
-            // This prevents a whiffle ball from "reviving" detection after we've started clearing
-            if (clearCount == 0) {
-                laneLastGoodDetectionMs.put(lane, currentTimeMs);
-            }
-
             // Standard debounce logic for artifact confirmation
             ArtifactColor previousCandidate = laneCandidateColor.getOrDefault(lane, ArtifactColor.NONE);
             int count = laneCandidateCount.getOrDefault(lane, 0);
@@ -550,20 +535,10 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // --- NON-ARTIFACT / CLEARING PATH ---
-        // We got a bad reading (NONE, BACKGROUND, UNKNOWN, or low confidence)
+        // We got a bad reading (NONE or low confidence)
 
-        // If we currently have an artifact detected, check keep-alive window
         if (currentLaneColor.isArtifact()) {
-            double lastGoodMs = laneLastGoodDetectionMs.getOrDefault(lane, 0.0);
-            double timeSinceGoodMs = currentTimeMs - lastGoodMs;
-
-            // Within keep-alive window? Keep current detection alive (likely just hit a hole)
-            if (timeSinceGoodMs < laneSensorConfig.gating.keepAliveMs) {
-                // Keep alive - don't clear, don't update counters
-                return;
-            }
-
-            // Outside keep-alive window - start counting consecutive clear confirmations
+            // Count consecutive clear confirmations before removing artifact
             int clearCount = laneClearCandidateCount.getOrDefault(lane, 0);
             clearCount++;
             laneClearCandidateCount.put(lane, clearCount);
@@ -574,7 +549,6 @@ public class IntakeSubsystem implements Subsystem {
                 laneCandidateColor.put(lane, ArtifactColor.NONE);
                 laneCandidateCount.put(lane, 0);
                 laneClearCandidateCount.put(lane, 0);
-                laneLastGoodDetectionMs.put(lane, 0.0);
                 updateLaneColor(lane, ArtifactColor.NONE);
             }
         } else {
@@ -679,43 +653,6 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
-    /**
-     * Gets whether hue-based presence detection is enabled for a specific lane.
-     * Checks both the global useHuePresence flag AND the per-lane flag.
-     */
-    private static boolean getUseHuePresence(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
-        // Global flag must be enabled, then check per-lane setting
-        if (!laneSensorConfig.presence.useHuePresence) {
-            return false;
-        }
-        switch (lane) {
-            case LEFT:
-                return config.leftUseHuePresence;
-            case CENTER:
-                return config.centerUseHuePresence;
-            case RIGHT:
-                return config.rightUseHuePresence;
-            default:
-                return config.centerUseHuePresence;
-        }
-    }
-
-    /**
-     * Gets the hue presence threshold for a specific lane.
-     */
-    private static double getHueThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
-        switch (lane) {
-            case LEFT:
-                return config.leftHueThreshold;
-            case CENTER:
-                return config.centerHueThreshold;
-            case RIGHT:
-                return config.rightHueThreshold;
-            default:
-                return config.centerHueThreshold;
-        }
-    }
-
     private LaneSample sampleLane(LauncherLane lane) {
         NormalizedColorSensor colorSensor = laneSensors.get(lane);
         DistanceSensor distanceSensor = laneDistanceSensors.get(lane);
@@ -781,67 +718,44 @@ public class IntakeSubsystem implements Subsystem {
             value = hsvBuffer[2];
         }
 
-        // Apply circular moving average filter to hue for smoother classification
+        // Apply saturation filter for presence detection smoothing (handles whiffle ball holes)
+        float filteredSaturation = saturation;
+        if (laneSensorConfig.saturationFilter.enableFilter && maxComponent > 0) {
+            MovingAverageFilter satFilter = laneSaturationFilters.get(lane);
+            if (satFilter != null) {
+                filteredSaturation = (float) satFilter.calculate(saturation);
+            }
+        }
+
+        // Apply circular moving average filter to hue for smoother GREEN vs PURPLE classification
         float filteredHue = rawHue;
         if (laneSensorConfig.hueFilter.enableFilter && maxComponent > 0) {
             CircularMovingAverageFilter hueFilter = laneHueFilters.get(lane);
             if (hueFilter != null) {
-                // Filter out low hue values (reds) that can corrupt the circular average
-                double minHue = laneSensorConfig.hueFilter.minHue;
-                boolean hueAccepted = minHue <= 0 || rawHue >= minHue;
-
-                if (hueAccepted) {
-                    // Jump detection: if raw hue differs significantly from filtered, snap to new value
-                    double jumpThreshold = laneSensorConfig.hueFilter.jumpThreshold;
-                    if (jumpThreshold > 0 && hueFilter.getSampleCount() > 0) {
-                        double currentFiltered = hueFilter.get();
-                        double hueDiff = Math.abs(rawHue - currentFiltered);
-                        // Handle circular wrap-around (e.g., 350° vs 10° = 20° difference, not 340°)
-                        if (hueDiff > 180.0) {
-                            hueDiff = 360.0 - hueDiff;
-                        }
-                        if (hueDiff > jumpThreshold) {
-                            // Large jump detected - prime filter with new value for instant response
-                            hueFilter.prime(rawHue);
-                        }
-                    }
-                    filteredHue = (float) hueFilter.calculate(rawHue);
-                } else {
-                    // Hue below minimum - use current filtered value without updating filter
-                    if (hueFilter.getSampleCount() > 0) {
-                        filteredHue = (float) hueFilter.get();
-                    }
-                    // else keep rawHue as filteredHue (no filter data yet)
-                }
+                filteredHue = (float) hueFilter.calculate(rawHue);
             }
         }
 
-        // Override withinDistance based on hue if hue-based presence detection is enabled for this lane
-        // This ensures isFull() and lanePresenceState work correctly with hue-based detection
-        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
-        boolean laneUseHuePresence = getUseHuePresence(presenceCfg, lane);
-        double laneHueThreshold = getHueThreshold(presenceCfg, lane);
-        if (laneUseHuePresence) {
-            withinDistance = filteredHue >= laneHueThreshold;
+        // Saturation-based presence detection: colorful artifact vs dull background
+        // This overrides distance-based detection when enabled
+        if (laneSensorConfig.presence.useSaturation) {
+            withinDistance = filteredSaturation >= laneSensorConfig.presence.saturationThreshold;
             lanePresenceState.put(lane, withinDistance);
         }
 
-        // Compute total RGB intensity for presence detection (preserve fractional contribution)
+        // Compute total RGB intensity for telemetry
         int totalIntensity = Math.round(scaledRedFloat + scaledGreenFloat + scaledBlueFloat);
 
         String lanePrefix = lane == null ? "unknown" : lane.name().toLowerCase(Locale.US);
 
-        // Classify color using selected classifier mode with enhanced presence/background detection
-        // Use filtered hue for stable classification
+        // Classify color using selected classifier mode
         ClassificationResult result = classifyColor(
-                filteredHue, saturation, value,
+                filteredHue, filteredSaturation, value,
                 maxComponent > 0,
                 totalIntensity,
                 distanceValid ? distanceCm : Double.NaN,
                 withinDistance,
-                lanePrefix,
-                laneUseHuePresence,
-                laneHueThreshold
+                lanePrefix
         );
         ArtifactColor hsvColor = result.color;
         double confidence = result.confidence;
@@ -862,7 +776,8 @@ public class IntakeSubsystem implements Subsystem {
         RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_b", normalizedBlue);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/hue_raw", rawHue);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/hue", filteredHue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/sat", saturation);
+        RobotState.packet.put("intake/sample/" + lanePrefix + "/sat_raw", saturation);
+        RobotState.packet.put("intake/sample/" + lanePrefix + "/sat", filteredSaturation);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/val", value);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/total_intensity", totalIntensity);
 
@@ -872,7 +787,7 @@ public class IntakeSubsystem implements Subsystem {
                 withinDistance,
                 scaledRed, scaledGreen, scaledBlue,
                 normalizedRed, normalizedGreen, normalizedBlue,
-                filteredHue, saturation, value,
+                filteredHue, filteredSaturation, value,
                 hsvColor,
                 finalColor,
                 confidence
@@ -893,7 +808,8 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     /**
-     * Classify color using the configured classifier mode with enhanced presence and background detection.
+     * Classify color using the configured classifier mode.
+     * Presence detection (distance/saturation) is handled in sampleLane() before this is called.
      *
      * @param hue Hue value (0-360°)
      * @param saturation Saturation value (0-1)
@@ -901,48 +817,29 @@ public class IntakeSubsystem implements Subsystem {
      * @param hasSignal Whether sensor has a valid signal
      * @param totalIntensity Total RGB intensity (0-765)
      * @param distanceCm Distance reading in cm (or NaN if unavailable)
-     * @param withinDistance Whether distance is within presence threshold
-     * @param laneUseHuePresence Whether hue-based presence is enabled for this lane
-     * @param laneHueThreshold Hue threshold for this lane's presence detection
+     * @param withinDistance Whether presence detection indicates artifact present
+     * @param lanePrefix Lane name prefix for telemetry
      * @return Classification result with color and confidence
      */
     private ClassificationResult classifyColor(float hue, float saturation, float value,
                                                boolean hasSignal, int totalIntensity,
                                                double distanceCm, boolean withinDistance,
-                                               String lanePrefix,
-                                               boolean laneUseHuePresence, double laneHueThreshold) {
+                                               String lanePrefix) {
         String reason = "classified";
 
-        // Hue-based presence detection: use filtered hue to determine if artifact is present
-        // Hue < threshold = definitely empty (background), Hue >= threshold = artifact present
-        if (laneUseHuePresence) {
-            boolean hueIndicatesPresent = hue >= laneHueThreshold;
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_presence_enabled", true);
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_presence_threshold", laneHueThreshold);
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_indicates_present", hueIndicatesPresent);
-
-            if (!hueIndicatesPresent) {
-                RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_score", 0.0);
-                reason = "hue_below_threshold";
-                RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
-                return new ClassificationResult(ArtifactColor.NONE, 0.0);
-            }
-            // Hue indicates artifact is present - skip distance check and proceed to classification
-        } else if (laneSensorConfig.presence.useDistance && !withinDistance) {
-            // Distance-only presence gate: if we're outside hysteresis window, treat as empty.
+        // Presence gate: withinDistance is already computed by sampleLane() using distance or saturation
+        if (!withinDistance) {
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_score", 0.0);
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_distance_valid", !Double.isNaN(distanceCm));
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_within_distance", false);
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_total_intensity", totalIntensity);
-            reason = "distance_out";
+            reason = "no_presence";
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
 
-        // Basic quality check - no signal
-        // Skip this check when using hue-based presence for this lane (hue is the authority)
-        if (!laneUseHuePresence
-                && (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation)) {
+        // Basic quality check - no signal or too dark
+        if (!hasSignal || value < laneSensorConfig.presence.minValue) {
             reason = "no_signal";
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
@@ -984,7 +881,7 @@ public class IntakeSubsystem implements Subsystem {
      * Always returns GREEN or PURPLE, never UNKNOWN (two-class problem).
      */
     private ClassificationResult classifyColorDecisionBoundary(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
-        if (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation) {
+        if (!hasSignal || value < laneSensorConfig.presence.minValue) {
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
 
@@ -1026,7 +923,7 @@ public class IntakeSubsystem implements Subsystem {
      * Picks the closer target (green or purple).
      */
     private ClassificationResult classifyColorDistanceBased(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
-        if (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation) {
+        if (!hasSignal || value < laneSensorConfig.presence.minValue) {
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
 
@@ -1104,7 +1001,6 @@ public class IntakeSubsystem implements Subsystem {
             updateLaneColor(lane, ArtifactColor.NONE);
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
-            laneLastGoodDetectionMs.put(lane, 0.0);
             laneClearCandidateCount.put(lane, 0);
         }
     }
@@ -1113,7 +1009,6 @@ public class IntakeSubsystem implements Subsystem {
         updateLaneColor(lane, ArtifactColor.NONE);
         laneCandidateColor.put(lane, ArtifactColor.NONE);
         laneCandidateCount.put(lane, 0);
-        laneLastGoodDetectionMs.put(lane, 0.0);
         laneClearCandidateCount.put(lane, 0);
     }
 

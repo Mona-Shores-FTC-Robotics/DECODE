@@ -6,14 +6,18 @@ import com.bylazar.configurables.annotations.Configurable;
 /**
  * Lane sensor configuration for artifact color detection.
  * Configures color sensors, classification algorithms, and presence detection.
+ *
+ * Presence detection uses saturation threshold (colorful artifact vs dull background).
+ * Color classification uses hue to distinguish GREEN vs PURPLE.
  */
 @Configurable
 public class IntakeLaneSensorConfig {
 
     public int fullCount = 3;
+
     /**
      * Artifact color classifier mode.
-     * Dtermines which algorithm is used to classify GREEN vs PURPLE.
+     * Determines which algorithm is used to classify GREEN vs PURPLE.
      */
     public enum ClassifierMode {
         /** Range-based: Independent hue ranges for green and purple (legacy) */
@@ -28,9 +32,9 @@ public class IntakeLaneSensorConfig {
     public static Polling polling = new Polling();
     public Hardware hardware = new Hardware();
     public static DistanceFilter distanceFilter = new DistanceFilter();
+    public static SaturationFilter saturationFilter = new SaturationFilter();
     public static HueFilter hueFilter = new HueFilter();
     public static Gating gating = new Gating();
-    public static Quality quality = new Quality();
     public static Presence presence = new Presence();
     public static Classifier classifier = new Classifier();
     public static LanePresenceConfig lanePresenceConfig19429 = createLanePresenceConfig19429();
@@ -56,108 +60,69 @@ public class IntakeLaneSensorConfig {
     public static class DistanceFilter {
         /** Enable moving average filtering for distance sensor readings */
         public boolean enableFilter = true;
-        /**
-         * Number of samples to average for the moving average filter.
-         * Higher values = more smoothing but slower response.
-         * Recommended: 3-5 for good balance of smoothing and responsiveness.
-         * At 150ms sample period: 3 samples = 450ms window, 5 samples = 750ms window.
-         */
+        /** Number of samples to average. Higher = smoother but slower response. */
+        public int windowSize = 4;
+    }
+
+    public static class SaturationFilter {
+        /** Enable moving average filtering for saturation (smooths whiffle ball hole flicker) */
+        public boolean enableFilter = true;
+        /** Number of samples to average. Higher = smoother but slower response. */
         public int windowSize = 4;
     }
 
     public static class HueFilter {
-        /** Enable circular moving average filtering for hue values (helps stabilize purple vs green classification) */
+        /** Enable circular moving average filtering for hue (stabilizes GREEN vs PURPLE classification) */
         public boolean enableFilter = true;
-        /**
-         * Number of samples to average for the moving average filter.
-         * Higher values = more smoothing but slower response.
-         * Recommended: 3-4 for good balance of smoothing and responsiveness.
-         * At 50ms sample period: 3 samples = 150ms window, 4 samples = 200ms window.
-         * Uses circular averaging to properly handle purple wrap-around (270°-30°).
-         */
-        public int windowSize = 10;
-        /**
-         * Jump detection threshold in degrees. If raw hue differs from filtered hue
-         * by more than this amount, the filter is reset to the new value immediately.
-         * This prevents slow transitions through intermediate hues (e.g., background->purple
-         * passing through green). Set to 0 to disable jump detection.
-         */
-        public double jumpThreshold = 50.0;
-        /**
-         * Minimum hue value to accept into the filter. Readings below this are ignored.
-         * Helps filter out spurious red readings that can corrupt the circular average.
-         * Set to 0 to disable. Typical value: 70 to reject reds.
-         */
-        public double minHue = 70.0;
+        /** Number of samples to average. Uses circular averaging for proper wrap-around handling. */
+        public int windowSize = 4;
     }
 
     public static class Gating {
         /** Minimum confidence required to accept a new artifact color classification */
-        public double minConfidenceToAccept = .2;
+        public double minConfidenceToAccept = 0.2;
         /** Number of consecutive confident samples required before updating lane color */
         public int consecutiveConfirmationsRequired = 1;
-        /** Number of consecutive non-artifact samples required before clearing lane color (helps with whiffle ball holes) */
+        /** Number of consecutive non-artifact samples required before clearing lane color */
         public int consecutiveClearConfirmationsRequired = 2;
-        /** Keep-alive duration (ms) - keep artifact detection alive after last good reading (helps with whiffle ball holes) */
-        public double keepAliveMs = 0;
-        /** Distance clearance margin (cm) - how far beyond threshold to instantly clear (helps artifacts clear quickly when removed) */
-        public double distanceClearanceMarginCm = .5;
-    }
-
-    public static class Quality {
-        /**
-         * Quality thresholds - only used when hue-based presence is DISABLED for a lane.
-         * When hue-based presence is enabled, these checks are skipped (hue is the authority).
-         */
-        public double minValue = 0.02;
-        public double minSaturation = 0.15;
+        /** Distance clearance margin (cm) - how far beyond threshold to instantly clear */
+        public double distanceClearanceMarginCm = 0.5;
     }
 
     public static class Presence {
         /**
-         * Enable distance-based presence detection (used when hue-based is disabled for a lane).
+         * Enable distance-based presence detection.
          * When true, artifact presence requires distance <= per-lane threshold.
          */
         public boolean useDistance = true;
 
         /**
-         * Global enable for hue-based presence detection.
-         * When true, per-lane settings (leftUseHuePresence, etc.) control which lanes use hue.
-         * When false, all lanes use distance-based detection.
+         * Enable saturation-based presence detection.
+         * When true, artifact presence requires saturation >= saturationThreshold.
+         * Artifacts are colorful (high saturation), background is dull (low saturation).
          */
-        public boolean useHuePresence = false;
+        public boolean useSaturation = false;
+
+        /** Saturation threshold for presence - values >= this indicate artifact present */
+        public double saturationThreshold = 0.25;
+
+        /** Minimum brightness (value) required for valid color reading */
+        public double minValue = 0.02;
     }
 
     /**
      * Per-lane presence detection settings.
      * Robot-specific configs are created in createLanePresenceConfig19429() and createLanePresenceConfig20245().
-     *
-     * Usage:
-     * - Set Presence.useHuePresence = true to enable hue-based detection globally
-     * - Then use per-lane flags to control which lanes use hue vs distance
-     * - Example: Set rightUseHuePresence = false to use distance-based for right lane only
      */
     public static class LanePresenceConfig {
-        // Distance thresholds (used when hue-based detection is disabled for a lane)
+        // Distance thresholds per lane (cm) - artifact detected when distance <= threshold
         public double leftThresholdCm;
         public double centerThresholdCm;
         public double rightThresholdCm;
-
-        // Per-lane hue presence enable (requires global Presence.useHuePresence = true)
-        public boolean leftUseHuePresence = true;
-        public boolean centerUseHuePresence = true;
-        public boolean rightUseHuePresence = true;
-
-        // Per-lane hue thresholds (hue >= threshold = artifact present)
-        public double leftHueThreshold = 130.0;
-        public double centerHueThreshold = 130.0;
-        public double rightHueThreshold = 130.0;
     }
 
     public static class Classifier {
-        // Classifier mode selector
         public String mode = ClassifierMode.DECISION_BOUNDARY.name();
-
         public DecisionBoundary decision = new DecisionBoundary();
         public Range range = new Range();
         public DistanceBased distance = new DistanceBased();
@@ -165,7 +130,7 @@ public class IntakeLaneSensorConfig {
 
     public static class DecisionBoundary {
         /** Hue decision boundary - classify as GREEN if hue < boundary, PURPLE otherwise */
-        public double hueDecisionBoundary = 165.0; //20245
+        public double hueDecisionBoundary = 165.0;
         /** Distance from boundary for low confidence warning (degrees) */
         public double lowConfidenceMargin = 8.0;
     }
