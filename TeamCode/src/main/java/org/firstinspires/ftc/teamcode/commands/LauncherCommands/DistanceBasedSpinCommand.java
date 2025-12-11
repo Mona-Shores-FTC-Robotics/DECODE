@@ -78,7 +78,7 @@ public class DistanceBasedSpinCommand extends Command {
         config.shortHoodPosition = 1;
         config.midHoodPosition = 0.05;
         config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = 0.62;
+        config.shortAutoHoodPosition = .75;
         config.farAutoHoodPosition = 0.0;
 
         config.timeoutSeconds = 3.5;
@@ -127,7 +127,7 @@ public class DistanceBasedSpinCommand extends Command {
         config.shortHoodPosition = .95;
         config.midHoodPosition = 0.0;
         config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = 0.62;
+        config.shortAutoHoodPosition = .75;
         config.farAutoHoodPosition = 0.0;
 
         config.timeoutSeconds = 3.5;
