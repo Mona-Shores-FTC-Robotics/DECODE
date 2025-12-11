@@ -750,20 +750,40 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // Saturation-based presence detection: colorful artifact vs dull background
+        // Can be used alone or combined with distance (AND logic)
         if (presenceCfg.useSaturation) {
-            withinDistance = filteredSaturation >= presenceCfg.saturationThreshold;
+            boolean satPresent = filteredSaturation >= presenceCfg.saturationThreshold;
+            // If distance is also enabled, require BOTH to pass (AND logic)
+            if (presenceCfg.useDistance) {
+                withinDistance = withinDistance && satPresent;
+            } else {
+                withinDistance = satPresent;
+            }
             lanePresenceState.put(lane, withinDistance);
         }
 
         // Value-based presence detection: bright artifact vs dark background
-        // Can be used alone or combined with saturation (AND logic)
+        // Can be used alone or combined with other methods (AND logic)
         if (presenceCfg.useValue) {
             boolean valuePresent = filteredValue >= presenceCfg.valueThreshold;
-            // If saturation is also enabled, require BOTH to pass (AND logic)
-            if (presenceCfg.useSaturation) {
+            // If other methods are enabled, require ALL to pass (AND logic)
+            if (presenceCfg.useDistance || presenceCfg.useSaturation) {
                 withinDistance = withinDistance && valuePresent;
             } else {
                 withinDistance = valuePresent;
+            }
+            lanePresenceState.put(lane, withinDistance);
+        }
+
+        // Hue-based presence detection: artifact hue vs background hue
+        // Can be used alone or combined with other methods (AND logic)
+        if (presenceCfg.useHue) {
+            boolean huePresent = filteredHue >= presenceCfg.hueThreshold;
+            // If other methods are enabled, require ALL to pass (AND logic)
+            if (presenceCfg.useDistance || presenceCfg.useSaturation || presenceCfg.useValue) {
+                withinDistance = withinDistance && huePresent;
+            } else {
+                withinDistance = huePresent;
             }
             lanePresenceState.put(lane, withinDistance);
         }

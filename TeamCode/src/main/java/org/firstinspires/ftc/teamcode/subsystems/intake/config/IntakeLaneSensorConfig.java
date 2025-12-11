@@ -11,42 +11,45 @@ import com.bylazar.configurables.annotations.Configurable;
  *
  * The sensor does TWO things:
  *   1. PRESENCE DETECTION - Is there an artifact in the lane? (yes/no)
- *   2. COLOR CLASSIFICATION - Is it GREEN or PURPLE? (uses hue)
+ *   2. COLOR CLASSIFICATION - Is it GREEN or PURPLE? (uses hue boundary)
  *
- * COLOR CLASSIFICATION (hueDecisionBoundary) is already working well.
- * You probably don't need to touch it.
+ * COLOR CLASSIFICATION is already working. Don't touch it.
  *
- * PRESENCE DETECTION is what needs tuning. Settings are PER-ROBOT in
- * lanePresenceConfig19429 or lanePresenceConfig20245. You have THREE options:
+ * PRESENCE DETECTION needs tuning. Settings are PER-ROBOT in
+ * lanePresenceConfig19429 or lanePresenceConfig20245.
  *
- *   Option A: Distance-based (useDistance = true)
- *     - Uses the distance sensor to detect if something is close
- *     - Problem: Background objects near sensor cause false positives
- *     - Tune: Adjust per-lane thresholds (leftThresholdCm, etc.)
+ * You have FOUR detection methods (enable any combination):
  *
- *   Option B: Saturation-based (useSaturation = true)
- *     - Colorful artifacts have HIGH saturation, dull background has LOW
- *     - Watch telemetry: intake/sample/{lane}/sat (filtered value)
- *     - Tune: Set saturationThreshold between background and artifact values
+ *   Distance (useDistance = true)
+ *     - Artifact present when distance <= threshold
+ *     - Telemetry: intake/sample/{lane}/distance_cm
+ *     - Problem: Background objects cause false positives
  *
- *   Option C: Value-based (useValue = true)
- *     - Bright artifacts have HIGH value, dark background has LOW
- *     - Watch telemetry: intake/sample/{lane}/val (filtered value)
- *     - Tune: Set valueThreshold between background and artifact values
+ *   Saturation (useSaturation = true)
+ *     - Artifact present when sat >= threshold
+ *     - Telemetry: intake/sample/{lane}/sat
+ *     - Colorful artifact vs dull background
  *
- * You can combine options (e.g., useSaturation + useValue requires BOTH).
+ *   Value (useValue = true)
+ *     - Artifact present when val >= threshold
+ *     - Telemetry: intake/sample/{lane}/val
+ *     - Bright artifact vs dark background
  *
- * FILTERING (saturationFilter, valueFilter):
- *   - Smooths out flicker from whiffle ball holes
- *   - Higher windowSize = smoother but slower response
- *   - Start with windowSize = 4, increase if flickering persists
+ *   Hue (useHue = true)
+ *     - Artifact present when hue >= threshold
+ *     - Telemetry: intake/sample/{lane}/hue
+ *     - Artifact hue vs background hue
+ *
+ * When MULTIPLE methods are enabled, ALL must pass (AND logic).
+ * This lets you combine for reliability (e.g., sat AND val).
  *
  * QUICK START:
- *   1. Run TeleOp and watch telemetry values for sat and val
- *   2. Note the values when empty vs when artifact is present
- *   3. Pick whichever (sat or val) has the clearest separation
- *   4. Set the threshold halfway between empty and artifact values
- *   5. Enable that detection method in YOUR ROBOT'S config
+ *   1. Run TeleOp and watch telemetry for all four values
+ *   2. Note values when EMPTY vs when ARTIFACT is present
+ *   3. Find which has the clearest separation
+ *   4. Set threshold halfway between empty and artifact values
+ *   5. Enable that method in YOUR ROBOT'S config
+ *   6. Test both detection AND clearing speed
  * ============================================================================
  */
 @Configurable
@@ -100,22 +103,26 @@ public class IntakeLaneSensorConfig {
      * RobotConfigs.getLanePresenceConfig() returns the active robot's config.
      */
     public static class LanePresenceConfig {
-        // --- DETECTION METHOD (pick one or combine) ---
+        // --- DETECTION METHODS (enable any combination) ---
+        // When multiple are enabled, ALL must pass (AND logic)
 
         /** Use distance sensor for presence detection */
         public boolean useDistance = true;
 
-        /** Use saturation for presence detection (colorful = artifact, dull = background) */
+        /** Use saturation for presence (colorful artifact vs dull background) */
         public boolean useSaturation = false;
-
         /** Saturation threshold - artifact present when sat >= this */
         public double saturationThreshold = 0.25;
 
-        /** Use brightness for presence detection (bright = artifact, dark = background) */
+        /** Use brightness for presence (bright artifact vs dark background) */
         public boolean useValue = false;
-
         /** Value threshold - artifact present when val >= this */
         public double valueThreshold = 0.15;
+
+        /** Use hue for presence (artifact hue vs background hue) */
+        public boolean useHue = false;
+        /** Hue threshold - artifact present when hue >= this */
+        public double hueThreshold = 130.0;
 
         // --- DISTANCE THRESHOLDS (per-lane, only used when useDistance = true) ---
 
@@ -197,12 +204,14 @@ public class IntakeLaneSensorConfig {
 
     private static LanePresenceConfig createLanePresenceConfig19429() {
         LanePresenceConfig config = new LanePresenceConfig();
-        // Detection method
+        // Detection methods (enable any combination - all enabled must pass)
         config.useDistance = true;
         config.useSaturation = false;
         config.saturationThreshold = 0.25;
         config.useValue = false;
         config.valueThreshold = 0.15;
+        config.useHue = false;
+        config.hueThreshold = 130.0;
         // Distance thresholds
         config.leftThresholdCm = 6.5;
         config.centerThresholdCm = 7.0;
@@ -214,12 +223,14 @@ public class IntakeLaneSensorConfig {
 
     private static LanePresenceConfig createLanePresenceConfig20245() {
         LanePresenceConfig config = new LanePresenceConfig();
-        // Detection method
+        // Detection methods (enable any combination - all enabled must pass)
         config.useDistance = true;
         config.useSaturation = false;
         config.saturationThreshold = 0.25;
         config.useValue = false;
         config.valueThreshold = 0.15;
+        config.useHue = false;
+        config.hueThreshold = 130.0;
         // Distance thresholds
         config.leftThresholdCm = 4.0;
         config.centerThresholdCm = 4.0;
