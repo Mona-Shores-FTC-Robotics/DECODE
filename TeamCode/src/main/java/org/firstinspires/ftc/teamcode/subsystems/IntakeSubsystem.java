@@ -879,7 +879,9 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // Basic quality check - no signal
-        if (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation) {
+        // Skip this check when using hue-based presence (hue is the authority)
+        if (!laneSensorConfig.presence.useHuePresence
+                && (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation)) {
             reason = "no_signal";
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
