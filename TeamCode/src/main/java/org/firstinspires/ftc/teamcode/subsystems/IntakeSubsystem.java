@@ -749,6 +749,13 @@ public class IntakeSubsystem implements Subsystem {
             }
         }
 
+        // Override withinDistance based on hue if hue-based presence detection is enabled
+        // This ensures isFull() and lanePresenceState work correctly with hue-based detection
+        if (laneSensorConfig.presence.useHuePresence) {
+            withinDistance = filteredHue >= laneSensorConfig.presence.huePresenceThreshold;
+            lanePresenceState.put(lane, withinDistance);
+        }
+
         // Compute total RGB intensity for presence detection (preserve fractional contribution)
         int totalIntensity = Math.round(scaledRedFloat + scaledGreenFloat + scaledBlueFloat);
 
@@ -831,8 +838,23 @@ public class IntakeSubsystem implements Subsystem {
                                                String lanePrefix) {
         String reason = "classified";
 
-        // Distance-only presence gate: if we're outside hysteresis window, treat as empty.
-        if (laneSensorConfig.presence.useDistance && !withinDistance) {
+        // Hue-based presence detection: use filtered hue to determine if artifact is present
+        // Hue < threshold = definitely empty (background), Hue >= threshold = artifact present
+        if (laneSensorConfig.presence.useHuePresence) {
+            boolean hueIndicatesPresent = hue >= laneSensorConfig.presence.huePresenceThreshold;
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_presence_enabled", true);
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_presence_threshold", laneSensorConfig.presence.huePresenceThreshold);
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_indicates_present", hueIndicatesPresent);
+
+            if (!hueIndicatesPresent) {
+                RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_score", 0.0);
+                reason = "hue_below_threshold";
+                RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
+                return new ClassificationResult(ArtifactColor.NONE, 0.0);
+            }
+            // Hue indicates artifact is present - skip distance check and proceed to classification
+        } else if (laneSensorConfig.presence.useDistance && !withinDistance) {
+            // Distance-only presence gate: if we're outside hysteresis window, treat as empty.
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_score", 0.0);
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_distance_valid", !Double.isNaN(distanceCm));
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_within_distance", false);

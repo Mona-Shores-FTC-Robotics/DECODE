@@ -104,6 +104,12 @@ public class IntakeLaneSensorConfig {
         /** Legacy presence distance for scoring (diagnostics only; hysteresis uses per-lane thresholds) */
         public double presenceDistanceCm = 5.5;
 
+        // Hue-based presence detection - uses filtered hue to determine artifact presence
+        /** Enable hue-based presence detection (hue >= threshold = artifact present, hue < threshold = empty) */
+        public boolean useHuePresence = false;
+        /** Hue threshold for artifact presence - values >= this indicate artifact, values < this indicate empty/background */
+        public double huePresenceThreshold = 130.0;
+
         // Multi-factor presence detection - improves artifact vs background discrimination
         /** Enabnicle enhanced presence scoring (not just distance) */
         public boolean enablePresenceScoring = true;
