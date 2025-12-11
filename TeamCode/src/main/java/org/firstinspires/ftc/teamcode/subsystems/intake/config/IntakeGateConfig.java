@@ -22,7 +22,7 @@ public class IntakeGateConfig {
     public double allowArtifacts = 0.0;
 
     /** Servo position for reverse/ejecting mode */
-    public double reverseConfig = 0.8;
+    public double reverseConfig = .6;
 
     // ===== ROBOT-SPECIFIC VALUES (no defaults - set per robot) =====
     // (none currently - all values are shared)

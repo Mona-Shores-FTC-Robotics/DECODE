@@ -8,7 +8,7 @@ import com.acmerobotics.dashboard.config.Config;
  */
 public class LauncherReverseIntakeConfig {
     /** Power level for reverse intake (negative runs motors backward) */
-    public static double reversePower = -.7;
+    public static double reversePower = -.75;
 
     /**
      * RPM threshold at which hood retracts for human loading.
@@ -16,5 +16,5 @@ public class LauncherReverseIntakeConfig {
      * This allows graceful degradation - if one lane is jammed, other lanes still work.
      * Set to 0 to disable speed-gating (hoods retract immediately like before).
      */
-    public static double reverseRpmThreshold = 1350;
+    public static double reverseRpmThreshold = 1550;
 }
