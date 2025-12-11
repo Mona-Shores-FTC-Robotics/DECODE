@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
 import com.pedropathing.geometry.Pose;
-import com.pedropathing.paths.HeadingInterpolator;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
@@ -205,23 +204,14 @@ public class CloseTogetherCommand {
                 new Delay(config.secondsOpeningGate), //Delay to open the gate
 
                 // Return and Launch Set 1 - using piecewise heading interpolation
+                // First 20%: constant 270°, then linear to launch heading
                 new FollowPathBuilder(robot, alliance)
                         .from(openGate())
                         .to(launchClose2())
-                        .withPiecewiseHeadingInterpolation(
-                                HeadingInterpolator.piecewise(
-                                        new HeadingInterpolator.PiecewiseNode(
-                                                0.0,
-                                                0.2,
-                                                HeadingInterpolator.constant(Math.toRadians(270))
-                                        ),
-                                        HeadingInterpolator.PiecewiseNode.linear(
-                                                0.2,
-                                                1.0,
-                                                Math.toRadians(270),
-                                                Math.toRadians(waypoints.launchClose2Heading)
-                                        )
-                                )
+                        .withPiecewiseConstantThenLinear(
+                                270,                           // Constant heading (degrees)
+                                0.2,                           // End of constant section
+                                waypoints.launchClose2Heading  // Linear end heading (degrees)
                         )
                         .build(config.maxPathPower),
 
