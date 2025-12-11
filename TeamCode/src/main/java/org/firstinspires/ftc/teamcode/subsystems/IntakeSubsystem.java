@@ -96,8 +96,6 @@ public class IntakeSubsystem implements Subsystem {
         public final float value;
         public final ArtifactColor hsvColor;
         public final ArtifactColor color;
-        /** Classification confidence (0.0 = uncertain, 1.0 = very confident) */
-        public final double confidence;
 
         private LaneSample(boolean sensorPresent,
                            boolean distanceAvailable,
@@ -107,8 +105,7 @@ public class IntakeSubsystem implements Subsystem {
                            float normalizedRed, float normalizedGreen, float normalizedBlue,
                            float hue, float saturation, float value,
                            ArtifactColor hsvColor,
-                           ArtifactColor color,
-                           double confidence) {
+                           ArtifactColor color) {
             this.sensorPresent = sensorPresent;
             this.distanceAvailable = distanceAvailable;
             this.distanceCm = distanceCm;
@@ -124,14 +121,13 @@ public class IntakeSubsystem implements Subsystem {
             this.value = value;
             this.hsvColor = hsvColor == null ? ArtifactColor.NONE : hsvColor;
             this.color = color == null ? ArtifactColor.NONE : color;
-            this.confidence = confidence;
         }
 
         private static LaneSample absent() {
             return new LaneSample(false, false, Double.NaN, false,
                     0, 0, 0,
                     0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                    ArtifactColor.NONE, ArtifactColor.NONE, 0.0);
+                    ArtifactColor.NONE, ArtifactColor.NONE);
         }
 
         private static LaneSample present(boolean distanceAvailable,
@@ -141,8 +137,7 @@ public class IntakeSubsystem implements Subsystem {
                                           float normalizedRed, float normalizedGreen, float normalizedBlue,
                                           float hue, float saturation, float value,
                                           ArtifactColor hsvColor,
-                                          ArtifactColor color,
-                                          double confidence) {
+                                          ArtifactColor color) {
             return new LaneSample(true,
                     distanceAvailable,
                     distanceCm,
@@ -150,7 +145,7 @@ public class IntakeSubsystem implements Subsystem {
                     scaledRed, scaledGreen, scaledBlue,
                     normalizedRed, normalizedGreen, normalizedBlue,
                     hue, saturation, value,
-                    hsvColor, color, confidence);
+                    hsvColor, color);
         }
     }
 
@@ -480,7 +475,7 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     /**
-     * Applies debounce + confidence gating before updating lane color to reduce flicker.
+     * Applies debounce before updating lane color to reduce flicker.
      * Uses consecutive sample confirmations for both detection and clearing.
      * Saturation filtering handles whiffle ball hole flicker before this is called.
      */
@@ -805,7 +800,6 @@ public class IntakeSubsystem implements Subsystem {
                 lanePrefix
         );
         ArtifactColor hsvColor = result.color;
-        double confidence = result.confidence;
 
         // Final color already accounts for distance, presence, and background checks
         ArtifactColor finalColor = hsvColor;
@@ -837,21 +831,18 @@ public class IntakeSubsystem implements Subsystem {
                 normalizedRed, normalizedGreen, normalizedBlue,
                 filteredHue, filteredSaturation, filteredValue,
                 hsvColor,
-                finalColor,
-                confidence
+                finalColor
         );
     }
 
     /**
-     * Classification result with color and confidence.
+     * Classification result with color.
      */
     private static class ClassificationResult {
         final ArtifactColor color;
-        final double confidence;  // 0.0 = very uncertain, 1.0 = very confident
 
-        ClassificationResult(ArtifactColor color, double confidence) {
+        ClassificationResult(ArtifactColor color) {
             this.color = color;
-            this.confidence = confidence;
         }
     }
 
@@ -867,7 +858,7 @@ public class IntakeSubsystem implements Subsystem {
      * @param distanceCm Distance reading in cm (or NaN if unavailable)
      * @param withinDistance Whether presence detection indicates artifact present
      * @param lanePrefix Lane name prefix for telemetry
-     * @return Classification result with color and confidence
+     * @return Classification result with color
      */
     private ClassificationResult classifyColor(float hue, float saturation, float value,
                                                boolean hasSignal, int totalIntensity,
@@ -877,13 +868,12 @@ public class IntakeSubsystem implements Subsystem {
 
         // Presence gate: withinDistance is already computed by sampleLane() using distance or saturation
         if (!withinDistance) {
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_score", 0.0);
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_distance_valid", !Double.isNaN(distanceCm));
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_within_distance", false);
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_total_intensity", totalIntensity);
             reason = "no_presence";
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
-            return new ClassificationResult(ArtifactColor.NONE, 0.0);
+            return new ClassificationResult(ArtifactColor.NONE);
         }
 
         // Basic quality check - no signal or too dark
@@ -891,7 +881,7 @@ public class IntakeSubsystem implements Subsystem {
         if (!hasSignal || value < presenceCfg.minValue) {
             reason = "no_signal";
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
-            return new ClassificationResult(ArtifactColor.NONE, 0.0);
+            return new ClassificationResult(ArtifactColor.NONE);
         }
 
         // Classify GREEN vs PURPLE using hue decision boundary
@@ -930,15 +920,11 @@ public class IntakeSubsystem implements Subsystem {
             distanceFromBoundary = (float) (unwrappedHue - boundary);
         }
 
-        // Confidence: high if far from boundary, low if close
-        double confidence = Math.min(1.0, distanceFromBoundary / laneSensorConfig.colorClassifier.lowConfidenceMargin);
-
         RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_unwrapped", unwrappedHue);
         RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_boundary", boundary);
         RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_distance_from_boundary", distanceFromBoundary);
         RobotState.packet.put("intake/classifier/" + lanePrefix + "/color", color.name());
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/confidence", confidence);
-        return new ClassificationResult(color, confidence);
+        return new ClassificationResult(color);
     }
 
     public boolean hasLaneSensors() {

@@ -191,9 +191,6 @@ public class IntakeLaneSensorConfig {
          * Default 165 works well for most setups.
          */
         public double hueDecisionBoundary = 165.0;
-
-        /** Margin for low-confidence warning (degrees from boundary) */
-        public double lowConfidenceMargin = 8.0;
     }
 
     // =========================================================================

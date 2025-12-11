@@ -210,13 +210,11 @@ Your artifact detection uses a **multi-stage pipeline**:
    ↓ (if quality OK)
 3. Background Detection (HSV distance to field mat)
    ↓ (if not background)
-4. Color Classification (DECISION_BOUNDARY / RANGE_BASED / DISTANCE_BASED)
-   ↓ (returns color + confidence)
-5. Confidence Gating (min confidence threshold)
-   ↓ (if confident)
-6. Debouncing (consecutive confirmations required)
+4. Color Classification (hue decision boundary)
+   ↓ (returns color)
+5. Debouncing (consecutive confirmations required)
    ↓ (if stable)
-7. Lane Color Update (GREEN / PURPLE accepted)
+6. Lane Color Update (GREEN / PURPLE accepted)
 ```
 
 Each stage can reject the sample:
@@ -244,12 +242,10 @@ intake/sample/{lane}/scaled_r/g/b         - RGB values (0-255)
 
 ### Per-lane classification diagnostics:
 ```
-intake/classifier/{lane}/reason                     - Why this classification? (distance_out, no_signal, background, GREEN, PURPLE, etc.)
-intake/classifier/{lane}/presence_score             - Multi-factor presence score (0-1)
-intake/classifier/{lane}/background_distance        - HSV distance to background
-intake/classifier/{lane}/decision_confidence        - Confidence in color classification (0-1)
-intake/classifier/{lane}/decision_unwrapped_hue     - Hue after purple wrap handling
-intake/classifier/{lane}/decision_boundary          - Current decision boundary
+intake/classifier/{lane}/reason                     - Why this classification? (no_presence, no_signal, GREEN, PURPLE, etc.)
+intake/classifier/{lane}/hue_unwrapped              - Hue after purple wrap handling
+intake/classifier/{lane}/hue_boundary               - Current decision boundary
+intake/classifier/{lane}/hue_distance_from_boundary - How far hue is from boundary (degrees)
 ```
 
 ### Lane color state (after debouncing):
@@ -308,8 +304,7 @@ FTC Dashboard will show final detected colors per lane in the main telemetry
 - `mode` - "DECISION_BOUNDARY" (recommended), "RANGE_BASED", or "DISTANCE_BASED"
 
 **Decision Boundary Parameters** (recommended):
-- `hueDecisionBoundary` - Single threshold to split green/purple (typical: 170-180°)
-- `lowConfidenceMargin` - Distance from boundary for low confidence (typical: 15°)
+- `hueDecisionBoundary` - Single threshold to split green/purple (typical: 165°)
 
 ---
 

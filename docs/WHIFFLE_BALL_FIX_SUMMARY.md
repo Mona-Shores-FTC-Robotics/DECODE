@@ -112,7 +112,7 @@ Added **dual clearing logic** with two independent paths:
 
 ```
 [NO ARTIFACT DETECTED]
-        ↓ (good color + confidence + within distance × N times)
+        ↓ (good color + within distance × N times)
 [ARTIFACT DETECTED] ← ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
         ↓                                 │ (keep-alive timer active)
    (bad reading)                          │ (brief hole reading)
@@ -153,7 +153,7 @@ Added **dual clearing logic** with two independent paths:
 **Look for patterns:**
 - Distance jumping 4→15→5→12→4cm = Whiffle ball holes (GOOD - detection should stay stable)
 - Distance steady at 4-5cm, then jumps to >10cm = Ball removed (detection should clear immediately)
-- Distance steady at 4-5cm, color flickers = Keep-alive too short OR confidence too low
+- Distance steady at 4-5cm, color flickers = Tune presence detection thresholds
 
 ## Success Criteria
 
