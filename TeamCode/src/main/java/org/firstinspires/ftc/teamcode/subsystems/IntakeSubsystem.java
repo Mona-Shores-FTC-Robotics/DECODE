@@ -496,7 +496,9 @@ public class IntakeSubsystem implements Subsystem {
 
         // --- CHECK IF ARTIFACT IS CLEARLY GONE (distance-based override) ---
         // If distance shows artifact is beyond threshold + margin, it's definitely gone - clear immediately
-        if (currentLaneColor.isArtifact() && sample.distanceAvailable && !Double.isNaN(sample.distanceCm)) {
+        // Skip this check when using hue-based presence detection (hue is the authority, not distance)
+        if (!laneSensorConfig.presence.useHuePresence
+                && currentLaneColor.isArtifact() && sample.distanceAvailable && !Double.isNaN(sample.distanceCm)) {
             IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
             double threshold = getThreshold(presenceCfg, lane);
             double clearanceMargin = laneSensorConfig.gating.distanceClearanceMarginCm;
