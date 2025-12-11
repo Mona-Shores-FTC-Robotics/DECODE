@@ -25,10 +25,8 @@ Added **dual clearing logic** with two independent paths:
 ## What Changed in Code
 
 **Files Modified:**
-1. `IntakeLaneSensorConfig.java` - Added `distanceClearanceMarginCm` parameter (default: 2.0cm)
-2. `IntakeSubsystem.java` - Implemented dual clearing logic in `applyGatedLaneColor()`:
-   - Added distance-based override at start of function
-   - Modified timer reset logic - only reset if NOT currently clearing
+1. `IntakeLaneSensorConfig.java` - Presence detection config with per-robot thresholds
+2. `IntakeSubsystem.java` - Simplified clearing logic in `applyGatedLaneColor()`:
    - Clear counter reset moved to detection confirmation path
 
 ## How to Test
@@ -64,12 +62,7 @@ Added **dual clearing logic** with two independent paths:
 **Diagnosis:** Check FTC Dashboard `intake/sample/{lane}/distance_cm` when ball is removed
 - If distance jumps to >10cm but still doesn't clear → Bug, report to me
 - If distance stays <7cm after removal → Ball is still in detection range (check physical setup)
-- If distance is NaN or invalid → Distance sensor broken, will use slow clearing path
-
-**Fix:** Decrease clearance margin to make clearing more aggressive
-1. FTC Dashboard → Config → IntakeSubsystem → laneSensorConfig → gating
-2. Set `distanceClearanceMarginCm` to 1.0 (was 2.0)
-3. Test again
+- If distance is NaN or invalid → Distance sensor broken, will use debounced clearing path
 
 ### Scenario 2: Detection flickers when ball is present
 
@@ -95,9 +88,8 @@ Added **dual clearing logic** with two independent paths:
 
 | Parameter | Default | What It Does | Tune Up | Tune Down |
 |-----------|---------|--------------|---------|-----------|
-| `keepAliveMs` | 400 | How long to keep detection alive after last good reading | More stable, slower clear | Less stable, faster clear |
+| `consecutiveConfirmationsRequired` | 1 | How many good samples needed to detect | More stable | Faster detection |
 | `consecutiveClearConfirmationsRequired` | 2 | How many bad samples needed to clear | Harder to clear (stable) | Easier to clear (faster) |
-| `distanceClearanceMarginCm` | 2.0 | Distance beyond exit threshold for instant clear | Harder to clear (needs farther) | Easier to clear (clears sooner) |
 
 ## Expected Behavior Summary
 

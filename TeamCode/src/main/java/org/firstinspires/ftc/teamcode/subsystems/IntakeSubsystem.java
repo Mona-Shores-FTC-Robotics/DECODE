@@ -487,26 +487,6 @@ public class IntakeSubsystem implements Subsystem {
         ArtifactColor candidate = sample.color == null ? ArtifactColor.NONE : sample.color;
         ArtifactColor currentLaneColor = laneColors.getOrDefault(lane, ArtifactColor.NONE);
 
-        // Get per-lane presence config for distance threshold
-        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
-
-        // --- CHECK IF ARTIFACT IS CLEARLY GONE (distance-based fast clear) ---
-        // If distance shows artifact is beyond threshold + margin, it's definitely gone - clear immediately.
-        // This provides fast clearing even when saturation filtering might be slow to respond.
-        if (currentLaneColor.isArtifact() && sample.distanceAvailable && !Double.isNaN(sample.distanceCm)) {
-            double threshold = getThreshold(presenceCfg, lane);
-            double clearanceMargin = laneSensorConfig.gating.distanceClearanceMarginCm;
-
-            if (sample.distanceCm > threshold + clearanceMargin) {
-                // Artifact is definitely gone - clear immediately
-                laneCandidateColor.put(lane, ArtifactColor.NONE);
-                laneCandidateCount.put(lane, 0);
-                laneClearCandidateCount.put(lane, 0);
-                updateLaneColor(lane, ArtifactColor.NONE);
-                return;
-            }
-        }
-
         // --- ARTIFACT DETECTION PATH ---
         // If presence detected an artifact, trust the color classification
         // (misclassification is better than false negative)

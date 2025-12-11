@@ -172,8 +172,6 @@ public class IntakeLaneSensorConfig {
         public int consecutiveConfirmationsRequired = 1;
         /** Consecutive samples needed to confirm artifact removed */
         public int consecutiveClearConfirmationsRequired = 2;
-        /** Distance margin (cm) for instant clearing when artifact is removed */
-        public double distanceClearanceMarginCm = 0.5;
     }
 
     // =========================================================================
