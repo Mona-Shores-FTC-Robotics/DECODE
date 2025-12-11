@@ -33,6 +33,7 @@ public class IntakeLaneSensorConfig {
     public Hardware hardware = new Hardware();
     public static DistanceFilter distanceFilter = new DistanceFilter();
     public static SaturationFilter saturationFilter = new SaturationFilter();
+    public static ValueFilter valueFilter = new ValueFilter();
     public static HueFilter hueFilter = new HueFilter();
     public static Gating gating = new Gating();
     public static Presence presence = new Presence();
@@ -71,6 +72,13 @@ public class IntakeLaneSensorConfig {
         public int windowSize = 4;
     }
 
+    public static class ValueFilter {
+        /** Enable moving average filtering for value/brightness (smooths whiffle ball hole flicker) */
+        public boolean enableFilter = true;
+        /** Number of samples to average. Higher = smoother but slower response. */
+        public int windowSize = 4;
+    }
+
     public static class HueFilter {
         /** Enable circular moving average filtering for hue (stabilizes GREEN vs PURPLE classification) */
         public boolean enableFilter = true;
@@ -98,7 +106,7 @@ public class IntakeLaneSensorConfig {
 
         /**
          * Enable saturation-based presence detection.
-         * When true, artifact presence requires saturation >= saturationThreshold.
+         * When true, artifact presence requires filtered saturation >= saturationThreshold.
          * Artifacts are colorful (high saturation), background is dull (low saturation).
          */
         public boolean useSaturation = false;
@@ -106,7 +114,17 @@ public class IntakeLaneSensorConfig {
         /** Saturation threshold for presence - values >= this indicate artifact present */
         public double saturationThreshold = 0.25;
 
-        /** Minimum brightness (value) required for valid color reading */
+        /**
+         * Enable value/brightness-based presence detection.
+         * When true, artifact presence requires filtered value >= valueThreshold.
+         * Useful if artifacts are brighter than background.
+         */
+        public boolean useValue = false;
+
+        /** Value threshold for presence - values >= this indicate artifact present */
+        public double valueThreshold = 0.15;
+
+        /** Minimum brightness (value) required for valid color reading (quality check, not presence) */
         public double minValue = 0.02;
     }
 

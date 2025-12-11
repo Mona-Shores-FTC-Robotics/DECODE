@@ -165,6 +165,7 @@ public class IntakeSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, DistanceSensor> laneDistanceSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, MovingAverageFilter> laneDistanceFilters = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, MovingAverageFilter> laneSaturationFilters = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, MovingAverageFilter> laneValueFilters = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, CircularMovingAverageFilter> laneHueFilters = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, LaneSample> laneSamples = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Boolean> lanePresenceState = new EnumMap<>(LauncherLane.class);
@@ -226,6 +227,7 @@ public class IntakeSubsystem implements Subsystem {
             // Initialize filters with configured window sizes
             laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
             laneSaturationFilters.put(lane, new MovingAverageFilter(laneSensorConfig.saturationFilter.windowSize));
+            laneValueFilters.put(lane, new MovingAverageFilter(laneSensorConfig.valueFilter.windowSize));
             laneHueFilters.put(lane, new CircularMovingAverageFilter(laneSensorConfig.hueFilter.windowSize));
         }
         bindLaneSensors(hardwareMap);
@@ -243,6 +245,7 @@ public class IntakeSubsystem implements Subsystem {
             // Reset filters (recreate with current config in case window size changed)
             laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
             laneSaturationFilters.put(lane, new MovingAverageFilter(laneSensorConfig.saturationFilter.windowSize));
+            laneValueFilters.put(lane, new MovingAverageFilter(laneSensorConfig.valueFilter.windowSize));
             laneHueFilters.put(lane, new CircularMovingAverageFilter(laneSensorConfig.hueFilter.windowSize));
         }
         sensorTimer.reset();
@@ -727,6 +730,15 @@ public class IntakeSubsystem implements Subsystem {
             }
         }
 
+        // Apply value filter for presence detection smoothing (handles whiffle ball holes)
+        float filteredValue = value;
+        if (laneSensorConfig.valueFilter.enableFilter && maxComponent > 0) {
+            MovingAverageFilter valFilter = laneValueFilters.get(lane);
+            if (valFilter != null) {
+                filteredValue = (float) valFilter.calculate(value);
+            }
+        }
+
         // Apply circular moving average filter to hue for smoother GREEN vs PURPLE classification
         float filteredHue = rawHue;
         if (laneSensorConfig.hueFilter.enableFilter && maxComponent > 0) {
@@ -737,9 +749,21 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // Saturation-based presence detection: colorful artifact vs dull background
-        // This overrides distance-based detection when enabled
         if (laneSensorConfig.presence.useSaturation) {
             withinDistance = filteredSaturation >= laneSensorConfig.presence.saturationThreshold;
+            lanePresenceState.put(lane, withinDistance);
+        }
+
+        // Value-based presence detection: bright artifact vs dark background
+        // Can be used alone or combined with saturation (AND logic)
+        if (laneSensorConfig.presence.useValue) {
+            boolean valuePresent = filteredValue >= laneSensorConfig.presence.valueThreshold;
+            // If saturation is also enabled, require BOTH to pass (AND logic)
+            if (laneSensorConfig.presence.useSaturation) {
+                withinDistance = withinDistance && valuePresent;
+            } else {
+                withinDistance = valuePresent;
+            }
             lanePresenceState.put(lane, withinDistance);
         }
 
@@ -750,7 +774,7 @@ public class IntakeSubsystem implements Subsystem {
 
         // Classify color using selected classifier mode
         ClassificationResult result = classifyColor(
-                filteredHue, filteredSaturation, value,
+                filteredHue, filteredSaturation, filteredValue,
                 maxComponent > 0,
                 totalIntensity,
                 distanceValid ? distanceCm : Double.NaN,
@@ -778,7 +802,8 @@ public class IntakeSubsystem implements Subsystem {
         RobotState.packet.put("intake/sample/" + lanePrefix + "/hue", filteredHue);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/sat_raw", saturation);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/sat", filteredSaturation);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/val", value);
+        RobotState.packet.put("intake/sample/" + lanePrefix + "/val_raw", value);
+        RobotState.packet.put("intake/sample/" + lanePrefix + "/val", filteredValue);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/total_intensity", totalIntensity);
 
         return LaneSample.present(
@@ -787,7 +812,7 @@ public class IntakeSubsystem implements Subsystem {
                 withinDistance,
                 scaledRed, scaledGreen, scaledBlue,
                 normalizedRed, normalizedGreen, normalizedBlue,
-                filteredHue, filteredSaturation, value,
+                filteredHue, filteredSaturation, filteredValue,
                 hsvColor,
                 finalColor,
                 confidence
