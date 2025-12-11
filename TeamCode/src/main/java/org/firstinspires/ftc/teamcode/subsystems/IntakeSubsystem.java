@@ -747,6 +747,20 @@ public class IntakeSubsystem implements Subsystem {
         if (laneSensorConfig.hueFilter.enableFilter && maxComponent > 0) {
             CircularMovingAverageFilter hueFilter = laneHueFilters.get(lane);
             if (hueFilter != null) {
+                // Jump detection: if raw hue differs significantly from filtered, snap to new value
+                double jumpThreshold = laneSensorConfig.hueFilter.jumpThreshold;
+                if (jumpThreshold > 0 && hueFilter.getSampleCount() > 0) {
+                    double currentFiltered = hueFilter.get();
+                    double hueDiff = Math.abs(rawHue - currentFiltered);
+                    // Handle circular wrap-around (e.g., 350° vs 10° = 20° difference, not 340°)
+                    if (hueDiff > 180.0) {
+                        hueDiff = 360.0 - hueDiff;
+                    }
+                    if (hueDiff > jumpThreshold) {
+                        // Large jump detected - prime filter with new value for instant response
+                        hueFilter.prime(rawHue);
+                    }
+                }
                 filteredHue = (float) hueFilter.calculate(rawHue);
             }
         }

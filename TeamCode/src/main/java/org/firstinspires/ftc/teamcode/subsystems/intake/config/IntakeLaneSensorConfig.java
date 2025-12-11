@@ -77,6 +77,13 @@ public class IntakeLaneSensorConfig {
          * Uses circular averaging to properly handle purple wrap-around (270°-30°).
          */
         public int windowSize = 10;
+        /**
+         * Jump detection threshold in degrees. If raw hue differs from filtered hue
+         * by more than this amount, the filter is reset to the new value immediately.
+         * This prevents slow transitions through intermediate hues (e.g., background->purple
+         * passing through green). Set to 0 to disable jump detection.
+         */
+        public double jumpThreshold = 50.0;
     }
 
     public static class Gating {
