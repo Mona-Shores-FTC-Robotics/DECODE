@@ -513,7 +513,9 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // --- ARTIFACT DETECTION PATH ---
-        if (candidate.isArtifact() && sample.confidence >= laneSensorConfig.gating.minConfidenceToAccept) {
+        // If presence detected an artifact, trust the color classification
+        // (misclassification is better than false negative)
+        if (candidate.isArtifact()) {
             // Standard debounce logic for artifact confirmation
             ArtifactColor previousCandidate = laneCandidateColor.getOrDefault(lane, ArtifactColor.NONE);
             int count = laneCandidateCount.getOrDefault(lane, 0);
@@ -537,7 +539,7 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // --- NON-ARTIFACT / CLEARING PATH ---
-        // We got a bad reading (NONE or low confidence)
+        // Presence detection said nothing there (NONE)
 
         if (currentLaneColor.isArtifact()) {
             // Count consecutive clear confirmations before removing artifact

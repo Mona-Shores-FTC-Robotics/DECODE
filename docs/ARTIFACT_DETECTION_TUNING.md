@@ -63,7 +63,6 @@ Run the **"Artifact Detection Diagnostics"** OpMode and observe the stability pe
 1. **Increase debouncing** (first line of defense):
    - Go to FTC Dashboard → Config → IntakeSubsystem → laneSensorConfig → gating
    - Increase `consecutiveConfirmationsRequired` from 2 to 3-4
-   - Increase `minConfidenceToAccept` from 0.4 to 0.5-0.6
 
 2. **Distance hysteresis too small**:
    - Make exit thresholds significantly larger than enter thresholds (1.0-2.0 cm gap)
@@ -184,12 +183,12 @@ Each lane has different geometry, so per-lane tuning is critical:
 5. Set `leftExitDistanceCm` to 0.5-1.0 cm higher
 6. Repeat for CENTER and RIGHT lanes
 
-### Step 5: Tune Debounce and Confidence
+### Step 5: Tune Debounce
 Based on stability from diagnostics:
 
 - Stability >90%: No changes needed
 - Stability 70-90%: Increase `consecutiveConfirmationsRequired` to 3
-- Stability 50-70%: Increase to 4 and raise `minConfidenceToAccept` to 0.5
+- Stability 50-70%: Increase to 4, tune presence thresholds
 - Stability <50%: Check hardware (sensor mount, cables, gain)
 
 ### Step 6: Verify in Real Conditions
@@ -288,11 +287,11 @@ FTC Dashboard will show final detected colors per lane in the main telemetry
 - `minValue` - Minimum brightness (typical: 0.01-0.02)
 - `minSaturation` - Minimum color saturation (typical: 0.10-0.15)
 
-### Confidence Gating
+### Debounce Gating
 **Path:** `IntakeSubsystem → laneSensorConfig → gating`
 
-- `minConfidenceToAccept` - Minimum confidence for new color (typical: 0.4-0.6)
-- `consecutiveConfirmationsRequired` - Debounce count (typical: 2-4)
+- `consecutiveConfirmationsRequired` - Samples needed to confirm detection (typical: 1-3)
+- `consecutiveClearConfirmationsRequired` - Samples needed to confirm clear (typical: 2-4)
 
 ### Background Detection
 **Path:** `IntakeSubsystem → laneSensorConfig → background`
@@ -358,7 +357,6 @@ centerExitDistanceCm: 5.5 → 6.5  (larger gap)
 **Step 3 - Increase debouncing:**
 ```
 consecutiveConfirmationsRequired: 2 → 3
-minConfidenceToAccept: 0.4 → 0.5
 ```
 
 **Result:** Stability improves to 85%, transitions drop to 8

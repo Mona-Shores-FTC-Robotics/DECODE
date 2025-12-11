@@ -168,8 +168,6 @@ public class IntakeLaneSensorConfig {
     // =========================================================================
 
     public static class Gating {
-        /** Minimum confidence to accept a color classification */
-        public double minConfidenceToAccept = 0.2;
         /** Consecutive samples needed to confirm artifact detected */
         public int consecutiveConfirmationsRequired = 1;
         /** Consecutive samples needed to confirm artifact removed */

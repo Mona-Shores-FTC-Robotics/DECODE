@@ -300,8 +300,8 @@ public class ArtifactDetectionDiagnostics extends LinearOpMode {
                 telemetry.addLine("  → Check sensor gain and lighting");
             } else if (stats.stabilityPercent < 70.0) {
                 telemetry.addLine("⚠ WARNING: Noisy detection");
-                telemetry.addLine("  → Tune distance thresholds");
-                telemetry.addLine("  → Increase minConfidenceToAccept");
+                telemetry.addLine("  → Tune presence thresholds (distance/sat/val/hue)");
+                telemetry.addLine("  → Increase debounce (consecutiveConfirmations)");
             } else {
                 telemetry.addLine("✓ GOOD: Stable detection");
             }
