@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems.intake.config;
 
-import com.acmerobotics.dashboard.config.Config;
 import com.bylazar.configurables.annotations.Configurable;
 
 /**
@@ -75,7 +74,7 @@ public class IntakeLaneSensorConfig {
          * At 50ms sample period: 3 samples = 150ms window, 4 samples = 200ms window.
          * Uses circular averaging to properly handle purple wrap-around (270°-30°).
          */
-        public int windowSize = 10;
+        public int windowSize = 4;
         /**
          * Jump detection threshold in degrees. If raw hue differs from filtered hue
          * by more than this amount, the filter is reset to the new value immediately.
@@ -143,9 +142,9 @@ public class IntakeLaneSensorConfig {
         public boolean rightUseHuePresence = true;
 
         // Per-lane hue thresholds (hue >= threshold = artifact present)
-        public double leftHueThreshold = 130.0;
-        public double centerHueThreshold = 130.0;
-        public double rightHueThreshold = 130.0;
+        public double leftHueThreshold = 153;
+        public double centerHueThreshold = 153.0;
+        public double rightHueThreshold = 153.0;
     }
 
     public static class Classifier {
@@ -153,7 +152,6 @@ public class IntakeLaneSensorConfig {
         public String mode = ClassifierMode.DECISION_BOUNDARY.name();
 
         public DecisionBoundary decision = new DecisionBoundary();
-        public Range range = new Range();
         public DistanceBased distance = new DistanceBased();
     }
 
@@ -162,15 +160,6 @@ public class IntakeLaneSensorConfig {
         public double hueDecisionBoundary = 165.0; //20245
         /** Distance from boundary for low confidence warning (degrees) */
         public double lowConfidenceMargin = 8.0;
-    }
-
-    public static class Range {
-        /** Range-based mode parameters (legacy) */
-        public double greenHueMin = 80.0;
-        public double greenHueMax = 160.0;
-        public double purpleHueMin = 260.0;
-        public double purpleHueMax = 330.0;
-        public double purpleHueWrapMax = 40.0;
     }
 
     public static class DistanceBased {
@@ -192,9 +181,9 @@ public class IntakeLaneSensorConfig {
 
     private static LanePresenceConfig createLanePresenceConfig19429() {
         LanePresenceConfig config = new LanePresenceConfig();
-        config.leftThresholdCm = 6.5;
-        config.centerThresholdCm = 7.0;
-        config.rightThresholdCm = 5.0;
+        config.leftThresholdCm = 4;
+        config.centerThresholdCm = 4;
+        config.rightThresholdCm = 6.2;
         return config;
     }
 
