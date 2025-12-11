@@ -16,12 +16,13 @@ import com.bylazar.configurables.annotations.Configurable;
  * COLOR CLASSIFICATION (hueDecisionBoundary) is already working well.
  * You probably don't need to touch it.
  *
- * PRESENCE DETECTION is what needs tuning. You have THREE options:
+ * PRESENCE DETECTION is what needs tuning. Settings are PER-ROBOT in
+ * lanePresenceConfig19429 or lanePresenceConfig20245. You have THREE options:
  *
  *   Option A: Distance-based (useDistance = true)
  *     - Uses the distance sensor to detect if something is close
  *     - Problem: Background objects near sensor cause false positives
- *     - Tune: Adjust per-lane thresholds in LanePresenceConfig
+ *     - Tune: Adjust per-lane thresholds (leftThresholdCm, etc.)
  *
  *   Option B: Saturation-based (useSaturation = true)
  *     - Colorful artifacts have HIGH saturation, dull background has LOW
@@ -45,7 +46,7 @@ import com.bylazar.configurables.annotations.Configurable;
  *   2. Note the values when empty vs when artifact is present
  *   3. Pick whichever (sat or val) has the clearest separation
  *   4. Set the threshold halfway between empty and artifact values
- *   5. Enable that detection method (useSaturation or useValue)
+ *   5. Enable that detection method in YOUR ROBOT'S config
  * ============================================================================
  */
 @Configurable
@@ -61,9 +62,10 @@ public class IntakeLaneSensorConfig {
     public static ValueFilter valueFilter = new ValueFilter();
     public static HueFilter hueFilter = new HueFilter();
     public static DistanceFilter distanceFilter = new DistanceFilter();
-    public static Presence presence = new Presence();
     public static Gating gating = new Gating();
     public static ColorClassifier colorClassifier = new ColorClassifier();
+
+    // Robot-specific presence detection configs
     public static LanePresenceConfig lanePresenceConfig19429 = createLanePresenceConfig19429();
     public static LanePresenceConfig lanePresenceConfig20245 = createLanePresenceConfig20245();
 
@@ -89,48 +91,42 @@ public class IntakeLaneSensorConfig {
     }
 
     // =========================================================================
-    // PRESENCE DETECTION - This is what you need to tune!
+    // PRESENCE DETECTION - Per-robot settings in LanePresenceConfig
     // =========================================================================
 
     /**
-     * Presence detection settings.
-     * Determines whether an artifact is in the lane (before classifying its color).
-     */
-    public static class Presence {
-        /**
-         * Use distance sensor for presence detection.
-         * Artifact present when distance <= per-lane threshold.
-         */
-        public boolean useDistance = true;
-
-        /**
-         * Use saturation for presence detection.
-         * Artifact present when filtered saturation >= saturationThreshold.
-         * Colorful artifacts = high saturation, dull background = low saturation.
-         */
-        public boolean useSaturation = false;
-        public double saturationThreshold = 0.25;
-
-        /**
-         * Use brightness (value) for presence detection.
-         * Artifact present when filtered value >= valueThreshold.
-         * Bright artifacts = high value, dark background = low value.
-         */
-        public boolean useValue = false;
-        public double valueThreshold = 0.15;
-
-        /** Minimum brightness for valid reading (quality check, not presence) */
-        public double minValue = 0.02;
-    }
-
-    /**
-     * Per-lane distance thresholds (only used when useDistance = true).
-     * Robot-specific - each robot has different sensor mounting.
+     * Per-robot presence detection settings.
+     * Each robot has its own instance (lanePresenceConfig19429, lanePresenceConfig20245).
+     * RobotConfigs.getLanePresenceConfig() returns the active robot's config.
      */
     public static class LanePresenceConfig {
-        public double leftThresholdCm;
-        public double centerThresholdCm;
-        public double rightThresholdCm;
+        // --- DETECTION METHOD (pick one or combine) ---
+
+        /** Use distance sensor for presence detection */
+        public boolean useDistance = true;
+
+        /** Use saturation for presence detection (colorful = artifact, dull = background) */
+        public boolean useSaturation = false;
+
+        /** Saturation threshold - artifact present when sat >= this */
+        public double saturationThreshold = 0.25;
+
+        /** Use brightness for presence detection (bright = artifact, dark = background) */
+        public boolean useValue = false;
+
+        /** Value threshold - artifact present when val >= this */
+        public double valueThreshold = 0.15;
+
+        // --- DISTANCE THRESHOLDS (per-lane, only used when useDistance = true) ---
+
+        public double leftThresholdCm = 5.0;
+        public double centerThresholdCm = 5.0;
+        public double rightThresholdCm = 5.0;
+
+        // --- QUALITY CHECK ---
+
+        /** Minimum brightness for valid reading */
+        public double minValue = 0.02;
     }
 
     // =========================================================================
@@ -196,22 +192,40 @@ public class IntakeLaneSensorConfig {
     }
 
     // =========================================================================
-    // ROBOT-SPECIFIC CONFIGS
+    // ROBOT-SPECIFIC CONFIGS - Tune these for each robot!
     // =========================================================================
 
     private static LanePresenceConfig createLanePresenceConfig19429() {
         LanePresenceConfig config = new LanePresenceConfig();
+        // Detection method
+        config.useDistance = true;
+        config.useSaturation = false;
+        config.saturationThreshold = 0.25;
+        config.useValue = false;
+        config.valueThreshold = 0.15;
+        // Distance thresholds
         config.leftThresholdCm = 6.5;
         config.centerThresholdCm = 7.0;
         config.rightThresholdCm = 5.0;
+        // Quality
+        config.minValue = 0.02;
         return config;
     }
 
     private static LanePresenceConfig createLanePresenceConfig20245() {
         LanePresenceConfig config = new LanePresenceConfig();
+        // Detection method
+        config.useDistance = true;
+        config.useSaturation = false;
+        config.saturationThreshold = 0.25;
+        config.useValue = false;
+        config.valueThreshold = 0.15;
+        // Distance thresholds
         config.leftThresholdCm = 4.0;
         config.centerThresholdCm = 4.0;
         config.rightThresholdCm = 4.5;
+        // Quality
+        config.minValue = 0.02;
         return config;
     }
 }

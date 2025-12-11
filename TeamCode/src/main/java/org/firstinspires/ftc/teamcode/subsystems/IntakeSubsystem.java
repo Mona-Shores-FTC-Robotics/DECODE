@@ -683,11 +683,13 @@ public class IntakeSubsystem implements Subsystem {
         boolean distanceValid = distanceAvailable && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
         boolean withinDistance = false;
 
-        // Simple threshold check - moving average filter handles noise smoothing
-        if (!distanceAvailable || !laneSensorConfig.presence.useDistance || !distanceValid) {
+        // Get per-robot presence config
+        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
+
+        // Distance-based presence check
+        if (!distanceAvailable || !presenceCfg.useDistance || !distanceValid) {
             withinDistance = false;
         } else {
-            IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
             double threshold = getThreshold(presenceCfg, lane);
             withinDistance = distanceCm <= threshold;
         }
@@ -748,17 +750,17 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // Saturation-based presence detection: colorful artifact vs dull background
-        if (laneSensorConfig.presence.useSaturation) {
-            withinDistance = filteredSaturation >= laneSensorConfig.presence.saturationThreshold;
+        if (presenceCfg.useSaturation) {
+            withinDistance = filteredSaturation >= presenceCfg.saturationThreshold;
             lanePresenceState.put(lane, withinDistance);
         }
 
         // Value-based presence detection: bright artifact vs dark background
         // Can be used alone or combined with saturation (AND logic)
-        if (laneSensorConfig.presence.useValue) {
-            boolean valuePresent = filteredValue >= laneSensorConfig.presence.valueThreshold;
+        if (presenceCfg.useValue) {
+            boolean valuePresent = filteredValue >= presenceCfg.valueThreshold;
             // If saturation is also enabled, require BOTH to pass (AND logic)
-            if (laneSensorConfig.presence.useSaturation) {
+            if (presenceCfg.useSaturation) {
                 withinDistance = withinDistance && valuePresent;
             } else {
                 withinDistance = valuePresent;
@@ -863,7 +865,8 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // Basic quality check - no signal or too dark
-        if (!hasSignal || value < laneSensorConfig.presence.minValue) {
+        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
+        if (!hasSignal || value < presenceCfg.minValue) {
             reason = "no_signal";
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
