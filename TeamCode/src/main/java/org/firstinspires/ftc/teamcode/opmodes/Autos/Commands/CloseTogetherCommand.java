@@ -29,7 +29,7 @@ public class CloseTogetherCommand {
 
     public static class Config {
         public double maxPathPower = .72;
-        public double endTimeForLinearHeadingInterpolation = .75;
+        public double endTimeForLinearHeadingInterpolation = .7;
         public double secondsOpeningGate = .5;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5;
@@ -61,7 +61,7 @@ public class CloseTogetherCommand {
         public double openGateHeading = 270;
 
         public double openGateControlX = 25;
-        public double openGateControlY = 81;
+        public double openGateControlY = 82;
 
         // LaunchClose2
         public double launchClose2X = 36;
