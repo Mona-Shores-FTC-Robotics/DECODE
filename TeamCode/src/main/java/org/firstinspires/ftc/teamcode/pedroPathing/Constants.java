@@ -22,8 +22,6 @@ import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 
 public class Constants {
 
-
-
     public static FollowerConstants followerConstants19429 = createFollowerConstants19429();
     public static FollowerConstants followerConstants20245 = createFollowerConstants20245();
     public static FollowerConstants followerConstants() {
@@ -106,8 +104,6 @@ public class Constants {
 //                .headingPIDFSwitch(Math.toRadians(10))
 //                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.5, 0.0001, .03, .00003))
 
-
-
                 .translationalPIDFCoefficients(new PIDFCoefficients(
                         0.06,
                         0,
@@ -131,15 +127,11 @@ public class Constants {
                 .useSecondaryHeadingPIDF(true)
                 .useSecondaryDrivePIDF(true)
 
-
                 .drivePIDFCoefficients(new FilteredPIDFCoefficients(.005, 0, 0.0005, 0.6, .0001)) // tuned 12/4
                 .drivePIDFSwitch(3)
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.02, 0, 0, 0.6, .0001))
 
                 .headingPIDFCoefficients(new PIDFCoefficients(.6, 0.01, .0001, .0005))  // Increased P and D, reduced F
-//                .headingPIDFSwitch(Math.toRadians(3))
-//                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.75, 0.0001, .03, .0003))
-
                 .headingPIDFSwitch(Math.toRadians(3.5))
                 .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(6.0, 0.0001, .001, .0003))
 
@@ -163,8 +155,6 @@ public class Constants {
     private static MecanumConstants createDriveConstants19429() {
         return new MecanumConstants()
                 .maxPower(1.0)
-//                .xVelocity(72.58829912801427) ///19429 old
-//                .yVelocity(43.5633) //19429 old
                 .xVelocity(59.1365506697527)
                 .yVelocity(53.16551100362942)
                 .rightFrontMotorName(HardwareNames.RF)
@@ -219,10 +209,10 @@ public class Constants {
                 .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
     public static PathConstraints pathConstraints = new PathConstraints(
-            1.0,
-            0.01,
+            .998,
+            0.05,
             .1,
-            Math.toRadians(2),
+            Math.toRadians(.5),
             150,
             1.0,
             10,
