@@ -9,9 +9,27 @@ import com.bylazar.configurables.annotations.Configurable;
  * TUNING GUIDE FOR MENTORS
  * ============================================================================
  *
- * The sensor does TWO things:
- *   1. PRESENCE DETECTION - Is there an artifact in the lane? (yes/no)
- *   2. COLOR CLASSIFICATION - Is it GREEN or PURPLE? (uses hue boundary)
+ * HOW IT WORKS (Data Flow):
+ *
+ *   Raw Sensor Reading
+ *         ↓
+ *   Moving Average Filter (smooths noise from whiffle ball holes)
+ *         ↓
+ *   PRESENCE DETECTION (is something there? yes/no)
+ *         ↓
+ *   COLOR CLASSIFICATION (if present: GREEN or PURPLE based on hue)
+ *         ↓
+ *   DEBOUNCE (consecutive samples confirm detection/clearing)
+ *         ↓
+ *   Final Result → getArtifactCount(), isFull(), getLaneColor()
+ *
+ * IMPORTANT: Once presence is detected, the artifact IS classified as
+ * GREEN or PURPLE. There are no hidden gates - if presence = true, you
+ * WILL get a color. Misclassification is acceptable; false negatives are not.
+ *
+ * ============================================================================
+ * WHAT TO TUNE
+ * ============================================================================
  *
  * COLOR CLASSIFICATION is already working. Don't touch it.
  *
@@ -23,33 +41,72 @@ import com.bylazar.configurables.annotations.Configurable;
  *   Distance (useDistance = true)
  *     - Artifact present when distance <= threshold
  *     - Telemetry: intake/sample/{lane}/distance_cm
+ *     - Good: Works in all lighting
  *     - Problem: Background objects cause false positives
  *
  *   Saturation (useSaturation = true)
  *     - Artifact present when sat >= threshold
  *     - Telemetry: intake/sample/{lane}/sat
- *     - Colorful artifact vs dull background
+ *     - Good: Colorful artifact vs dull background
+ *     - Problem: Varies with lighting conditions
  *
  *   Value (useValue = true)
  *     - Artifact present when val >= threshold
  *     - Telemetry: intake/sample/{lane}/val
- *     - Bright artifact vs dark background
+ *     - Good: Bright artifact vs dark background
+ *     - Problem: Varies with lighting conditions
  *
  *   Hue (useHue = true)
  *     - Artifact present when hue >= threshold
  *     - Telemetry: intake/sample/{lane}/hue
- *     - Artifact hue vs background hue
+ *     - Good: Artifact hue differs from background
+ *     - Problem: Hue is undefined when saturation is near 0
  *
  * When MULTIPLE methods are enabled, ALL must pass (AND logic).
- * This lets you combine for reliability (e.g., sat AND val).
+ * Example: useDistance=true AND useSaturation=true means both must
+ * be satisfied to detect presence. This reduces false positives.
  *
- * QUICK START:
+ * ============================================================================
+ * QUICK START
+ * ============================================================================
+ *
  *   1. Run TeleOp and watch telemetry for all four values
  *   2. Note values when EMPTY vs when ARTIFACT is present
- *   3. Find which has the clearest separation
+ *   3. Find which has the clearest separation (biggest gap)
  *   4. Set threshold halfway between empty and artifact values
- *   5. Enable that method in YOUR ROBOT'S config
+ *   5. Enable that method in YOUR ROBOT'S config (see bottom of file)
  *   6. Test both detection AND clearing speed
+ *
+ * ============================================================================
+ * TROUBLESHOOTING
+ * ============================================================================
+ *
+ * FALSE POSITIVES (detects artifact when empty):
+ *   - Lower the threshold (tighter detection)
+ *   - Enable additional detection methods (AND logic)
+ *   - Increase consecutiveConfirmationsRequired in Gating
+ *
+ * FALSE NEGATIVES (misses artifact when present):
+ *   - Raise the threshold (looser detection)
+ *   - Disable detection methods that aren't working well
+ *   - Try a different detection method entirely
+ *
+ * SLOW CLEARING (takes too long to register removal):
+ *   - Lower consecutiveClearConfirmationsRequired in Gating
+ *   - Reduce filter windowSize (faster response, more noise)
+ *
+ * FLICKERING (detection rapidly toggles on/off):
+ *   - Increase consecutiveConfirmationsRequired in Gating
+ *   - Increase filter windowSize (smoother, but slower)
+ *
+ * TELEMETRY KEYS TO WATCH:
+ *   intake/sample/{lane}/presence_detected - Is presence detected? (after filters)
+ *   intake/sample/{lane}/distance_cm       - Raw distance reading
+ *   intake/sample/{lane}/sat               - Filtered saturation (0.0-1.0)
+ *   intake/sample/{lane}/val               - Filtered value/brightness (0.0-1.0)
+ *   intake/sample/{lane}/hue               - Filtered hue (0-360 degrees)
+ *   intake/sample/{lane}/color             - Final debounced color (NONE/GREEN/PURPLE)
+ *
  * ============================================================================
  */
 @Configurable

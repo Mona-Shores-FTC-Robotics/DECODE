@@ -83,7 +83,7 @@ public class IntakeSubsystem implements Subsystem {
         public final boolean sensorPresent;
         public final boolean distanceAvailable;
         public final double distanceCm;
-        public final boolean withinDistance;
+        public final boolean presenceDetected;
         public final int scaledRed;
         public final int scaledGreen;
         public final int scaledBlue;
@@ -100,7 +100,7 @@ public class IntakeSubsystem implements Subsystem {
         private LaneSample(boolean sensorPresent,
                            boolean distanceAvailable,
                            double distanceCm,
-                           boolean withinDistance,
+                           boolean presenceDetected,
                            int scaledRed, int scaledGreen, int scaledBlue,
                            float normalizedRed, float normalizedGreen, float normalizedBlue,
                            float hue, float saturation, float value,
@@ -109,7 +109,7 @@ public class IntakeSubsystem implements Subsystem {
             this.sensorPresent = sensorPresent;
             this.distanceAvailable = distanceAvailable;
             this.distanceCm = distanceCm;
-            this.withinDistance = withinDistance;
+            this.presenceDetected = presenceDetected;
             this.scaledRed = scaledRed;
             this.scaledGreen = scaledGreen;
             this.scaledBlue = scaledBlue;
@@ -132,7 +132,7 @@ public class IntakeSubsystem implements Subsystem {
 
         private static LaneSample present(boolean distanceAvailable,
                                           double distanceCm,
-                                          boolean withinDistance,
+                                          boolean presenceDetected,
                                           int scaledRed, int scaledGreen, int scaledBlue,
                                           float normalizedRed, float normalizedGreen, float normalizedBlue,
                                           float hue, float saturation, float value,
@@ -141,7 +141,7 @@ public class IntakeSubsystem implements Subsystem {
             return new LaneSample(true,
                     distanceAvailable,
                     distanceCm,
-                    withinDistance,
+                    presenceDetected,
                     scaledRed, scaledGreen, scaledBlue,
                     normalizedRed, normalizedGreen, normalizedBlue,
                     hue, saturation, value,
@@ -658,19 +658,19 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         boolean distanceValid = distanceAvailable && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
-        boolean withinDistance = false;
+        boolean presenceDetected = false;
 
         // Get per-robot presence config
         IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
 
         // Distance-based presence check
         if (!distanceAvailable || !presenceCfg.useDistance || !distanceValid) {
-            withinDistance = false;
+            presenceDetected = false;
         } else {
             double threshold = getThreshold(presenceCfg, lane);
-            withinDistance = distanceCm <= threshold;
+            presenceDetected = distanceCm <= threshold;
         }
-        lanePresenceState.put(lane, withinDistance);
+        lanePresenceState.put(lane, presenceDetected);
 
         // SINGLE I2C read for all color channels (red, green, blue, alpha)
         NormalizedRGBA colors = colorSensor.getNormalizedColors();
@@ -732,11 +732,11 @@ public class IntakeSubsystem implements Subsystem {
             boolean satPresent = filteredSaturation >= presenceCfg.saturationThreshold;
             // If distance is also enabled, require BOTH to pass (AND logic)
             if (presenceCfg.useDistance) {
-                withinDistance = withinDistance && satPresent;
+                presenceDetected = presenceDetected && satPresent;
             } else {
-                withinDistance = satPresent;
+                presenceDetected = satPresent;
             }
-            lanePresenceState.put(lane, withinDistance);
+            lanePresenceState.put(lane, presenceDetected);
         }
 
         // Value-based presence detection: bright artifact vs dark background
@@ -745,11 +745,11 @@ public class IntakeSubsystem implements Subsystem {
             boolean valuePresent = filteredValue >= presenceCfg.valueThreshold;
             // If other methods are enabled, require ALL to pass (AND logic)
             if (presenceCfg.useDistance || presenceCfg.useSaturation) {
-                withinDistance = withinDistance && valuePresent;
+                presenceDetected = presenceDetected && valuePresent;
             } else {
-                withinDistance = valuePresent;
+                presenceDetected = valuePresent;
             }
-            lanePresenceState.put(lane, withinDistance);
+            lanePresenceState.put(lane, presenceDetected);
         }
 
         // Hue-based presence detection: artifact hue vs background hue
@@ -758,11 +758,11 @@ public class IntakeSubsystem implements Subsystem {
             boolean huePresent = filteredHue >= presenceCfg.hueThreshold;
             // If other methods are enabled, require ALL to pass (AND logic)
             if (presenceCfg.useDistance || presenceCfg.useSaturation || presenceCfg.useValue) {
-                withinDistance = withinDistance && huePresent;
+                presenceDetected = presenceDetected && huePresent;
             } else {
-                withinDistance = huePresent;
+                presenceDetected = huePresent;
             }
-            lanePresenceState.put(lane, withinDistance);
+            lanePresenceState.put(lane, presenceDetected);
         }
 
         // Compute total RGB intensity for telemetry
@@ -776,7 +776,7 @@ public class IntakeSubsystem implements Subsystem {
                 maxComponent > 0,
                 totalIntensity,
                 distanceValid ? distanceCm : Double.NaN,
-                withinDistance,
+                presenceDetected,
                 lanePrefix
         );
         ArtifactColor hsvColor = result.color;
@@ -788,7 +788,7 @@ public class IntakeSubsystem implements Subsystem {
         RobotState.packet.put("intake/sample/" + lanePrefix + "/sensor_present", true);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/distance_raw_cm", distanceAvailable ? rawDistanceCm : Double.NaN);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/distance_cm", distanceValid ? distanceCm : Double.NaN);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/within_distance", withinDistance);
+        RobotState.packet.put("intake/sample/" + lanePrefix + "/presence_detected", presenceDetected);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_r", scaledRed);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_g", scaledGreen);
         RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_b", scaledBlue);
@@ -806,7 +806,7 @@ public class IntakeSubsystem implements Subsystem {
         return LaneSample.present(
                 distanceAvailable,
                 distanceValid ? distanceCm : Double.NaN,
-                withinDistance,
+                presenceDetected,
                 scaledRed, scaledGreen, scaledBlue,
                 normalizedRed, normalizedGreen, normalizedBlue,
                 filteredHue, filteredSaturation, filteredValue,
@@ -836,20 +836,20 @@ public class IntakeSubsystem implements Subsystem {
      * @param hasSignal Whether sensor has a valid signal
      * @param totalIntensity Total RGB intensity (0-765)
      * @param distanceCm Distance reading in cm (or NaN if unavailable)
-     * @param withinDistance Whether presence detection indicates artifact present
+     * @param presenceDetected Whether presence detection indicates artifact present
      * @param lanePrefix Lane name prefix for telemetry
      * @return Classification result with color
      */
     private ClassificationResult classifyColor(float hue, float saturation, float value,
                                                boolean hasSignal, int totalIntensity,
-                                               double distanceCm, boolean withinDistance,
+                                               double distanceCm, boolean presenceDetected,
                                                String lanePrefix) {
         String reason = "classified";
 
-        // Presence gate: withinDistance is already computed by sampleLane() using distance or saturation
-        if (!withinDistance) {
+        // Presence gate: presenceDetected is already computed by sampleLane() using distance or saturation
+        if (!presenceDetected) {
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_distance_valid", !Double.isNaN(distanceCm));
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_within_distance", false);
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_presence_detected", false);
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_total_intensity", totalIntensity);
             reason = "no_presence";
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
@@ -1029,12 +1029,12 @@ public class IntakeSubsystem implements Subsystem {
         return null;
     }
 
+    /**
+     * Check if intake is full based on debounced artifact count.
+     * Uses the same source of truth as getArtifactCount() for consistency.
+     */
     public boolean isFull() {
-        int count = 0;
-        for (LauncherLane lane : LauncherLane.values()) {
-            if (getLaneSample(lane).withinDistance) count++;
-        }
-        return count >= laneSensorConfig.fullCount;
+        return getArtifactCount() >= laneSensorConfig.fullCount;
     }
 
     public interface LaneColorListener {

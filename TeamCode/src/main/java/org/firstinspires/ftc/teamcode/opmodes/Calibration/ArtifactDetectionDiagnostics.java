@@ -208,14 +208,14 @@ public class ArtifactDetectionDiagnostics extends LinearOpMode {
         telemetry.addData("  Detected", "%s (conf: %.2f)", current.color, current.confidence);
         telemetry.addData("  Distance", "%.1f cm %s",
             current.distanceCm,
-            current.withinDistance ? "✓" : "✗");
+            current.presenceDetected ? "✓" : "✗");
         telemetry.addData("  HSV", "H:%.0f° S:%.2f V:%.2f",
             current.hue, current.saturation, current.value);
 
         packet.put(laneName + "/Detected", current.color != null ? current.color.name() : "NONE");
         packet.put(laneName + "/Confidence", current.confidence);
         packet.put(laneName + "/Distance_cm", current.distanceCm);
-        packet.put(laneName + "/Within_Distance", current.withinDistance);
+        packet.put(laneName + "/Presence_Detected", current.presenceDetected);
         packet.put(laneName + "/Hue", current.hue);
         packet.put(laneName + "/Saturation", current.saturation);
         packet.put(laneName + "/Value", current.value);
@@ -255,7 +255,7 @@ public class ArtifactDetectionDiagnostics extends LinearOpMode {
         telemetry.addLine("--- Current Reading ---");
         telemetry.addData("Detected Color", "%s", current.color);
         telemetry.addData("Confidence", "%.2f", current.confidence);
-        telemetry.addData("Distance", "%.2f cm (within: %s)", current.distanceCm, current.withinDistance);
+        telemetry.addData("Distance", "%.2f cm (present: %s)", current.distanceCm, current.presenceDetected);
         telemetry.addData("Hue", "%.1f°", current.hue);
         telemetry.addData("Saturation", "%.3f", current.saturation);
         telemetry.addData("Value", "%.3f", current.value);
@@ -267,7 +267,7 @@ public class ArtifactDetectionDiagnostics extends LinearOpMode {
         packet.put(laneName + "/Current/Color", current.color != null ? current.color.name() : "NONE");
         packet.put(laneName + "/Current/Confidence", current.confidence);
         packet.put(laneName + "/Current/Distance_cm", current.distanceCm);
-        packet.put(laneName + "/Current/Within_Distance", current.withinDistance);
+        packet.put(laneName + "/Current/Presence_Detected", current.presenceDetected);
         packet.put(laneName + "/Current/Hue", current.hue);
         packet.put(laneName + "/Current/Saturation", current.saturation);
         packet.put(laneName + "/Current/Value", current.value);
