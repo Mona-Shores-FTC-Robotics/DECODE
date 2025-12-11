@@ -139,6 +139,16 @@ public class IntakeLaneSensorConfig {
         public double leftThresholdCm;
         public double centerThresholdCm;
         public double rightThresholdCm;
+
+        /** Per-lane hue presence enable - set to true to use hue-based detection for this lane */
+        public boolean leftUseHuePresence = true;
+        public boolean centerUseHuePresence = true;
+        public boolean rightUseHuePresence = true;
+
+        /** Per-lane hue threshold - only used if per-lane hue presence is enabled */
+        public double leftHueThreshold = 130.0;
+        public double centerHueThreshold = 130.0;
+        public double rightHueThreshold = 130.0;
     }
 
     public static class Background {
