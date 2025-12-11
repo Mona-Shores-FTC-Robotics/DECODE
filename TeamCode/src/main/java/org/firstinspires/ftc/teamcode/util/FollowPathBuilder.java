@@ -111,6 +111,57 @@ public class FollowPathBuilder {
         return this;
     }
 
+    /**
+     * Helper method to create piecewise heading interpolation with alliance mirroring.
+     * First section: constant heading from t=0 to constantEndT
+     * Second section: linear heading from constantEndT to t=1
+     *
+     * @param constantHeadingDeg Constant heading in degrees (will be mirrored for red alliance)
+     * @param constantEndT T-value where constant section ends (0.0 to 1.0)
+     * @param linearEndHeadingDeg End heading for linear section in degrees (will be mirrored for red alliance)
+     * @return This returns itself with the updated data
+     */
+    public FollowPathBuilder withPiecewiseConstantThenLinear(
+            double constantHeadingDeg,
+            double constantEndT,
+            double linearEndHeadingDeg) {
+
+        // Mirror headings for red alliance
+        double mirroredConstantHeading = mirrorHeading(constantHeadingDeg);
+        double mirroredLinearEndHeading = mirrorHeading(linearEndHeadingDeg);
+
+        HeadingInterpolator interpolator = HeadingInterpolator.piecewise(
+                new HeadingInterpolator.PiecewiseNode(
+                        0.0,
+                        constantEndT,
+                        HeadingInterpolator.constant(Math.toRadians(mirroredConstantHeading))
+                ),
+                HeadingInterpolator.PiecewiseNode.linear(
+                        constantEndT,
+                        1.0,
+                        Math.toRadians(mirroredConstantHeading),
+                        Math.toRadians(mirroredLinearEndHeading)
+                )
+        );
+
+        return withPiecewiseHeadingInterpolation(interpolator);
+    }
+
+    /**
+     * Mirrors a heading for red alliance using the same logic as poseForAlliance
+     */
+    private double mirrorHeading(double headingDeg) {
+        if (alliance == Alliance.RED) {
+            double headingRad = Math.toRadians(headingDeg);
+            double mirroredRad = Math.PI - headingRad;
+            // Normalize to 0-360 range
+            double mirroredDeg = Math.toDegrees(mirroredRad);
+            return (mirroredDeg % 360 + 360) % 360;
+        } else {
+            return headingDeg;
+        }
+    }
+
     // ---------------------------
     // Build
     // ---------------------------
