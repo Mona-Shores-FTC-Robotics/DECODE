@@ -94,8 +94,8 @@ public class IntakeLaneSensorConfig {
 
     public static class Quality {
         // Quality thresholds (used by all classifiers)
-        public double minValue = 0.02;
-        public double minSaturation = 0.15;
+        public double minValue = 0;
+        public double minSaturation = 0;
     }
 
     public static class Presence {
@@ -106,7 +106,7 @@ public class IntakeLaneSensorConfig {
 
         // Hue-based presence detection - uses filtered hue to determine artifact presence
         /** Enable hue-based presence detection (hue >= threshold = artifact present, hue < threshold = empty) */
-        public boolean useHuePresence = false;
+        public boolean useHuePresence = true;
         /** Hue threshold for artifact presence - values >= this indicate artifact, values < this indicate empty/background */
         public double huePresenceThreshold = 130.0;
 
