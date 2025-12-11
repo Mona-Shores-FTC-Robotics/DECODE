@@ -27,7 +27,7 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 public class FarThreeAtOnceCommand {
 
     public static class Config {
-        public double maxPathPower = .75;
+        public double maxPathPower = .85;
         public double endTimeForLinearHeadingInterpolation = .7;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.0;
@@ -42,12 +42,12 @@ public class FarThreeAtOnceCommand {
         // LaunchFar
         public double launchFarX = 58;
         public double launchFarY = 11;
-        public double launchFarHeadingDeg = 115;
+        public double launchFarHeadingDeg = 110;
 
         // Artifacts at Alliance Wall)
-        public double artifactsWallX = 8;
-        public double artifactsWallY = 7.0;
-        public double artifactsWallHeading = 180;
+        public double artifactsWallX = 9;
+        public double artifactsWallY = 6.5;
+        public double artifactsWallHeading = 185;
 
         // Control point for segment: leavewall
         public double leaveWallControlPointX = 27.5;
@@ -72,9 +72,9 @@ public class FarThreeAtOnceCommand {
         public double artifactSet2ControlPointY = 23;
 
         // NearGate
-        public double readyForTeleopX = 58;
-        public double readyForTeleopY = 37;
-        public double readyForTeleopHeading = 0;
+        public double readyForTeleopX = 33;
+        public double readyForTeleopY = 12;
+        public double readyForTeleopHeading = 90;
 
     }
 
@@ -130,13 +130,12 @@ public class FarThreeAtOnceCommand {
                 // Launch Preloads
                 new ParallelDeadlineGroup(
                 firstPathBuilder
-                    .to(launchFar())
-                    .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                    .build(config.maxPathPower),
+                        .to(launchFar())
+                        .withConstantHeading(waypoints.launchFarHeadingDeg)
+                        .build(config.maxPathPower),
                     new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
                     launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
-            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Alliance Wall Artifacts
@@ -144,10 +143,10 @@ public class FarThreeAtOnceCommand {
                 new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
                         .to(artifactsAllianceWall())
+                        .withControl(leaveControl0())
                         .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
                         new SequentialGroup(
-                                new TimedEjectCommand(robot.intake, config.ejectTime),
                                 new AutoSmartIntakeCommand(robot.intake)
                         )
             ),
@@ -160,7 +159,6 @@ public class FarThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Artifact Set 3
@@ -172,7 +170,6 @@ public class FarThreeAtOnceCommand {
                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                             .build(config.maxPathPower),
                     new SequentialGroup(
-                            new TimedEjectCommand(robot.intake, config.ejectTime),
                             new AutoSmartIntakeCommand(robot.intake)
                     )
             ),
@@ -184,7 +181,6 @@ public class FarThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-            new AimAtGoalCommand(robot.drive, robot.vision),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Artifact Set 2
@@ -196,7 +192,6 @@ public class FarThreeAtOnceCommand {
                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                             .build(config.maxPathPower),
                     new SequentialGroup(
-                            new TimedEjectCommand(robot.intake, config.ejectTime),
                             new AutoSmartIntakeCommand(robot.intake)
                     )
             ),
@@ -213,7 +208,6 @@ public class FarThreeAtOnceCommand {
                                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                     .build(config.maxPathPower),
 
-                            new AimAtGoalCommand(robot.drive, robot.vision),
                             launcherCommands.launchAccordingToMode(false),
 
                             new ParallelDeadlineGroup(
@@ -223,7 +217,6 @@ public class FarThreeAtOnceCommand {
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower),
                                     new SequentialGroup(
-                                            new TimedEjectCommand(robot.intake, config.ejectTime),
                                             new AutoSmartIntakeCommand(robot.intake)
                                     )
                             )

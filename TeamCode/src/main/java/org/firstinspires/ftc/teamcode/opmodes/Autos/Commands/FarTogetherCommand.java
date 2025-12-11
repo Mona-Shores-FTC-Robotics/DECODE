@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.commands.DriveCommands.AimAtGoalCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
@@ -31,6 +32,7 @@ public class FarTogetherCommand {
         public double delayForGateToOpen = 1.0;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.0;
+        public double slowPath = .75;
         public double ejectTime = 1000;
     }
 
@@ -40,39 +42,39 @@ public class FarTogetherCommand {
         public double startHeading = 90.0;
 
         // LaunchFar
-        public double launchFarX = 58;
-        public double launchFarY = 11;
-        public double launchFarHeadingDeg = 108;
+        public double launchFarX = 55;
+        public double launchFarY = 14;
+        public double launchFarHeadingDeg = 110;
 
         // Artifacts at Alliance Wall)
-        public double artifactsWallX = 10;
+        public double artifactsWallX = 9;
         public double artifactsWallY = 6.5;
-        public double artifactsWallHeading = 180;
+        public double artifactsWallHeading = 185;
 
         // Control point for segment: leavewall
         public double wallControlPointX = 27.5;
         public double wallControlPointY = 18;
 
         // Chute Released Artifacts Try 1
-        public double releasedTry1X = 10;
-        public double releasedTry1Y = 23;
+        public double releasedTry1X = 15;
+        public double releasedTry1Y = 6.5;
         public double releasedTry1Heading = 180;
 
         public double releasedTry1controlX = 35.3;
         public double releasedTry1controlY = 13.6;
 
         // Chute Released Artifacts Try 1
-        public double releasedTry2X = 10;
-        public double releasedTry2Y = 13;
-        public double releasedTry2Heading = 180;
+        public double releasedTry2X = 9;
+        public double releasedTry2Y = 6.5;
+        public double releasedTry2Heading = 185;
 
         public double releasedTry2controlX = 35.3;
         public double releasedTry2controlY = 18;
 
         // Off Line
-        public double readyForTeleopX = 58;
-        public double readyForTeleopY = 36;
-        public double readyForTeleopHeading = 0;
+        public double readyForTeleopX = 33;
+        public double readyForTeleopY = 12;
+        public double readyForTeleopHeading = 90;
 
     }
 
@@ -109,7 +111,6 @@ public class FarTogetherCommand {
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
         LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
-        AutoSmartIntakeCommand autoSmartIntake = new AutoSmartIntakeCommand(robot.intake);
 
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
@@ -135,7 +136,7 @@ public class FarTogetherCommand {
                         launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+              //  new AimAtGoalCommand(robot.drive, robot.vision),
                 launcherCommands.launchAccordingToMode(false),
 
                 // Pickup Alliance Wall Artifacts
@@ -157,7 +158,7 @@ public class FarTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
+               // new AimAtGoalCommand(robot.drive, robot.vision),
                 new Delay(config.delayForGateToOpen),
                 launcherCommands.launchAccordingToMode(false),
 
@@ -168,7 +169,7 @@ public class FarTogetherCommand {
                             .to(releasedArtifacts1())
                             .withControl(releasedArtifacts1Control0())
                             .withConstantHeading(waypoints.releasedTry1Heading)
-                            .build(config.maxPathPower),
+                            .build(config.slowPath),
                         new AutoSmartIntakeCommand(robot.intake)
                 ),
 
@@ -190,7 +191,7 @@ public class FarTogetherCommand {
                                 .to(releasedArtifacts2())
                                 .withControl(releasedArtifacts2Control0())
                                 .withConstantHeading(waypoints.releasedTry2Heading)
-                                .build(config.maxPathPower),
+                                .build(config.slowPath),
                         new AutoSmartIntakeCommand(robot.intake)
                 ),
 
@@ -205,8 +206,9 @@ public class FarTogetherCommand {
                                         .to(launchFar())
                                         .withControl(releasedArtifacts2Control0())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                        .build(config.maxPathPower),
+                                        .build(config.slowPath),
 
+//                               new AimAtGoalCommand(robot.drive, robot.vision),
                                 launcherCommands.launchAccordingToMode(false),
 
                                 new ParallelDeadlineGroup(

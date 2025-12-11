@@ -131,9 +131,9 @@ public class Constants {
                 .drivePIDFSwitch(3)
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.02, 0, 0, 0.6, .0001))
 
-                .headingPIDFCoefficients(new PIDFCoefficients(.6, 0.01, .0001, .0005))  // Increased P and D, reduced F
-                .headingPIDFSwitch(Math.toRadians(3.5))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(6.0, 0.0001, .001, .0003))
+                .headingPIDFCoefficients(new PIDFCoefficients(.48, 0.01, .0001, .0005))  // Increased P and D, reduced F
+                .headingPIDFSwitch(Math.toRadians(3))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .001, .0003))
 
                 .translationalPIDFCoefficients(new PIDFCoefficients(
                         .06,
@@ -209,11 +209,11 @@ public class Constants {
                 .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
     public static PathConstraints pathConstraints = new PathConstraints(
-            .998,
-            0.05,
+            1.0,
+            0.08,
             .1,
             Math.toRadians(.5),
-            150,
+            100,
             1.0,
             10,
             1);

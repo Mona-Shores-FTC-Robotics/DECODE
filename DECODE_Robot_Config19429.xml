@@ -39,7 +39,7 @@
             <Servo name="indicator_center" port="5"/>
 
             <!-- Expansion Hub I2C (Color sensors) -->
-            <RevColorSensorV3 name="lane_left_color" port="0" bus="0"/>
+            <RevColorSensorV3 name="lane_left_color" port="1" bus="1"/>
             <RevColorSensorV3 name="lane_center_color" port="3" bus="1"/> //MOVED on 12/8/25 from port 1
             <RevColorSensorV3 name="lane_right_color" port="2" bus="2"/>
         </LynxModule>
