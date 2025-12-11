@@ -76,7 +76,7 @@ public class IntakeLaneSensorConfig {
          * At 50ms sample period: 3 samples = 150ms window, 4 samples = 200ms window.
          * Uses circular averaging to properly handle purple wrap-around (270°-30°).
          */
-        public int windowSize = 10;
+        public int windowSize = 4;
         /**
          * Jump detection threshold in degrees. If raw hue differs from filtered hue
          * by more than this amount, the filter is reset to the new value immediately.
@@ -92,7 +92,7 @@ public class IntakeLaneSensorConfig {
         /** Number of consecutive confident samples required before updating lane color */
         public int consecutiveConfirmationsRequired = 1;
         /** Number of consecutive non-artifact samples required before clearing lane color (helps with whiffle ball holes) */
-        public int consecutiveClearConfirmationsRequired = 3;
+        public int consecutiveClearConfirmationsRequired = 1;
         /** Keep-alive duration (ms) - keep artifact detection alive after last good reading (helps with whiffle ball holes) */
         public double keepAliveMs = 0;
         /** Distance clearance margin (cm) - how far beyond threshold to instantly clear (helps artifacts clear quickly when removed) */
