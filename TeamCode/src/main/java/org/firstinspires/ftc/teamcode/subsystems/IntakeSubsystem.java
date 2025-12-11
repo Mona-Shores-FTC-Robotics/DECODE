@@ -20,7 +20,6 @@ import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeLaneSensorConfig;
-import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeLaneSensorConfig.ClassifierMode;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeManualModeConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeMotorConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeRollerConfig;
@@ -870,31 +869,10 @@ public class IntakeSubsystem implements Subsystem {
             return new ClassificationResult(ArtifactColor.NONE, 0.0);
         }
 
-        // Parse classifier mode
-        ClassifierMode mode;
-        try {
-            mode = ClassifierMode.valueOf(laneSensorConfig.classifier.mode.toUpperCase(Locale.US));
-        } catch (IllegalArgumentException e) {
-            mode = ClassifierMode.DECISION_BOUNDARY; // Default
-        }
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/mode", mode.name());
+        // Classify GREEN vs PURPLE using hue decision boundary
+        ClassificationResult result = classifyByHue(hue, lanePrefix);
 
-        // Route to appropriate color classifier (GREEN vs PURPLE)
-        ClassificationResult result;
-        switch (mode) {
-            case DECISION_BOUNDARY:
-                result = classifyColorDecisionBoundary(hue, saturation, value, hasSignal, lanePrefix);
-                break;
-            case DISTANCE_BASED:
-                result = classifyColorDistanceBased(hue, saturation, value, hasSignal, lanePrefix);
-                break;
-            default:
-                // Fallback to decision boundary if mode is invalid
-                result = classifyColorDecisionBoundary(hue, saturation, value, hasSignal, lanePrefix);
-                break;
-        }
-
-        // Tag the reason as the chosen color to make empty vs artifact easier to spot on the dashboard
+        // Tag the reason as the chosen color
         reason = result.color == null ? "none" : result.color.name();
         RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
 
@@ -902,19 +880,15 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     /**
-     * DECISION_BOUNDARY classifier: Single hue threshold between green and purple (recommended).
-     * Always returns GREEN or PURPLE, never UNKNOWN (two-class problem).
+     * Classify artifact color as GREEN or PURPLE using hue decision boundary.
+     * GREEN if hue < boundary, PURPLE otherwise.
      */
-    private ClassificationResult classifyColorDecisionBoundary(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
-        if (!hasSignal || value < laneSensorConfig.presence.minValue) {
-            return new ClassificationResult(ArtifactColor.NONE, 0.0);
-        }
+    private ClassificationResult classifyByHue(float hue, String lanePrefix) {
+        double boundary = laneSensorConfig.colorClassifier.hueDecisionBoundary;
 
-        // Unwrap hue to handle purple wrap-around
-        // Purple spans across 0°; we map low-end hues onto the high side relative to the boundary.
+        // Unwrap hue to handle purple wrap-around (purple spans across 0°)
         float unwrappedHue = hue;
-        // Dynamic wrap window: anything more than 180° below the boundary is considered wrap-side purple
-        float wrapThreshold = (float) (laneSensorConfig.classifier.decision.hueDecisionBoundary - 180.0);
+        float wrapThreshold = (float) (boundary - 180.0);
         if (hue < wrapThreshold) {
             unwrappedHue = hue + 360.0f;
         }
@@ -923,84 +897,23 @@ public class IntakeSubsystem implements Subsystem {
         ArtifactColor color;
         float distanceFromBoundary;
 
-        if (unwrappedHue < laneSensorConfig.classifier.decision.hueDecisionBoundary) {
+        if (unwrappedHue < boundary) {
             color = ArtifactColor.GREEN;
-            distanceFromBoundary = (float) (laneSensorConfig.classifier.decision.hueDecisionBoundary - unwrappedHue);
+            distanceFromBoundary = (float) (boundary - unwrappedHue);
         } else {
             color = ArtifactColor.PURPLE;
-            distanceFromBoundary = (float) (unwrappedHue - laneSensorConfig.classifier.decision.hueDecisionBoundary);
+            distanceFromBoundary = (float) (unwrappedHue - boundary);
         }
 
-        // Confidence based on distance from boundary
-        // High confidence if far from boundary, low if close
-        double confidence = Math.min(1.0, distanceFromBoundary / laneSensorConfig.classifier.decision.lowConfidenceMargin);
+        // Confidence: high if far from boundary, low if close
+        double confidence = Math.min(1.0, distanceFromBoundary / laneSensorConfig.colorClassifier.lowConfidenceMargin);
 
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_unwrapped_hue", unwrappedHue);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_boundary", laneSensorConfig.classifier.decision.hueDecisionBoundary);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_distance_from_boundary", distanceFromBoundary);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_result", color.name());
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_confidence", confidence);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_unwrapped", unwrappedHue);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_boundary", boundary);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_distance_from_boundary", distanceFromBoundary);
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/color", color.name());
+        RobotState.packet.put("intake/classifier/" + lanePrefix + "/confidence", confidence);
         return new ClassificationResult(color, confidence);
-    }
-
-    /**
-     * DISTANCE_BASED classifier: Euclidean distance in HSV space to color targets.
-     * Picks the closer target (green or purple).
-     */
-    private ClassificationResult classifyColorDistanceBased(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
-        if (!hasSignal || value < laneSensorConfig.presence.minValue) {
-            return new ClassificationResult(ArtifactColor.NONE, 0.0);
-        }
-
-        // Compute weighted distance to green target
-        double distToGreen = hsvDistance(hue, saturation, value,
-                laneSensorConfig.classifier.distance.greenHueTarget,
-                laneSensorConfig.classifier.distance.greenSatTarget,
-                laneSensorConfig.classifier.distance.greenValTarget);
-
-        // Compute weighted distance to purple target
-        double distToPurple = hsvDistance(hue, saturation, value,
-                laneSensorConfig.classifier.distance.purpleHueTarget,
-                laneSensorConfig.classifier.distance.purpleSatTarget,
-                laneSensorConfig.classifier.distance.purpleValTarget);
-
-        // Pick closer color
-        ArtifactColor color = (distToGreen < distToPurple) ? ArtifactColor.GREEN : ArtifactColor.PURPLE;
-
-        // Confidence based on separation between distances
-        // High confidence if one is much closer than the other
-        double minDist = Math.min(distToGreen, distToPurple);
-        double maxDist = Math.max(distToGreen, distToPurple);
-        double separation = maxDist - minDist;
-        double confidence = Math.min(1.0, separation / 30.0); // 30° weighted separation for full confidence
-
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_green", distToGreen);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_purple", distToPurple);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_separation", separation);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_result", color.name());
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_confidence", confidence);
-        return new ClassificationResult(color, confidence);
-    }
-
-    /**
-     * Compute weighted distance in HSV space, handling hue wrap-around.
-     */
-    private double hsvDistance(float hue, float saturation, float value,
-                               double targetHue, double targetSat, double targetVal) {
-        // Hue distance (circular, 0-360°)
-        double hueDiff = Math.abs(hue - targetHue);
-        if (hueDiff > 180.0) {
-            hueDiff = 360.0 - hueDiff;  // Shortest path on circle
-        }
-
-        // Saturation and value differences (linear, 0-1)
-        double satDiff = Math.abs(saturation - targetSat);
-        double valDiff = Math.abs(value - targetVal);
-
-        // Weighted Euclidean distance
-        return laneSensorConfig.classifier.distance.hueWeight * hueDiff
-                + laneSensorConfig.classifier.distance.saturationWeight * satDiff * 100.0  // Scale to ~0-100
-                + laneSensorConfig.classifier.distance.valueWeight * valDiff * 100.0;      // Scale to ~0-100
     }
 
     public boolean hasLaneSensors() {

@@ -1,48 +1,79 @@
 package org.firstinspires.ftc.teamcode.subsystems.intake.config;
 
-import com.acmerobotics.dashboard.config.Config;
 import com.bylazar.configurables.annotations.Configurable;
 
 /**
  * Lane sensor configuration for artifact color detection.
- * Configures color sensors, classification algorithms, and presence detection.
  *
- * Presence detection uses saturation threshold (colorful artifact vs dull background).
- * Color classification uses hue to distinguish GREEN vs PURPLE.
+ * ============================================================================
+ * TUNING GUIDE FOR MENTORS
+ * ============================================================================
+ *
+ * The sensor does TWO things:
+ *   1. PRESENCE DETECTION - Is there an artifact in the lane? (yes/no)
+ *   2. COLOR CLASSIFICATION - Is it GREEN or PURPLE? (uses hue)
+ *
+ * COLOR CLASSIFICATION (hueDecisionBoundary) is already working well.
+ * You probably don't need to touch it.
+ *
+ * PRESENCE DETECTION is what needs tuning. You have THREE options:
+ *
+ *   Option A: Distance-based (useDistance = true)
+ *     - Uses the distance sensor to detect if something is close
+ *     - Problem: Background objects near sensor cause false positives
+ *     - Tune: Adjust per-lane thresholds in LanePresenceConfig
+ *
+ *   Option B: Saturation-based (useSaturation = true)
+ *     - Colorful artifacts have HIGH saturation, dull background has LOW
+ *     - Watch telemetry: intake/sample/{lane}/sat (filtered value)
+ *     - Tune: Set saturationThreshold between background and artifact values
+ *
+ *   Option C: Value-based (useValue = true)
+ *     - Bright artifacts have HIGH value, dark background has LOW
+ *     - Watch telemetry: intake/sample/{lane}/val (filtered value)
+ *     - Tune: Set valueThreshold between background and artifact values
+ *
+ * You can combine options (e.g., useSaturation + useValue requires BOTH).
+ *
+ * FILTERING (saturationFilter, valueFilter):
+ *   - Smooths out flicker from whiffle ball holes
+ *   - Higher windowSize = smoother but slower response
+ *   - Start with windowSize = 4, increase if flickering persists
+ *
+ * QUICK START:
+ *   1. Run TeleOp and watch telemetry values for sat and val
+ *   2. Note the values when empty vs when artifact is present
+ *   3. Pick whichever (sat or val) has the clearest separation
+ *   4. Set the threshold halfway between empty and artifact values
+ *   5. Enable that detection method (useSaturation or useValue)
+ * ============================================================================
  */
 @Configurable
 public class IntakeLaneSensorConfig {
 
+    /** Number of lanes that must have artifacts to consider intake "full" */
     public int fullCount = 3;
 
-    /**
-     * Artifact color classifier mode.
-     * Determines which algorithm is used to classify GREEN vs PURPLE.
-     */
-    public enum ClassifierMode {
-        /** Range-based: Independent hue ranges for green and purple (legacy) */
-        RANGE_BASED,
-        /** Decision boundary: Single hue threshold between green and purple (default, most robust) */
-        DECISION_BOUNDARY,
-        /** Distance-based: Euclidean distance in HSV space to color targets */
-        DISTANCE_BASED
-    }
-
-    // Groups below are shown as collapsible sections in @Configurable UI
+    // Configuration groups (shown in FTC Dashboard)
     public static Polling polling = new Polling();
     public Hardware hardware = new Hardware();
-    public static DistanceFilter distanceFilter = new DistanceFilter();
     public static SaturationFilter saturationFilter = new SaturationFilter();
     public static ValueFilter valueFilter = new ValueFilter();
     public static HueFilter hueFilter = new HueFilter();
-    public static Gating gating = new Gating();
+    public static DistanceFilter distanceFilter = new DistanceFilter();
     public static Presence presence = new Presence();
-    public static Classifier classifier = new Classifier();
+    public static Gating gating = new Gating();
+    public static ColorClassifier colorClassifier = new ColorClassifier();
     public static LanePresenceConfig lanePresenceConfig19429 = createLanePresenceConfig19429();
     public static LanePresenceConfig lanePresenceConfig20245 = createLanePresenceConfig20245();
 
+    // =========================================================================
+    // SENSOR POLLING
+    // =========================================================================
+
     public static class Polling {
         public boolean enablePolling = true;
+        /** How often to read sensors (ms). Lower = faster but more CPU. */
         public double samplePeriodMs = 150;
         public String leftSensor = "lane_left_color";
         public String centerSensor = "lane_center_color";
@@ -50,134 +81,123 @@ public class IntakeLaneSensorConfig {
     }
 
     public static class Hardware {
-        /** Turn the onboard white LED on/off (applied at bind time) */
+        /** Turn the onboard white LED on/off */
         public boolean enableSensorLight = true;
-        /** If true, override sensor gain with sensorGain value; otherwise leave default */
+        /** Override sensor gain (REV Color Sensor V3 typical range ~1-10) */
         public boolean overrideSensorGain = true;
-        /** Gain applied when overrideSensorGain is true (REV Color Sensor V3 typical range ~1-10) */
         public double sensorGain = 20.0;
     }
 
-    public static class DistanceFilter {
-        /** Enable moving average filtering for distance sensor readings */
-        public boolean enableFilter = true;
-        /** Number of samples to average. Higher = smoother but slower response. */
-        public int windowSize = 4;
-    }
+    // =========================================================================
+    // PRESENCE DETECTION - This is what you need to tune!
+    // =========================================================================
 
-    public static class SaturationFilter {
-        /** Enable moving average filtering for saturation (smooths whiffle ball hole flicker) */
-        public boolean enableFilter = true;
-        /** Number of samples to average. Higher = smoother but slower response. */
-        public int windowSize = 4;
-    }
-
-    public static class ValueFilter {
-        /** Enable moving average filtering for value/brightness (smooths whiffle ball hole flicker) */
-        public boolean enableFilter = true;
-        /** Number of samples to average. Higher = smoother but slower response. */
-        public int windowSize = 4;
-    }
-
-    public static class HueFilter {
-        /** Enable circular moving average filtering for hue (stabilizes GREEN vs PURPLE classification) */
-        public boolean enableFilter = true;
-        /** Number of samples to average. Uses circular averaging for proper wrap-around handling. */
-        public int windowSize = 4;
-    }
-
-    public static class Gating {
-        /** Minimum confidence required to accept a new artifact color classification */
-        public double minConfidenceToAccept = 0.2;
-        /** Number of consecutive confident samples required before updating lane color */
-        public int consecutiveConfirmationsRequired = 1;
-        /** Number of consecutive non-artifact samples required before clearing lane color */
-        public int consecutiveClearConfirmationsRequired = 2;
-        /** Distance clearance margin (cm) - how far beyond threshold to instantly clear */
-        public double distanceClearanceMarginCm = 0.5;
-    }
-
+    /**
+     * Presence detection settings.
+     * Determines whether an artifact is in the lane (before classifying its color).
+     */
     public static class Presence {
         /**
-         * Enable distance-based presence detection.
-         * When true, artifact presence requires distance <= per-lane threshold.
+         * Use distance sensor for presence detection.
+         * Artifact present when distance <= per-lane threshold.
          */
         public boolean useDistance = true;
 
         /**
-         * Enable saturation-based presence detection.
-         * When true, artifact presence requires filtered saturation >= saturationThreshold.
-         * Artifacts are colorful (high saturation), background is dull (low saturation).
+         * Use saturation for presence detection.
+         * Artifact present when filtered saturation >= saturationThreshold.
+         * Colorful artifacts = high saturation, dull background = low saturation.
          */
         public boolean useSaturation = false;
-
-        /** Saturation threshold for presence - values >= this indicate artifact present */
         public double saturationThreshold = 0.25;
 
         /**
-         * Enable value/brightness-based presence detection.
-         * When true, artifact presence requires filtered value >= valueThreshold.
-         * Useful if artifacts are brighter than background.
+         * Use brightness (value) for presence detection.
+         * Artifact present when filtered value >= valueThreshold.
+         * Bright artifacts = high value, dark background = low value.
          */
         public boolean useValue = false;
-
-        /** Value threshold for presence - values >= this indicate artifact present */
         public double valueThreshold = 0.15;
 
-        /** Minimum brightness (value) required for valid color reading (quality check, not presence) */
+        /** Minimum brightness for valid reading (quality check, not presence) */
         public double minValue = 0.02;
     }
 
     /**
-     * Per-lane presence detection settings.
-     * Robot-specific configs are created in createLanePresenceConfig19429() and createLanePresenceConfig20245().
+     * Per-lane distance thresholds (only used when useDistance = true).
+     * Robot-specific - each robot has different sensor mounting.
      */
     public static class LanePresenceConfig {
-        // Distance thresholds per lane (cm) - artifact detected when distance <= threshold
         public double leftThresholdCm;
         public double centerThresholdCm;
         public double rightThresholdCm;
     }
 
-    public static class Classifier {
-        public String mode = ClassifierMode.DECISION_BOUNDARY.name();
-        public DecisionBoundary decision = new DecisionBoundary();
-        public Range range = new Range();
-        public DistanceBased distance = new DistanceBased();
+    // =========================================================================
+    // FILTERS - Smooth out whiffle ball hole flicker
+    // =========================================================================
+
+    public static class SaturationFilter {
+        public boolean enableFilter = true;
+        /** Higher = smoother but slower. Start with 4. */
+        public int windowSize = 4;
     }
 
-    public static class DecisionBoundary {
-        /** Hue decision boundary - classify as GREEN if hue < boundary, PURPLE otherwise */
+    public static class ValueFilter {
+        public boolean enableFilter = true;
+        /** Higher = smoother but slower. Start with 4. */
+        public int windowSize = 4;
+    }
+
+    public static class HueFilter {
+        public boolean enableFilter = true;
+        /** Higher = smoother but slower. Start with 4. */
+        public int windowSize = 4;
+    }
+
+    public static class DistanceFilter {
+        public boolean enableFilter = true;
+        public int windowSize = 4;
+    }
+
+    // =========================================================================
+    // GATING - Debounce to prevent flickering
+    // =========================================================================
+
+    public static class Gating {
+        /** Minimum confidence to accept a color classification */
+        public double minConfidenceToAccept = 0.2;
+        /** Consecutive samples needed to confirm artifact detected */
+        public int consecutiveConfirmationsRequired = 1;
+        /** Consecutive samples needed to confirm artifact removed */
+        public int consecutiveClearConfirmationsRequired = 2;
+        /** Distance margin (cm) for instant clearing when artifact is removed */
+        public double distanceClearanceMarginCm = 0.5;
+    }
+
+    // =========================================================================
+    // COLOR CLASSIFICATION - Already working, probably don't touch
+    // =========================================================================
+
+    /**
+     * Color classifier settings. Uses hue to distinguish GREEN vs PURPLE.
+     * This is already tuned and working well.
+     */
+    public static class ColorClassifier {
+        /**
+         * Hue decision boundary (degrees).
+         * GREEN if hue < boundary, PURPLE if hue >= boundary.
+         * Default 165 works well for most setups.
+         */
         public double hueDecisionBoundary = 165.0;
-        /** Distance from boundary for low confidence warning (degrees) */
+
+        /** Margin for low-confidence warning (degrees from boundary) */
         public double lowConfidenceMargin = 8.0;
     }
 
-    public static class Range {
-        /** Range-based mode parameters (legacy) */
-        public double greenHueMin = 80.0;
-        public double greenHueMax = 160.0;
-        public double purpleHueMin = 260.0;
-        public double purpleHueMax = 330.0;
-        public double purpleHueWrapMax = 40.0;
-    }
-
-    public static class DistanceBased {
-        /** Weight for hue component in distance calculation */
-        public double hueWeight = 2.0;
-        /** Weight for saturation component in distance calculation */
-        public double saturationWeight = 0.5;
-        /** Weight for value component in distance calculation */
-        public double valueWeight = 0.3;
-        /** Target hue/sat/value for green artifacts */
-        public double greenHueTarget = 120.0;
-        public double greenSatTarget = 0.45;
-        public double greenValTarget = 0.50;
-        /** Target hue/sat/value for purple artifacts */
-        public double purpleHueTarget = 290.0;
-        public double purpleSatTarget = 0.40;
-        public double purpleValTarget = 0.45;
-    }
+    // =========================================================================
+    // ROBOT-SPECIFIC CONFIGS
+    // =========================================================================
 
     private static LanePresenceConfig createLanePresenceConfig19429() {
         LanePresenceConfig config = new LanePresenceConfig();
