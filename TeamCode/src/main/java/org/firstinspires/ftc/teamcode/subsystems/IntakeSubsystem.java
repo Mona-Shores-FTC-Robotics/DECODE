@@ -492,12 +492,15 @@ public class IntakeSubsystem implements Subsystem {
         ArtifactColor currentLaneColor = laneColors.getOrDefault(lane, ArtifactColor.NONE);
         double currentTimeMs = sensorTimer.milliseconds();
 
+        // Get per-lane presence config
+        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
+        boolean laneUseHuePresence = getUseHuePresence(presenceCfg, lane);
+
         // --- CHECK IF ARTIFACT IS CLEARLY GONE (distance-based override) ---
         // If distance shows artifact is beyond threshold + margin, it's definitely gone - clear immediately
-        // Skip this check when using hue-based presence detection (hue is the authority, not distance)
-        if (!laneSensorConfig.presence.useHuePresence
+        // Skip this check when using hue-based presence detection for this lane (hue is the authority, not distance)
+        if (!laneUseHuePresence
                 && currentLaneColor.isArtifact() && sample.distanceAvailable && !Double.isNaN(sample.distanceCm)) {
-            IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
             double threshold = getThreshold(presenceCfg, lane);
             double clearanceMargin = laneSensorConfig.gating.distanceClearanceMarginCm;
 
@@ -675,6 +678,43 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
+    /**
+     * Gets whether hue-based presence detection is enabled for a specific lane.
+     * Checks both the global useHuePresence flag AND the per-lane flag.
+     */
+    private static boolean getUseHuePresence(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
+        // Global flag must be enabled, then check per-lane setting
+        if (!laneSensorConfig.presence.useHuePresence) {
+            return false;
+        }
+        switch (lane) {
+            case LEFT:
+                return config.leftUseHuePresence;
+            case CENTER:
+                return config.centerUseHuePresence;
+            case RIGHT:
+                return config.rightUseHuePresence;
+            default:
+                return config.centerUseHuePresence;
+        }
+    }
+
+    /**
+     * Gets the hue presence threshold for a specific lane.
+     */
+    private static double getHueThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return config.leftHueThreshold;
+            case CENTER:
+                return config.centerHueThreshold;
+            case RIGHT:
+                return config.rightHueThreshold;
+            default:
+                return config.centerHueThreshold;
+        }
+    }
+
     private LaneSample sampleLane(LauncherLane lane) {
         NormalizedColorSensor colorSensor = laneSensors.get(lane);
         DistanceSensor distanceSensor = laneDistanceSensors.get(lane);
@@ -763,10 +803,13 @@ public class IntakeSubsystem implements Subsystem {
             }
         }
 
-        // Override withinDistance based on hue if hue-based presence detection is enabled
+        // Override withinDistance based on hue if hue-based presence detection is enabled for this lane
         // This ensures isFull() and lanePresenceState work correctly with hue-based detection
-        if (laneSensorConfig.presence.useHuePresence) {
-            withinDistance = filteredHue >= laneSensorConfig.presence.huePresenceThreshold;
+        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
+        boolean laneUseHuePresence = getUseHuePresence(presenceCfg, lane);
+        double laneHueThreshold = getHueThreshold(presenceCfg, lane);
+        if (laneUseHuePresence) {
+            withinDistance = filteredHue >= laneHueThreshold;
             lanePresenceState.put(lane, withinDistance);
         }
 
@@ -783,7 +826,9 @@ public class IntakeSubsystem implements Subsystem {
                 totalIntensity,
                 distanceValid ? distanceCm : Double.NaN,
                 withinDistance,
-                lanePrefix
+                lanePrefix,
+                laneUseHuePresence,
+                laneHueThreshold
         );
         ArtifactColor hsvColor = result.color;
         double confidence = result.confidence;
@@ -844,20 +889,23 @@ public class IntakeSubsystem implements Subsystem {
      * @param totalIntensity Total RGB intensity (0-765)
      * @param distanceCm Distance reading in cm (or NaN if unavailable)
      * @param withinDistance Whether distance is within presence threshold
+     * @param laneUseHuePresence Whether hue-based presence is enabled for this lane
+     * @param laneHueThreshold Hue threshold for this lane's presence detection
      * @return Classification result with color and confidence
      */
     private ClassificationResult classifyColor(float hue, float saturation, float value,
                                                boolean hasSignal, int totalIntensity,
                                                double distanceCm, boolean withinDistance,
-                                               String lanePrefix) {
+                                               String lanePrefix,
+                                               boolean laneUseHuePresence, double laneHueThreshold) {
         String reason = "classified";
 
         // Hue-based presence detection: use filtered hue to determine if artifact is present
         // Hue < threshold = definitely empty (background), Hue >= threshold = artifact present
-        if (laneSensorConfig.presence.useHuePresence) {
-            boolean hueIndicatesPresent = hue >= laneSensorConfig.presence.huePresenceThreshold;
+        if (laneUseHuePresence) {
+            boolean hueIndicatesPresent = hue >= laneHueThreshold;
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_presence_enabled", true);
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_presence_threshold", laneSensorConfig.presence.huePresenceThreshold);
+            RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_presence_threshold", laneHueThreshold);
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_indicates_present", hueIndicatesPresent);
 
             if (!hueIndicatesPresent) {
@@ -879,8 +927,8 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // Basic quality check - no signal
-        // Skip this check when using hue-based presence (hue is the authority)
-        if (!laneSensorConfig.presence.useHuePresence
+        // Skip this check when using hue-based presence for this lane (hue is the authority)
+        if (!laneUseHuePresence
                 && (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation)) {
             reason = "no_signal";
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
