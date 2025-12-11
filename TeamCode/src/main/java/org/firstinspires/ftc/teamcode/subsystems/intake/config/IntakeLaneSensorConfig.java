@@ -186,9 +186,9 @@ public class IntakeLaneSensorConfig {
 
     private static LanePresenceConfig createLanePresenceConfig19429() {
         LanePresenceConfig config = new LanePresenceConfig();
-        config.leftThresholdCm = 6.5;
-        config.centerThresholdCm = 7.0;
-        config.rightThresholdCm = 5.0;
+        config.leftThresholdCm = 4.2;
+        config.centerThresholdCm = 4.2;
+        config.rightThresholdCm = 4.2;
         return config;
     }
 
