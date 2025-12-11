@@ -83,6 +83,12 @@ public class IntakeLaneSensorConfig {
          * passing through green). Set to 0 to disable jump detection.
          */
         public double jumpThreshold = 50.0;
+        /**
+         * Minimum hue value to accept into the filter. Readings below this are ignored.
+         * Helps filter out spurious red readings that can corrupt the circular average.
+         * Set to 0 to disable. Typical value: 70 to reject reds.
+         */
+        public double minHue = 70.0;
     }
 
     public static class Gating {
