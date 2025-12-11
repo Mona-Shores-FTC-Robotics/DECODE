@@ -47,7 +47,6 @@ Run the **"Artifact Detection Diagnostics"** OpMode and observe the stability pe
 
 4. **Quality thresholds too strict**:
    - Go to FTC Dashboard → Config → IntakeSubsystem → laneSensorConfig → quality
-   - Decrease `minValue` from 0.02 to 0.01
    - Decrease `minSaturation` from 0.15 to 0.10
 
 ---
@@ -170,7 +169,7 @@ Follow these steps in order for best results:
 - Go to Config tab → IntakeSubsystem → laneSensorConfig
 - Apply recommended values from calibration OpMode:
   - Classifier parameters (decision boundary, distance targets)
-  - Quality thresholds (minSaturation, minValue)
+  - Quality thresholds (minSaturation)
   - Background detection (backgroundHue, maxBackgroundDistance)
 
 ### Step 4: Tune Distance Thresholds
@@ -280,7 +279,6 @@ FTC Dashboard will show final detected colors per lane in the main telemetry
 ### Quality Thresholds
 **Path:** `IntakeSubsystem → laneSensorConfig → quality`
 
-- `minValue` - Minimum brightness (typical: 0.01-0.02)
 - `minSaturation` - Minimum color saturation (typical: 0.10-0.15)
 
 ### Debounce Gating

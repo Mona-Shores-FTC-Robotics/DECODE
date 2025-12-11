@@ -856,9 +856,8 @@ public class IntakeSubsystem implements Subsystem {
             return new ClassificationResult(ArtifactColor.NONE);
         }
 
-        // Basic quality check - no signal or too dark
-        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
-        if (!hasSignal || value < presenceCfg.minValue) {
+        // Basic quality check - no signal from sensor
+        if (!hasSignal) {
             reason = "no_signal";
             RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
             return new ClassificationResult(ArtifactColor.NONE);

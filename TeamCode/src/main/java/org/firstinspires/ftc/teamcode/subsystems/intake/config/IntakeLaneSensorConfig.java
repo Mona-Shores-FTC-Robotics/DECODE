@@ -129,11 +129,6 @@ public class IntakeLaneSensorConfig {
         public double leftThresholdCm = 5.0;
         public double centerThresholdCm = 5.0;
         public double rightThresholdCm = 5.0;
-
-        // --- QUALITY CHECK ---
-
-        /** Minimum brightness for valid reading */
-        public double minValue = 0.02;
     }
 
     // =========================================================================
@@ -209,8 +204,6 @@ public class IntakeLaneSensorConfig {
         config.leftThresholdCm = 6.5;
         config.centerThresholdCm = 7.0;
         config.rightThresholdCm = 5.0;
-        // Quality
-        config.minValue = 0.02;
         return config;
     }
 
@@ -228,8 +221,6 @@ public class IntakeLaneSensorConfig {
         config.leftThresholdCm = 4.0;
         config.centerThresholdCm = 4.0;
         config.rightThresholdCm = 4.5;
-        // Quality
-        config.minValue = 0.02;
         return config;
     }
 }
