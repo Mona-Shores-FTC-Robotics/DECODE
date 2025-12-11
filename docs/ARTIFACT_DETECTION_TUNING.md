@@ -47,7 +47,6 @@ Run the **"Artifact Detection Diagnostics"** OpMode and observe the stability pe
 
 4. **Quality thresholds too strict**:
    - Go to FTC Dashboard → Config → IntakeSubsystem → laneSensorConfig → quality
-   - Decrease `minValue` from 0.02 to 0.01
    - Decrease `minSaturation` from 0.15 to 0.10
 
 ---
@@ -63,7 +62,6 @@ Run the **"Artifact Detection Diagnostics"** OpMode and observe the stability pe
 1. **Increase debouncing** (first line of defense):
    - Go to FTC Dashboard → Config → IntakeSubsystem → laneSensorConfig → gating
    - Increase `consecutiveConfirmationsRequired` from 2 to 3-4
-   - Increase `minConfidenceToAccept` from 0.4 to 0.5-0.6
 
 2. **Distance hysteresis too small**:
    - Make exit thresholds significantly larger than enter thresholds (1.0-2.0 cm gap)
@@ -171,7 +169,7 @@ Follow these steps in order for best results:
 - Go to Config tab → IntakeSubsystem → laneSensorConfig
 - Apply recommended values from calibration OpMode:
   - Classifier parameters (decision boundary, distance targets)
-  - Quality thresholds (minSaturation, minValue)
+  - Quality thresholds (minSaturation)
   - Background detection (backgroundHue, maxBackgroundDistance)
 
 ### Step 4: Tune Distance Thresholds
@@ -184,12 +182,12 @@ Each lane has different geometry, so per-lane tuning is critical:
 5. Set `leftExitDistanceCm` to 0.5-1.0 cm higher
 6. Repeat for CENTER and RIGHT lanes
 
-### Step 5: Tune Debounce and Confidence
+### Step 5: Tune Debounce
 Based on stability from diagnostics:
 
 - Stability >90%: No changes needed
 - Stability 70-90%: Increase `consecutiveConfirmationsRequired` to 3
-- Stability 50-70%: Increase to 4 and raise `minConfidenceToAccept` to 0.5
+- Stability 50-70%: Increase to 4, tune presence thresholds
 - Stability <50%: Check hardware (sensor mount, cables, gain)
 
 ### Step 6: Verify in Real Conditions
@@ -211,13 +209,11 @@ Your artifact detection uses a **multi-stage pipeline**:
    ↓ (if quality OK)
 3. Background Detection (HSV distance to field mat)
    ↓ (if not background)
-4. Color Classification (DECISION_BOUNDARY / RANGE_BASED / DISTANCE_BASED)
-   ↓ (returns color + confidence)
-5. Confidence Gating (min confidence threshold)
-   ↓ (if confident)
-6. Debouncing (consecutive confirmations required)
+4. Color Classification (hue decision boundary)
+   ↓ (returns color)
+5. Debouncing (consecutive confirmations required)
    ↓ (if stable)
-7. Lane Color Update (GREEN / PURPLE accepted)
+6. Lane Color Update (GREEN / PURPLE accepted)
 ```
 
 Each stage can reject the sample:
@@ -245,12 +241,10 @@ intake/sample/{lane}/scaled_r/g/b         - RGB values (0-255)
 
 ### Per-lane classification diagnostics:
 ```
-intake/classifier/{lane}/reason                     - Why this classification? (distance_out, no_signal, background, GREEN, PURPLE, etc.)
-intake/classifier/{lane}/presence_score             - Multi-factor presence score (0-1)
-intake/classifier/{lane}/background_distance        - HSV distance to background
-intake/classifier/{lane}/decision_confidence        - Confidence in color classification (0-1)
-intake/classifier/{lane}/decision_unwrapped_hue     - Hue after purple wrap handling
-intake/classifier/{lane}/decision_boundary          - Current decision boundary
+intake/classifier/{lane}/reason                     - Why this classification? (no_presence, no_signal, GREEN, PURPLE, etc.)
+intake/classifier/{lane}/hue_unwrapped              - Hue after purple wrap handling
+intake/classifier/{lane}/hue_boundary               - Current decision boundary
+intake/classifier/{lane}/hue_distance_from_boundary - How far hue is from boundary (degrees)
 ```
 
 ### Lane color state (after debouncing):
@@ -285,14 +279,13 @@ FTC Dashboard will show final detected colors per lane in the main telemetry
 ### Quality Thresholds
 **Path:** `IntakeSubsystem → laneSensorConfig → quality`
 
-- `minValue` - Minimum brightness (typical: 0.01-0.02)
 - `minSaturation` - Minimum color saturation (typical: 0.10-0.15)
 
-### Confidence Gating
+### Debounce Gating
 **Path:** `IntakeSubsystem → laneSensorConfig → gating`
 
-- `minConfidenceToAccept` - Minimum confidence for new color (typical: 0.4-0.6)
-- `consecutiveConfirmationsRequired` - Debounce count (typical: 2-4)
+- `consecutiveConfirmationsRequired` - Samples needed to confirm detection (typical: 1-3)
+- `consecutiveClearConfirmationsRequired` - Samples needed to confirm clear (typical: 2-4)
 
 ### Background Detection
 **Path:** `IntakeSubsystem → laneSensorConfig → background`
@@ -309,8 +302,7 @@ FTC Dashboard will show final detected colors per lane in the main telemetry
 - `mode` - "DECISION_BOUNDARY" (recommended), "RANGE_BASED", or "DISTANCE_BASED"
 
 **Decision Boundary Parameters** (recommended):
-- `hueDecisionBoundary` - Single threshold to split green/purple (typical: 170-180°)
-- `lowConfidenceMargin` - Distance from boundary for low confidence (typical: 15°)
+- `hueDecisionBoundary` - Single threshold to split green/purple (typical: 165°)
 
 ---
 
@@ -358,7 +350,6 @@ centerExitDistanceCm: 5.5 → 6.5  (larger gap)
 **Step 3 - Increase debouncing:**
 ```
 consecutiveConfirmationsRequired: 2 → 3
-minConfidenceToAccept: 0.4 → 0.5
 ```
 
 **Result:** Stability improves to 85%, transitions drop to 8

@@ -366,14 +366,11 @@ public class ArtifactColorCalibration extends LinearOpMode {
         );
 
         float recMinSat = (float) Math.max(0.05f, minSat - 0.05f);
-        float recMinVal = (float) Math.max(0.01f, minVal - 0.02f);
 
         telemetry.addLine("→ Common (all modes):");
         telemetry.addData("  minSaturation", "%.2f", recMinSat);
-        telemetry.addData("  minValue", "%.2f", recMinVal);
 
         packet.put("Common/minSaturation", recMinSat);
-        packet.put("Common/minValue", recMinVal);
     }
 
     /**
@@ -496,13 +493,10 @@ public class ArtifactColorCalibration extends LinearOpMode {
             packet.put("Recommended/purpleGreenMax", recPurpleGMax);
         }
 
-        float recMinValue = (float) Math.max(0.01f, valMin - 0.02f);
         float recMinSat = (float) Math.max(0.05f, satMin - 0.05f);
 
-        telemetry.addData("  → minValue", "%.2f", recMinValue);
         telemetry.addData("  → minSaturation", "%.2f", recMinSat);
 
-        packet.put("Recommended/minValue", recMinValue);
         packet.put("Recommended/minSaturation", recMinSat);
     }
 
