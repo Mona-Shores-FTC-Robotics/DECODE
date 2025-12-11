@@ -68,7 +68,7 @@ public class DecodeAutonomousCloseTogether extends NextFTCOpMode {
         GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
 
         allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
-        modeSelector = new LauncherModeSelector(operatorPad, LauncherMode.THROUGHPUT);
+        modeSelector = new LauncherModeSelector(operatorPad, LauncherMode.DECODE);
 
         activeAlliance = allianceSelector.getSelectedAlliance();
 
