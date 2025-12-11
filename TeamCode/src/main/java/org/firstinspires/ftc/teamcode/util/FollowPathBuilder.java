@@ -23,15 +23,15 @@ public class FollowPathBuilder {
     private Pose start;
     private Pose end;
 
-    private Double timeoutMilliSec = 0.0;
+    private Double timeoutMilliSec = null;
 
 
     private final List<Pose> controlPoints = new ArrayList<>();
 
     private boolean constantHeading = false;
     private double constantHeadingDeg = 0;
-    private double translationalConstraint = 3;
-    private double headingConstraint = 2;
+    private Double translationalConstraint = null;
+    private Double headingConstraint = null;
 
 
     private double linearInterpWeight = 0.7;
@@ -156,13 +156,13 @@ public class FollowPathBuilder {
             onlyPath.setTimeoutConstraint(timeoutMilliSec);
         }
 
-        if (headingConstraint != 0) {
+        if (headingConstraint != null) {
             // Assuming your chain only has one path
             Path onlyPath = chain.getPath(0);
             onlyPath.setHeadingConstraint(headingConstraint);
         }
 
-        if (translationalConstraint != 0) {
+        if (translationalConstraint != null) {
             // Assuming your chain only has one path
             Path onlyPath = chain.getPath(0);
             onlyPath.setTranslationalConstraint(translationalConstraint);
