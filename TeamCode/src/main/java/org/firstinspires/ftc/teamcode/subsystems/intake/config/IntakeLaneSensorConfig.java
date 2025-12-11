@@ -32,7 +32,6 @@ public class IntakeLaneSensorConfig {
     public static Gating gating = new Gating();
     public static Quality quality = new Quality();
     public static Presence presence = new Presence();
-    public static Background background = new Background();
     public static Classifier classifier = new Classifier();
     public static LanePresenceConfig lanePresenceConfig19429 = createLanePresenceConfig19429();
     public static LanePresenceConfig lanePresenceConfig20245 = createLanePresenceConfig20245();
@@ -100,69 +99,53 @@ public class IntakeLaneSensorConfig {
     }
 
     public static class Quality {
-        // Quality thresholds (used by all classifiers)
+        /**
+         * Quality thresholds - only used when hue-based presence is DISABLED for a lane.
+         * When hue-based presence is enabled, these checks are skipped (hue is the authority).
+         */
         public double minValue = 0.02;
         public double minSaturation = 0.15;
     }
 
     public static class Presence {
-        // Distance gating (used by all classifiers)
+        /**
+         * Enable distance-based presence detection (used when hue-based is disabled for a lane).
+         * When true, artifact presence requires distance <= per-lane threshold.
+         */
         public boolean useDistance = true;
-        /** Legacy presence distance for scoring (diagnostics only; hysteresis uses per-lane thresholds) */
-        public double presenceDistanceCm = 5.5;
 
-        // Hue-based presence detection - uses filtered hue to determine artifact presence
-        /** Enable hue-based presence detection (hue >= threshold = artifact present, hue < threshold = empty) */
+        /**
+         * Global enable for hue-based presence detection.
+         * When true, per-lane settings (leftUseHuePresence, etc.) control which lanes use hue.
+         * When false, all lanes use distance-based detection.
+         */
         public boolean useHuePresence = false;
-        /** Hue threshold for artifact presence - values >= this indicate artifact, values < this indicate empty/background */
-        public double huePresenceThreshold = 130.0;
-
-        // Multi-factor presence detection - improves artifact vs background discrimination
-        /** Enabnicle enhanced presence scoring (not just distance) */
-        public boolean enablePresenceScoring = true;
-        /** Minimum total RGB intensity for artifact presence (0-765 range) */
-        public double minTotalIntensity = 10;
-        /** Weight for distance factor in presence score */
-        public double presenceDistanceWeight = .55;
-        /** Weight for saturation factor in presence score */
-        public double presenceSaturationWeight = 0.25;
-        /** Weight for value factor in presence score */
-        public double presenceValueWeight = 0.15;
-        /** Weight for intensity factor in presence score */
-        public double presenceIntensityWeight = 0.05;
-        /** Minimum presence score (0-1) to consider artifact present */
-        public double minPresenceScore = .25;
     }
 
+    /**
+     * Per-lane presence detection settings.
+     * Robot-specific configs are created in createLanePresenceConfig19429() and createLanePresenceConfig20245().
+     *
+     * Usage:
+     * - Set Presence.useHuePresence = true to enable hue-based detection globally
+     * - Then use per-lane flags to control which lanes use hue vs distance
+     * - Example: Set rightUseHuePresence = false to use distance-based for right lane only
+     */
     public static class LanePresenceConfig {
-        /** Distance threshold per lane (cm) - artifact detected when distance <= threshold */
+        // Distance thresholds (used when hue-based detection is disabled for a lane)
         public double leftThresholdCm;
         public double centerThresholdCm;
         public double rightThresholdCm;
 
-        /** Per-lane hue presence enable - set to true to use hue-based detection for this lane */
+        // Per-lane hue presence enable (requires global Presence.useHuePresence = true)
         public boolean leftUseHuePresence = true;
         public boolean centerUseHuePresence = true;
         public boolean rightUseHuePresence = true;
 
-        /** Per-lane hue threshold - only used if per-lane hue presence is enabled */
+        // Per-lane hue thresholds (hue >= threshold = artifact present)
         public double leftHueThreshold = 130.0;
         public double centerHueThreshold = 130.0;
         public double rightHueThreshold = 130.0;
-    }
-
-    public static class Background {
-        // Background detection - distinguishes empty space from artifacts
-        /** Enable background similarity checking */
-        public boolean enableBackgroundDetection = true;
-        /** Background hue (set from calibration, typically ~40-60° for field mat) */
-        public double backgroundHue = 50.0;
-        /** Background saturation (set from calibration, typically low ~0.1-0.3) */
-        public double backgroundSaturation = 0.20;
-        /** Background value (set from calibration, brightness of empty space) */
-        public double backgroundValue = 0.30;
-        /** Maximum weighted distance to background to classify as BACKGROUND */
-        public double maxBackgroundDistance = 40.0;
     }
 
     public static class Classifier {
