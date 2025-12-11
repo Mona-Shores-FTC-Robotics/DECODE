@@ -28,8 +28,8 @@ import dev.nextftc.core.commands.groups.SequentialGroup;
 public class CloseTogetherCommand {
 
     public static class Config {
-        public double maxPathPower = .8;
-        public double endTimeForLinearHeadingInterpolation = .7;
+        public double maxPathPower = .72;
+        public double endTimeForLinearHeadingInterpolation = .75;
         public double secondsOpeningGate = .5;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5;
@@ -57,11 +57,11 @@ public class CloseTogetherCommand {
 
         // OpenGate
         public double openGateX = 17;
-        public double openGateY = 80;
+        public double openGateY = 81;
         public double openGateHeading = 270;
 
         public double openGateControlX = 25;
-        public double openGateControlY = 80;
+        public double openGateControlY = 81;
 
         // LaunchClose2
         public double launchClose2X = 36;

@@ -65,9 +65,9 @@ public class DistanceBasedSpinCommand extends Command {
         config.longMaxRightRpm = 2900;
 
         // Short Auto range RPMs
-        config.shortAutoLeftRpm = 2025;
-        config.shortAutoCenterRpm = 2025;
-        config.shortAutoRightRpm = 2025;
+        config.shortAutoLeftRpm = 2000;
+        config.shortAutoCenterRpm = 2000;
+        config.shortAutoRightRpm = 2000;
 
         // Far Auto range RPMs
         config.farAutoLeftRpm = 2725;
@@ -78,7 +78,7 @@ public class DistanceBasedSpinCommand extends Command {
         config.shortHoodPosition = 1;
         config.midHoodPosition = 0.05;
         config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = .75;
+        config.shortAutoHoodPosition = .55;
         config.farAutoHoodPosition = 0.0;
 
         config.timeoutSeconds = 3.5;
@@ -114,9 +114,9 @@ public class DistanceBasedSpinCommand extends Command {
         config.longMaxRightRpm = 2800;
 
         // Short Auto range RPMs
-        config.shortAutoLeftRpm = 2025;
-        config.shortAutoCenterRpm = 2025;
-        config.shortAutoRightRpm = 2025;
+        config.shortAutoLeftRpm = 1850;
+        config.shortAutoCenterRpm = 1850;
+        config.shortAutoRightRpm = 1850;
 
         // Far Auto range RPMs
         config.farAutoLeftRpm = 2725;
@@ -127,7 +127,7 @@ public class DistanceBasedSpinCommand extends Command {
         config.shortHoodPosition = .95;
         config.midHoodPosition = 0.0;
         config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = .75;
+        config.shortAutoHoodPosition = .55;
         config.farAutoHoodPosition = 0.0;
 
         config.timeoutSeconds = 3.5;

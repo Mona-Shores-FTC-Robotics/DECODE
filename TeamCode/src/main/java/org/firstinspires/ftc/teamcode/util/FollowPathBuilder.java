@@ -24,15 +24,15 @@ public class FollowPathBuilder {
     private Pose start;
     private Pose end;
 
-    private Double timeoutMilliSec = 0.0;
+    private Double timeoutMilliSec = 150.0;
 
 
     private final List<Pose> controlPoints = new ArrayList<>();
 
     private boolean constantHeading = false;
     private double constantHeadingDeg = 0;
-    private double translationalConstraint = 3;
-    private double headingConstraint = 2;
+    private double translationalConstraint = .1;
+    private double headingConstraint = Math.toRadians(.5);
 
     private boolean usePiecewiseHeading = false;
     private HeadingInterpolator piecewiseInterpolator = null;

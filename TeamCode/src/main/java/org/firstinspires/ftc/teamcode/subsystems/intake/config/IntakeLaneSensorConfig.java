@@ -63,7 +63,7 @@ public class IntakeLaneSensorConfig {
          * Recommended: 3-5 for good balance of smoothing and responsiveness.
          * At 150ms sample period: 3 samples = 450ms window, 5 samples = 750ms window.
          */
-        public int windowSize = 4;
+        public int windowSize = 6;
     }
 
     public static class HueFilter {
@@ -85,7 +85,7 @@ public class IntakeLaneSensorConfig {
         /** Number of consecutive confident samples required before updating lane color */
         public int consecutiveConfirmationsRequired = 1;
         /** Number of consecutive non-artifact samples required before clearing lane color (helps with whiffle ball holes) */
-        public int consecutiveClearConfirmationsRequired = 2;
+        public int consecutiveClearConfirmationsRequired = 3;
         /** Keep-alive duration (ms) - keep artifact detection alive after last good reading (helps with whiffle ball holes) */
         public double keepAliveMs = 0;
         /** Distance clearance margin (cm) - how far beyond threshold to instantly clear (helps artifacts clear quickly when removed) */
@@ -195,7 +195,7 @@ public class IntakeLaneSensorConfig {
     private static LanePresenceConfig createLanePresenceConfig20245() {
         LanePresenceConfig config = new LanePresenceConfig();
         config.leftThresholdCm = 4.0;
-        config.centerThresholdCm = 4.0;
+        config.centerThresholdCm = 3.85;
         config.rightThresholdCm = 4.5;
         return config;
     }

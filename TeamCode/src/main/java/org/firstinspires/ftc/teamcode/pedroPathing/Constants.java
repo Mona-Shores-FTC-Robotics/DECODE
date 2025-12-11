@@ -109,13 +109,13 @@ public class Constants {
 
 
                 .translationalPIDFCoefficients(new PIDFCoefficients(
-                        0.8,
+                        0.06,
                         0,
                         0,
                         .05))
                 .translationalPIDFSwitch(5)
                 .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(
-                        0.05,
+                        .1,
                         0.0001,
                         .0006,
                         .00015))
@@ -132,25 +132,25 @@ public class Constants {
                 .useSecondaryDrivePIDF(true)
 
 
-                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.006, 0, 0.0005, 0.6, .0001)) // tuned 12/4
+                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.005, 0, 0.0005, 0.6, .0001)) // tuned 12/4
                 .drivePIDFSwitch(3)
-                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.045, 0, 0, 0.6, .0001))
+                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.02, 0, 0, 0.6, .0001))
 
                 .headingPIDFCoefficients(new PIDFCoefficients(.6, 0.01, .0001, .0005))  // Increased P and D, reduced F
 //                .headingPIDFSwitch(Math.toRadians(3))
 //                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.75, 0.0001, .03, .0003))
 
                 .headingPIDFSwitch(Math.toRadians(3.5))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .05, .0003))
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(6.0, 0.0001, .001, .0003))
 
                 .translationalPIDFCoefficients(new PIDFCoefficients(
-                        0.8,
+                        .06,
                         0,
                         0,
                         .05)) // TODO: Tune for 20245
                 .translationalPIDFSwitch(5)
                 .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(
-                        0.05,
+                        .1,
                         0.0001,
                         .0006,
                         .00015))
@@ -219,12 +219,12 @@ public class Constants {
                 .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
     public static PathConstraints pathConstraints = new PathConstraints(
-            0.995,
-            0.1,
+            1.0,
+            0.01,
             .1,
-            Math.toRadians(.5),
-            350,
-            1.1,
+            Math.toRadians(2),
+            150,
+            1.0,
             10,
             1);
 
