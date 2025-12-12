@@ -91,9 +91,9 @@ public class DistanceBasedSpinCommand extends Command {
     private static CommandRangeConfig createRangeConfig20245() {
         CommandRangeConfig config = new CommandRangeConfig();
         // Short range RPMs
-        config.shortLeftRpm = 1800;
-        config.shortCenterRpm = 1800;
-        config.shortRightRpm = 1800;
+        config.shortLeftRpm = 1810;
+        config.shortCenterRpm = 1810;
+        config.shortRightRpm = 1810;
 
         // Mid range RPMs
         config.midLeftRpm = 2400;
@@ -114,9 +114,9 @@ public class DistanceBasedSpinCommand extends Command {
         config.longMaxRightRpm = 2800;
 
         // Short Auto range RPMs
-        config.shortAutoLeftRpm = 1850;
-        config.shortAutoCenterRpm = 1850;
-        config.shortAutoRightRpm = 1850;
+        config.shortAutoLeftRpm = 1870;
+        config.shortAutoCenterRpm = 1870;
+        config.shortAutoRightRpm = 1870;
 
         // Far Auto range RPMs
         config.farAutoLeftRpm = 2725;
