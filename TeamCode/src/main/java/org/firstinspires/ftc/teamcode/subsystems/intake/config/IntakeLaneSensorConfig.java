@@ -274,11 +274,11 @@ public class IntakeLaneSensorConfig {
     private static LanePresenceConfig createLanePresenceConfig20245() {
         LanePresenceConfig config = new LanePresenceConfig();
         // Detection methods (enable any combination - all enabled must pass)
-        config.useDistance = true;
+        config.useDistance = false;
         config.useSaturation = false;
         config.saturationThreshold = 0.25;
-        config.useValue = false;
-        config.valueThreshold = 0.15;
+        config.useValue = true;
+        config.valueThreshold = .09;
         config.useHue = false;
         config.hueThreshold = 130.0;
         // Distance thresholds
