@@ -180,13 +180,17 @@ public class IntakeLaneSensorConfig {
 
         /** Use brightness for presence (bright artifact vs dark background) */
         public boolean useValue;
-        /** Value threshold - artifact present when val >= this */
-        public double valueThreshold;
 
         /** Use hue for presence (artifact hue vs background hue) */
         public boolean useHue;
         /** Hue threshold - artifact present when hue >= this */
         public double hueThreshold;
+
+        // --- VALUE THRESHOLDS (per-lane, only used when useValue = true) ---
+
+        public double leftValueThreshold;
+        public double centerValueThreshold;
+        public double rightValueThreshold;
 
         // --- DISTANCE THRESHOLDS (per-lane, only used when useDistance = true) ---
 
@@ -261,9 +265,12 @@ public class IntakeLaneSensorConfig {
         config.useSaturation = false;
         config.saturationThreshold = 0.25;
         config.useValue = true;
-        config.valueThreshold = 0.09;
         config.useHue = false;
         config.hueThreshold = 130.0;
+        // Value thresholds (per-lane, only used when useValue = true)
+        config.leftValueThreshold = 0.09;
+        config.centerValueThreshold = 0.09;
+        config.rightValueThreshold = 0.09;
         // Distance thresholds (only used when useDistance = true)
         config.leftThresholdCm = 6.5;
         config.centerThresholdCm = 7.0;
@@ -278,10 +285,13 @@ public class IntakeLaneSensorConfig {
         config.useSaturation = false;
         config.saturationThreshold = 0.25;
         config.useValue = true;
-        config.valueThreshold = .09;
         config.useHue = false;
         config.hueThreshold = 130.0;
-        // Distance thresholds
+        // Value thresholds (per-lane, only used when useValue = true)
+        config.leftValueThreshold = 0.09;
+        config.centerValueThreshold = 0.02;
+        config.rightValueThreshold = 0.09;
+        // Distance thresholds (only used when useDistance = true)
         config.leftThresholdCm = 4.0;
         config.centerThresholdCm = 4.0;
         config.rightThresholdCm = 4.5;

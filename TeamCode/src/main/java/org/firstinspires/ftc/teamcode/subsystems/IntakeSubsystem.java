@@ -621,7 +621,7 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
-    private static double getThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
+    private static double getDistanceThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
         switch (lane) {
             case LEFT:
                 return config.leftThresholdCm;
@@ -631,6 +631,19 @@ public class IntakeSubsystem implements Subsystem {
                 return config.rightThresholdCm;
             default:
                 return config.centerThresholdCm;
+        }
+    }
+
+    private static double getValueThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return config.leftValueThreshold;
+            case CENTER:
+                return config.centerValueThreshold;
+            case RIGHT:
+                return config.rightValueThreshold;
+            default:
+                return config.centerValueThreshold;
         }
     }
 
@@ -669,7 +682,7 @@ public class IntakeSubsystem implements Subsystem {
         if (!distanceAvailable || !presenceCfg.useDistance || !distanceValid) {
             presenceDetected = false;
         } else {
-            double threshold = getThreshold(presenceCfg, lane);
+            double threshold = getDistanceThreshold(presenceCfg, lane);
             presenceDetected = distanceCm <= threshold;
         }
         lanePresenceState.put(lane, presenceDetected);
@@ -744,7 +757,8 @@ public class IntakeSubsystem implements Subsystem {
         // Value-based presence detection: bright artifact vs dark background
         // Can be used alone or combined with other methods (AND logic)
         if (presenceCfg.useValue) {
-            boolean valuePresent = filteredValue >= presenceCfg.valueThreshold;
+            double valueThreshold = getValueThreshold(presenceCfg, lane);
+            boolean valuePresent = filteredValue >= valueThreshold;
             // If other methods are enabled, require ALL to pass (AND logic)
             if (presenceCfg.useDistance || presenceCfg.useSaturation) {
                 presenceDetected = presenceDetected && valuePresent;
