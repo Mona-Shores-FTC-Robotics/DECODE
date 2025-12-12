@@ -278,7 +278,7 @@ public class IntakeLaneSensorConfig {
         config.useSaturation = false;
         config.saturationThreshold = 0.25;
         config.useValue = true;
-        config.valueThreshold = .02;
+        config.valueThreshold = .09;
         config.useHue = false;
         config.hueThreshold = 130.0;
         // Distance thresholds
