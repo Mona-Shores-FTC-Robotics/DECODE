@@ -156,36 +156,43 @@ public class IntakeLaneSensorConfig {
 
     /**
      * Per-robot presence detection settings.
-     * Each robot has its own instance (lanePresenceConfig19429, lanePresenceConfig20245).
+     *
+     * IMPORTANT: These are just field declarations with safe defaults.
+     * Actual values are set in the robot-specific factory methods below:
+     *   - createLanePresenceConfig19429()
+     *   - createLanePresenceConfig20245()
+     *
+     * To change settings, edit YOUR ROBOT'S factory method, not these defaults.
      * RobotConfigs.getLanePresenceConfig() returns the active robot's config.
      */
     public static class LanePresenceConfig {
         // --- DETECTION METHODS (enable any combination) ---
         // When multiple are enabled, ALL must pass (AND logic)
+        // Defaults are all OFF - robot-specific configs enable what's needed
 
         /** Use distance sensor for presence detection */
-        public boolean useDistance = false;
+        public boolean useDistance;
 
         /** Use saturation for presence (colorful artifact vs dull background) */
-        public boolean useSaturation = false;
+        public boolean useSaturation;
         /** Saturation threshold - artifact present when sat >= this */
-        public double saturationThreshold = 0.25;
+        public double saturationThreshold;
 
         /** Use brightness for presence (bright artifact vs dark background) */
-        public boolean useValue = true;
+        public boolean useValue;
         /** Value threshold - artifact present when val >= this */
-        public double valueThreshold = 0.09;
+        public double valueThreshold;
 
         /** Use hue for presence (artifact hue vs background hue) */
-        public boolean useHue = false;
+        public boolean useHue;
         /** Hue threshold - artifact present when hue >= this */
-        public double hueThreshold = 130.0;
+        public double hueThreshold;
 
         // --- DISTANCE THRESHOLDS (per-lane, only used when useDistance = true) ---
 
-        public double leftThresholdCm = 5.0;
-        public double centerThresholdCm = 5.0;
-        public double rightThresholdCm = 5.0;
+        public double leftThresholdCm;
+        public double centerThresholdCm;
+        public double rightThresholdCm;
     }
 
     // =========================================================================
