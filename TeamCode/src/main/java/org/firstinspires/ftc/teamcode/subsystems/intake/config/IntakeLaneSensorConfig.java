@@ -288,9 +288,9 @@ public class IntakeLaneSensorConfig {
         config.useHue = false;
         config.hueThreshold = 130.0;
         // Value thresholds (per-lane, only used when useValue = true)
-        config.leftValueThreshold = 0.09;
+        config.leftValueThreshold = 0.04;
         config.centerValueThreshold = 0.02;
-        config.rightValueThreshold = 0.09;
+        config.rightValueThreshold = 0.04;
         // Distance thresholds (only used when useDistance = true)
         config.leftThresholdCm = 4.0;
         config.centerThresholdCm = 4.0;
