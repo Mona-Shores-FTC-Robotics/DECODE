@@ -164,7 +164,7 @@ public class IntakeLaneSensorConfig {
         // When multiple are enabled, ALL must pass (AND logic)
 
         /** Use distance sensor for presence detection */
-        public boolean useDistance = true;
+        public boolean useDistance = false;
 
         /** Use saturation for presence (colorful artifact vs dull background) */
         public boolean useSaturation = false;
@@ -172,9 +172,9 @@ public class IntakeLaneSensorConfig {
         public double saturationThreshold = 0.25;
 
         /** Use brightness for presence (bright artifact vs dark background) */
-        public boolean useValue = false;
+        public boolean useValue = true;
         /** Value threshold - artifact present when val >= this */
-        public double valueThreshold = 0.15;
+        public double valueThreshold = 0.09;
 
         /** Use hue for presence (artifact hue vs background hue) */
         public boolean useHue = false;
