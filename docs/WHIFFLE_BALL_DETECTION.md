@@ -56,24 +56,16 @@ If distance readings are jumping around (e.g., 4cm → 15cm → 5cm → 20cm), t
 
 ### What Changed
 
-**New Config Parameters** (in `IntakeLaneSensorConfig.Gating`):
-- `keepAliveMs` (default: 400ms) - Duration to keep detection alive after last good reading
+**Config Parameters** (in `IntakeLaneSensorConfig.Gating`):
+- `consecutiveConfirmationsRequired` (default: 1) - Number of consecutive good samples required to detect
 - `consecutiveClearConfirmationsRequired` (default: 2) - Number of consecutive bad samples required to clear detection
-- `distanceClearanceMarginCm` (default: 2.0cm) - Distance beyond exit threshold for instant clearing
 
 **IntakeSubsystem Changes:**
-- Added per-lane keep-alive timers (`laneLastGoodDetectionMs`)
 - Added per-lane clear counters (`laneClearCandidateCount`)
-- Modified `applyGatedLaneColor()` to implement **dual clearing logic**:
-
-  **Path 1: Distance-Based Instant Clearing** (NEW - solves "never clears" issue)
-  - If distance > exitThreshold + clearanceMargin → Clear immediately
-  - Overrides keep-alive timer when artifact is physically gone
-  - Example: exitThreshold=5cm, margin=2cm → Clear instantly if distance >7cm
-
-  **Path 2: Temporal Hysteresis** (prevents flicker from holes)
-  - Good artifact reading (not during clearing) → record timestamp
-  - Bad reading within keep-alive window → keep detection alive
+- Simplified `applyGatedLaneColor()` with debounce-based clearing:
+  - Presence detection determines if artifact is there
+  - Debounce prevents single-sample flicker
+  - Moving average filters smooth sensor values before threshold checks
   - Bad reading outside keep-alive window → count consecutive bad samples
   - Clear after N consecutive bad samples
   - **Once clearing starts, don't reset timer** (prevents "reviving" from intermittent holes)

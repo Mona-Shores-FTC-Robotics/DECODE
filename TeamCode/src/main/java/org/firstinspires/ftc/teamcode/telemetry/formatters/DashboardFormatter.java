@@ -127,7 +127,7 @@ public class DashboardFormatter {
             String prefix = lanePrefix(lane);
             packet.put(prefix + "/sensor_present", sample.sensorPresent);
             packet.put(prefix + "/distance_available", sample.distanceAvailable);
-            packet.put(prefix + "/within_distance", sample.withinDistance);
+            packet.put(prefix + "/presence_detected", sample.presenceDetected);
             packet.put(prefix + "/  distance_cm", sample.distanceCm);
             packet.put(prefix + "/color", sample.color.name());
             packet.put(prefix + "/color_hsv", sample.hsvColor.name());
