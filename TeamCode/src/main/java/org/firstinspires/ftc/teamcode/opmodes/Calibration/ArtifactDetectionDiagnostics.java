@@ -205,7 +205,7 @@ public class ArtifactDetectionDiagnostics extends LinearOpMode {
         }
 
         // Current state
-        telemetry.addData("  Detected", "%s (conf: %.2f)", current.color, current.confidence);
+//        telemetry.addData("  Detected", "%s (conf: %.2f)", current.color, current.confidence);
         telemetry.addData("  Distance", "%.1f cm %s",
             current.distanceCm,
             current.presenceDetected ? "✓" : "✗");
@@ -213,7 +213,7 @@ public class ArtifactDetectionDiagnostics extends LinearOpMode {
             current.hue, current.saturation, current.value);
 
         packet.put(laneName + "/Detected", current.color != null ? current.color.name() : "NONE");
-        packet.put(laneName + "/Confidence", current.confidence);
+//        packet.put(laneName + "/Confidence", current.confidence);
         packet.put(laneName + "/Distance_cm", current.distanceCm);
         packet.put(laneName + "/Presence_Detected", current.presenceDetected);
         packet.put(laneName + "/Hue", current.hue);
@@ -254,7 +254,7 @@ public class ArtifactDetectionDiagnostics extends LinearOpMode {
         // Current reading - detailed
         telemetry.addLine("--- Current Reading ---");
         telemetry.addData("Detected Color", "%s", current.color);
-        telemetry.addData("Confidence", "%.2f", current.confidence);
+//        telemetry.addData("Confidence", "%.2f", current.confidence);
         telemetry.addData("Distance", "%.2f cm (present: %s)", current.distanceCm, current.presenceDetected);
         telemetry.addData("Hue", "%.1f°", current.hue);
         telemetry.addData("Saturation", "%.3f", current.saturation);
@@ -265,7 +265,7 @@ public class ArtifactDetectionDiagnostics extends LinearOpMode {
             current.normalizedRed, current.normalizedGreen, current.normalizedBlue);
 
         packet.put(laneName + "/Current/Color", current.color != null ? current.color.name() : "NONE");
-        packet.put(laneName + "/Current/Confidence", current.confidence);
+//        packet.put(laneName + "/Current/Confidence", current.confidence);
         packet.put(laneName + "/Current/Distance_cm", current.distanceCm);
         packet.put(laneName + "/Current/Presence_Detected", current.presenceDetected);
         packet.put(laneName + "/Current/Hue", current.hue);
