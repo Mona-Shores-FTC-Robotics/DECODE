@@ -179,7 +179,7 @@ public class CloseThreeAtOnceCommand {
                         .withConstantHeading(270)
                         .build(config.maxPathPower),
                         new SequentialGroup(
-                                new TimedEjectCommand(robot.intake, config.ejectTime),
+//                                new TimedEjectCommand(robot.intake, config.ejectTime),
                                 new AutoSmartIntakeCommand(robot.intake)
                         )
                 ),
@@ -203,7 +203,7 @@ public class CloseThreeAtOnceCommand {
                             .withConstantHeading(270)
                             .build(config.maxPathPower),
                     new SequentialGroup(
-                        new TimedEjectCommand(robot.intake, config.ejectTime),
+//                        new TimedEjectCommand(robot.intake, config.ejectTime),
                         new AutoSmartIntakeCommand(robot.intake)
                     )
                 ),
@@ -229,7 +229,7 @@ public class CloseThreeAtOnceCommand {
                                 .withConstantHeading(270)
                                 .build(config.maxPathPower),
                         new SequentialGroup(
-                                new TimedEjectCommand(robot.intake, config.ejectTime),
+//                                new TimedEjectCommand(robot.intake, config.ejectTime),
                                 new AutoSmartIntakeCommand(robot.intake)
                         )
                 ),
@@ -257,7 +257,7 @@ public class CloseThreeAtOnceCommand {
                                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                             .build(config.lastPathsMaxPower),
                                         new SequentialGroup(
-                                                new TimedEjectCommand(robot.intake, config.ejectTime),
+//                                                new TimedEjectCommand(robot.intake, config.ejectTime),
                                                 new AutoSmartIntakeCommand(robot.intake)
                                         )
                                 )

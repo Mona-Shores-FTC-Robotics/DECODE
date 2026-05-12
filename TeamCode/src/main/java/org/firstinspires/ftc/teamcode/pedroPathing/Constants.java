@@ -98,7 +98,6 @@ public class Constants {
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.015, 0, .0001, 0.6, 0.0001))
 
                 .headingPIDFCoefficients(new PIDFCoefficients(.6, .01, .0001, .0005))  // Increased P and D, reduced F
-
                 .headingPIDFSwitch(Math.toRadians(3.5))
                 .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .05, 0.0003))
 //                .headingPIDFSwitch(Math.toRadians(10))
