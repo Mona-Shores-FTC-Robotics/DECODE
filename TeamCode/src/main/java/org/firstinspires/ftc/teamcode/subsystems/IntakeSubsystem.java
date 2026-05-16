@@ -612,7 +612,7 @@ public class IntakeSubsystem implements Subsystem {
         }
         try {
             @SuppressWarnings("unchecked")
-            I2cDeviceSynch deviceClient = ((I2cDeviceSynchDevice<I2cDeviceSynch>) sensor).getI2cDeviceSynch();
+            I2cDeviceSynch deviceClient = ((I2cDeviceSynchDevice<I2cDeviceSynch>) sensor).getDeviceClient();
             // Tell the Control Hub to continuously cache this register range in the background so
             // getNormalizedColors() reads from the Hub's buffer instead of blocking on I2C.
             deviceClient.setReadWindow(new I2cDeviceSynch.ReadWindow(
