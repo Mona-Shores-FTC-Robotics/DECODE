@@ -16,7 +16,10 @@
       "WebFetch(domain:panels.bylazar.com)",
       "WebFetch(domain:nextftc.dev)",
       "Bash(find:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(jar tf *)",
+      "Read(//c/Users/dusti/.gradle/caches/modules-2/files-2.1/org.firstinspires.ftc/RobotCore/11.1.0/d90f546b66fee52a1f644a61b9947162cc8803ef/**)",
+      "Bash(jar xf *)"
     ],
     "deny": [],
     "ask": []
