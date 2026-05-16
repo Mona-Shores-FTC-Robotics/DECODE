@@ -211,9 +211,13 @@ public class Constants {
                 .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
                 .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
+
+    // PathConstraints parameter order:
+    // tValueConstraint, velocityConstraint, translationalConstraint, headingConstraint,
+    // timeoutConstraint, brakingStrength, BEZIER_CURVE_SEARCH_LIMIT, brakingStart
     public static PathConstraints pathConstraints = new PathConstraints(
-            0.95,
-            0.08,
+            0.995, // tValueConstraint: Pedro default — end-settling starts at 99.5% of path, not 95%
+            0.1,   // velocityConstraint: Pedro default — was 0.08
             .1,
             Math.toRadians(.5),
             100,
