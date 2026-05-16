@@ -31,9 +31,12 @@ public final class AutoField {
     public static Pose poseForAlliance(double x, double y, double headingDeg, Alliance alliance) {
         Pose base = new Pose(x, y, Math.toRadians(headingDeg));
         if (alliance == Alliance.RED) {
-            double mirroredX = FieldConstants.FIELD_WIDTH_INCHES - base.getX();
+            double mirroredX = FieldConstants.MIRROR_X_SUM - base.getX()
+                    + FieldConstants.AllianceMirrorFudge.redMirrorXInches;
+            double mirroredY = base.getY()
+                    + FieldConstants.AllianceMirrorFudge.redMirrorYInches;
             double mirroredHeading = AngleUnit.normalizeRadians(Math.PI - base.getHeading());
-            return new Pose(mirroredX, base.getY(), mirroredHeading);
+            return new Pose(mirroredX, mirroredY, mirroredHeading);
         }
         return base;
     }

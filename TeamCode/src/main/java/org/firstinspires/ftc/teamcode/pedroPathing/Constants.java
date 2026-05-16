@@ -133,7 +133,7 @@ public class Constants {
                 .drivePIDFSwitch(3)
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.02, 0, 0, 0.6, .0001))
 
-                .headingPIDFCoefficients(new PIDFCoefficients(.48, 0.01, .0001, .0005))  // Increased P and D, reduced F
+                .headingPIDFCoefficients(new PIDFCoefficients(.48, 0.01, .001, .0005))  // Increased P and D, reduced F
                 .headingPIDFSwitch(Math.toRadians(3))
                 .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .001, .0003))
 
@@ -150,7 +150,7 @@ public class Constants {
                         .00015))
 
                 .centripetalScaling(0)
-                .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.1, 0.04, 0.0016))
+                .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.1, 0.0655, 0.0015))
                 .mass(15.4221); // TODO: Update mass for 20245
     }
 

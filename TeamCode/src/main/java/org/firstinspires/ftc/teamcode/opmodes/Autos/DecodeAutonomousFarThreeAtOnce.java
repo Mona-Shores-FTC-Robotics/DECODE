@@ -512,6 +512,21 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
 
 
     private void publishTelemetry() {
+        Pose currentPose = robot.drive.getFollower().getPose();
+        if (currentPose != null) {
+            RobotState.packet.put("Auto/Pose/X", currentPose.getX());
+            RobotState.packet.put("Auto/Pose/Y", currentPose.getY());
+            RobotState.packet.put("Auto/Pose/Heading (deg)", Math.toDegrees(currentPose.getHeading()));
+            RobotState.packet.put("Auto/Pose/Heading (rad)", currentPose.getHeading());
+            RobotState.packet.put("Auto/Alliance", activeAlliance.name());
+            telemetry.addData("Pose",
+                    "X=%.2f Y=%.2f θ=%.1f° (%s)",
+                    currentPose.getX(),
+                    currentPose.getY(),
+                    Math.toDegrees(currentPose.getHeading()),
+                    activeAlliance.name());
+        }
+
         robot.telemetry.publishLoopTelemetry(
                 robot.drive,
                 robot.launcher,

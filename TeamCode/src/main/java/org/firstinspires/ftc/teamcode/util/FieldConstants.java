@@ -24,6 +24,31 @@ public final class FieldConstants {
     }
     public static BasketTargetOffsets  basketTargetOffsets = new BasketTargetOffsets();
 
+    /**
+     * Live-tunable fudge factor applied to red-side alliance mirroring.
+     *
+     * Symptom: blue waypoints work, but red lands a couple of inches off
+     * (e.g. aim is consistently a hair off, or the robot consistently parks
+     * a bit too close/far from its alliance wall).
+     *
+     * Root cause: if blue waypoints were defined assuming "X=0 is the blue
+     * wall" but the Pedro origin actually sits ~1.84" outside the wall, then
+     * the mirror formula 144 - X doesn't quite mirror across the physical
+     * field center, and red ends up offset by ~3.68" from the symmetric spot.
+     *
+     * Usage: nudge redMirrorXInches from FTC Dashboard during practice until
+     * the red aim/positions match blue. Typical values are 0..±4 inches.
+     * Positive pushes red poses toward the red wall (higher X).
+     */
+    @Configurable
+    public static class AllianceMirrorFudge {
+        /** Inches added to every red-mirrored X. Default 0 = legacy behavior. */
+        public static double redMirrorXInches = .75;
+        /** Inches added to every red-mirrored Y. Y is not mirrored by default,
+         *  but expose this in case practice reveals an offset there too. */
+        public static double redMirrorYInches = 0.0;
+    }
+
     public static class BasketTargetOffsets {
         /** Blue basket X offset from incenter (inches). Negative = left toward corner */
         public double blueDeltaX = 0;
@@ -37,6 +62,36 @@ public final class FieldConstants {
 
 
     public static final double FIELD_WIDTH_INCHES = 144.0;
+
+    /**
+     * Pedro X position of the BLUE alliance side wall (left side in Pedro frame).
+     * Derived from FTC CAD: ftcToPedro(BLUE_GOAL_CORNER_FTC).X ≈ 1.84.
+     *
+     * MEASUREMENT PROCEDURE: place the robot touching the blue side wall, run an
+     * init that calls follower.setPose(...) only from vision, and read the
+     * follower's reported X. That value is BLUE_SIDE_WALL_X. Adjust below.
+     */
+    public static final double BLUE_SIDE_WALL_X = 1.84;
+
+    /**
+     * Pedro X position of the RED alliance side wall (right side in Pedro frame).
+     * Derived from FTC CAD: ftcToPedro(RED_GOAL_CORNER_FTC).X ≈ 142.16.
+     */
+    public static final double RED_SIDE_WALL_X = 142.16;
+
+    /**
+     * Sum used for alliance mirroring: mirroredX = MIRROR_X_SUM - X.
+     *
+     * This works because mirroring across the midpoint M satisfies
+     * mirror(X) = 2M - X, and 2M = (leftWall + rightWall). So as long as
+     * BLUE_SIDE_WALL_X + RED_SIDE_WALL_X equals 2 × (physical field center),
+     * mirroring is correct regardless of where the Pedro origin sits.
+     *
+     * Defaults sum to 144.0, identical to the legacy FIELD_WIDTH_INCHES-based
+     * formula. Update BLUE_SIDE_WALL_X / RED_SIDE_WALL_X after measuring to
+     * correct any small mirror discrepancy.
+     */
+    public static final double MIRROR_X_SUM = BLUE_SIDE_WALL_X + RED_SIDE_WALL_X;
 
     /**
      * Goal AprilTags
@@ -152,13 +207,19 @@ public final class FieldConstants {
         return chebyshevGoalPedroPose;
     }
 
+    @Configurable
+    public static class AimOffsets {
+        /** Fudge factor added to the computed aim angle (degrees). Positive = CCW (aim further left). */
+        public static double aimAngleOffsetDeg = 0.0;
+    }
+
     /**
      * Computes the aim angle from a robot pose to a target pose.
      */
     public static double getAimAngleTo(Pose robotPose, Pose targetPose) {
         double dx = targetPose.getX() - robotPose.getX();
         double dy = targetPose.getY() - robotPose.getY();
-        return Math.atan2(dy, dx);
+        return Math.atan2(dy, dx) + Math.toRadians(AimOffsets.aimAngleOffsetDeg);
     }
 
 }

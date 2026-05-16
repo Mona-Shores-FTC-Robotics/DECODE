@@ -48,6 +48,9 @@ public class AutoSmartIntakeCommand extends IntakeCommand {
 
     @Override
     public void start() {
+        // Lane colors persist across launches; without this, stale "loaded" detections from before
+        // the prior launch can make the state machine flip straight to FULL_REVERSED on tick 1.
+        getIntake().clearLaneColors();
         state = State.FORWARD;
         timer.reset();
         getIntake().setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD);

@@ -200,9 +200,20 @@ public class FollowPathBuilder {
         } else if (constantHeading) {
             builder.setConstantHeadingInterpolation(Math.toRadians(constantHeadingDeg));
         } else {
+            // Force shortest-direction rotation. Pedro's linear interp uses raw
+            // start/end values, so if end-start lands outside [-π, π] the robot
+            // turns the long way. Blue waypoints come in unnormalized
+            // (Math.toRadians(deg)) while red mirrors go through
+            // AngleUnit.normalizeRadians, so the two alliances can land on
+            // different sides of the wrap for the same physical motion.
+            double startHeading = start.getHeading();
+            double endHeading = end.getHeading();
+            double diff = endHeading - startHeading;
+            while (diff > Math.PI)  { endHeading -= 2 * Math.PI; diff = endHeading - startHeading; }
+            while (diff < -Math.PI) { endHeading += 2 * Math.PI; diff = endHeading - startHeading; }
             builder.setLinearHeadingInterpolation(
-                    start.getHeading(),
-                    end.getHeading(),
+                    startHeading,
+                    endHeading,
                     linearInterpWeight
             );
         }
