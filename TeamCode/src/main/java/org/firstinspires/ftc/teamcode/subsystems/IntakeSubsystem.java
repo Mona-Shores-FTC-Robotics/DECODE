@@ -10,8 +10,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.I2cDeviceSynch;
-import com.qualcomm.robotcore.hardware.I2cDeviceSynchDevice;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -154,10 +152,6 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     private static final LaneSample ABSENT_SAMPLE = LaneSample.absent();
-
-    // APDS-9151 (REV Color Sensor V3) data registers: proximity(2) + IR(3) + G/R/B(3 each) = 14 bytes
-    private static final int APDS9151_REG_DATA_START = 0x08;
-    private static final int APDS9151_BULK_READ_LENGTH = 14;
 
     private final ElapsedTime sensorTimer = new ElapsedTime();
 
@@ -602,22 +596,6 @@ public class IntakeSubsystem implements Subsystem {
             } catch (IllegalArgumentException | UnsupportedOperationException ignored) {
                 // Ignore invalid gain values to avoid crashing during onInit
             }
-        }
-        applyRepeatReadWindow(sensor);
-    }
-
-    private static void applyRepeatReadWindow(NormalizedColorSensor sensor) {
-        if (!(sensor instanceof I2cDeviceSynchDevice)) {
-            return;
-        }
-        try {
-            @SuppressWarnings("unchecked")
-            I2cDeviceSynch deviceClient = ((I2cDeviceSynchDevice<I2cDeviceSynch>) sensor).getDeviceClient();
-            // Tell the Control Hub to continuously cache this register range in the background so
-            // getNormalizedColors() reads from the Hub's buffer instead of blocking on I2C.
-            deviceClient.setReadWindow(new I2cDeviceSynch.ReadWindow(
-                    APDS9151_REG_DATA_START, APDS9151_BULK_READ_LENGTH, I2cDeviceSynch.ReadMode.REPEAT));
-        } catch (Exception ignored) {
         }
     }
 
