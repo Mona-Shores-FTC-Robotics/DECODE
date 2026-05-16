@@ -35,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import org.firstinspires.ftc.teamcode.util.CircularMovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.MovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
@@ -152,6 +153,75 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     private static final LaneSample ABSENT_SAMPLE = LaneSample.absent();
+
+    /** Pre-computed packet keys per lane so the hot path avoids string concat allocations. */
+    private static final class LaneKeys {
+        final String sensorPresent;
+        final String distanceRawCm;
+        final String distanceCm;
+        final String presenceDetected;
+        final String scaledR;
+        final String scaledG;
+        final String scaledB;
+        final String normR;
+        final String normG;
+        final String normB;
+        final String hueRaw;
+        final String hue;
+        final String satRaw;
+        final String sat;
+        final String valRaw;
+        final String val;
+        final String totalIntensity;
+        final String classifierPresenceDistanceValid;
+        final String classifierPresencePresenceDetected;
+        final String classifierPresenceTotalIntensity;
+        final String classifierReason;
+        final String classifierHueUnwrapped;
+        final String classifierHueBoundary;
+        final String classifierHueDistanceFromBoundary;
+        final String classifierColor;
+
+        LaneKeys(String prefix) {
+            String sample = "intake/sample/" + prefix + "/";
+            String classifier = "intake/classifier/" + prefix + "/";
+            sensorPresent = sample + "sensor_present";
+            distanceRawCm = sample + "distance_raw_cm";
+            distanceCm = sample + "distance_cm";
+            presenceDetected = sample + "presence_detected";
+            scaledR = sample + "scaled_r";
+            scaledG = sample + "scaled_g";
+            scaledB = sample + "scaled_b";
+            normR = sample + "norm_r";
+            normG = sample + "norm_g";
+            normB = sample + "norm_b";
+            hueRaw = sample + "hue_raw";
+            hue = sample + "hue";
+            satRaw = sample + "sat_raw";
+            sat = sample + "sat";
+            valRaw = sample + "val_raw";
+            val = sample + "val";
+            totalIntensity = sample + "total_intensity";
+            classifierPresenceDistanceValid = classifier + "presence_distance_valid";
+            classifierPresencePresenceDetected = classifier + "presence_presence_detected";
+            classifierPresenceTotalIntensity = classifier + "presence_total_intensity";
+            classifierReason = classifier + "reason";
+            classifierHueUnwrapped = classifier + "hue_unwrapped";
+            classifierHueBoundary = classifier + "hue_boundary";
+            classifierHueDistanceFromBoundary = classifier + "hue_distance_from_boundary";
+            classifierColor = classifier + "color";
+        }
+    }
+
+    private static final LaneKeys[] LANE_KEYS;
+    static {
+        LauncherLane[] lanes = LauncherLane.values();
+        LaneKeys[] keys = new LaneKeys[lanes.length];
+        for (LauncherLane lane : lanes) {
+            keys[lane.ordinal()] = new LaneKeys(lane.name().toLowerCase(Locale.US));
+        }
+        LANE_KEYS = keys;
+    }
 
     private final ElapsedTime sensorTimer = new ElapsedTime();
 
@@ -654,10 +724,19 @@ public class IntakeSubsystem implements Subsystem {
             return ABSENT_SAMPLE;
         }
 
+        boolean telemetryActive = TelemetrySettings.shouldSendDashboardPackets();
+
+        // Get per-robot presence config
+        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
+
+        // Skip the distance I2C read entirely when nothing needs it. Distance is consumed by
+        // (a) distance-based presence detection and (b) packet telemetry. If neither is active,
+        // we save one I2C transaction per lane per poll cycle.
         boolean distanceAvailable = distanceSensor != null;
+        boolean distanceNeeded = distanceAvailable && (presenceCfg.useDistance || telemetryActive);
         double rawDistanceCm = Double.NaN;
         double distanceCm = Double.NaN;
-        if (distanceAvailable) {
+        if (distanceNeeded) {
             rawDistanceCm = distanceSensor.getDistance(DistanceUnit.CM);
             // Apply moving average filter if enabled
             if (laneSensorConfig.distanceFilter.enableFilter) {
@@ -672,11 +751,8 @@ public class IntakeSubsystem implements Subsystem {
             }
         }
 
-        boolean distanceValid = distanceAvailable && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
+        boolean distanceValid = distanceNeeded && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
         boolean presenceDetected = false;
-
-        // Get per-robot presence config
-        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
 
         // Distance-based presence check
         if (!distanceAvailable || !presenceCfg.useDistance || !distanceValid) {
@@ -784,7 +860,7 @@ public class IntakeSubsystem implements Subsystem {
         // Compute total RGB intensity for telemetry
         int totalIntensity = Math.round(scaledRedFloat + scaledGreenFloat + scaledBlueFloat);
 
-        String lanePrefix = lane == null ? "unknown" : lane.name().toLowerCase(Locale.US);
+        LaneKeys keys = lane == null ? null : LANE_KEYS[lane.ordinal()];
 
         // Classify color using selected classifier mode
         ClassificationResult result = classifyColor(
@@ -793,31 +869,35 @@ public class IntakeSubsystem implements Subsystem {
                 totalIntensity,
                 distanceValid ? distanceCm : Double.NaN,
                 presenceDetected,
-                lanePrefix
+                keys,
+                telemetryActive
         );
         ArtifactColor hsvColor = result.color;
 
         // Final color already accounts for distance, presence, and background checks
         ArtifactColor finalColor = hsvColor;
 
-        // Publish raw sensor metrics every poll so we can see empty vs artifact behavior even when classification fails
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/sensor_present", true);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/distance_raw_cm", distanceAvailable ? rawDistanceCm : Double.NaN);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/distance_cm", distanceValid ? distanceCm : Double.NaN);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/presence_detected", presenceDetected);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_r", scaledRed);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_g", scaledGreen);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_b", scaledBlue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_r", normalizedRed);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_g", normalizedGreen);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_b", normalizedBlue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/hue_raw", rawHue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/hue", filteredHue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/sat_raw", saturation);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/sat", filteredSaturation);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/val_raw", value);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/val", filteredValue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/total_intensity", totalIntensity);
+        // Publish raw sensor metrics every poll so we can see empty vs artifact behavior even when classification fails.
+        // Skipped entirely in MATCH mode (no dashboard packets sent) to avoid string/autobox allocations in the hot path.
+        if (telemetryActive && keys != null) {
+            RobotState.packet.put(keys.sensorPresent, true);
+            RobotState.packet.put(keys.distanceRawCm, distanceAvailable ? rawDistanceCm : Double.NaN);
+            RobotState.packet.put(keys.distanceCm, distanceValid ? distanceCm : Double.NaN);
+            RobotState.packet.put(keys.presenceDetected, presenceDetected);
+            RobotState.packet.put(keys.scaledR, scaledRed);
+            RobotState.packet.put(keys.scaledG, scaledGreen);
+            RobotState.packet.put(keys.scaledB, scaledBlue);
+            RobotState.packet.put(keys.normR, normalizedRed);
+            RobotState.packet.put(keys.normG, normalizedGreen);
+            RobotState.packet.put(keys.normB, normalizedBlue);
+            RobotState.packet.put(keys.hueRaw, rawHue);
+            RobotState.packet.put(keys.hue, filteredHue);
+            RobotState.packet.put(keys.satRaw, saturation);
+            RobotState.packet.put(keys.sat, filteredSaturation);
+            RobotState.packet.put(keys.valRaw, value);
+            RobotState.packet.put(keys.val, filteredValue);
+            RobotState.packet.put(keys.totalIntensity, totalIntensity);
+        }
 
         return LaneSample.present(
                 distanceAvailable,
@@ -853,38 +933,42 @@ public class IntakeSubsystem implements Subsystem {
      * @param totalIntensity Total RGB intensity (0-765)
      * @param distanceCm Distance reading in cm (or NaN if unavailable)
      * @param presenceDetected Whether presence detection indicates artifact present
-     * @param lanePrefix Lane name prefix for telemetry
+     * @param keys Pre-computed telemetry keys for this lane (null if no lane)
+     * @param telemetryActive Whether dashboard packets are being sent this build
      * @return Classification result with color
      */
     private ClassificationResult classifyColor(float hue, float saturation, float value,
                                                boolean hasSignal, int totalIntensity,
                                                double distanceCm, boolean presenceDetected,
-                                               String lanePrefix) {
-        String reason = "classified";
+                                               LaneKeys keys, boolean telemetryActive) {
+        boolean writeTelemetry = telemetryActive && keys != null;
 
         // Presence gate: presenceDetected is already computed by sampleLane() using distance or saturation
         if (!presenceDetected) {
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_distance_valid", !Double.isNaN(distanceCm));
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_presence_detected", false);
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_total_intensity", totalIntensity);
-            reason = "no_presence";
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
+            if (writeTelemetry) {
+                RobotState.packet.put(keys.classifierPresenceDistanceValid, !Double.isNaN(distanceCm));
+                RobotState.packet.put(keys.classifierPresencePresenceDetected, false);
+                RobotState.packet.put(keys.classifierPresenceTotalIntensity, totalIntensity);
+                RobotState.packet.put(keys.classifierReason, "no_presence");
+            }
             return new ClassificationResult(ArtifactColor.NONE);
         }
 
         // Basic quality check - no signal from sensor
         if (!hasSignal) {
-            reason = "no_signal";
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
+            if (writeTelemetry) {
+                RobotState.packet.put(keys.classifierReason, "no_signal");
+            }
             return new ClassificationResult(ArtifactColor.NONE);
         }
 
         // Classify GREEN vs PURPLE using hue decision boundary
-        ClassificationResult result = classifyByHue(hue, lanePrefix);
+        ClassificationResult result = classifyByHue(hue, keys, writeTelemetry);
 
         // Tag the reason as the chosen color
-        reason = result.color == null ? "none" : result.color.name();
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
+        if (writeTelemetry) {
+            RobotState.packet.put(keys.classifierReason, result.color == null ? "none" : result.color.name());
+        }
 
         return result;
     }
@@ -893,7 +977,7 @@ public class IntakeSubsystem implements Subsystem {
      * Classify artifact color as GREEN or PURPLE using hue decision boundary.
      * GREEN if hue < boundary, PURPLE otherwise.
      */
-    private ClassificationResult classifyByHue(float hue, String lanePrefix) {
+    private ClassificationResult classifyByHue(float hue, LaneKeys keys, boolean writeTelemetry) {
         double boundary = laneSensorConfig.colorClassifier.hueDecisionBoundary;
 
         // Unwrap hue to handle purple wrap-around (purple spans across 0°)
@@ -915,10 +999,12 @@ public class IntakeSubsystem implements Subsystem {
             distanceFromBoundary = (float) (unwrappedHue - boundary);
         }
 
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_unwrapped", unwrappedHue);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_boundary", boundary);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/hue_distance_from_boundary", distanceFromBoundary);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/color", color.name());
+        if (writeTelemetry && keys != null) {
+            RobotState.packet.put(keys.classifierHueUnwrapped, unwrappedHue);
+            RobotState.packet.put(keys.classifierHueBoundary, boundary);
+            RobotState.packet.put(keys.classifierHueDistanceFromBoundary, distanceFromBoundary);
+            RobotState.packet.put(keys.classifierColor, color.name());
+        }
         return new ClassificationResult(color);
     }
 

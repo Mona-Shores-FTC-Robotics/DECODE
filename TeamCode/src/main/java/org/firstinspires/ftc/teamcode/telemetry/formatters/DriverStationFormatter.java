@@ -60,6 +60,12 @@ public class DriverStationFormatter {
     private boolean lastDpadUp = false;
     private boolean lastDpadDown = false;
 
+    private static final double SPIKE_THRESHOLD_MS = 100.0;
+    private static final long LOOP_STATS_WINDOW_NS = 5_000_000_000L;
+    private double rollingMaxLoopMs = 0.0;
+    private int rollingSpikeCount = 0;
+    private long rollingWindowStartNs = 0L;
+
     /**
      * Handle page navigation from gamepad dpad input.
      * Call this before publishing DEBUG telemetry.
@@ -97,6 +103,23 @@ public class DriverStationFormatter {
         if (telemetry == null) {
             return;
         }
+
+        // Loop timing (cheap; useful for spike comparison vs DEBUG mode)
+        double loopMs = data.timing.mainLoopMs;
+        long nowNs = System.nanoTime();
+        if (rollingWindowStartNs == 0L || (nowNs - rollingWindowStartNs) > LOOP_STATS_WINDOW_NS) {
+            rollingMaxLoopMs = 0.0;
+            rollingSpikeCount = 0;
+            rollingWindowStartNs = nowNs;
+        }
+        if (loopMs > rollingMaxLoopMs) {
+            rollingMaxLoopMs = loopMs;
+        }
+        if (loopMs > SPIKE_THRESHOLD_MS) {
+            rollingSpikeCount++;
+        }
+        telemetry.addData("Loop", "%.1f ms (max 5s: %.1f, spikes>%dms: %d)",
+                loopMs, rollingMaxLoopMs, (int) SPIKE_THRESHOLD_MS, rollingSpikeCount);
 
         // Alliance
         telemetry.addData("Alliance", data.context.alliance.displayName());

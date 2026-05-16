@@ -4,6 +4,7 @@ import android.health.connect.datatypes.units.Mass;
 
 import com.pedropathing.control.FilteredPIDFCoefficients;
 import com.pedropathing.control.PIDFCoefficients;
+import com.pedropathing.control.PredictiveBrakingCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
@@ -115,7 +116,8 @@ public class Constants {
                         0.0001,
                         .0006,
                         .00015))
-                .centripetalScaling(0.00005)
+                .centripetalScaling(0)
+                .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.1, 0.04, 0.0016))
                 .mass(15.4221); //34 pounds 11/16/25
     }
 
@@ -147,7 +149,8 @@ public class Constants {
                         .0006,
                         .00015))
 
-                .centripetalScaling(0.00005)
+                .centripetalScaling(0)
+                .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.1, 0.04, 0.0016))
                 .mass(15.4221); // TODO: Update mass for 20245
     }
 
@@ -209,7 +212,7 @@ public class Constants {
                 .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
     public static PathConstraints pathConstraints = new PathConstraints(
-            1.0,
+            0.95,
             0.08,
             .1,
             Math.toRadians(.5),
