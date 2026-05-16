@@ -13,8 +13,7 @@
       "Bash(git checkout:*)",
       "Bash(git pull:*)",
       "WebFetch(domain:docs.limelightvision.io)",
-      "WebFetch(domain:panels.bylazar.com)"
-      "WebFetch(domain:docs.limelightvision.io)",
+      "WebFetch(domain:panels.bylazar.com)",
       "WebFetch(domain:nextftc.dev)",
       "Bash(find:*)",
       "Bash(xargs:*)"
