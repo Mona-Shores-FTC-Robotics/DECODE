@@ -10,6 +10,8 @@ import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.constants.PinpointConstants;
+import com.pedropathing.ftc.localization.localizers.PinpointLocalizer;
+import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathConstraints;
 
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
@@ -22,6 +24,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 
 public class Constants {
+
+    public static FusionLocalizer activeFusionLocalizer;
 
     public static FollowerConstants followerConstants19429 = createFollowerConstants19429();
     public static FollowerConstants followerConstants20245 = createFollowerConstants20245();
@@ -226,8 +230,16 @@ public class Constants {
             1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
+        PinpointLocalizer pinpoint = new PinpointLocalizer(hardwareMap, localizerConstants());
+        activeFusionLocalizer = new FusionLocalizer(
+                pinpoint,
+                new Pose(0.25, 0.25, Math.toRadians(2.0)),
+                new Pose(1.0, 1.0, Math.toRadians(0.5) / 60.0),
+                new Pose(2.1561, 2.6065, 0.0248),
+                100
+        );
         return new FollowerBuilder(followerConstants(), hardwareMap)
-                .pinpointLocalizer(localizerConstants())
+                .setLocalizer(activeFusionLocalizer)
                 .pathConstraints(pathConstraints)
                 .mecanumDrivetrain(driveConstants())
                 .build();

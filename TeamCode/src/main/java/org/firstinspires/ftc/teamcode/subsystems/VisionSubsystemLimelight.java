@@ -546,6 +546,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     }
     public static class TagSnapshot {
 
+        public final long capturedAtNs;
         public final Alliance alliance;
         public final int tagId;
 
@@ -599,6 +600,7 @@ public class VisionSubsystemLimelight implements Subsystem {
                 double ty,
                 double ta
         ) {
+            this.capturedAtNs = System.nanoTime();
             this.alliance = alliance == null ? Alliance.UNKNOWN : alliance;
             this.tagId = tagId;
 
