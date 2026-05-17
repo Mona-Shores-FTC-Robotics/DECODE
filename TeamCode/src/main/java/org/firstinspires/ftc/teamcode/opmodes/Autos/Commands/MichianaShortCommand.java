@@ -4,7 +4,6 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.FireAtPathTCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
 import org.firstinspires.ftc.teamcode.commands.IntakeCommands.TimedEjectCommand;
@@ -19,12 +18,15 @@ import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
 import dev.nextftc.core.commands.groups.SequentialGroup;
 
 /**
- * MichianaShort autonomous: fires all 3 lanes mid-path (at fireAtT) rather than stopping to shoot.
+ * MichianaShort autonomous: fires all 3 lanes mid-return-path via Pedro's ParametricCallback
+ * (attached to the PathChain at T = fireAtT) rather than stopping to shoot.
  *
  * Key difference from CloseThreeAtOnce:
- *   - Return paths use FireAtPathTCommand so shots queue when T >= fireAtT (heading already settled)
- *   - Flywheels stay at launch speed between shots (spinDownAfterShot=false handled by presetRangeSpinUp)
- *   - No sequential launch step between return path and next artifact pickup
+ *   - withFireAtT() attaches a ParametricCallback to each return path's PathChain.
+ *     Pedro fires the callback automatically when T >= fireAtT — no command wrapper needed.
+ *   - fireAtT (default 0.85) is after headingInterpEnd (default 0.70), so heading is
+ *     already settled when shots queue.
+ *   - Flywheels stay at launch speed between shots (spinDownAfterShot=false via presetRangeSpinUp).
  *
  * Waypoints mirror CloseThreeAtOnceCommand — adjust Config and Waypoints as needed.
  */
@@ -38,7 +40,7 @@ public class MichianaShortCommand {
         public static double lastPathsMaxPower = 1.0;
         /** linearInterpWeight: heading interpolation finishes at this T fraction */
         public static double headingInterpEnd = 0.7;
-        /** T value at which shots fire on return paths — must be > headingInterpEnd */
+        /** T value at which the ParametricCallback fires — must be > headingInterpEnd */
         public static double fireAtT = 0.85;
         /** Full auto duration in seconds (for ConditionalFinalLaunch) */
         public static double autoDurationSeconds = 30.0;
@@ -55,7 +57,7 @@ public class MichianaShortCommand {
         public static double startY = 130;
         public static double startHeading = 0;
 
-        // Launch positions (same heading — robot faces goal)
+        // Launch position (shared by all shots)
         public static double launchX = 36;
         public static double launchY = 107.0;
         public static double launchHeading = 134.0;
@@ -74,7 +76,7 @@ public class MichianaShortCommand {
         public static double artifactsSet2CtrlX = 24;
         public static double artifactsSet2CtrlY = 100;
 
-        // Return from set 2 — control point to avoid obstacles
+        // Return from set 2 — control point to curve around obstacles
         public static double returnSet2CtrlX = 50.5;
         public static double returnSet2CtrlY = 72;
 
@@ -103,9 +105,6 @@ public class MichianaShortCommand {
         return start();
     }
 
-    /**
-     * Creates the command. Optionally pass a vision-detected start pose.
-     */
     public static Command create(Robot robot, Alliance alliance) {
         return create(robot, alliance, null);
     }
@@ -114,7 +113,7 @@ public class MichianaShortCommand {
         LauncherCommands launcherCommands = new LauncherCommands(
                 robot.launcher, robot.intake, robot.drive, robot.lighting);
 
-        // --- First path: start → launch position, spin up during travel ---
+        // --- First path: start → launch, spin up flywheels in parallel, fire preloads at T=fireAtT ---
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
         if (startOverride != null) {
             firstPathBuilder.fromWorldCoordinates(robot.drive.getFollower().getPose());
@@ -126,15 +125,13 @@ public class MichianaShortCommand {
                 firstPathBuilder
                         .to(launch())
                         .withLinearHeadingCompletion(Config.headingInterpEnd)
+                        .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower),
                 new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
-                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true),
-                // Fire preloads when heading is settled and we're approaching launch spot
-                new FireAtPathTCommand(robot.drive.getFollower(), Config.fireAtT,
-                        robot.launcher, robot.intake)
+                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true)
         );
 
-        // --- Artifact Set 1 pickup ---
+        // --- Artifact pickups (constant heading so robot faces gate while intaking) ---
         Command pickupSet1 = new ParallelDeadlineGroup(
                 new FollowPathBuilder(robot, alliance)
                         .from(launch())
@@ -148,18 +145,6 @@ public class MichianaShortCommand {
                 )
         );
 
-        // --- Return from set 1, fire at T=fireAtT ---
-        Command returnAndFireSet1 = new ParallelDeadlineGroup(
-                new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet1())
-                        .to(launch())
-                        .withLinearHeadingCompletion(Config.headingInterpEnd)
-                        .build(Config.maxPathPower),
-                new FireAtPathTCommand(robot.drive.getFollower(), Config.fireAtT,
-                        robot.launcher, robot.intake)
-        );
-
-        // --- Artifact Set 2 pickup ---
         Command pickupSet2 = new ParallelDeadlineGroup(
                 new FollowPathBuilder(robot, alliance)
                         .from(launch())
@@ -173,19 +158,6 @@ public class MichianaShortCommand {
                 )
         );
 
-        // --- Return from set 2, fire at T=fireAtT (with control point) ---
-        Command returnAndFireSet2 = new ParallelDeadlineGroup(
-                new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet2())
-                        .to(launch())
-                        .withControl(returnSet2Ctrl())
-                        .withLinearHeadingCompletion(Config.headingInterpEnd)
-                        .build(Config.maxPathPower),
-                new FireAtPathTCommand(robot.drive.getFollower(), Config.fireAtT,
-                        robot.launcher, robot.intake)
-        );
-
-        // --- Artifact Set 3 pickup ---
         Command pickupSet3 = new ParallelDeadlineGroup(
                 new FollowPathBuilder(robot, alliance)
                         .from(launch())
@@ -199,22 +171,35 @@ public class MichianaShortCommand {
                 )
         );
 
-        // --- Conditional final sequence: return + fire + park if time permits ---
+        // --- Return paths: ParametricCallback fires at T=fireAtT, no extra command needed ---
+        Command returnAndFireSet1 = new FollowPathBuilder(robot, alliance)
+                .from(artifactsSet1())
+                .to(launch())
+                .withLinearHeadingCompletion(Config.headingInterpEnd)
+                .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
+                .build(Config.maxPathPower);
+
+        Command returnAndFireSet2 = new FollowPathBuilder(robot, alliance)
+                .from(artifactsSet2())
+                .to(launch())
+                .withControl(returnSet2Ctrl())
+                .withLinearHeadingCompletion(Config.headingInterpEnd)
+                .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
+                .build(Config.maxPathPower);
+
+        // --- Conditional final sequence ---
         Command finalSequence = new ConditionalFinalLaunchCommand(
                 Config.autoDurationSeconds,
                 Config.minTimeForFinalLaunchSeconds,
-                // Enough time: return + fire mid-path + park
+                // Enough time: return + fire mid-path, then park
                 new SequentialGroup(
-                        new ParallelDeadlineGroup(
-                                new FollowPathBuilder(robot, alliance)
-                                        .from(artifactsSet3())
-                                        .to(launch())
-                                        .withControl(returnSet3Ctrl())
-                                        .withLinearHeadingCompletion(Config.headingInterpEnd)
-                                        .build(Config.lastPathsMaxPower),
-                                new FireAtPathTCommand(robot.drive.getFollower(), Config.fireAtT,
-                                        robot.launcher, robot.intake)
-                        ),
+                        new FollowPathBuilder(robot, alliance)
+                                .from(artifactsSet3())
+                                .to(launch())
+                                .withControl(returnSet3Ctrl())
+                                .withLinearHeadingCompletion(Config.headingInterpEnd)
+                                .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
+                                .build(Config.lastPathsMaxPower),
                         new ParallelDeadlineGroup(
                                 new FollowPathBuilder(robot, alliance)
                                         .from(launch())
@@ -228,7 +213,7 @@ public class MichianaShortCommand {
                                 )
                         )
                 ),
-                // Not enough time: go straight to park
+                // Not enough time: straight to park
                 new FollowPathBuilder(robot, alliance)
                         .from(artifactsSet3())
                         .to(nearGate())
@@ -251,13 +236,11 @@ public class MichianaShortCommand {
     // ---- Pose helpers ----
 
     private static Pose start() {
-        return new Pose(Waypoints.startX, Waypoints.startY,
-                Math.toRadians(Waypoints.startHeading));
+        return new Pose(Waypoints.startX, Waypoints.startY, Math.toRadians(Waypoints.startHeading));
     }
 
     private static Pose launch() {
-        return new Pose(Waypoints.launchX, Waypoints.launchY,
-                Math.toRadians(Waypoints.launchHeading));
+        return new Pose(Waypoints.launchX, Waypoints.launchY, Math.toRadians(Waypoints.launchHeading));
     }
 
     private static Pose artifactsSet1() {

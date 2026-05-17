@@ -5,6 +5,7 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
+import com.pedropathing.paths.callbacks.ParametricCallback;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +15,9 @@ import dev.nextftc.core.commands.Command;
 import dev.nextftc.extensions.pedro.FollowPath;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 public class FollowPathBuilder {
 
@@ -35,6 +39,10 @@ public class FollowPathBuilder {
 
 
     private double linearInterpWeight = 0.7;
+
+    private Double fireAtT = null;
+    private LauncherSubsystem launcherForCallback = null;
+    private IntakeSubsystem intakeForCallback = null;
 
     public FollowPathBuilder(Robot robot, Alliance alliance) {
         this.robot = robot;
@@ -168,6 +176,20 @@ public class FollowPathBuilder {
             onlyPath.setTranslationalConstraint(translationalConstraint);
         }
 
+        if (fireAtT != null && launcherForCallback != null) {
+            LauncherSubsystem launcher = launcherForCallback;
+            IntakeSubsystem intake = intakeForCallback;
+            chain.setCallbacks(new ParametricCallback(0, fireAtT, robot.drive.getFollower(), () -> {
+                launcher.spinUpAllLanesToLaunch();
+                for (LauncherLane lane : LauncherLane.values()) {
+                    launcher.queueShot(lane);
+                }
+                if (intake != null) {
+                    intake.setGateAllowArtifacts();
+                }
+            }));
+        }
+
         double clippedPower = Range.clip(maxPower, 0.0, 1.0);
 
         return new FollowPath(chain, true, clippedPower);
@@ -193,6 +215,19 @@ public class FollowPathBuilder {
 
     public FollowPathBuilder withTimeout(double milliseconds) {
         this.timeoutMilliSec = milliseconds;
+        return this;
+    }
+
+    /**
+     * Attaches a ParametricCallback that fires all launcher lanes when path T >= fireAtT.
+     * Must be called before build(). fireAtT should be greater than the linearInterpWeight so
+     * heading is already settled when shots queue.
+     * Uses Pedro's built-in callback system — no parallel command wrapper needed.
+     */
+    public FollowPathBuilder withFireAtT(double t, LauncherSubsystem launcher, IntakeSubsystem intake) {
+        this.fireAtT = t;
+        this.launcherForCallback = launcher;
+        this.intakeForCallback = intake;
         return this;
     }
 }
