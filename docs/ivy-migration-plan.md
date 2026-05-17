@@ -410,9 +410,252 @@ Acceptance:
 3. Whether NextFTC pulls FTC Dashboard or `com.bylazar:fullpanels` transitively at `implementation` scope (matters only if Sloth is added before NextFTC is removed). Run on dev machine: `./gradlew :TeamCode:dependencies --configuration debugRuntimeClasspath | grep -E "acmerobotics\.dashboard|com\.bylazar"`.
 4. Whether `com.pedropathing:telemetry:1.0.0` can be dropped once `Tuning.java` is replaced with whatever the current Pedro 2.1.2 quickstart uses (orthogonal to Ivy migration but worth checking at the same time).
 
+## Style guide: 22131 Traffic Cones
+
+`BaronClaps/22131-Decode` is the canonical Ivy reference codebase — Baron Henderson is both the Pedro Pathing author and an Ivy co-author, and 22131 is a top-1% global OPR team. This section captures patterns from their code worth adopting, plus a couple worth explicitly rejecting.
+
+Confirmed by reading these files at 2026-05-17:
+- `TeamCode/.../config/Robot.java`
+- `TeamCode/.../config/command/CommandOpMode.java`
+- `TeamCode/.../config/subsystem/Shooter.java`
+- `TeamCode/.../opmode/Tele.java`
+- `TeamCode/.../opmode/auto/Auto15.java`
+
+### Package layout
+
+Their tree:
+
+```
+config/
+  Robot.java                   # service locator
+  command/CommandOpMode.java   # 30-line OpMode base
+  paths/Fast15.java, ...       # auto path classes
+  pedro/Constants.java         # Pedro config (same as our pedroPathing/)
+  subsystem/                   # Drivetrain, Flipper, Intake, Shooter, Turret
+  util/Alliance.java
+  vision/Limelight.java, ArtifactFetcher.java, opencv/
+opmode/
+  auto/Auto15.java, Blue15.java, Red15.java, Auto12.java, Blue12.java, Red12.java
+  test/DexTest.java, TurretTest.java
+  Tele.java, BlueTele.java, RedTele.java
+```
+
+Pattern: **everything robot-related lives under `config/`**. OpModes are the only top-level package. Subsystems are flat (`config/subsystem/Shooter.java`, not `subsystems/shooter/Shooter.java` + config subdirectory like we do).
+
+Our `subsystems/launcher/` + `subsystems/launcher/config/` split is more elaborate than theirs. Reasonable to flatten during the Ivy migration if we want — but not required.
+
+### Robot.java as a service locator
+
+Their `Robot` holds every subsystem as a `public final` field with a **single-letter name**:
+
+```java
+public final Intake i;
+public final Limelight l;
+public final Shooter s;
+public final Flipper g;
+public final Turret t;
+public final Follower f;
+public Alliance a;
+```
+
+…and is accessed directly: `r.i.in()`, `r.s.atTarget()`, `r.f.getPose()`. No getters.
+
+**Adopt:** the service-locator pattern. Single owning class holding all subsystems, passed everywhere. We already do this; just simpler.
+
+**Don't adopt:** single-letter field names. They scale poorly for a team with multiple programmers. `r.intake`, `r.shooter`, etc. read better and survive grep. (Baron has the luxury of writing most of his own code; we don't.)
+
+### Subsystems are plain classes
+
+No `implements Subsystem`, no base class, no framework registration. Constructor takes `HardwareMap`. Each subsystem has a `periodic()` method that `Robot.periodic()` calls.
+
+```java
+public class Shooter {
+    private DcMotorEx l, r;
+    public Shooter(HardwareMap hardwareMap) { ... }
+    public void periodic() { ... }   // called from Robot.periodic()
+}
+```
+
+Matches the Ivy translation table above — drop `implements Subsystem`, no replacement needed.
+
+### Subsystem methods return commands
+
+This is the **most important pattern to adopt.** Subsystems own their command factories:
+
+```java
+public class Shooter {
+    public CommandBuilder toggle() { return Commands.instant(this::shooterToggle); }
+    public CommandBuilder near()   { return Commands.instant(this::shootNear); }
+    public CommandBuilder far()    { return Commands.instant(this::shootFar); }
+}
+```
+
+Bindings then read like English:
+
+```java
+bindings.when(gamepad1::aWasPressed).onTrue(r.s.toggle());
+bindings.when(gamepad1::bWasPressed).onTrue(r.s.near());
+```
+
+Compare to our current `commands/LauncherCommands/LauncherCommands.java` factory class. The Traffic Cones pattern eliminates that file: the factory methods live on the subsystem itself.
+
+**Adopt for the migration:** move our `commands/<Subsystem>Commands/*.java` factories into the subsystems themselves. The `commands/` package shrinks toward zero (only true cross-subsystem composite commands remain). Big code-organization win.
+
+### Composite commands live on Robot
+
+Cross-subsystem macros are methods on `Robot` returning a built command:
+
+```java
+public CommandBuilder shoot() {
+    return sequential(
+        g.down(),
+        i.in(),
+        Commands.waitUntil(s::atTarget),
+        Commands.wait(200.0),
+        g.up(),
+        Commands.wait(200.0),
+        g.down(),
+        ...
+    );
+}
+
+public CommandBuilder intake() {
+    return sequential(g.down(), i.in(), Commands.wait(500.0));
+}
+```
+
+Auto code then reads as a high-level sequence:
+
+```java
+PedroCommands.follow(r.f, p.next())
+    .with(Commands.waitUntil(() -> r.f.getCurrentTValue() >= 0.5).then(r.shoot()))
+```
+
+**Adopt:** put composite/cross-subsystem commands (current `LauncherCoordinator`, `AimAndDrive*`, etc.) as methods on `Robot` returning `CommandBuilder`. Our `opmodes/Autos/Commands/*.java` would mostly become `Robot.threeAtOnce()`, `Robot.together()`, etc.
+
+### CommandOpMode base (30 lines)
+
+```java
+public abstract class CommandOpMode extends OpMode {
+    public void reset() { Scheduler.reset(); }
+    public void schedule(Command... commands) { Scheduler.schedule(commands); }
+    @Override public void init() {}
+    @Override public void loop() { Scheduler.execute(); }
+    public void stop() { reset(); }
+}
+```
+
+That's it. The base extends iterative `OpMode` (not `LinearOpMode`), `init()` is overridable by subclasses to do command setup + `schedule(...)`, `loop()` just ticks the scheduler. No `runOpMode()` / `waitForStart()` ceremony.
+
+**Adopt:** copy `CommandOpMode` verbatim into our codebase. Add `bindings.update()` to our copy's `loop()` if we want bindings to be auto-ticked. (Their codebase doesn't have bindings — they handle gamepad input imperatively per loop. See next section.)
+
+### Iterative OpMode + imperative gamepad
+
+Their `Tele.java` extends `CommandOpMode` and handles input directly in `loop()`:
+
+```java
+@Override public void loop() {
+    r.periodic();
+    if (gamepad1.bWasPressed()) shoot = !shoot;
+    if (gamepad1.rightBumperWasPressed())
+        intakeOn = (intakeOn == 1) ? 0 : 1;
+    if (gamepad1.aWasPressed()) {
+        if (manualFlip) { r.g.toggle(); ... }
+        else autoFlipping = true;
+    }
+    // ... 100 more lines of conditionals ...
+}
+```
+
+`Scheduler.execute()` is called automatically by `CommandOpMode.loop()` at the end (well, actually their `Tele.java` doesn't seem to call `super.loop()` — they may rely on the framework's iterative scheduler).
+
+**Don't adopt as-is.** This works for a 2-person team where one person writes all the teleop code. With multiple programmers and existing declarative `DriverBindings.java` / `OperatorBindings.java` patterns, we want the `IvyBindings` shim. Our shim *uses* SDK 11.1 `wasJustPressed` under the hood but keeps the declarative front-end.
+
+A hybrid is fine: use `IvyBindings` for stable button → command mappings; use raw `if (gamepad.xWasPressed())` blocks inside `loop()` for one-off, in-development behavior. Same as we do today.
+
+### Path "feeder" pattern for autos
+
+Instead of declaring every `PathChain` upfront with a meaningful name, Baron uses a stateful path class that yields paths in order:
+
+```java
+Fast15 p = new Fast15(r);
+r.f.setStartingPose(p.start);
+// ...
+PedroCommands.follow(r.f, p.next())   // path 1
+PedroCommands.follow(r.f, p.next())   // path 2
+PedroCommands.follow(r.f, p.next())   // path 3
+```
+
+The `Fast15` class internally holds an index and a list, advancing on each `next()`.
+
+**Mixed verdict:** terse, but path identity is lost — you can't tell what `p.next()` does without counting calls. Our `FollowPathBuilder` + named paths in autos is more verbose but more readable. **Don't adopt** unless we run into auto-OpMode files growing past a screen length.
+
+### Telemetry as an infinite command
+
+```java
+schedule(
+    Commands.infinite(r::periodic),
+    Commands.infinite(() -> {
+        telemetry.addData("Pose: ", r.f.getPose());
+        telemetry.addData("Shooter At Target: ", r.s.atTarget());
+        ...
+        telemetry.update();
+    }),
+    sequential(/* the actual auto */)
+);
+```
+
+`Robot.periodic()` and telemetry both ride priority-0 infinite commands that run forever in parallel with the auto sequence.
+
+**Adopt:** this is a clean way to handle the "always-on" stuff. Our `RobotStatusLogger.logStatus(...)` call can become an Ivy `infinite` command instead of being called manually in the OpMode loop.
+
+### `@Config` and FTC Dashboard
+
+Their subsystems are `@Config`-annotated with tunable `public static` fields:
+
+```java
+@Config
+public class Shooter {
+    public static double kS = 0.08, kV = 0.00039, kP = 0.01;
+    public static double near = 1200;
+    public static double far = 1400;
+    ...
+}
+```
+
+Same pattern we use in our `<Subsystem>.<Subsystem>Config` nested classes. They use top-level `@Config` instead of nested; either works.
+
+**No change needed.** Our nested-config pattern is fine; the migration doesn't affect it.
+
+### What our codebase already does better
+
+For honesty's sake:
+
+- We have proper telemetry levels (`TelemetryLevel.MATCH/DEBUG` gated at compile time) — Baron just always-logs.
+- We have `Constants.HardwareNames.*` for centralized hardware names — Baron hardcodes strings (`"sl"`, `"sr"` in `Shooter.java`).
+- We have `PoseFusion` + AprilTag relocalization tooling — they have a simpler Limelight setup.
+- Our autos use Pedro Path Generator-compatible exports for visualization — they don't seem to.
+
+The migration should preserve all of these.
+
+### API names confirmed from Traffic Cones code
+
+Two more 1.0.0 verifications worth recording here (both differ from MOEbo's snapshot usage):
+
+- `Commands.wait(double ms)` — not `Commands.waitMs(double)`. Used as `Commands.wait(200.0)`, `Commands.wait(1.0)`. **Unit is presumed milliseconds** but verify against `Commands.kt` source.
+- `Commands.waitUntil(BooleanSupplier)` — confirmed, same as snapshot.
+- `Commands.infinite(Runnable)` — confirmed.
+- `Commands.instant(Runnable)` — confirmed.
+- `PedroCommands.follow(Follower, PathChain)` — confirmed.
+- `cmd.with(other)` / `cmd.then(other)` chaining — confirmed in heavy use.
+
+`Groups.sequential(...)` confirmed via `import static com.pedropathing.ivy.groups.Groups.sequential;`.
+
 ## References
 
 - Ivy installation: https://pedropathing.com/docs/ivy (gated to network; user paste required)
 - Sloth README: `Dairy-Foundation/Sloth` on GitHub
-- Reference Ivy projects: `MOEbo-Sapiens/MOEbo-Sapiens-Decode`, `BaronClaps/22131-Decode`
+- Reference Ivy projects:
+  - `BaronClaps/22131-Decode` (Traffic Cones, Pedro/Ivy authors — canonical reference)
+  - `MOEbo-Sapiens/MOEbo-Sapiens-Decode` (uses pre-release Ivy snapshot; some API names stale)
 - FTC SDK 11.1 release notes: gamepad trigger edge detection added (see CLAUDE.md history)
