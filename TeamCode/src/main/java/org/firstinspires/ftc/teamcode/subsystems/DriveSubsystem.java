@@ -9,15 +9,13 @@ import com.acmerobotics.dashboard.config.Config;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.ivy.commands.Commands;
 import com.pedropathing.math.Vector;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
-
-import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
@@ -41,7 +39,7 @@ import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import java.util.Optional;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 @Configurable
-public class DriveSubsystem implements Subsystem {
+public class DriveSubsystem {
 
     private static final double VISION_TIMEOUT_MS = 100;
     public static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.5;
@@ -246,9 +244,6 @@ public class DriveSubsystem implements Subsystem {
     private long lastFedSnapshotNs = -1L;
     private final ElapsedTime clock = new ElapsedTime();
 
-    // Default command for NextFTC command scheduler
-    private Command driveDefaultCommand = null;
-
     private double lastGoodVisionAngle = Double.NaN;
     private double lastVisionTimestamp = Double.NEGATIVE_INFINITY;
     private double fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
@@ -316,24 +311,6 @@ public class DriveSubsystem implements Subsystem {
         }
     }
 
-    /**
-     * Sets the default command for this subsystem.
-     * The default command runs whenever no other command requires this subsystem.
-     */
-    public void setDefaultCommand(Command command) {
-        this.driveDefaultCommand = command;
-    }
-
-    /**
-     * Gets the default command for this subsystem.
-     * Overrides the Subsystem interface property to return our configured command.
-     */
-    @NonNull
-    @Override
-    public Command getDefaultCommand() {
-        return driveDefaultCommand != null ? driveDefaultCommand : Subsystem.super.getDefaultCommand();
-    }
-
     public void setRobotCentric(boolean enabled) {
         robotCentric = enabled;
         robotCentricConfig = enabled;
@@ -343,7 +320,6 @@ public class DriveSubsystem implements Subsystem {
         teleOpControlEnabled = enabled;
     }
 
-    @Override
     public void initialize() {
         // Defensive check: ensure follower is attached before initialization
         if (follower == null) {
@@ -392,8 +368,15 @@ public class DriveSubsystem implements Subsystem {
 
     private double lastPeriodicMs = 0.0;
 
-    @Override
-    public void periodic() {
+    /**
+     * Infinite Command that drives the Pedro follower update + vision feed each scheduler tick.
+     * Scheduled once in OpMode init; runs until OpMode stop.
+     */
+    public com.pedropathing.ivy.Command periodic() {
+        return Commands.infinite(this::doPeriodic).requiring(this);
+    }
+
+    private void doPeriodic() {
         long start = System.nanoTime();
         follower.update();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;

@@ -1,9 +1,9 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
-
-import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.lighting.config.LightingColorPositionConfig;
@@ -28,7 +28,7 @@ import java.util.Optional;
  * - Current pattern: What's actively being displayed (may differ temporarily)
  * - Priority resolution: Higher priority patterns override lower ones
  */
-public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorListener {
+public class LightingSubsystem implements IntakeSubsystem.LaneColorListener {
 
     /**
      * Lighting patterns with priority-based control.
@@ -110,13 +110,19 @@ public class LightingSubsystem implements Subsystem, IntakeSubsystem.LaneColorLi
         }
     }
 
-    @Override
     public void initialize() {
         indicateAllianceInit();
     }
 
-    @Override
-    public void periodic() {
+    /**
+     * Infinite Command that drives the lighting state machine each scheduler tick.
+     * Scheduled once in OpMode init; runs until OpMode stop.
+     */
+    public Command periodic() {
+        return Commands.infinite(this::doPeriodic).requiring(this);
+    }
+
+    private void doPeriodic() {
         long start = System.nanoTime();
         long nowMs = System.currentTimeMillis();
 

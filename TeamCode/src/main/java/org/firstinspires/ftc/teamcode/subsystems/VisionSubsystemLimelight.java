@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -14,8 +16,6 @@ import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
-import dev.nextftc.core.subsystems.Subsystem;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -23,7 +23,7 @@ import java.util.Optional;
  * Limelight-backed vision subsystem that mirrors the public API of the legacy VisionPortal-based
  * implementation so existing OpModes can switch to Limelight without broader structural changes.
  */
-public class VisionSubsystemLimelight implements Subsystem {
+public class VisionSubsystemLimelight {
 
     private static final long ODOMETRY_RESET_TIMEOUT_MS = 3000L;
 
@@ -104,7 +104,6 @@ public class VisionSubsystemLimelight implements Subsystem {
         this.limelightAvailable = available;
     }
 
-    @Override
     public void initialize() {
         if (!limelightAvailable || limelight == null) {
             state = VisionState.OFF;
@@ -115,8 +114,15 @@ public class VisionSubsystemLimelight implements Subsystem {
         state = VisionState.STREAMING;
     }
 
-    @Override
-    public void periodic() {
+    /**
+     * Infinite Command that drives the vision update loop each scheduler tick.
+     * Scheduled once in OpMode init; runs until OpMode stop.
+     */
+    public Command periodic() {
+        return Commands.infinite(this::doPeriodic).requiring(this);
+    }
+
+    private void doPeriodic() {
         long start = System.nanoTime();
         long nowMs = System.currentTimeMillis();
 

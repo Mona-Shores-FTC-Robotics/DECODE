@@ -10,7 +10,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import dev.nextftc.core.subsystems.Subsystem;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
 
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
@@ -36,7 +37,7 @@ import java.util.Set;
  * Callers queue individual shots or bursts while this class coordinates spin-up,
  * feed timing, and recovery delays.
  */
-public class LauncherSubsystem implements Subsystem {
+public class LauncherSubsystem {
 
     // Global configuration instances
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
@@ -117,7 +118,6 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    @Override
     public void initialize() {
         clock.reset();
         shotQueue.clear();
@@ -137,8 +137,15 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    @Override
-    public void periodic() {
+    /**
+     * Infinite Command that drives the launcher state machine each scheduler tick.
+     * Scheduled once in OpMode init; runs until OpMode stop.
+     */
+    public Command periodic() {
+        return Commands.infinite(this::doPeriodic).requiring(this);
+    }
+
+    private void doPeriodic() {
         long start = System.nanoTime();
         double now = clock.milliseconds();
 

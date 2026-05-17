@@ -8,7 +8,6 @@ import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.NextFTCOpMode;
 import dev.nextftc.ftc.components.BulkReadComponent;
@@ -70,9 +69,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         robot.setAlliance(Alliance.BLUE); // Default for testing
         robot.initializeForTeleOp();
 
-        addComponents(
-                new SubsystemComponent(robot.drive),
-                new SubsystemComponent(robot.vision)
+        com.pedropathing.ivy.Scheduler.reset();
+        com.pedropathing.ivy.Scheduler.schedule(
+                robot.drive.periodic(),
+                robot.vision.periodic()
         );
 
         // Enable diagnostic mode to prevent VisionSubsystem from updating heading
@@ -103,6 +103,7 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
+        com.pedropathing.ivy.Scheduler.execute();
         // Get current odometry pose (ground truth)
 
         Pose odomPose = robot.drive.getFollower().getPose();

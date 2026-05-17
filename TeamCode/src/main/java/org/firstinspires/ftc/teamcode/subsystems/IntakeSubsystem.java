@@ -17,7 +17,8 @@ import com.qualcomm.robotcore.hardware.SwitchableLight;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import dev.nextftc.core.subsystems.Subsystem;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
 
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeLaneSensorConfig;
@@ -47,7 +48,7 @@ import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
  * while higher-level coordinators decide what the subsystem should do.
  */
 @Configurable
-public class IntakeSubsystem implements Subsystem {
+public class IntakeSubsystem {
 
     public enum IntakeMode {
         PASSIVE_REVERSE,
@@ -301,7 +302,6 @@ public class IntakeSubsystem implements Subsystem {
         bindLaneSensors(hardwareMap);
     }
 
-    @Override
     public void initialize() {
         clearLaneColors();
         for (LauncherLane lane : LauncherLane.values()) {
@@ -334,8 +334,15 @@ public class IntakeSubsystem implements Subsystem {
 
 
 
-    @Override
-    public void periodic() {
+    /**
+     * Infinite Command that drives the intake sense + actuate loop each scheduler tick.
+     * Scheduled once in OpMode init; runs until OpMode stop.
+     */
+    public Command periodic() {
+        return Commands.infinite(this::doPeriodic).requiring(this);
+    }
+
+    private void doPeriodic() {
 
         long start = System.nanoTime();
 

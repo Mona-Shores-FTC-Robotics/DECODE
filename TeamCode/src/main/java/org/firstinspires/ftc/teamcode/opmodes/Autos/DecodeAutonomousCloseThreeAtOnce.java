@@ -20,7 +20,6 @@ import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
-import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
@@ -81,12 +80,13 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
         // Set expected start pose for jump safeguards during init relocalization
         updateExpectedStartPose();
 
-        addComponents(
-                new SubsystemComponent(robot.drive),
-                new SubsystemComponent(robot.launcher),
-                new SubsystemComponent(robot.intake),
-                new SubsystemComponent(robot.lighting),
-                new SubsystemComponent(robot.vision)
+        com.pedropathing.ivy.Scheduler.reset();
+        com.pedropathing.ivy.Scheduler.schedule(
+                robot.drive.periodic(),
+                robot.launcher.periodic(),
+                robot.intake.periodic(),
+                robot.lighting.periodic(),
+                robot.vision.periodic()
         );
     }
 
@@ -145,6 +145,7 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
 
     @Override
     public void onUpdate() {
+        com.pedropathing.ivy.Scheduler.execute();
         publishTelemetry();
     }
 

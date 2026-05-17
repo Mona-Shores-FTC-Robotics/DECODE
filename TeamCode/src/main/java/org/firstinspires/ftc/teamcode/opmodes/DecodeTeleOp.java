@@ -5,7 +5,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import dev.nextftc.bindings.BindingManager;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
-import dev.nextftc.core.components.SubsystemComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
 import dev.nextftc.ftc.GamepadEx;
 import dev.nextftc.ftc.NextFTCOpMode;
@@ -100,15 +99,16 @@ public class DecodeTeleOp extends NextFTCOpMode {
                 : Alliance.BLUE;
         allianceSelector = new AllianceSelector(driverPad, selectorDefault);
 
-        addComponents(
-                new SubsystemComponent(robot.drive),
-                new SubsystemComponent(robot.launcher),
-                new SubsystemComponent(robot.intake),
-                new SubsystemComponent(robot.lighting),
-                new SubsystemComponent(robot.vision)
+        // Subsystem periodics are scheduled as Ivy infinite Commands; no NextFTC SubsystemComponent registration.
+        // Reset Ivy's process-global Scheduler to clear any leftover state from a prior OpMode.
+        com.pedropathing.ivy.Scheduler.reset();
+        com.pedropathing.ivy.Scheduler.schedule(
+                robot.drive.periodic(),
+                robot.launcher.periodic(),
+                robot.intake.periodic(),
+                robot.lighting.periodic(),
+                robot.vision.periodic()
         );
-
-
     }
 
     @Override
@@ -167,6 +167,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         }
         lastLoopStartNs = loopStartNs;
         BindingManager.update();
+        com.pedropathing.ivy.Scheduler.execute();
 
         // Auto-switch to DECODE mode when endgame threshold is reached
         checkEndgameModeSwitch();

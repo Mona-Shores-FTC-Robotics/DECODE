@@ -67,7 +67,7 @@ public class DriverBindings {
                 slowHold::get,
                 robot.drive
         );
-        robot.drive.setDefaultCommand(defaultDrive);
+        defaultDrive.schedule();  // TODO PR4: replace with Ivy infinite priority-0 + SUSPEND
 
         aimAtGoal.whenBecomesTrue(aimAndDrive)
                 .whenBecomesFalse(aimAndDrive::cancel);
