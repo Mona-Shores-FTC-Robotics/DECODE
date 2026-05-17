@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 /**
  * Smart intake command with automatic reversal when full.
@@ -79,7 +80,7 @@ public class SmartIntakeCommand extends IntakeCommand {
         else {
             state = State.INTAKING;
         }
-        if (config.enableDebugTelemetry) {
+        if (config.enableDebugTelemetry && TelemetrySettings.isVerbose()) {
             RobotState.packet.put("SmartIntake/state", state.name());
         }
     }
@@ -95,7 +96,7 @@ public class SmartIntakeCommand extends IntakeCommand {
                     state = State.DEBOUNCING;
                     debounceTimer.reset();
 
-                    if (config.enableDebugTelemetry) {
+                    if (config.enableDebugTelemetry && TelemetrySettings.isVerbose()) {
                         RobotState.packet.put("SmartIntake/state", state.name());
                         RobotState.packet.put("SmartIntake/fullDetectedTime", debounceTimer.milliseconds());
                     }
@@ -110,7 +111,7 @@ public class SmartIntakeCommand extends IntakeCommand {
                     // Back to intaking
                     state = State.INTAKING;
 
-                    if (config.enableDebugTelemetry) {
+                    if (config.enableDebugTelemetry && TelemetrySettings.isVerbose()) {
                         RobotState.packet.put("SmartIntake/state", state.name());
                         RobotState.packet.put("SmartIntake/falseAlarm", true);
                     }
@@ -127,7 +128,7 @@ public class SmartIntakeCommand extends IntakeCommand {
                         gamepad.rumble(500); // Strong rumble = auto-reversed
                     }
 
-                    if (config.enableDebugTelemetry) {
+                    if (config.enableDebugTelemetry && TelemetrySettings.isVerbose()) {
                         RobotState.packet.put("SmartIntake/state", state.name());
                         RobotState.packet.put("SmartIntake/autoReversedTime", debounceTimer.milliseconds());
                     }
@@ -142,7 +143,7 @@ public class SmartIntakeCommand extends IntakeCommand {
         }
 
         // Debug telemetry
-        if (config.enableDebugTelemetry) {
+        if (config.enableDebugTelemetry && TelemetrySettings.isVerbose()) {
             RobotState.packet.put("SmartIntake/isFull", isFull);
             if (state == State.DEBOUNCING) {
                 RobotState.packet.put("SmartIntake/debounceTimeMs", debounceTimer.milliseconds());
@@ -159,7 +160,7 @@ public class SmartIntakeCommand extends IntakeCommand {
     @Override
     public void stop(boolean interrupted) {
         // Cleanup happens via whenBecomesFalse binding
-        if (config.enableDebugTelemetry) {
+        if (config.enableDebugTelemetry && TelemetrySettings.isVerbose()) {
             RobotState.packet.put("SmartIntake/stopped", interrupted ? "interrupted" : "normal");
         }
     }

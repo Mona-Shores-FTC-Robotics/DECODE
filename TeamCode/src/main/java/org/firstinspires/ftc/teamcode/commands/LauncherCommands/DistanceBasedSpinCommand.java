@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -277,16 +278,18 @@ public class DistanceBasedSpinCommand extends Command {
         diagnostics.lastCalculatedDistanceIn = smoothedDistance;
 
         // Push diagnostics to telemetry packet
-        RobotState.packet.put("Commands/Distance-Based-Spin/Update Count", diagnostics.updateCount);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Distance (in)", diagnostics.lastCalculatedDistanceIn);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Left Target RPM", diagnostics.lastLeftTargetRpm);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Center Target RPM", diagnostics.lastCenterTargetRpm);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Right Target RPM", diagnostics.lastRightTargetRpm);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Hood Position", diagnostics.lastHoodPosition);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Data Source", diagnostics.lastSource);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Robot Pose Available", diagnostics.robotPoseAvailable);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Goal Pose Available", diagnostics.goalPoseAvailable);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Feedback Triggered", feedbackTriggered);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("Commands/Distance-Based-Spin/Update Count", diagnostics.updateCount);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Distance (in)", diagnostics.lastCalculatedDistanceIn);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Left Target RPM", diagnostics.lastLeftTargetRpm);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Center Target RPM", diagnostics.lastCenterTargetRpm);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Right Target RPM", diagnostics.lastRightTargetRpm);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Hood Position", diagnostics.lastHoodPosition);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Data Source", diagnostics.lastSource);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Robot Pose Available", diagnostics.robotPoseAvailable);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Goal Pose Available", diagnostics.goalPoseAvailable);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Feedback Triggered", feedbackTriggered);
+        }
     }
 
     @Override
@@ -327,10 +330,12 @@ public class DistanceBasedSpinCommand extends Command {
         boolean readyWithAim = rpmReady && aimReady && stationary;
 
         // Publish readiness axes for dashboard / lighting debug
-        RobotState.packet.put("Commands/Distance-Based-Spin/RPM Ready", rpmReady);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Aim Ready", aimReady);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Stationary", stationary);
-        RobotState.packet.put("Commands/Distance-Based-Spin/Ready With Aim", readyWithAim);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("Commands/Distance-Based-Spin/RPM Ready", rpmReady);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Aim Ready", aimReady);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Stationary", stationary);
+            RobotState.packet.put("Commands/Distance-Based-Spin/Ready With Aim", readyWithAim);
+        }
 
         if (readyWithAim) {
             readyLossTimer.reset();

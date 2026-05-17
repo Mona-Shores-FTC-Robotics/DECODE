@@ -13,6 +13,7 @@ import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 import java.util.Objects;
 
@@ -95,23 +96,27 @@ public class PresetRangeSpinCommand extends Command {
                 allEnabledReady &= ready;
             }
 
-            RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Enabled", enabled);
-            RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Target RPM", launchRpm);
-            RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Ready", ready);
-            RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Current RPM", launcher.getCurrentRpm(lane));
+            if (TelemetrySettings.isVerbose()) {
+                RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Enabled", enabled);
+                RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Target RPM", launchRpm);
+                RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Ready", ready);
+                RobotState.packet.put("Preset-Spin/Lane " + lane.name() + "/Current RPM", launcher.getCurrentRpm(lane));
+            }
         }
 
-        RobotState.packet.put("Preset-Spin/Range", range.name());
-        RobotState.packet.put("Preset-Spin/Finish When Ready", finishWhenReady);
         boolean rpmReady = anyEnabled && allEnabledReady;
         boolean aimReady = drive != null && drive.isAimSettled(2.0);
         boolean stable = drive != null && drive.getRobotSpeedInchesPerSecond() <= DriveSubsystem.STATIONARY_SPEED_THRESHOLD_IN_PER_SEC;
         boolean readyWithAim = rpmReady && aimReady && stable;
 
-        RobotState.packet.put("Preset-Spin/All Enabled Ready", rpmReady);
-        RobotState.packet.put("Preset-Spin/Aim Ready", aimReady);
-        RobotState.packet.put("Preset-Spin/Stable", stable);
-        RobotState.packet.put("Preset-Spin/Ready With Aim", readyWithAim);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("Preset-Spin/Range", range.name());
+            RobotState.packet.put("Preset-Spin/Finish When Ready", finishWhenReady);
+            RobotState.packet.put("Preset-Spin/All Enabled Ready", rpmReady);
+            RobotState.packet.put("Preset-Spin/Aim Ready", aimReady);
+            RobotState.packet.put("Preset-Spin/Stable", stable);
+            RobotState.packet.put("Preset-Spin/Ready With Aim", readyWithAim);
+        }
 
         triggerReadyFeedback(readyWithAim);
     }

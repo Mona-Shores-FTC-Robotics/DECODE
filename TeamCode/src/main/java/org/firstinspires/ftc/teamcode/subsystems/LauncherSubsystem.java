@@ -21,6 +21,7 @@ import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherVoltage
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -166,7 +167,7 @@ public class LauncherSubsystem implements Subsystem {
         applyTargetRpms();
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
-            if (flywheel.motor != null) {
+            if (flywheel.motor != null && TelemetrySettings.isVerbose()) {
                 // Log velocity measurements using cached values
                 double velocityTps = flywheel.getMeasuredTicksPerSec();
                 double velocityRpm = flywheel.getCurrentRpm();
@@ -701,7 +702,9 @@ public class LauncherSubsystem implements Subsystem {
                 hoodsRetractedForHumanLoading.add(lane);
 
                 // Log for debugging
-                RobotState.packet.put("launcher/humanLoading/" + lane.name() + "_hoodRetracted", true);
+                if (TelemetrySettings.isVerbose()) {
+                    RobotState.packet.put("launcher/humanLoading/" + lane.name() + "_hoodRetracted", true);
+                }
             }
         }
     }
@@ -1158,7 +1161,9 @@ public class LauncherSubsystem implements Subsystem {
 
             // Apply voltage compensation to maintain consistent performance across battery voltages
             double voltageMultiplier = getVoltageCompensationMultiplier();
-            RobotState.packet.put("launcher/" + lane.name().toLowerCase() + "/voltageMultiplier", voltageMultiplier);
+            if (TelemetrySettings.isVerbose()) {
+                RobotState.packet.put("launcher/" + lane.name().toLowerCase() + "/voltageMultiplier", voltageMultiplier);
+            }
             power = Range.clip(power * voltageMultiplier, 0.0, 1.0);
 
             motor.setPower(power);

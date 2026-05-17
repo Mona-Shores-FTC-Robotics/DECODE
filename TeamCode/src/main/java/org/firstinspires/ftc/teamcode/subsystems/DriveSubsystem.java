@@ -1015,18 +1015,22 @@ public class DriveSubsystem implements Subsystem {
 
     private void recordRelocalizeSource(String source , boolean success , long timestampMs , int tagId) {
         lastRelocalizeSource = source;
-        RobotState.packet.put("/vision/relocalize/last/source", source);
-        RobotState.packet.put("/vision/relocalize/last/success", success);
-        RobotState.packet.put("/vision/relocalize/last/timestamp_ms", timestampMs);
-        RobotState.packet.put("/vision/relocalize/last/tag", tagId);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/relocalize/last/source", source);
+            RobotState.packet.put("/vision/relocalize/last/success", success);
+            RobotState.packet.put("/vision/relocalize/last/timestamp_ms", timestampMs);
+            RobotState.packet.put("/vision/relocalize/last/tag", tagId);
+        }
     }
 
     private void recordAutoRelocalizePacket(boolean success , long timestampMs , int tagId , String status , String source) {
-        RobotState.packet.put("/vision/relocalize/auto/success", success);
-        RobotState.packet.put("/vision/relocalize/auto/timestamp_ms", timestampMs);
-        RobotState.packet.put("/vision/relocalize/auto/tag", tagId);
-        RobotState.packet.put("/vision/relocalize/auto/status", status);
-        RobotState.packet.put("/vision/relocalize/auto/source", source);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/relocalize/auto/success", success);
+            RobotState.packet.put("/vision/relocalize/auto/timestamp_ms", timestampMs);
+            RobotState.packet.put("/vision/relocalize/auto/tag", tagId);
+            RobotState.packet.put("/vision/relocalize/auto/status", status);
+            RobotState.packet.put("/vision/relocalize/auto/source", source);
+        }
     }
 
     private boolean poseWithinField(Pose pose) {
