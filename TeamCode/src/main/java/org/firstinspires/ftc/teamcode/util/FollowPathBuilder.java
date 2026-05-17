@@ -5,8 +5,6 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
-import com.pedropathing.paths.callbacks.ParametricCallback;
-
 import java.util.ArrayList;
 import java.util.List;
 import com.qualcomm.robotcore.util.Range;
@@ -155,31 +153,10 @@ public class FollowPathBuilder {
             );
         }
 
-
-        PathChain chain = builder.build();
-
-        if (timeoutMilliSec != null) {
-            // Assuming your chain only has one path
-            Path onlyPath = chain.getPath(0);
-            onlyPath.setTimeoutConstraint(timeoutMilliSec);
-        }
-
-        if (headingConstraint != 0) {
-            // Assuming your chain only has one path
-            Path onlyPath = chain.getPath(0);
-            onlyPath.setHeadingConstraint(headingConstraint);
-        }
-
-        if (translationalConstraint != 0) {
-            // Assuming your chain only has one path
-            Path onlyPath = chain.getPath(0);
-            onlyPath.setTranslationalConstraint(translationalConstraint);
-        }
-
         if (fireAtT != null && launcherForCallback != null) {
             LauncherSubsystem launcher = launcherForCallback;
             IntakeSubsystem intake = intakeForCallback;
-            chain.setCallbacks(new ParametricCallback(0, fireAtT, robot.drive.getFollower(), () -> {
+            builder.addParametricCallback(fireAtT, () -> {
                 launcher.spinUpAllLanesToLaunch();
                 for (LauncherLane lane : LauncherLane.values()) {
                     launcher.queueShot(lane);
@@ -187,7 +164,22 @@ public class FollowPathBuilder {
                 if (intake != null) {
                     intake.setGateAllowArtifacts();
                 }
-            }));
+            });
+        }
+
+        PathChain chain = builder.build();
+
+        if (timeoutMilliSec != null) {
+            Path onlyPath = chain.getPath(0);
+            onlyPath.setTimeoutConstraint(timeoutMilliSec);
+        }
+        if (headingConstraint != 0) {
+            Path onlyPath = chain.getPath(0);
+            onlyPath.setHeadingConstraint(headingConstraint);
+        }
+        if (translationalConstraint != 0) {
+            Path onlyPath = chain.getPath(0);
+            onlyPath.setTranslationalConstraint(translationalConstraint);
         }
 
         double clippedPower = Range.clip(maxPower, 0.0, 1.0);

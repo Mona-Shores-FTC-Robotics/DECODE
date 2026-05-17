@@ -1,108 +1,107 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 
+import androidx.annotation.Nullable;
+
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.geometry.BezierCurve;
+import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.paths.PathBuilder;
+import com.pedropathing.paths.PathChain;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.TimedEjectCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
-import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
+import org.firstinspires.ftc.teamcode.util.AutoField;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
-import dev.nextftc.core.commands.groups.SequentialGroup;
+import dev.nextftc.extensions.pedro.FollowPath;
 
 /**
- * MichianaShort autonomous: fires all 3 lanes mid-return-path via Pedro's ParametricCallback
- * (attached to the PathChain at T = fireAtT) rather than stopping to shoot.
+ * MichianaShort: entire auto as a single PathChain with ParametricCallbacks.
  *
- * Key difference from CloseThreeAtOnce:
- *   - withFireAtT() attaches a ParametricCallback to each return path's PathChain.
- *     Pedro fires the callback automatically when T >= fireAtT — no command wrapper needed.
- *   - fireAtT (default 0.85) is after headingInterpEnd (default 0.70), so heading is
- *     already settled when shots queue.
- *   - Flywheels stay at launch speed between shots (spinDownAfterShot=false via presetRangeSpinUp).
+ * Structure:
+ *   Seg 0 : start    → launch  (spin up + fire preloads at T=fireAtT)
+ *   Seg 1 : launch   → art1    (constant 270°, brakes near artifacts, starts intake)
+ *   Seg 2 : art1     → launch  (constant launch heading, fire at T=fireAtT)
+ *   Seg 3 : launch   → art2    (same as seg 1)
+ *   Seg 4 : art2     → launch  (same as seg 2, curved return)
+ *   Seg 5 : launch   → art3    (same as seg 1)
+ *   Seg 6 : art3     → launch  (same as seg 2, curved return)
+ *   Seg 7 : launch   → park
  *
- * Waypoints mirror CloseThreeAtOnceCommand — adjust Config and Waypoints as needed.
+ * No SequentialGroup, no ParallelDeadlineGroup per segment — one FollowPath command.
+ * Robot never stops at the launch waypoint between cycles; callbacks handle all events.
+ *
+ * Two tuning modes (adjust on FTC Dashboard, no recompile):
+ *   Fast       : fireAtT=0.6,  returnBrakingStart=0.9  — fire while moving fast
+ *   Consistent : fireAtT=0.85, returnBrakingStart=0.5  — fire while decelerating
  */
 public class MichianaShortCommand {
 
     @Configurable
     public static class Config {
-        /** Max drive power for normal paths */
-        public static double maxPathPower = 0.8;
-        /** Max drive power for the last paths (park etc.) */
-        public static double lastPathsMaxPower = 1.0;
-        /** linearInterpWeight: heading interpolation finishes at this T fraction */
-        public static double headingInterpEnd = 0.7;
-        /** T value at which the ParametricCallback fires — must be > headingInterpEnd */
+        /** Max power for the full auto chain */
+        public static double maxPathPower = 0.85;
+
+        /** Heading interpolation end point for the first path (start → launch) */
+        public static double firstPathHeadingInterpEnd = 0.7;
+
+        /**
+         * Outbound braking start (launch → artifacts).
+         * Robot begins decelerating at this T fraction so it arrives slowly for intake.
+         */
+        public static double outboundBrakingStart = 0.7;
+
+        /**
+         * Return path T value at which shots fire.
+         * Pair with returnBrakingStart:
+         *   Fast mode       : fireAtT=0.60, returnBrakingStart=0.90
+         *   Consistent mode : fireAtT=0.85, returnBrakingStart=0.50
+         */
         public static double fireAtT = 0.85;
-        /** Full auto duration in seconds (for ConditionalFinalLaunch) */
-        public static double autoDurationSeconds = 30.0;
-        /** Min remaining seconds to attempt the 4th launch + park sequence */
-        public static double minTimeForFinalLaunchSeconds = 6.8;
-        /** Duration of eject pulse before each intake sweep */
-        public static double ejectTime = 1200;
+
+        /**
+         * Return path braking start (artifacts → launch).
+         * High = robot still moving fast when shots fire (faster cycle).
+         * Low  = robot decelerating when shots fire (more consistent RPM).
+         */
+        public static double returnBrakingStart = 0.5;
     }
 
     @Configurable
     public static class Waypoints {
-        // Start
-        public static double startX = 26.5;
-        public static double startY = 130;
-        public static double startHeading = 0;
+        public static double startX = 26.5, startY = 130, startHeading = 0;
 
-        // Launch position (shared by all shots)
-        public static double launchX = 36;
-        public static double launchY = 107.0;
-        public static double launchHeading = 134.0;
+        public static double launchX = 36, launchY = 107, launchHeading = 134;
 
-        // Artifact Set 1
-        public static double artifactsSet1X = 24;
-        public static double artifactsSet1Y = 83.8;
-        public static double artifactsSet1Heading = 270.0;
-        public static double artifactsSet1CtrlX = 24;
-        public static double artifactsSet1CtrlY = 113;
+        // Art1: outbound control only (return is a straight line)
+        public static double art1X = 24, art1Y = 83.8;
+        public static double art1CtrlX = 24, art1CtrlY = 113;
 
-        // Artifact Set 2
-        public static double artifactsSet2X = 24;
-        public static double artifactsSet2Y = 61.0;
-        public static double artifactsSet2Heading = 260;
-        public static double artifactsSet2CtrlX = 24;
-        public static double artifactsSet2CtrlY = 100;
+        // Art2: outbound + return control
+        public static double art2X = 24, art2Y = 61;
+        public static double art2CtrlX = 24, art2CtrlY = 100;
+        public static double art2RetCtrlX = 50.5, art2RetCtrlY = 72;
 
-        // Return from set 2 — control point to curve around obstacles
-        public static double returnSet2CtrlX = 50.5;
-        public static double returnSet2CtrlY = 72;
+        // Art3: outbound + return control
+        public static double art3X = 24, art3Y = 35.5;
+        public static double art3CtrlX = 24, art3CtrlY = 100;
+        public static double art3RetCtrlX = 44.5, art3RetCtrlY = 73.5;
 
-        // Artifact Set 3
-        public static double artifactsSet3X = 24;
-        public static double artifactsSet3Y = 35.5;
-        public static double artifactsSet3Heading = 260;
-        public static double artifactsSet3CtrlX = 24;
-        public static double artifactsSet3CtrlY = 100;
-
-        // Return from set 3 — control point
-        public static double returnSet3CtrlX = 44.5;
-        public static double returnSet3CtrlY = 73.5;
-
-        // Park / near gate
-        public static double nearGateX = 35;
-        public static double nearGateY = 70.4;
-        public static double nearGateHeading = 180.0;
-        public static double nearGateCtrlX = 41;
-        public static double nearGateCtrlY = 85;
+        public static double nearGateX = 35, nearGateY = 70.4, nearGateHeading = 180;
+        public static double nearGateCtrlX = 41, nearGateCtrlY = 85;
     }
 
     private MichianaShortCommand() {}
 
     public static Pose getDefaultStartPose() {
-        return start();
+        return wp(Waypoints.startX, Waypoints.startY, Waypoints.startHeading, Alliance.BLUE);
     }
 
     public static Command create(Robot robot, Alliance alliance) {
@@ -110,180 +109,112 @@ public class MichianaShortCommand {
     }
 
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
+        LauncherSubsystem launcher = robot.launcher;
+        IntakeSubsystem intake = robot.intake;
+
+        Runnable fireAll = () -> {
+            launcher.spinUpAllLanesToLaunch();
+            for (LauncherLane lane : LauncherLane.values()) launcher.queueShot(lane);
+            intake.setGateAllowArtifacts();
+        };
+
+        Pose start  = startOverride != null
+                ? startOverride
+                : wp(Waypoints.startX, Waypoints.startY, Waypoints.startHeading, alliance);
+        Pose launch  = wp(Waypoints.launchX,   Waypoints.launchY,   Waypoints.launchHeading,   alliance);
+        Pose nearGate = wp(Waypoints.nearGateX, Waypoints.nearGateY, Waypoints.nearGateHeading, alliance);
+
+        PathBuilder b = robot.drive.getFollower().pathBuilder();
+
+        // ── Seg 0: start → launch ────────────────────────────────────────────
+        // Spin up at path start, fire preloads at T=fireAtT
+        b.addPath(new BezierLine(start, launch))
+         .setLinearHeadingInterpolation(start.getHeading(), launch.getHeading(),
+                 Config.firstPathHeadingInterpEnd)
+         .addParametricCallback(0.0,           launcher::spinUpAllLanesToLaunch)
+         .addParametricCallback(Config.fireAtT, fireAll);
+
+        // ── Cycles 1–3 ───────────────────────────────────────────────────────
+        addCycle(b, launch,
+                wp(Waypoints.art1X, Waypoints.art1Y, 0, alliance),
+                ctrl(Waypoints.art1CtrlX, Waypoints.art1CtrlY, alliance),
+                null,   // straight return, no control point
+                launch.getHeading(), fireAll, intake);
+
+        addCycle(b, launch,
+                wp(Waypoints.art2X, Waypoints.art2Y, 0, alliance),
+                ctrl(Waypoints.art2CtrlX, Waypoints.art2CtrlY, alliance),
+                ctrl(Waypoints.art2RetCtrlX, Waypoints.art2RetCtrlY, alliance),
+                launch.getHeading(), fireAll, intake);
+
+        addCycle(b, launch,
+                wp(Waypoints.art3X, Waypoints.art3Y, 0, alliance),
+                ctrl(Waypoints.art3CtrlX, Waypoints.art3CtrlY, alliance),
+                ctrl(Waypoints.art3RetCtrlX, Waypoints.art3RetCtrlY, alliance),
+                launch.getHeading(), fireAll, intake);
+
+        // ── Final: launch → park ─────────────────────────────────────────────
+        b.addPath(new BezierCurve(launch,
+                ctrl(Waypoints.nearGateCtrlX, Waypoints.nearGateCtrlY, alliance), nearGate))
+         .setLinearHeadingInterpolation(launch.getHeading(), nearGate.getHeading(), 0.8);
+
+        PathChain fullAuto = b.build();
+
+        // presetRangeSpinUp(finishWhenReady=false) runs alongside the full chain,
+        // ensuring SHORT_AUTO RPM targets are always set even if something clears them.
         LauncherCommands launcherCommands = new LauncherCommands(
-                robot.launcher, robot.intake, robot.drive, robot.lighting);
+                launcher, intake, robot.drive, robot.lighting);
 
-        // --- First path: start → launch, spin up flywheels in parallel, fire preloads at T=fireAtT ---
-        FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
-        if (startOverride != null) {
-            firstPathBuilder.fromWorldCoordinates(robot.drive.getFollower().getPose());
+        return new ParallelDeadlineGroup(
+                new FollowPath(fullAuto, true, Config.maxPathPower),
+                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, false)
+        );
+    }
+
+    /**
+     * Appends one outbound + return cycle to the PathBuilder.
+     *
+     * Outbound (launch → artifacts):
+     *   - Constant 270° heading (robot faces the artifact area)
+     *   - Brakes starting at outboundBrakingStart so it arrives slowly
+     *   - Starts intake at T=0.05
+     *
+     * Return (artifacts → launch):
+     *   - Constant launch heading (always aimed at goal — safe to fire any time)
+     *   - Brakes starting at returnBrakingStart (tune for fast vs consistent)
+     *   - Fires at T=fireAtT
+     *
+     * @param retCtrl Control point for the return curve, or null for a straight line.
+     */
+    private static void addCycle(PathBuilder b,
+                                  Pose launch, Pose artifacts,
+                                  Pose outCtrl, @Nullable Pose retCtrl,
+                                  double launchHeadingRad,
+                                  Runnable fireAll, IntakeSubsystem intake) {
+        // Outbound
+        b.addPath(new BezierCurve(launch, outCtrl, artifacts))
+         .setConstantHeadingInterpolation(Math.toRadians(270))
+         .setBrakingStart(Config.outboundBrakingStart)
+         .addParametricCallback(0.05, intake::forwardRoller);
+
+        // Return
+        if (retCtrl != null) {
+            b.addPath(new BezierCurve(artifacts, retCtrl, launch));
         } else {
-            firstPathBuilder.from(start());
+            b.addPath(new BezierLine(artifacts, launch));
         }
-
-        Command driveToFirstLaunch = new ParallelDeadlineGroup(
-                firstPathBuilder
-                        .to(launch())
-                        .withLinearHeadingCompletion(Config.headingInterpEnd)
-                        .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
-                        .build(Config.maxPathPower),
-                new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
-                launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true)
-        );
-
-        // --- Artifact pickups (constant heading so robot faces gate while intaking) ---
-        Command pickupSet1 = new ParallelDeadlineGroup(
-                new FollowPathBuilder(robot, alliance)
-                        .from(launch())
-                        .to(artifactsSet1())
-                        .withControl(artifactsSet1Ctrl())
-                        .withConstantHeading(270)
-                        .build(Config.maxPathPower),
-                new SequentialGroup(
-                        new TimedEjectCommand(robot.intake, Config.ejectTime),
-                        new AutoSmartIntakeCommand(robot.intake)
-                )
-        );
-
-        Command pickupSet2 = new ParallelDeadlineGroup(
-                new FollowPathBuilder(robot, alliance)
-                        .from(launch())
-                        .to(artifactsSet2())
-                        .withControl(artifactsSet2Ctrl())
-                        .withConstantHeading(270)
-                        .build(Config.maxPathPower),
-                new SequentialGroup(
-                        new TimedEjectCommand(robot.intake, Config.ejectTime),
-                        new AutoSmartIntakeCommand(robot.intake)
-                )
-        );
-
-        Command pickupSet3 = new ParallelDeadlineGroup(
-                new FollowPathBuilder(robot, alliance)
-                        .from(launch())
-                        .to(artifactsSet3())
-                        .withControl(artifactsSet3Ctrl())
-                        .withConstantHeading(270)
-                        .build(Config.maxPathPower),
-                new SequentialGroup(
-                        new TimedEjectCommand(robot.intake, Config.ejectTime),
-                        new AutoSmartIntakeCommand(robot.intake)
-                )
-        );
-
-        // --- Return paths: ParametricCallback fires at T=fireAtT, no extra command needed ---
-        Command returnAndFireSet1 = new FollowPathBuilder(robot, alliance)
-                .from(artifactsSet1())
-                .to(launch())
-                .withLinearHeadingCompletion(Config.headingInterpEnd)
-                .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
-                .build(Config.maxPathPower);
-
-        Command returnAndFireSet2 = new FollowPathBuilder(robot, alliance)
-                .from(artifactsSet2())
-                .to(launch())
-                .withControl(returnSet2Ctrl())
-                .withLinearHeadingCompletion(Config.headingInterpEnd)
-                .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
-                .build(Config.maxPathPower);
-
-        // --- Conditional final sequence ---
-        Command finalSequence = new ConditionalFinalLaunchCommand(
-                Config.autoDurationSeconds,
-                Config.minTimeForFinalLaunchSeconds,
-                // Enough time: return + fire mid-path, then park
-                new SequentialGroup(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(artifactsSet3())
-                                .to(launch())
-                                .withControl(returnSet3Ctrl())
-                                .withLinearHeadingCompletion(Config.headingInterpEnd)
-                                .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
-                                .build(Config.lastPathsMaxPower),
-                        new ParallelDeadlineGroup(
-                                new FollowPathBuilder(robot, alliance)
-                                        .from(launch())
-                                        .to(nearGate())
-                                        .withControl(nearGateCtrl())
-                                        .withLinearHeadingCompletion(Config.headingInterpEnd)
-                                        .build(Config.lastPathsMaxPower),
-                                new SequentialGroup(
-                                        new TimedEjectCommand(robot.intake, Config.ejectTime),
-                                        new AutoSmartIntakeCommand(robot.intake)
-                                )
-                        )
-                ),
-                // Not enough time: straight to park
-                new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet3())
-                        .to(nearGate())
-                        .withLinearHeadingCompletion(Config.headingInterpEnd)
-                        .build(Config.maxPathPower)
-        );
-
-        return new SequentialGroup(
-                ConditionalFinalLaunchCommand.createTimerReset(),
-                driveToFirstLaunch,
-                pickupSet1,
-                returnAndFireSet1,
-                pickupSet2,
-                returnAndFireSet2,
-                pickupSet3,
-                finalSequence
-        );
+        b.setConstantHeadingInterpolation(launchHeadingRad)
+         .setBrakingStart(Config.returnBrakingStart)
+         .addParametricCallback(Config.fireAtT, fireAll);
     }
 
-    // ---- Pose helpers ----
+    // ── Pose helpers ─────────────────────────────────────────────────────────
 
-    private static Pose start() {
-        return new Pose(Waypoints.startX, Waypoints.startY, Math.toRadians(Waypoints.startHeading));
+    private static Pose wp(double x, double y, double headingDeg, Alliance alliance) {
+        return AutoField.poseForAlliance(x, y, headingDeg, alliance);
     }
 
-    private static Pose launch() {
-        return new Pose(Waypoints.launchX, Waypoints.launchY, Math.toRadians(Waypoints.launchHeading));
-    }
-
-    private static Pose artifactsSet1() {
-        return new Pose(Waypoints.artifactsSet1X, Waypoints.artifactsSet1Y,
-                Math.toRadians(Waypoints.artifactsSet1Heading));
-    }
-
-    private static Pose artifactsSet1Ctrl() {
-        return new Pose(Waypoints.artifactsSet1CtrlX, Waypoints.artifactsSet1CtrlY, 0);
-    }
-
-    private static Pose artifactsSet2() {
-        return new Pose(Waypoints.artifactsSet2X, Waypoints.artifactsSet2Y,
-                Math.toRadians(Waypoints.artifactsSet2Heading));
-    }
-
-    private static Pose artifactsSet2Ctrl() {
-        return new Pose(Waypoints.artifactsSet2CtrlX, Waypoints.artifactsSet2CtrlY, 0);
-    }
-
-    private static Pose returnSet2Ctrl() {
-        return new Pose(Waypoints.returnSet2CtrlX, Waypoints.returnSet2CtrlY, 0);
-    }
-
-    private static Pose artifactsSet3() {
-        return new Pose(Waypoints.artifactsSet3X, Waypoints.artifactsSet3Y,
-                Math.toRadians(Waypoints.artifactsSet3Heading));
-    }
-
-    private static Pose artifactsSet3Ctrl() {
-        return new Pose(Waypoints.artifactsSet3CtrlX, Waypoints.artifactsSet3CtrlY, 0);
-    }
-
-    private static Pose returnSet3Ctrl() {
-        return new Pose(Waypoints.returnSet3CtrlX, Waypoints.returnSet3CtrlY, 0);
-    }
-
-    private static Pose nearGate() {
-        return new Pose(Waypoints.nearGateX, Waypoints.nearGateY,
-                Math.toRadians(Waypoints.nearGateHeading));
-    }
-
-    private static Pose nearGateCtrl() {
-        return new Pose(Waypoints.nearGateCtrlX, Waypoints.nearGateCtrlY, 0);
+    private static Pose ctrl(double x, double y, Alliance alliance) {
+        return AutoField.poseForAlliance(x, y, 0, alliance);
     }
 }
