@@ -1391,7 +1391,7 @@ public class DriveSubsystem implements Subsystem {
         VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
         if (snap.capturedAtNs == lastFedSnapshotNs) return;
         lastFedSnapshotNs = snap.capturedAtNs;
-        if (snap.decisionMargin < FusionConfig.minDecisionMarginPercent) return;
+        if (snap.decisionMargin < FusionConfig.minTargetAreaPercent) return;
         Pose pose = snap.pedroPoseMT2 != null ? snap.pedroPoseMT2 : snap.pedroPoseMT1;
         if (pose == null) return;
         long measurementNs = snap.capturedAtNs - (long)(FusionConfig.limelightLatencyMs * 1_000_000L);
