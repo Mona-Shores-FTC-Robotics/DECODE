@@ -425,13 +425,107 @@ Acceptance:
 - `master` retains the NextFTC implementation until PR 5 merges.
 - If post-PR-5 issues surface in competition, revert PRs 5 → 4 → 3 → 2 → 1 in order, or branch from the last NextFTC commit.
 
+## Multi-robot configuration (DECODE_19429 + DECODE_20245)
+
+We have two physical robots sharing this codebase. The control hub identifies itself at runtime via `util/ControlHubIdentifierUtil.java`, and `util/RobotConfigs.java` dispatches to per-robot tuning constants via 11 `if ("DECODE_19429".equals(robotName))` getters. Configs that differ between robots: Pinpoint offsets, Mecanum PIDs, hood positions, feeder timing, aim-assist gains, lane sensor thresholds, distance→RPM curves, gate config.
+
+The migration must preserve this. It's also a good opportunity to clean it up.
+
+### Problems with the current pattern
+
+- 11 nearly-identical getter methods doing string-equals comparisons.
+- Adding a third robot would mean editing 11 getters plus all the config classes (each holds a `xxx19429` and `xxx20245` static field).
+- Subsystems implicitly depend on `RobotState.getRobotName()` having been set before they read any config — temporal coupling that's only enforced by comments.
+- The literal `"DECODE_19429"` appears 11+ times in one file. Rename risk.
+
+### Proposed: `RobotProfile` value object
+
+Replace `RobotConfigs` with a single immutable bundle, selected once at boot:
+
+```java
+public final class RobotProfile {
+    public final LauncherFeederConfig feeder;
+    public final LauncherHoodConfig hood;
+    public final LauncherFlywheelConfig flywheel;
+    public final LauncherTimingConfig timing;
+    public final PinpointConstants pinpoint;
+    public final FollowerConstants follower;
+    public final MecanumConstants drive;
+    public final DriveAimAssistConfig aimAssist;
+    public final DriveFixedAngleAimConfig fixedAngleAim;
+    public final DriveRightTriggerFixedAngleConfig rightTriggerFixedAngle;
+    public final IntakeGateConfig gate;
+    public final IntakeLaneSensorConfig.LanePresenceConfig lanePresence;
+    public final CommandRangeConfig commandRange;
+
+    private RobotProfile(/* all-args constructor */) { /* ... */ }
+
+    public static RobotProfile forCurrent() {
+        String name = RobotState.getRobotName();
+        if ("DECODE_19429".equals(name)) return ROBOT_19429;
+        return ROBOT_20245;  // default
+    }
+
+    public static final RobotProfile ROBOT_19429 = new RobotProfile(
+        LauncherFeederConfig.feederConfig19429,
+        LauncherHoodConfig.hoodConfig19429,
+        /* ... 11 more args ... */);
+
+    public static final RobotProfile ROBOT_20245 = new RobotProfile(/* ... */);
+}
+```
+
+Subsystems take what they need explicitly at construction (Traffic Cones idiom):
+
+```java
+public LauncherSubsystem(HardwareMap hm,
+                         LauncherFlywheelConfig flywheel,
+                         LauncherHoodConfig hood,
+                         LauncherFeederConfig feeder,
+                         LauncherTimingConfig timing) { /* ... */ }
+```
+
+`Robot` wires it once:
+
+```java
+public Robot(HardwareMap hm) {
+    ControlHubIdentifierUtil.setRobotName(hm, null);
+    RobotProfile p = RobotProfile.forCurrent();
+    launcher = new LauncherSubsystem(hm, p.flywheel, p.hood, p.feeder, p.timing);
+    drive = new DriveSubsystem(hm, vision, p.drive, p.pinpoint, p.follower, p.aimAssist);
+    intake = new IntakeSubsystem(hm, p.gate, p.lanePresence);
+    /* ... */
+}
+```
+
+### Wins
+
+- Adding a third robot is **1 file edit** (one new `ROBOT_NNNNN` constant) instead of 11.
+- Type-safe — no string compares scattered through config classes.
+- Subsystems declare config dependencies explicitly. No hidden `RobotConfigs.getXxx()` calls inside subsystem code.
+- Testable — pass any `RobotProfile` in tests.
+- Plays nice with Ivy's plain-subsystem-class style; no framework coupling at all.
+
+### Note on `Commands.match`
+
+`Commands.match` is for *behavior* dispatch (returns a `Command`), not *config* dispatch. For selecting `RobotProfile` at construction time, use a plain Java switch / `forCurrent()` method. Don't try to force Ivy's `match` into the wrong job.
+
+### Where this fits in PR sequencing
+
+The `RobotProfile` refactor is **orthogonal to the Ivy migration** — it could happen before, during, or after. Two options:
+
+- **Do it as PR 0** (before Ivy): clean refactor while staying on NextFTC. Smaller, safer changes per PR. Subsystems get explicit config deps before they're also asked to change framework.
+- **Do it inside PR 3** (the big subsystem port): port subsystem to Ivy *and* take its configs as constructor args in one shot. Fewer PRs but each PR is larger.
+
+PR 0 is the more conservative path. Recommended.
+
 ## Open items to verify before starting
 
 1. ~~`com.pedropathing.ivy.commands.Commands` — paste source, confirm factory names.~~ **Done 2026-05-17.** All factories verified.
 2. ~~`com.pedropathing.ivy.groups.Groups` — paste source, confirm signatures.~~ **Done 2026-05-17.** All signatures verified including the bonus `repeat(int)`, `repeat(IntSupplier)`, `loop(Command)`.
-3. Whether NextFTC pulls FTC Dashboard or `com.bylazar:fullpanels` transitively at `implementation` scope (matters only if Sloth is added before NextFTC is removed). Run on dev machine: `./gradlew :TeamCode:dependencies --configuration debugRuntimeClasspath | grep -E "acmerobotics\.dashboard|com\.bylazar"`.
+3. ~~Whether NextFTC pulls FTC Dashboard or `com.bylazar:fullpanels` transitively at `implementation` scope.~~ **Done 2026-05-17.** Per `./gradlew :TeamCode:dependencies` on dev machine: NextFTC pulls only `org.jetbrains.kotlin:kotlin-stdlib` and intra-NextFTC modules. **No dashboard or panels transitives.** Sloth can be adopted without any `exclude group:` lines — just swap the direct `com.acmerobotics.dashboard:dashboard:0.5.1` for `com.acmerobotics.slothboard:dashboard:0.2.4+0.5.1` and `com.bylazar:fullpanels:1.0.12` for `com.bylazar.sloth:fullpanels:0.2.4+1.0.12`. Original "Sloth incompatibility" concern was unfounded.
 4. Whether `com.pedropathing:telemetry:1.0.0` can be dropped once `Tuning.java` is replaced with whatever the current Pedro 2.1.2 quickstart uses (orthogonal to Ivy migration but worth checking at the same time).
-5. Confirm `Commands.waitMs` argument unit. The Javadoc says "the time to wait in milliseconds" so it's confirmed milliseconds; just internalize that `Commands.waitMs(1000.0)` is one second, not one millisecond.
+5. ~~Confirm `Commands.waitMs` argument unit.~~ **Done.** Javadoc says milliseconds explicitly.
 
 ## Style guide: 22131 Traffic Cones
 
