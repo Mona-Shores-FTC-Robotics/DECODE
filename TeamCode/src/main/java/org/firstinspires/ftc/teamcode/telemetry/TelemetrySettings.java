@@ -1,50 +1,33 @@
 package org.firstinspires.ftc.teamcode.telemetry;
 
+import com.acmerobotics.dashboard.config.Config;
+
+@Config
 public final class TelemetrySettings {
     private TelemetrySettings() {}
 
-    /**
-     * Telemetry level - controls whether Dashboard starts and packets are sent.
-     */
     public enum TelemetryLevel {
-        /**
-         * MATCH: Safe for competition.
-         * - FTC Dashboard does NOT start
-         * - No telemetry packets sent
-         * - Driver station only: essential info
-         */
+        /** Competition: no Dashboard, no packets, driver station only. */
         MATCH,
-
-        /**
-         * DEBUG: Full telemetry for tuning and development.
-         * - FTC Dashboard starts
-         * - Telemetry packets sent
-         * - All diagnostics available
-         */
-        DEBUG
+        /** Practice/tuning: lean ~25-field packet + field overlay at 20 Hz. */
+        PRACTICE,
+        /** Full diagnostics: every subsystem field, color sensors, gamepad axes. */
+        VERBOSE
     }
 
-    /**
-     * Telemetry level for this build. Change and recompile to switch modes.
-     *
-     * MATCH (default): No Dashboard, no packets - safe for competition
-     * DEBUG: Full telemetry - for tuning and development
-     */
-    public static final TelemetryLevel LEVEL = TelemetryLevel.MATCH;
+    /** Change via FTC Dashboard Config tab — no recompile needed. */
+    public static TelemetryLevel LEVEL = TelemetryLevel.PRACTICE;
 
-    /**
-     * Returns true if FTC Dashboard should be initialized.
-     * Dashboard only starts in DEBUG mode - never in MATCH.
-     */
     public static boolean shouldInitializeDashboard() {
-        return LEVEL == TelemetryLevel.DEBUG;
+        return LEVEL != TelemetryLevel.MATCH;
     }
 
-    /**
-     * Returns true if telemetry packets should be sent.
-     */
     public static boolean shouldSendDashboardPackets() {
-        return LEVEL == TelemetryLevel.DEBUG;
+        return LEVEL != TelemetryLevel.MATCH;
     }
 
+    /** True only in VERBOSE mode — guards expensive/high-volume packet.put calls. */
+    public static boolean isVerbose() {
+        return LEVEL == TelemetryLevel.VERBOSE;
+    }
 }

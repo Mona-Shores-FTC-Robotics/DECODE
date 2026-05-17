@@ -132,7 +132,7 @@ public class TelemetryService {
                 telemetryStartNs
         );
 
-        // FTC Dashboard packets (only in DEBUG mode)
+        // FTC Dashboard packets (only in PRACTICE/VERBOSE mode)
         publishDashboardTelemetry(data);
 
         // Driver station telemetry (skip if autonomous and driver controls hidden)
@@ -148,7 +148,7 @@ public class TelemetryService {
         if (TelemetrySettings.LEVEL == TelemetrySettings.TelemetryLevel.MATCH) {
             driverStationFormatter.publishMatch(telemetry, data);
         } else {
-            // DEBUG mode - handle page navigation from driver gamepad dpad
+            // PRACTICE/VERBOSE mode - handle page navigation from driver gamepad dpad
             driverStationFormatter.handlePageNavigation(
                     data.gamepad.driver.dpadUp,
                     data.gamepad.driver.dpadDown
@@ -158,7 +158,7 @@ public class TelemetryService {
     }
 
     /**
-     * Publish FTC Dashboard telemetry (only in DEBUG mode).
+     * Publish FTC Dashboard telemetry (only in PRACTICE/VERBOSE mode).
      */
     private void publishDashboardTelemetry(RobotTelemetryData data) {
         if (!TelemetrySettings.shouldSendDashboardPackets()) {

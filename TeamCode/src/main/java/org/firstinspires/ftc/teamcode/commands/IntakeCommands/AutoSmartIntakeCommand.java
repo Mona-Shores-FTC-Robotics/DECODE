@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 /**
  * Autonomous-oriented smart intake:
@@ -121,9 +122,11 @@ public class AutoSmartIntakeCommand extends IntakeCommand {
         if (!config.enableTelemetry) {
             return;
         }
-        RobotState.packet.put("AutoSmartIntake/state", state == null ? "UNKNOWN" : state.name());
-        RobotState.packet.put("AutoSmartIntake/artifactCount", artifactCount);
-        RobotState.packet.put("AutoSmartIntake/isFull", isFull);
-        RobotState.packet.put("AutoSmartIntake/timerMs", timer.milliseconds());
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("AutoSmartIntake/state", state == null ? "UNKNOWN" : state.name());
+            RobotState.packet.put("AutoSmartIntake/artifactCount", artifactCount);
+            RobotState.packet.put("AutoSmartIntake/isFull", isFull);
+            RobotState.packet.put("AutoSmartIntake/timerMs", timer.milliseconds());
+        }
     }
 }

@@ -40,6 +40,7 @@ import org.firstinspires.ftc.teamcode.util.CircularMovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.MovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 /**
  * Hardware-facing intake wrapper. Handles motor power, roller servo, and lane sensor sampling
@@ -879,7 +880,8 @@ public class IntakeSubsystem implements Subsystem {
 
         // Publish raw sensor metrics every poll so we can see empty vs artifact behavior even when classification fails.
         // Skipped entirely in MATCH mode (no dashboard packets sent) to avoid string/autobox allocations in the hot path.
-        if (telemetryActive && keys != null) {
+        // Skipped in PRACTICE mode — 17 fields × 3 lanes is too much for lean telemetry; use VERBOSE for raw sensor data.
+        if (TelemetrySettings.isVerbose() && telemetryActive && keys != null) {
             RobotState.packet.put(keys.sensorPresent, true);
             RobotState.packet.put(keys.distanceRawCm, distanceAvailable ? rawDistanceCm : Double.NaN);
             RobotState.packet.put(keys.distanceCm, distanceValid ? distanceCm : Double.NaN);

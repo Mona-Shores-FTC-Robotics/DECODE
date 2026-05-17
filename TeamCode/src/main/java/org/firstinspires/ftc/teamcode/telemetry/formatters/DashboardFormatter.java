@@ -18,7 +18,8 @@ import java.util.concurrent.TimeUnit;
  * Formats telemetry packets for FTC Dashboard.
  * Uses hierarchical field naming with underscores for alphabetical grouping.
  * <p>
- * Note: MATCH mode does not send dashboard packets. DEBUG mode sends full diagnostics.
+ * Note: MATCH mode does not send dashboard packets. PRACTICE mode sends lean packets.
+ * VERBOSE mode sends full diagnostics.
  * </p>
  */
 public class DashboardFormatter {
@@ -26,19 +27,64 @@ public class DashboardFormatter {
     /**
      * Create a telemetry packet based on the current telemetry level.
      * MATCH mode returns null (no packets sent).
-     * DEBUG mode includes comprehensive diagnostics.
+     * PRACTICE mode includes lean diagnostics.
+     * VERBOSE mode includes comprehensive diagnostics.
      */
     public TelemetryPacket createPacket(RobotTelemetryData data, TelemetrySettings.TelemetryLevel level) {
         if (level == TelemetrySettings.TelemetryLevel.MATCH) {
             return null;
         }
-        return createDebugPacket(data);
+        if (level == TelemetrySettings.TelemetryLevel.PRACTICE) {
+            return createPracticePacket(data);
+        }
+        return createVerbosePacket(data);
+    }
+
+    private TelemetryPacket createPracticePacket(RobotTelemetryData data) {
+        TelemetryPacket packet = RobotState.packet;
+
+        // Pose
+        packet.put("Pose/x", data.pose.poseXIn);
+        packet.put("Pose/y", data.pose.poseYIn);
+        packet.put("Pose/heading_deg", Math.toDegrees(data.pose.headingRad));
+
+        // Vision
+        packet.put("vision/has_tag", data.vision.hasTag);
+        packet.put("vision/tag_id", data.vision.tagId);
+        packet.put("vision/range_in", data.vision.rangeIn);
+        packet.put("vision/tx_deg", data.vision.txDeg);
+
+        // Intake
+        packet.put("intake/count", data.intake.artifactCount);
+        packet.put("intake/mode", data.intake.mode);
+        packet.put("intake/left_color", data.intake.laneLeftSummary.color);
+        packet.put("intake/center_color", data.intake.laneCenterSummary.color);
+        packet.put("intake/right_color", data.intake.laneRightSummary.color);
+
+        // Launcher (per lane: ready + RPM)
+        addPracticeLaneData(packet, "launcher/left", data.launcher.left);
+        addPracticeLaneData(packet, "launcher/center", data.launcher.center);
+        addPracticeLaneData(packet, "launcher/right", data.launcher.right);
+
+        // Timing
+        packet.put("timing/loop_ms", data.timing.mainLoopMs);
+
+        // Field overlay
+        addFieldOverlay(packet, data, false);
+
+        return packet;
+    }
+
+    private void addPracticeLaneData(TelemetryPacket packet, String prefix, LauncherTelemetryData.LaneData lane) {
+        packet.put(prefix + "/ready", lane.ready);
+        packet.put(prefix + "/target_rpm", lane.targetRpm);
+        packet.put(prefix + "/rpm", lane.currentRpm);
     }
 
     /**
-     * Create DEBUG level packet - comprehensive diagnostics.
+     * Create VERBOSE level packet - comprehensive diagnostics.
      */
-    private TelemetryPacket createDebugPacket(RobotTelemetryData data) {
+    private TelemetryPacket createVerbosePacket(RobotTelemetryData data) {
         TelemetryPacket packet = RobotState.packet;
 
         // Context

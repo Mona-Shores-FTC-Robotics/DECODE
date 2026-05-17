@@ -35,8 +35,9 @@ import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionRelocal
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
-import org.firstinspires.ftc.teamcode.util.PoseFusion;
+import org.firstinspires.ftc.teamcode.pedroPathing.FusionLocalizer;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import java.util.Optional;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 @Configurable
@@ -62,6 +63,17 @@ public class DriveSubsystem implements Subsystem {
     public static DriveVisionCenteredAimConfig visionCenteredAimConfig = new DriveVisionCenteredAimConfig();
     public static DriveRampConfig rampConfig = new DriveRampConfig();
     public static DriveVisionRelocalizeConfig visionRelocalizeConfig = new DriveVisionRelocalizeConfig();
+
+    @Config
+    public static class FusionConfig {
+        /**
+         * Minimum target area % (ta) to accept a Limelight measurement.
+         * At competition range ta is typically 0.2–2%; set to 0 to disable.
+         */
+        public static double minTargetAreaPercent = 0.1;
+        /** Estimated Limelight pipeline latency in milliseconds for timestamp compensation. */
+        public static double limelightLatencyMs = 20.0;
+    }
 
     // Robot-specific aim assist configs - visible in Panels for tuning
     public static DriveAimAssistConfig aimAssistConfig_Robot19429 = createAimAssistConfig19429();
@@ -220,7 +232,8 @@ public class DriveSubsystem implements Subsystem {
     private final DcMotorEx motorRb;
     private final VisionSubsystemLimelight vision;
     private LightingSubsystem lighting;
-    private final PoseFusion poseFusion = new PoseFusion();
+    private FusionLocalizer fusionLocalizer;
+    private long lastFedSnapshotNs = -1L;
     private final ElapsedTime clock = new ElapsedTime();
 
     // Default command for NextFTC command scheduler
@@ -228,7 +241,6 @@ public class DriveSubsystem implements Subsystem {
 
     private double lastGoodVisionAngle = Double.NaN;
     private double lastVisionTimestamp = Double.NEGATIVE_INFINITY;
-    private long lastFusionVisionTimestampMs = 0L;
     private double fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
     private static final double DESIRED_FIELD_HEADING_RAD = Math.PI / 2.0;
     private boolean visionHeadingCalibrated = false;
@@ -274,8 +286,11 @@ public class DriveSubsystem implements Subsystem {
 
     public void attachFollower() {
         this.follower = follower();
+        this.fusionLocalizer = Constants.activeFusionLocalizer;
         // Log which config set is being used for diagnostics
-        RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName());
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName());
+        }
     }
 
     /**
@@ -339,8 +354,6 @@ public class DriveSubsystem implements Subsystem {
         fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
         visionHeadingCalibrated = false;
 
-        poseFusion.reset(pedroFollowerSeed, System.currentTimeMillis());
-        lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
         visionRelocalizationEnabled = true;
     }
 
@@ -369,8 +382,10 @@ public class DriveSubsystem implements Subsystem {
             vision.setRobotHeading(headingRad);
         }
 
-        updatePoseFusion();
-        RobotState.packet.put("/vision/state", visionState.name());
+        maybeFeedVisionMeasurement();
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/state", visionState.name());
+        }
 
         // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)
         Pose pose = follower.getPose();
@@ -386,9 +401,11 @@ public class DriveSubsystem implements Subsystem {
         if (pose != null) {
             // Pedro follower doesn't expose target heading directly; approximate using current path heading
             double currentHeading = follower.getHeading();
-            RobotState.packet.put("HeadingDiag/current_deg", Math.toDegrees(currentHeading));
-            RobotState.packet.put("HeadingDiag/mode", follower.isBusy() ? "path_follow" : "idle/hold");
-            RobotState.packet.put("HeadingDiag/speed_ips", getRobotSpeedInchesPerSecond());
+            if (TelemetrySettings.isVerbose()) {
+                RobotState.packet.put("HeadingDiag/current_deg", Math.toDegrees(currentHeading));
+                RobotState.packet.put("HeadingDiag/mode", follower.isBusy() ? "path_follow" : "idle/hold");
+                RobotState.packet.put("HeadingDiag/speed_ips", getRobotSpeedInchesPerSecond());
+            }
         }
     }
 
@@ -631,16 +648,18 @@ public class DriveSubsystem implements Subsystem {
         lastAimTurnCommand = turn;
         double errorRateDegPerSec = Math.toDegrees(errorRateRadPerSec);
 
-        RobotState.packet.put("Command/AimAndDrive/Aim Error (deg)", headingErrorDeg);
-        RobotState.packet.put("Command/AimAndDrive/Aim Error Rate (deg/s)", errorRateDegPerSec);
-        RobotState.packet.put("Command/AimAndDrive/Aim Target Heading (deg)", Math.toDegrees(targetHeading));
-        RobotState.packet.put("Command/AimAndDrive/Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
-        RobotState.packet.put("Command/AimAndDrive/P Gain", pGain);
-        RobotState.packet.put("Command/AimAndDrive/P Term", pTerm);
-        RobotState.packet.put("Command/AimAndDrive/D Term", dTerm);
-        RobotState.packet.put("Command/AimAndDrive/Static Applied", staticApplied);
-        RobotState.packet.put("Command/AimAndDrive/Turn Cmd Raw", turnRaw);
-        RobotState.packet.put("Command/AimAndDrive/Turn Cmd (slewed)", turn);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("Command/AimAndDrive/Aim Error (deg)", headingErrorDeg);
+            RobotState.packet.put("Command/AimAndDrive/Aim Error Rate (deg/s)", errorRateDegPerSec);
+            RobotState.packet.put("Command/AimAndDrive/Aim Target Heading (deg)", Math.toDegrees(targetHeading));
+            RobotState.packet.put("Command/AimAndDrive/Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
+            RobotState.packet.put("Command/AimAndDrive/P Gain", pGain);
+            RobotState.packet.put("Command/AimAndDrive/P Term", pTerm);
+            RobotState.packet.put("Command/AimAndDrive/D Term", dTerm);
+            RobotState.packet.put("Command/AimAndDrive/Static Applied", staticApplied);
+            RobotState.packet.put("Command/AimAndDrive/Turn Cmd Raw", turnRaw);
+            RobotState.packet.put("Command/AimAndDrive/Turn Cmd (slewed)", turn);
+        }
 
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
@@ -980,40 +999,48 @@ public class DriveSubsystem implements Subsystem {
     }
 
     private void recordVisionAgreementTelemetry(double distance , double headingErrorDeg , boolean mt2Safe) {
-        RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distance);
-        RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
-        RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
-        RobotState.packet.put("/vision/Poses/mt2DistanceThreshold", mt2DistanceThresholdInches());
-        RobotState.packet.put("/vision/Poses/mt2HeadingThresholdDeg", visionRelocalizeConfig.MT2HeadingThresholdDeg);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distance);
+            RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
+            RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
+            RobotState.packet.put("/vision/Poses/mt2DistanceThreshold", mt2DistanceThresholdInches());
+            RobotState.packet.put("/vision/Poses/mt2HeadingThresholdDeg", visionRelocalizeConfig.MT2HeadingThresholdDeg);
+        }
     }
 
     private void recordVisionPoseTelemetry(Pose mt1 , Pose mt2) {
-        double mt1HeadingDeg = mt1 == null ? Double.NaN : Math.toDegrees(mt1.getHeading());
-        double mt2HeadingDeg = mt2 == null ? Double.NaN : Math.toDegrees(mt2.getHeading());
+        if (TelemetrySettings.isVerbose()) {
+            double mt1HeadingDeg = mt1 == null ? Double.NaN : Math.toDegrees(mt1.getHeading());
+            double mt2HeadingDeg = mt2 == null ? Double.NaN : Math.toDegrees(mt2.getHeading());
 
-        RobotState.packet.put("/vision/Poses/mt1/x", mt1 == null ? Double.NaN : mt1.getX());
-        RobotState.packet.put("/vision/Poses/mt1/y", mt1 == null ? Double.NaN : mt1.getY());
-        RobotState.packet.put("/vision/Poses/mt1/heading_deg", mt1HeadingDeg);
+            RobotState.packet.put("/vision/Poses/mt1/x", mt1 == null ? Double.NaN : mt1.getX());
+            RobotState.packet.put("/vision/Poses/mt1/y", mt1 == null ? Double.NaN : mt1.getY());
+            RobotState.packet.put("/vision/Poses/mt1/heading_deg", mt1HeadingDeg);
 
-        RobotState.packet.put("/vision/Poses/mt2/x", mt2 == null ? Double.NaN : mt2.getX());
-        RobotState.packet.put("/vision/Poses/mt2/y", mt2 == null ? Double.NaN : mt2.getY());
-        RobotState.packet.put("/vision/Poses/mt2/heading_deg", mt2HeadingDeg);
+            RobotState.packet.put("/vision/Poses/mt2/x", mt2 == null ? Double.NaN : mt2.getX());
+            RobotState.packet.put("/vision/Poses/mt2/y", mt2 == null ? Double.NaN : mt2.getY());
+            RobotState.packet.put("/vision/Poses/mt2/heading_deg", mt2HeadingDeg);
+        }
     }
 
     private void recordRelocalizeSource(String source , boolean success , long timestampMs , int tagId) {
         lastRelocalizeSource = source;
-        RobotState.packet.put("/vision/relocalize/last/source", source);
-        RobotState.packet.put("/vision/relocalize/last/success", success);
-        RobotState.packet.put("/vision/relocalize/last/timestamp_ms", timestampMs);
-        RobotState.packet.put("/vision/relocalize/last/tag", tagId);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/relocalize/last/source", source);
+            RobotState.packet.put("/vision/relocalize/last/success", success);
+            RobotState.packet.put("/vision/relocalize/last/timestamp_ms", timestampMs);
+            RobotState.packet.put("/vision/relocalize/last/tag", tagId);
+        }
     }
 
     private void recordAutoRelocalizePacket(boolean success , long timestampMs , int tagId , String status , String source) {
-        RobotState.packet.put("/vision/relocalize/auto/success", success);
-        RobotState.packet.put("/vision/relocalize/auto/timestamp_ms", timestampMs);
-        RobotState.packet.put("/vision/relocalize/auto/tag", tagId);
-        RobotState.packet.put("/vision/relocalize/auto/status", status);
-        RobotState.packet.put("/vision/relocalize/auto/source", source);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/relocalize/auto/success", success);
+            RobotState.packet.put("/vision/relocalize/auto/timestamp_ms", timestampMs);
+            RobotState.packet.put("/vision/relocalize/auto/tag", tagId);
+            RobotState.packet.put("/vision/relocalize/auto/status", status);
+            RobotState.packet.put("/vision/relocalize/auto/source", source);
+        }
     }
 
     private boolean poseWithinField(Pose pose) {
@@ -1207,7 +1234,6 @@ public class DriveSubsystem implements Subsystem {
         Pose correctedPose = new Pose(currentPose.getX() , currentPose.getY() , targetHeading);
 
         follower.setPose(correctedPose);
-        poseFusion.reset(correctedPose , System.currentTimeMillis());
         vision.markOdometryUpdated();
 
         visionRelocalizeStatus = "Heading reset to field-forward (square to wall)";
@@ -1273,7 +1299,6 @@ public class DriveSubsystem implements Subsystem {
             }
 
             follower.setPose(pedroPoseMT1);
-            poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
             vision.markOdometryUpdated();
 
             // Now heading is calibrated
@@ -1291,7 +1316,6 @@ public class DriveSubsystem implements Subsystem {
             }
 
             follower.setPose(pedroPoseMT2);
-            poseFusion.reset(pedroPoseMT2, System.currentTimeMillis());
             vision.markOdometryUpdated();
             recordRelocalizeSource("mt2", true, nowMs, snap.tagId);
             return true;
@@ -1305,7 +1329,6 @@ public class DriveSubsystem implements Subsystem {
             }
 
             follower.setPose(pedroPoseMT1);
-            poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
             vision.markOdometryUpdated();
             recordRelocalizeSource("mt1", true, nowMs, snap.tagId);
             return true;
@@ -1361,45 +1384,18 @@ public class DriveSubsystem implements Subsystem {
         return true;
     }
 
-    private void updatePoseFusion() {
-        long timestampMs = System.currentTimeMillis();
-
-        // 1. Always update with odometry
-        poseFusion.updateWithOdometry(follower.getPose(), timestampMs);
-
-        // 2. Get the latest LL tag snapshot
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.getLastSnapshot();
-        if (!snapshotOpt.isPresent()) {
-            return;
-        }
-
-        VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-        Pose visionPose = snapshot.getRobotPosePedroMT1().orElse(null);
-        //  Pose visionPose = snapshot.getRobotPosePedroMT2().orElse(null);  // try this once we think mt2 is working
-
-        if (visionPose == null) {
-            return;
-        }
-
-        // 3. Only use fresh measurements
-        long visionTimestamp = vision.getLastPoseTimestampMs();
-        if (visionTimestamp <= lastFusionVisionTimestampMs) {
-            return;
-        }
-
-        // 4. Use vision measurement
-        poseFusion.addVisionMeasurement(
-                visionPose,
-                visionTimestamp,
-                snapshot.getFtcRange(),
-                snapshot.getDecisionMargin()
-        );
-
-        lastFusionVisionTimestampMs = visionTimestamp;
-    }
-
-    public PoseFusion.State getPoseFusionStateSnapshot() {
-        return poseFusion.getStateSnapshot();
+    private void maybeFeedVisionMeasurement() {
+        if (fusionLocalizer == null || vision == null) return;
+        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
+        if (!snapOpt.isPresent()) return;
+        VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
+        if (snap.capturedAtNs == lastFedSnapshotNs) return;
+        lastFedSnapshotNs = snap.capturedAtNs;
+        if (snap.decisionMargin < FusionConfig.minTargetAreaPercent) return;
+        Pose pose = snap.pedroPoseMT2 != null ? snap.pedroPoseMT2 : snap.pedroPoseMT1;
+        if (pose == null) return;
+        long measurementNs = snap.capturedAtNs - (long)(FusionConfig.limelightLatencyMs * 1_000_000L);
+        fusionLocalizer.addMeasurement(pose, measurementNs);
     }
 
     public double getRobotSpeedInchesPerSecond() {
@@ -1592,77 +1588,4 @@ public class DriveSubsystem implements Subsystem {
                 : Math.max(0.0, clock.milliseconds() - lastVisionTimestamp);
     }
 
-    public boolean getFusionHasPose() {
-        return poseFusion.getStateSnapshot().hasFusedPose;
-    }
-
-    public double getFusionPoseXInches() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        return (state.hasFusedPose && Double.isFinite(state.fusedXInches)) ? state.fusedXInches : Double.NaN;
-    }
-
-    public double getFusionPoseYInches() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        return (state.hasFusedPose && Double.isFinite(state.fusedYInches)) ? state.fusedYInches : Double.NaN;
-    }
-
-    public double getFusionPoseHeadingDeg() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        return (state.hasFusedPose && Double.isFinite(state.fusedHeadingRad)) ? Math.toDegrees(state.fusedHeadingRad) : Double.NaN;
-    }
-
-    public double getFusionDeltaXYInches() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        if (state.hasFusedPose
-                && Double.isFinite(state.odometryXInches)
-                && Double.isFinite(state.odometryYInches)) {
-            return Math.hypot(
-                    state.fusedXInches - state.odometryXInches,
-                    state.fusedYInches - state.odometryYInches);
-        }
-        return Double.NaN;
-    }
-
-    public double getFusionDeltaHeadingDeg() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        if (state.hasFusedPose
-                && Double.isFinite(state.odometryXInches)
-                && Double.isFinite(state.odometryYInches)
-                && Double.isFinite(state.odometryHeadingRad)) {
-            return Math.toDegrees(normalizeAngle(state.fusedHeadingRad - state.odometryHeadingRad));
-        }
-        return Double.NaN;
-    }
-
-    public double getFusionVisionWeight() {
-        return poseFusion.getStateSnapshot().lastVisionWeight;
-    }
-
-    public boolean getFusionVisionAccepted() {
-        return poseFusion.getStateSnapshot().lastVisionAccepted;
-    }
-
-    public double getFusionVisionErrorInches() {
-        return poseFusion.getStateSnapshot().lastVisionTranslationErrorInches;
-    }
-
-    public double getFusionVisionHeadingErrorDeg() {
-        return poseFusion.getStateSnapshot().lastVisionHeadingErrorDeg;
-    }
-
-    public double getFusionVisionRangeInches() {
-        return poseFusion.getStateSnapshot().lastVisionRangeInches;
-    }
-
-    public double getFusionVisionDecisionMargin() {
-        return poseFusion.getStateSnapshot().lastVisionDecisionMargin;
-    }
-
-    public double getFusionLastVisionAgeMs() {
-        return poseFusion.getStateSnapshot().ageOfLastVisionMs;
-    }
-
-    public double getFusionOdometryDtMs() {
-        return poseFusion.getStateSnapshot().lastOdometryDtMs;
-    }
 }
