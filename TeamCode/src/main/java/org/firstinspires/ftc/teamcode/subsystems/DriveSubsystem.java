@@ -37,6 +37,7 @@ import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
 import org.firstinspires.ftc.teamcode.util.PoseFusion;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import java.util.Optional;
 import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 @Configurable
@@ -275,7 +276,9 @@ public class DriveSubsystem implements Subsystem {
     public void attachFollower() {
         this.follower = follower();
         // Log which config set is being used for diagnostics
-        RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName());
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName());
+        }
     }
 
     /**
@@ -370,7 +373,9 @@ public class DriveSubsystem implements Subsystem {
         }
 
         updatePoseFusion();
-        RobotState.packet.put("/vision/state", visionState.name());
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/state", visionState.name());
+        }
 
         // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)
         Pose pose = follower.getPose();
@@ -386,9 +391,11 @@ public class DriveSubsystem implements Subsystem {
         if (pose != null) {
             // Pedro follower doesn't expose target heading directly; approximate using current path heading
             double currentHeading = follower.getHeading();
-            RobotState.packet.put("HeadingDiag/current_deg", Math.toDegrees(currentHeading));
-            RobotState.packet.put("HeadingDiag/mode", follower.isBusy() ? "path_follow" : "idle/hold");
-            RobotState.packet.put("HeadingDiag/speed_ips", getRobotSpeedInchesPerSecond());
+            if (TelemetrySettings.isVerbose()) {
+                RobotState.packet.put("HeadingDiag/current_deg", Math.toDegrees(currentHeading));
+                RobotState.packet.put("HeadingDiag/mode", follower.isBusy() ? "path_follow" : "idle/hold");
+                RobotState.packet.put("HeadingDiag/speed_ips", getRobotSpeedInchesPerSecond());
+            }
         }
     }
 
@@ -631,16 +638,18 @@ public class DriveSubsystem implements Subsystem {
         lastAimTurnCommand = turn;
         double errorRateDegPerSec = Math.toDegrees(errorRateRadPerSec);
 
-        RobotState.packet.put("Command/AimAndDrive/Aim Error (deg)", headingErrorDeg);
-        RobotState.packet.put("Command/AimAndDrive/Aim Error Rate (deg/s)", errorRateDegPerSec);
-        RobotState.packet.put("Command/AimAndDrive/Aim Target Heading (deg)", Math.toDegrees(targetHeading));
-        RobotState.packet.put("Command/AimAndDrive/Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
-        RobotState.packet.put("Command/AimAndDrive/P Gain", pGain);
-        RobotState.packet.put("Command/AimAndDrive/P Term", pTerm);
-        RobotState.packet.put("Command/AimAndDrive/D Term", dTerm);
-        RobotState.packet.put("Command/AimAndDrive/Static Applied", staticApplied);
-        RobotState.packet.put("Command/AimAndDrive/Turn Cmd Raw", turnRaw);
-        RobotState.packet.put("Command/AimAndDrive/Turn Cmd (slewed)", turn);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("Command/AimAndDrive/Aim Error (deg)", headingErrorDeg);
+            RobotState.packet.put("Command/AimAndDrive/Aim Error Rate (deg/s)", errorRateDegPerSec);
+            RobotState.packet.put("Command/AimAndDrive/Aim Target Heading (deg)", Math.toDegrees(targetHeading));
+            RobotState.packet.put("Command/AimAndDrive/Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
+            RobotState.packet.put("Command/AimAndDrive/P Gain", pGain);
+            RobotState.packet.put("Command/AimAndDrive/P Term", pTerm);
+            RobotState.packet.put("Command/AimAndDrive/D Term", dTerm);
+            RobotState.packet.put("Command/AimAndDrive/Static Applied", staticApplied);
+            RobotState.packet.put("Command/AimAndDrive/Turn Cmd Raw", turnRaw);
+            RobotState.packet.put("Command/AimAndDrive/Turn Cmd (slewed)", turn);
+        }
 
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
@@ -980,24 +989,28 @@ public class DriveSubsystem implements Subsystem {
     }
 
     private void recordVisionAgreementTelemetry(double distance , double headingErrorDeg , boolean mt2Safe) {
-        RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distance);
-        RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
-        RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
-        RobotState.packet.put("/vision/Poses/mt2DistanceThreshold", mt2DistanceThresholdInches());
-        RobotState.packet.put("/vision/Poses/mt2HeadingThresholdDeg", visionRelocalizeConfig.MT2HeadingThresholdDeg);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distance);
+            RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
+            RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
+            RobotState.packet.put("/vision/Poses/mt2DistanceThreshold", mt2DistanceThresholdInches());
+            RobotState.packet.put("/vision/Poses/mt2HeadingThresholdDeg", visionRelocalizeConfig.MT2HeadingThresholdDeg);
+        }
     }
 
     private void recordVisionPoseTelemetry(Pose mt1 , Pose mt2) {
-        double mt1HeadingDeg = mt1 == null ? Double.NaN : Math.toDegrees(mt1.getHeading());
-        double mt2HeadingDeg = mt2 == null ? Double.NaN : Math.toDegrees(mt2.getHeading());
+        if (TelemetrySettings.isVerbose()) {
+            double mt1HeadingDeg = mt1 == null ? Double.NaN : Math.toDegrees(mt1.getHeading());
+            double mt2HeadingDeg = mt2 == null ? Double.NaN : Math.toDegrees(mt2.getHeading());
 
-        RobotState.packet.put("/vision/Poses/mt1/x", mt1 == null ? Double.NaN : mt1.getX());
-        RobotState.packet.put("/vision/Poses/mt1/y", mt1 == null ? Double.NaN : mt1.getY());
-        RobotState.packet.put("/vision/Poses/mt1/heading_deg", mt1HeadingDeg);
+            RobotState.packet.put("/vision/Poses/mt1/x", mt1 == null ? Double.NaN : mt1.getX());
+            RobotState.packet.put("/vision/Poses/mt1/y", mt1 == null ? Double.NaN : mt1.getY());
+            RobotState.packet.put("/vision/Poses/mt1/heading_deg", mt1HeadingDeg);
 
-        RobotState.packet.put("/vision/Poses/mt2/x", mt2 == null ? Double.NaN : mt2.getX());
-        RobotState.packet.put("/vision/Poses/mt2/y", mt2 == null ? Double.NaN : mt2.getY());
-        RobotState.packet.put("/vision/Poses/mt2/heading_deg", mt2HeadingDeg);
+            RobotState.packet.put("/vision/Poses/mt2/x", mt2 == null ? Double.NaN : mt2.getX());
+            RobotState.packet.put("/vision/Poses/mt2/y", mt2 == null ? Double.NaN : mt2.getY());
+            RobotState.packet.put("/vision/Poses/mt2/heading_deg", mt2HeadingDeg);
+        }
     }
 
     private void recordRelocalizeSource(String source , boolean success , long timestampMs , int tagId) {
