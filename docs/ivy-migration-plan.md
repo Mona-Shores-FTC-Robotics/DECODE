@@ -2,6 +2,32 @@
 
 Status: **Proposal, not started.** Generated 2026-05-17 from a live read of `com.pedropathing:ivy:1.0.0` source in External Libraries and inspection of two reference repos already running Ivy.
 
+## Prerequisite: merge fusion branch first
+
+A parallel branch `claude/evaluate-rewrite-sensor-fusion-LI9x2` adds Kalman filter sensor fusion via a new `pedroPathing/FusionLocalizer.java` and deletes `util/PoseFusion.java`. That branch also heavily refactors `DriveSubsystem.java`.
+
+**This Ivy migration must start from a TuesdayTest that already has fusion merged.** Reasons:
+
+1. The Ivy migration rewrites `DriveSubsystem.java`. So does the fusion branch. Doing them as parallel branches guarantees a merge conflict in that file with no clean way to untangle which change caused any robot-side regression.
+2. `FusionLocalizer.java` is framework-agnostic (pure Pedro — `Localizer`, `Pose`, `Matrix`, `Vector`) and survives the Ivy migration unchanged. The Ivy migration's `DriveSubsystem` rewrite simply uses the already-installed fusion localizer.
+3. Fusion is the smaller, more validatable change. Land it first.
+
+**Recommended sequencing:**
+
+```
+1. Robot-test claude/evaluate-rewrite-sensor-fusion-LI9x2 (one session).
+2. If it works, merge to TuesdayTest with `git merge --no-ff` so the
+   merge commit exists for a clean one-command revert.
+3. Rebase ivy-migration onto the new TuesdayTest.
+4. Begin the Ivy migration on the fusion-aware base.
+```
+
+**Rollback safety net for fusion** (in case it misbehaves after Ivy stacks on top):
+
+- **Runtime toggle:** `DriveSubsystem.FusionConfig.minTargetAreaPercent` — set high via Panels to reject all Limelight measurements; falls back to dead-reckoning through Kalman.
+- **One-line code disable:** `Constants.activeFusionLocalizer` is wired into the follower via a single `.setLocalizer(activeFusionLocalizer)` call. Swap for the original Pinpoint localizer to fully disable fusion without touching DriveSubsystem.
+- **Branch-level revert:** if fusion's merge commit is preserved (`--no-ff`), `git revert -m 1 <merge>` undoes it cleanly. Note: only works before Ivy migration's DriveSubsystem rewrite depends on the fusion-shape Drive.
+
 ## TL;DR
 
 - **Migrate offseason, not mid-season.** Ivy 1.0.0 was released 2026-05-11 (six days before this doc); the codebase has ~32 files / ~100 NextFTC reference lines to touch.
@@ -307,7 +333,7 @@ Replace `BindingManager`/`Button`/`Range` calls with `IvyBindings.when(...).onTr
 
 - `pedroPathing/Constants.java`
 - `pedroPathing/Tuning.java` (still uses `SelectableOpMode` from `com.pedropathing:telemetry:1.0.0`; Ivy doesn't affect it)
-- `util/PoseFusion.java`, `PoseTransforms.java`, `AprilTagPoseUtil.java`, `FieldConstants.java`, `RobotState.java`, `Alliance.java`, `RobotMode.java`, `ArtifactColor.java`
+- `util/PoseTransforms.java`, `AprilTagPoseUtil.java`, `FieldConstants.java`, `RobotState.java`, `Alliance.java`, `RobotMode.java`, `ArtifactColor.java` (note: `util/PoseFusion.java` deleted by fusion branch; `pedroPathing/FusionLocalizer.java` added there, framework-agnostic, survives migration unchanged)
 - `telemetry/*`
 
 ### Dependency changes (final state, TeamCode/build.gradle)
@@ -750,7 +776,7 @@ For honesty's sake:
 
 - We have proper telemetry levels (`TelemetryLevel.MATCH/DEBUG` gated at compile time) — Baron just always-logs.
 - We have `Constants.HardwareNames.*` for centralized hardware names — Baron hardcodes strings (`"sl"`, `"sr"` in `Shooter.java`).
-- We have `PoseFusion` + AprilTag relocalization tooling — they have a simpler Limelight setup.
+- We have Kalman-filter `FusionLocalizer` + AprilTag relocalization tooling — they have a simpler Limelight setup.
 - Our autos use Pedro Path Generator-compatible exports for visualization — they don't seem to.
 
 The migration should preserve all of these.
