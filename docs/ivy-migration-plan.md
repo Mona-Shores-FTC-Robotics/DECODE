@@ -31,7 +31,7 @@ A parallel branch `claude/evaluate-rewrite-sensor-fusion-LI9x2` adds Kalman filt
 ## TL;DR
 
 - **Migrate offseason, not mid-season.** Ivy 1.0.0 was released 2026-05-11 (six days before this doc); the codebase has ~32 files / ~100 NextFTC reference lines to touch.
-- **Ivy 1.0.0 + Sloth + Pedro Pathing is a known-working stack** (proved by `MOEbo-Sapiens/MOEbo-Sapiens-Decode`).
+- **Ivy 1.0.0 + Sloth + Pedro Pathing is a verified end-to-end stack** (proved by `BeepBot99/CodeBloodedDecodeV3` running `ivy:1.0.0` + Sloth + Slothboard + Pedro `ftc:2.1.1` + the same Kalman `FusionLocalizer` we use, all together in production).
 - **Ivy ships no bindings module.** We will write a small shim (`util/IvyBindings.java`) on top of the SDK 11.1 gamepad edge-detection primitives. Full source is in this doc.
 - **Plan in 5 PRs.** PR 1 lands the dep + shim + tests with zero production-code changes. Each subsequent PR keeps the codebase buildable and runnable on the robot.
 
@@ -613,6 +613,7 @@ PR 0 is the more conservative path. Recommended.
 3. ~~Whether NextFTC pulls FTC Dashboard or `com.bylazar:fullpanels` transitively at `implementation` scope.~~ **Done 2026-05-17.** Per `./gradlew :TeamCode:dependencies` on dev machine: NextFTC pulls only `org.jetbrains.kotlin:kotlin-stdlib` and intra-NextFTC modules. **No dashboard or panels transitives.** Sloth can be adopted without any `exclude group:` lines — just swap the direct `com.acmerobotics.dashboard:dashboard:0.5.1` for `com.acmerobotics.slothboard:dashboard:0.2.4+0.5.1` and `com.bylazar:fullpanels:1.0.12` for `com.bylazar.sloth:fullpanels:0.2.4+1.0.12`. Original "Sloth incompatibility" concern was unfounded.
 4. ~~Whether `com.pedropathing:telemetry:1.0.0` can be dropped once `Tuning.java` is replaced with whatever the current Pedro 2.1.2 quickstart uses.~~ **Done 2026-05-17.** Pedro-Pathing/Quickstart's current `Tuning.java` (in the `Pedro-Pathing/Quickstart` repo) is identical to ours — same `@version 1.0, 6/26/2025` header, same `import com.pedropathing.telemetry.SelectableOpMode;`. Their `build.dependencies.gradle` still includes `implementation 'com.pedropathing:telemetry:1.0.0'`. Keep the artifact and the file. No change.
 5. ~~Confirm `Commands.waitMs` argument unit.~~ **Done.** Javadoc says milliseconds explicitly.
+6. **Evaluate `dev.frozenmilk.dairy:CachingHardware:1.0.0` against our `FastColorSensor`.** `BeepBot99/CodeBloodedDecodeV3` includes this dep; it's a Dairy-provided hardware caching layer that may overlap with our custom `FastColorSensor` bulk-read driver (commit `e1b0be2`). During PR 1, do a short evaluation: read CachingHardware's public API, compare to what `FastColorSensor` does, decide whether to (a) keep `FastColorSensor` and skip the dep, (b) replace `FastColorSensor` with CachingHardware, or (c) add CachingHardware and let it cover whatever overlap it covers while keeping `FastColorSensor` for the color-sensor-specific bits. Not blocking — `FastColorSensor` works today.
 
 ## Style guide: 22131 Traffic Cones
 
@@ -860,7 +861,9 @@ Confirmed structural patterns (independent of method names):
 
 - Ivy installation: https://pedropathing.com/docs/ivy (gated to network; user paste required)
 - Sloth README: `Dairy-Foundation/Sloth` on GitHub
-- Reference Ivy projects:
-  - `BaronClaps/22131-Decode` (Traffic Cones, Pedro/Ivy authors — canonical reference)
+- Reference Ivy projects (in order of relevance to our migration):
+  - **`BeepBot99/CodeBloodedDecodeV3`** — **best end-to-end reference.** Runs the exact target stack: Ivy **1.0.0 (public release)** + Sloth + Slothboard dashboard fork + sloth-fullpanels + Pedro Pathing **2.1.1** + the same Kalman `FusionLocalizer.java` we're using (byte-for-byte identical — our fusion code originated here). Also uses `dev.frozenmilk.dairy:CachingHardware:1.0.0`. Uses the Dairy `ftc { ... }` Gradle DSL which we are NOT adopting, but the Java code patterns are sound. When in doubt about Ivy+Sloth+Pedro wiring, cross-reference this repo.
+  - `BaronClaps/22131-Decode` (Traffic Cones, Pedro/Ivy authors — canonical for style patterns; uses pre-release `ivy:0.0.1-LOCAL` so some API names like `Commands.wait` don't exist in 1.0.0)
   - `MOEbo-Sapiens/MOEbo-Sapiens-Decode` (uses pre-release Ivy snapshot; some API names stale)
+  - `BeepBot99/CodeBloodedDecodeV2` — **older version, do NOT use as reference.** Open-loop Pinpoint, no fusion, snapshot Ivy. Superseded by V3.
 - FTC SDK 11.1 release notes: gamepad trigger edge detection added (see CLAUDE.md history)
