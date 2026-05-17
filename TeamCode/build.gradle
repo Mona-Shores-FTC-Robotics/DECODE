@@ -46,6 +46,7 @@ dependencies {
     // Pedro Pathing
     implementation('com.pedropathing:ftc:2.1.2')
     implementation('com.pedropathing:telemetry:1.0.0')
+    implementation('com.pedropathing:ivy:1.0.0')
 
     //Panels
     implementation('com.bylazar:fullpanels:1.0.12')
@@ -55,6 +56,8 @@ dependencies {
     implementation('com.acmerobotics.dashboard:dashboard:0.5.1') {
         exclude group: 'org.firstinspires.ftc'
     }
+
+    testImplementation 'junit:junit:4.13.2'
 
     // AdvantageScope Lite - enables AdvantageScope connection via FTC Dashboard packets
 //    implementation("page.j5155.AdvantageScope:lite:v26.0.0")
