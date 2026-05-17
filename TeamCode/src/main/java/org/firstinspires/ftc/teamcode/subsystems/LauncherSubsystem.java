@@ -42,17 +42,14 @@ public class LauncherSubsystem implements Subsystem {
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
 
-    // Robot-specific config accessors (delegate to RobotProfile)
-    public static LauncherTimingConfig timingConfig() {
-        return RobotProfile.forCurrent().timing;
-    }
-    public static LauncherFlywheelConfig flywheelConfig() {return RobotProfile.forCurrent().flywheel;}
-    public static LauncherFeederConfig feederConfig() {
-        return RobotProfile.forCurrent().feeder;
-    }
-    public static LauncherHoodConfig hoodConfig() {
-        return RobotProfile.forCurrent().hood;
-    }
+    // Per-robot configs are injected at construction. Suffixed Config to disambiguate
+    // from local variables of the Flywheel/Feeder/Hood inner classes (e.g. the common
+    // `for (Hood hood : hoods.values())` loop pattern).
+    private final LauncherFlywheelConfig flywheelConfig;
+    private final LauncherFeederConfig feederConfig;
+    private final LauncherHoodConfig hoodConfig;
+    private final LauncherTimingConfig timingConfig;
+
     private final HardwareMap hardwareMap;
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);
@@ -101,8 +98,16 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    public LauncherSubsystem(HardwareMap hardwareMap) {
+    public LauncherSubsystem(HardwareMap hardwareMap,
+                             LauncherFlywheelConfig flywheelConfig,
+                             LauncherFeederConfig feederConfig,
+                             LauncherHoodConfig hoodConfig,
+                             LauncherTimingConfig timingConfig) {
         this.hardwareMap = hardwareMap;
+        this.flywheelConfig = flywheelConfig;
+        this.feederConfig = feederConfig;
+        this.hoodConfig = hoodConfig;
+        this.timingConfig = timingConfig;
         for (LauncherLane lane : LauncherLane.values()) {
             flywheels.put(lane, new Flywheel(lane, hardwareMap));
             feeders.put(lane, new Feeder(lane, hardwareMap));
@@ -305,7 +310,7 @@ public class LauncherSubsystem implements Subsystem {
         double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
             laneLaunchHoldDeadlineMs.put(lane, 0.0);
-            laneRecoveryDeadlineMs.put(lane, now + timingConfig().recoveryMs);
+            laneRecoveryDeadlineMs.put(lane, now + timingConfig.recoveryMs);
             // Wrap hardware operations in try-catch to prevent "expansion hub stopped responding"
             // errors during OpMode shutdown when the hub communication is already terminating
             try {
@@ -386,13 +391,13 @@ public class LauncherSubsystem implements Subsystem {
 
     public void setAllHoodsRetracted() {
         for (Hood hood : hoods.values()) {
-            hood.setPosition(hoodConfig().retractedPosition);
+            hood.setPosition(hoodConfig.retractedPosition);
         }
     }
 
     public void setAllHoodsExtended() {
         for (Hood hood : hoods.values()) {
-            hood.setPosition(hoodConfig().extendedPosition);
+            hood.setPosition(hoodConfig.extendedPosition);
         }
     }
 
@@ -620,8 +625,8 @@ public class LauncherSubsystem implements Subsystem {
                 Feeder feeder = feeders.get(next.lane);
                 if (feeder != null && !feeder.isBusy()) {
                     feeder.fire();
-                    laneLaunchHoldDeadlineMs.put(next.lane, now + timingConfig().launchHoldAfterFireMs);
-                    laneRecoveryDeadlineMs.put(next.lane, now + timingConfig().recoveryMs);
+                    laneLaunchHoldDeadlineMs.put(next.lane, now + timingConfig.launchHoldAfterFireMs);
+                    laneRecoveryDeadlineMs.put(next.lane, now + timingConfig.recoveryMs);
                     iterator.remove();
                 }
             }
@@ -674,7 +679,7 @@ public class LauncherSubsystem implements Subsystem {
                 // Retract this lane's hood
                 Hood hood = hoods.get(lane);
                 if (hood != null) {
-                    hood.setPosition(hoodConfig().retractedPosition);
+                    hood.setPosition(hoodConfig.retractedPosition);
                 }
                 hoodsRetractedForHumanLoading.add(lane);
 
@@ -780,135 +785,135 @@ public class LauncherSubsystem implements Subsystem {
         }
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, flywheelConfig().flywheelLeft.idleRpm);
+                return Math.max(0.0, flywheelConfig.flywheelLeft.idleRpm);
             case CENTER:
-                return Math.max(0.0, flywheelConfig().flywheelCenter.idleRpm);
+                return Math.max(0.0, flywheelConfig.flywheelCenter.idleRpm);
             case RIGHT:
             default:
-                return Math.max(0.0, flywheelConfig().flywheelRight.idleRpm);
+                return Math.max(0.0, flywheelConfig.flywheelRight.idleRpm);
         }
     }
 
-    private static double feederHoldMsFor(LauncherLane lane) {
+    private double feederHoldMsFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, feederConfig().left.holdMs);
+                return Math.max(0.0, feederConfig.left.holdMs);
             case CENTER:
-                return Math.max(0.0, feederConfig().center.holdMs);
+                return Math.max(0.0, feederConfig.center.holdMs);
             case RIGHT:
             default:
-                return Math.max(0.0, feederConfig().right.holdMs);
+                return Math.max(0.0, feederConfig.right.holdMs);
         }
     }
 
-    private static double feederLoadPositionFor(LauncherLane lane) {
+    private double feederLoadPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(feederConfig().left.loadPosition);
+                return clampServo(feederConfig.left.loadPosition);
             case CENTER:
-                return clampServo(feederConfig().center.loadPosition);
+                return clampServo(feederConfig.center.loadPosition);
             case RIGHT:
             default:
-                return clampServo(feederConfig().right.loadPosition);
+                return clampServo(feederConfig.right.loadPosition);
         }
     }
 
-    private static double feederFirePositionFor(LauncherLane lane) {
+    private double feederFirePositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(feederConfig().left.firePosition);
+                return clampServo(feederConfig.left.firePosition);
             case CENTER:
-                return clampServo(feederConfig().center.firePosition);
+                return clampServo(feederConfig.center.firePosition);
             case RIGHT:
             default:
-                return clampServo(feederConfig().right.firePosition);
+                return clampServo(feederConfig.right.firePosition);
         }
     }
 
-    private static double feederPinchPositionFor(LauncherLane lane) {
+    private double feederPinchPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(feederConfig().left.pinchPosition);
+                return clampServo(feederConfig.left.pinchPosition);
             case CENTER:
-                return clampServo(feederConfig().center.pinchPosition);
+                return clampServo(feederConfig.center.pinchPosition);
             case RIGHT:
             default:
-                return clampServo(feederConfig().right.pinchPosition);
+                return clampServo(feederConfig.right.pinchPosition);
         }
     }
 
-    private static boolean feederReversedFor(LauncherLane lane) {
+    private boolean feederReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return feederConfig().left.reversed;
+                return feederConfig.left.reversed;
             case CENTER:
-                return feederConfig().center.reversed;
+                return feederConfig.center.reversed;
             case RIGHT:
             default:
-                return feederConfig().right.reversed;
+                return feederConfig.right.reversed;
         }
     }
 
-    private static String motorNameFor(LauncherLane lane) {
+    private String motorNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig().flywheelLeft.motorName;
+                return flywheelConfig.flywheelLeft.motorName;
             case CENTER:
-                return flywheelConfig().flywheelCenter.motorName;
+                return flywheelConfig.flywheelCenter.motorName;
             case RIGHT:
             default:
-                return flywheelConfig().flywheelRight.motorName;
+                return flywheelConfig.flywheelRight.motorName;
         }
     }
 
-    private static boolean motorReversedFor(LauncherLane lane) {
+    private boolean motorReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig().flywheelLeft.reversed;
+                return flywheelConfig.flywheelLeft.reversed;
             case CENTER:
-                return flywheelConfig().flywheelCenter.reversed;
+                return flywheelConfig.flywheelCenter.reversed;
             case RIGHT:
             default:
-                return flywheelConfig().flywheelRight.reversed;
+                return flywheelConfig.flywheelRight.reversed;
         }
     }
 
-    private static String feederNameFor(LauncherLane lane) {
+    private String feederNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return feederConfig().left.servoName;
+                return feederConfig.left.servoName;
             case CENTER:
-                return feederConfig().center.servoName;
+                return feederConfig.center.servoName;
             case RIGHT:
             default:
-                return feederConfig().right.servoName;
+                return feederConfig.right.servoName;
         }
     }
 
-    private static double rpmToTicksPerSecond(double rpm) {
+    private double rpmToTicksPerSecond(double rpm) {
         if (rpm <= 0.0) {
             return 0.0;
         }
-        return rpm * flywheelConfig().parameters.ticksPerRev * flywheelConfig().parameters.gearRatio / 60.0;
+        return rpm * flywheelConfig.parameters.ticksPerRev * flywheelConfig.parameters.gearRatio / 60.0;
     }
 
-    private static double ticksPerSecondToRpm(double ticksPerSecond) {
-        return ticksPerSecond * 60.0 / (flywheelConfig().parameters.ticksPerRev * flywheelConfig().parameters.gearRatio);
+    private double ticksPerSecondToRpm(double ticksPerSecond) {
+        return ticksPerSecond * 60.0 / (flywheelConfig.parameters.ticksPerRev * flywheelConfig.parameters.gearRatio);
     }
 
     /**
      * Gets the per-lane static friction coefficient (kS).
      * This is the minimum power needed to overcome friction and start the motor spinning.
      */
-    private static double kSFor(LauncherLane lane) {
+    private double kSFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig().flywheelLeft.kS;
+                return flywheelConfig.flywheelLeft.kS;
             case CENTER:
-                return flywheelConfig().flywheelCenter.kS;
+                return flywheelConfig.flywheelCenter.kS;
             case RIGHT:
             default:
-                return flywheelConfig().flywheelRight.kS;
+                return flywheelConfig.flywheelRight.kS;
         }
     }
 
@@ -916,15 +921,15 @@ public class LauncherSubsystem implements Subsystem {
      * Gets the per-lane velocity gain (kV).
      * This maps target RPM to required power: power = kS + kV * rpm
      */
-    private static double kVFor(LauncherLane lane) {
+    private double kVFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig().flywheelLeft.kV;
+                return flywheelConfig.flywheelLeft.kV;
             case CENTER:
-                return flywheelConfig().flywheelCenter.kV;
+                return flywheelConfig.flywheelCenter.kV;
             case RIGHT:
             default:
-                return flywheelConfig().flywheelRight.kV;
+                return flywheelConfig.flywheelRight.kV;
         }
     }
 
@@ -933,15 +938,15 @@ public class LauncherSubsystem implements Subsystem {
      * This adds feedback correction: power += kP * (target - actual)
      * Set to 0 for pure feedforward, >0 to add error correction.
      */
-    private static double kPFor(LauncherLane lane) {
+    private double kPFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig().flywheelLeft.kP;
+                return flywheelConfig.flywheelLeft.kP;
             case CENTER:
-                return flywheelConfig().flywheelCenter.kP;
+                return flywheelConfig.flywheelCenter.kP;
             case RIGHT:
             default:
-                return flywheelConfig().flywheelRight.kP;
+                return flywheelConfig.flywheelRight.kP;
         }
     }
 
@@ -1044,7 +1049,7 @@ public class LauncherSubsystem implements Subsystem {
             double error = Math.abs(currentRpm - launchRpm);
 
             // Primary check: within tolerance of target RPM
-            if (error <= flywheelConfig().parameters.rpmTolerance) {
+            if (error <= flywheelConfig.parameters.rpmTolerance) {
                 return true;
             }
 
@@ -1056,14 +1061,14 @@ public class LauncherSubsystem implements Subsystem {
 
             // Fallback for spinning UP: allow if minimal time elapsed and we've commanded the right RPM
             // This handles encoder issues but still requires the command to be sent
-            if (elapsed >= timingConfig().fallbackReadyMs) {
+            if (elapsed >= timingConfig.fallbackReadyMs) {
                 return true;  // Timeout - assume ready
             }
 
             // For early ready (before fallback timeout), check both:
             // 1. Minimal spin-up time elapsed
             // 2. Current RPM is appropriate for target (works for both spin-up and spin-down)
-            if (elapsed >= timingConfig().minimalSpinUpMs) {
+            if (elapsed >= timingConfig.minimalSpinUpMs) {
                 // Check if we're close enough OR if spinning down, at least below a reasonable threshold
                 // Allow some headroom when spinning down (within 10% above target is acceptable)
                 double upperThreshold = launchRpm * 1.1;  // 10% overspeed tolerance
@@ -1234,7 +1239,7 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    private static class Hood {
+    private class Hood {
         private final LauncherLane lane;
         private final Servo servo;
 
@@ -1289,51 +1294,51 @@ public class LauncherSubsystem implements Subsystem {
         }
     }
 
-    private static String hoodNameFor(LauncherLane lane) {
+    private String hoodNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return hoodConfig().hoodLeft.servoName;
+                return hoodConfig.hoodLeft.servoName;
             case CENTER:
-                return hoodConfig().hoodCenter.servoName;
+                return hoodConfig.hoodCenter.servoName;
             case RIGHT:
             default:
-                return hoodConfig().hoodRight.servoName;
+                return hoodConfig.hoodRight.servoName;
         }
     }
 
-    public static double hoodShortPositionFor(LauncherLane lane) {
+    public double hoodShortPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(hoodConfig().hoodLeft.shortPosition);
+                return clampServo(hoodConfig.hoodLeft.shortPosition);
             case CENTER:
-                return clampServo(hoodConfig().hoodCenter.shortPosition);
+                return clampServo(hoodConfig.hoodCenter.shortPosition);
             case RIGHT:
             default:
-                return clampServo(hoodConfig().hoodRight.shortPosition);
+                return clampServo(hoodConfig.hoodRight.shortPosition);
         }
     }
 
-    public static double hoodMidPositionFor(LauncherLane lane) {
+    public double hoodMidPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(hoodConfig().hoodLeft.midPosition);
+                return clampServo(hoodConfig.hoodLeft.midPosition);
             case CENTER:
-                return clampServo(hoodConfig().hoodCenter.midPosition);
+                return clampServo(hoodConfig.hoodCenter.midPosition);
             case RIGHT:
             default:
-                return clampServo(hoodConfig().hoodRight.midPosition);
+                return clampServo(hoodConfig.hoodRight.midPosition);
         }
     }
 
-    public static double hoodLongPositionFor(LauncherLane lane) {
+    public double hoodLongPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(hoodConfig().hoodLeft.longPosition);
+                return clampServo(hoodConfig.hoodLeft.longPosition);
             case CENTER:
-                return clampServo(hoodConfig().hoodCenter.longPosition);
+                return clampServo(hoodConfig.hoodCenter.longPosition);
             case RIGHT:
             default:
-                return clampServo(hoodConfig().hoodRight.longPosition);
+                return clampServo(hoodConfig.hoodRight.longPosition);
         }
     }
 

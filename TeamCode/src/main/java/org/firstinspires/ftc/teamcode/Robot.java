@@ -43,7 +43,8 @@ public class Robot {
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision,
                 profile.aimAssist, profile.fixedAngleAim, profile.rightTriggerFixedAngle);
-        launcher = new LauncherSubsystem(hardwareMap);
+        launcher = new LauncherSubsystem(hardwareMap,
+                profile.flywheel, profile.feeder, profile.hood, profile.timing);
         intake = new IntakeSubsystem(hardwareMap, profile.gate, profile.lanePresence);
         lighting = new LightingSubsystem(hardwareMap);
 
