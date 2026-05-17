@@ -163,7 +163,7 @@ public class IntakeLaneSensorConfig {
      *   - createLanePresenceConfig20245()
      *
      * To change settings, edit YOUR ROBOT'S factory method, not these defaults.
-     * RobotConfigs.getLanePresenceConfig() returns the active robot's config.
+     * RobotProfile.forCurrent().lanePresence returns the active robot's config.
      */
     public static class LanePresenceConfig {
         // --- DETECTION METHODS (enable any combination) ---

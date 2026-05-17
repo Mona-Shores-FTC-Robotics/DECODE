@@ -21,7 +21,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.teamcode.util.RobotConfigs;
+import org.firstinspires.ftc.teamcode.util.RobotProfile;
 
 public class Constants {
 
@@ -30,19 +30,19 @@ public class Constants {
     public static FollowerConstants followerConstants19429 = createFollowerConstants19429();
     public static FollowerConstants followerConstants20245 = createFollowerConstants20245();
     public static FollowerConstants followerConstants() {
-        return RobotConfigs.getFollowerConstants();
+        return RobotProfile.forCurrent().follower;
     }
 
     public static PinpointConstants pinpointConstants19429 = createPinpointConstants19429();
     public static PinpointConstants pinpointConstants20245 = createPinpointConstants20245();
     public static PinpointConstants localizerConstants() {
-        return RobotConfigs.getPinpointConstants();
+        return RobotProfile.forCurrent().pinpoint;
     }
 
     public static MecanumConstants driveConstants19429 = createDriveConstants19429();
     public static MecanumConstants driveConstants20245 = createDriveConstants20245();
     public static MecanumConstants driveConstants() {
-        return RobotConfigs.getDriveConstants();
+        return RobotProfile.forCurrent().drive;
     }
 
 

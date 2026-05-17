@@ -78,7 +78,7 @@ public class DriveSubsystem implements Subsystem {
     // Robot-specific aim assist configs - visible in Panels for tuning
     public static DriveAimAssistConfig aimAssistConfig_Robot19429 = createAimAssistConfig19429();
     public static DriveAimAssistConfig aimAssistConfig_Robot20245 = createAimAssistConfig20245();
-    public static DriveAimAssistConfig aimAssistConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotConfigs.getAimAssistConfig();
+    public static DriveAimAssistConfig aimAssistConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().aimAssist;
 
     /**
      * Helper to create 19429-specific aim assist configuration.
@@ -138,13 +138,13 @@ public class DriveSubsystem implements Subsystem {
      * @return aimAssistConfig19429 or aimAssistConfig20245
      */
     public static DriveAimAssistConfig aimAssistConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getAimAssistConfig();
+        return org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().aimAssist;
     }
 
     // Robot-specific fixed angle aim configs - visible in Panels for tuning
     public static DriveFixedAngleAimConfig fixedAngleAimConfig_Robot19429 = createFixedAngleAimConfig19429();
     public static DriveFixedAngleAimConfig fixedAngleAimConfig_Robot20245 = createFixedAngleAimConfig20245();
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().fixedAngleAim;
 
     /**
      * Helper to create 19429-specific fixed angle aim configuration.
@@ -171,13 +171,13 @@ public class DriveSubsystem implements Subsystem {
      * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245
      */
     public static DriveFixedAngleAimConfig fixedAngleAimConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
+        return org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().fixedAngleAim;
     }
 
     // Robot-specific right trigger fixed angle aim configs - visible in Panels for tuning
     public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_Robot19429 = createRightTriggerFixedAngleConfig19429();
     public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_Robot20245 = createRightTriggerFixedAngleConfig20245();
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotConfigs.getRightTriggerFixedAngleConfig();
+    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().rightTriggerFixedAngle;
 
     /**
      * Helper to create 19429-specific right trigger fixed angle aim configuration.
@@ -204,7 +204,7 @@ public class DriveSubsystem implements Subsystem {
      * @return rightTriggerFixedAngleConfig19429 or rightTriggerFixedAngleConfig20245
      */
     public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getRightTriggerFixedAngleConfig();
+        return org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().rightTriggerFixedAngle;
     }
 
     /**
@@ -289,7 +289,7 @@ public class DriveSubsystem implements Subsystem {
         this.fusionLocalizer = Constants.activeFusionLocalizer;
         // Log which config set is being used for diagnostics
         if (TelemetrySettings.isVerbose()) {
-            RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName());
+            RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotProfile.activeName());
         }
     }
 

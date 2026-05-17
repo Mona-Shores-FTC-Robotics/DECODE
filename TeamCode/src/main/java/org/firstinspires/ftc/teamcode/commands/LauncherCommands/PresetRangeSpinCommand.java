@@ -11,7 +11,7 @@ import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
-import org.firstinspires.ftc.teamcode.util.RobotConfigs;
+import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
@@ -27,7 +27,7 @@ public class PresetRangeSpinCommand extends Command {
     private final LauncherSubsystem launcher;
     private final LauncherRange range;
     public static CommandRangeConfig rangeConfig() {
-        return RobotConfigs.getCommandRangeConfig();
+        return RobotProfile.forCurrent().commandRange;
     }
     private final ElapsedTime timer = new ElapsedTime();
     private final ElapsedTime readyLossTimer = new ElapsedTime();

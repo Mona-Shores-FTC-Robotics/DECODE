@@ -102,7 +102,7 @@ public class RobotTelemetryData {
                 matchTimeSec,
                 opMode,
                 isAutonomous,
-                org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName(),
+                org.firstinspires.ftc.teamcode.util.RobotProfile.activeName(),
                 RobotState.getLauncherMode().name(),
                 RobotState.getMotif().name(),
                 RobotState.getMotifTail()

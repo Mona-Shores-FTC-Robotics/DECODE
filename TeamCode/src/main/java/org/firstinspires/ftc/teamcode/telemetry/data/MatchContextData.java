@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode.telemetry.data;
 
 import org.firstinspires.ftc.teamcode.util.Alliance;
-import org.firstinspires.ftc.teamcode.util.RobotConfigs;
+import org.firstinspires.ftc.teamcode.util.RobotProfile;
 
 /**
  * Match and OpMode context data for telemetry.
@@ -47,7 +47,7 @@ public class MatchContextData {
                 matchTimeSec,
                 opMode,
                 isAutonomous,
-                RobotConfigs.getActiveConfigName(),
+                RobotProfile.activeName(),
                 null,  // launcherMode
                 null,  // motifPattern
                 0);    // motifTail

@@ -38,7 +38,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import org.firstinspires.ftc.teamcode.util.CircularMovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.MovingAverageFilter;
-import org.firstinspires.ftc.teamcode.util.RobotConfigs;
+import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
@@ -68,19 +68,19 @@ public class IntakeSubsystem implements Subsystem {
     // Robot-specific gate configs
     public static IntakeGateConfig gateConfig_Robot19429 = IntakeGateConfig.gateConfig19429;
     public static IntakeGateConfig gateConfig_Robot20245 = IntakeGateConfig.gateConfig20245;
-    public static IntakeGateConfig gateConfig_ACTIVE = RobotConfigs.getGateConfig();
+    public static IntakeGateConfig gateConfig_ACTIVE = RobotProfile.forCurrent().gate;
 
     // Robot-specific lane presence configs (distance thresholds for artifact detection)
     public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_Robot19429 = IntakeLaneSensorConfig.lanePresenceConfig19429;
     public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_Robot20245 = IntakeLaneSensorConfig.lanePresenceConfig20245;
-    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_ACTIVE = RobotConfigs.getLanePresenceConfig();
+    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_ACTIVE = RobotProfile.forCurrent().lanePresence;
 
     /**
      * Gets the robot-specific GateConfig based on RobotState.getRobotName().
      * @return gateConfig19429 or gateConfig20245
      */
     public static IntakeGateConfig gateConfig() {
-        return RobotConfigs.getGateConfig();
+        return RobotProfile.forCurrent().gate;
     }
 
     public static final class LaneSample {
@@ -728,7 +728,7 @@ public class IntakeSubsystem implements Subsystem {
         boolean telemetryActive = TelemetrySettings.shouldSendDashboardPackets();
 
         // Get per-robot presence config
-        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
+        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotProfile.forCurrent().lanePresence;
 
         // Skip the distance I2C read entirely when nothing needs it. Distance is consumed by
         // (a) distance-based presence detection and (b) packet telemetry. If neither is active,

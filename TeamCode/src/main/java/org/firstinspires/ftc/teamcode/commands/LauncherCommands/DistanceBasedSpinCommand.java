@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
-import org.firstinspires.ftc.teamcode.util.RobotConfigs;
+import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
@@ -33,7 +33,7 @@ import dev.nextftc.core.commands.Command;
 public class DistanceBasedSpinCommand extends Command {
 
     // Robot-specific CommandRangeConfig instances - visible in Dashboard for live tuning
-    // These are the PRIMARY definitions - RobotConfigs returns these
+    // These are the PRIMARY definitions - RobotProfile.forCurrent().commandRange returns these
     public static CommandRangeConfig rangeConfig_Robot19429 = createRangeConfig19429();
     public static CommandRangeConfig rangeConfig_Robot20245 = createRangeConfig20245();
 
@@ -186,7 +186,7 @@ public class DistanceBasedSpinCommand extends Command {
     private final LightingSubsystem lighting;
     private final Gamepad gamepad;
     public static CommandRangeConfig rangeConfig() {
-        return RobotConfigs.getCommandRangeConfig();
+        return RobotProfile.forCurrent().commandRange;
     }
 
     private double lastSmoothedDistanceIn = 0.0;

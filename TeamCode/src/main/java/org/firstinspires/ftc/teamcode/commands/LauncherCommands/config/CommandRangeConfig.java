@@ -7,7 +7,7 @@ package org.firstinspires.ftc.teamcode.commands.LauncherCommands.config;
  *
  * Robot-specific instances are defined as static fields on DistanceBasedSpinCommand
  * (which has @Configurable), allowing Dashboard/Panels to edit the instance fields
- * of these config objects live. Access via RobotConfigs.getCommandRangeConfig().
+ * of these config objects live. Access via RobotProfile.forCurrent().commandRange.
  */
 public class CommandRangeConfig {
     /** Short range RPMs */
