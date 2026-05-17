@@ -365,6 +365,67 @@ dependencies {
 
 If adding Sloth at the same time: replace `com.acmerobotics.dashboard:dashboard:0.5.1` with `com.acmerobotics.slothboard:dashboard:0.2.4+0.5.1`, replace `com.bylazar:fullpanels:1.0.12` with `com.bylazar.sloth:fullpanels:0.2.4+1.0.12`, add Sloth Load plugin per `Dairy-Foundation/Sloth` README.
 
+## Fusion-related improvement: button relocalize should reset covariance
+
+Folded in here because it surfaced while planning the migration. Not strictly required for Ivy to compile, but a meaningful correctness improvement that the migrating agent should apply while it's already rewriting `DriveSubsystem`.
+
+### The issue
+
+Driver-station Cross/X is wired to `drive::tryRelocalize`, which calls `follower.setPose(visionPose)`. That propagates to `FusionLocalizer.setPose(pose)`:
+
+```java
+@Override
+public void setPose(Pose setPose) {
+    currentPosition = setPose.copy();         // hard snap, not Kalman-filtered
+    deadReckoning.setPose(setPose);
+    if (poseHistory.lastEntry() != null)
+        poseHistory.lastEntry().setValue(setPose.copy());
+    else
+        setStartPose(setPose);
+}
+```
+
+The position is hard-set correctly, but **the covariance matrix `P` is not reset.** When the driver presses the button, they're asserting "I know where the robot is now" — but the Kalman filter doesn't get that signal. The next vision correction will pull the pose around more than expected because the filter still carries the pre-press uncertainty.
+
+### The fix: add `forceRelocalize(pose)` to `FusionLocalizer`
+
+Keep `setPose` Pedro-conformant (no covariance reset — Pedro calls it during init). Add a separate explicit method that does both position and covariance:
+
+```java
+/**
+ * Driver-asserted relocalization. Snaps position AND resets covariance
+ * to a confident estimate, signaling "trust this position going forward."
+ * Use from manual relocalize buttons; do NOT use from Pedro lifecycle code.
+ */
+public void forceRelocalize(Pose pose) {
+    setPose(pose);
+    P = Matrix.diag(0.5, 0.5, Math.toRadians(2));   // ~0.5in xy, ~2deg heading
+}
+```
+
+Then in `DriveSubsystem`, change `tryRelocalize` to call `forceRelocalize` instead of routing through `follower.setPose`:
+
+```java
+// Before (fusion branch):
+follower.setPose(visionPose);
+
+// After:
+Constants.activeFusionLocalizer.forceRelocalize(visionPose);
+follower.setPose(visionPose);  // keep, so Pedro internals stay in sync
+```
+
+The double-call is intentional: `forceRelocalize` updates the FusionLocalizer's covariance + history; `follower.setPose` also updates Pedro internals (current path T-value, etc.) that aren't reachable through the localizer alone.
+
+### Where to put it in the PR sequence
+
+Apply during **PR 2** (subsystems port) since DriveSubsystem is being heavily rewritten anyway. Mention it in the commit message so robot-side regression debugging knows the relocalize semantics changed slightly:
+
+> "Driver Cross now resets Kalman covariance on relocalize; previously the filter retained pre-press uncertainty."
+
+### Confidence values
+
+`P = Matrix.diag(0.5, 0.5, Math.toRadians(2))` is a reasonable starting point — half-inch xy uncertainty, 2 degrees heading — but it's a guess. If the robot exhibits weird "snap back" behavior after a relocalize-then-drive sequence, lower the values (e.g., 0.1, 0.1, 1deg) to make the filter trust the manual pose more strongly. If subsequent vision corrections feel too aggressive, raise them. Make `P`'s post-relocalize value a `FusionConfig` field so it can be tuned via Panels without recompile.
+
 ## Known gotchas
 
 1. **`PedroCommands.turn` was renamed to `turnTo` in 1.0.0.** Reference-repo code (on snapshot Ivy) uses `turn(...)`; that signature does not exist on the public artifact. Verified against the 1.0.0 AAR.
