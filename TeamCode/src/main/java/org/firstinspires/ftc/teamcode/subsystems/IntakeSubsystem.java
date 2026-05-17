@@ -1153,4 +1153,65 @@ public class IntakeSubsystem {
         void onLaneColorChanged(LauncherLane lane, ArtifactColor color);
     }
 
+    // =========================================================================
+    // Ivy Command factories. Subsystem owns its commands (Traffic Cones idiom).
+    // =========================================================================
+
+    /** Tunable smart-intake debounce + haptic settings. */
+    public static class SmartIntakeConfig {
+        /** Continue intaking this long after isFull() goes true (ms). */
+        public double fullDebounceMs = 150;
+        /** Strong rumble (ms) on auto-reverse. */
+        public int hapticRumbleMs = 500;
+        public boolean enableHapticFeedback = true;
+    }
+    public static SmartIntakeConfig smartIntakeConfig = new SmartIntakeConfig();
+
+    /** One-shot Command that sets the intake mode. */
+    public com.pedropathing.ivy.Command setIntakeModeCmd(IntakeMode mode) {
+        final IntakeMode resolved = mode == null ? IntakeMode.STOPPED : mode;
+        return com.pedropathing.ivy.commands.Commands.instant(() -> setMode(resolved))
+                .requiring(this);
+    }
+
+    /**
+     * Smart intake Command: forward while not full, debounce on full, then
+     * auto-reverse. Optional haptic rumble when auto-reversing. Never finishes
+     * on its own — runs while the trigger button is held.
+     */
+    public com.pedropathing.ivy.Command smartIntakeCmd(com.qualcomm.robotcore.hardware.Gamepad gamepad) {
+        // 0=INTAKING, 1=DEBOUNCING, 2=AUTO_REVERSED. Per-command-instance state.
+        final int[] state = {0};
+        final com.qualcomm.robotcore.util.ElapsedTime debounceTimer = new com.qualcomm.robotcore.util.ElapsedTime();
+        return new com.pedropathing.ivy.CommandBuilder()
+                .setStart(() -> state[0] = isFull() ? 2 : 0)
+                .setExecute(() -> {
+                    boolean full = isFull();
+                    switch (state[0]) {
+                        case 0:  // INTAKING
+                            if (full) {
+                                state[0] = 1;
+                                debounceTimer.reset();
+                            } else {
+                                setMode(IntakeMode.ACTIVE_FORWARD);
+                            }
+                            break;
+                        case 1:  // DEBOUNCING
+                            if (!full) { state[0] = 0; break; }
+                            if (debounceTimer.milliseconds() >= smartIntakeConfig.fullDebounceMs) {
+                                state[0] = 2;
+                                setMode(IntakeMode.PASSIVE_REVERSE);
+                                if (smartIntakeConfig.enableHapticFeedback && gamepad != null) {
+                                    gamepad.rumble(smartIntakeConfig.hapticRumbleMs);
+                                }
+                            }
+                            break;
+                        case 2:  // AUTO_REVERSED
+                            if (!full) state[0] = 0;
+                            break;
+                    }
+                })
+                .setDone(() -> false)
+                .requiring(this);
+    }
 }
