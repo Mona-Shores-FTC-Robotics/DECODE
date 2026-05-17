@@ -3,11 +3,13 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 import androidx.annotation.Nullable;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
+import com.pedropathing.util.HeadingInterpolator;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
@@ -15,6 +17,7 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AutoField;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
@@ -27,20 +30,24 @@ import dev.nextftc.extensions.pedro.FollowPath;
  *
  * Structure:
  *   Seg 0 : start    → launch  (spin up + fire preloads at T=fireAtT)
- *   Seg 1 : launch   → art1    (constant 270°, brakes near artifacts, starts intake)
- *   Seg 2 : art1     → launch  (constant launch heading, fire at T=fireAtT)
+ *   Seg 1 : launch   → art1    (face 270°, brakes near artifacts, starts intake)
+ *   Seg 2 : art1     → launch  (face goal dynamically, fire at T=fireAtT)
  *   Seg 3 : launch   → art2    (same as seg 1)
  *   Seg 4 : art2     → launch  (same as seg 2, curved return)
  *   Seg 5 : launch   → art3    (same as seg 1)
  *   Seg 6 : art3     → launch  (same as seg 2, curved return)
  *   Seg 7 : launch   → park
  *
- * No SequentialGroup, no ParallelDeadlineGroup per segment — one FollowPath command.
- * Robot never stops at the launch waypoint between cycles; callbacks handle all events.
+ * Return paths use HeadingInterpolator.facingPoint() so the robot continuously
+ * faces the fixed goal position as it moves — the aim angle changes along the path
+ * because the goal is a fixed point on the field, not a fixed heading.
  *
  * Two tuning modes (adjust on FTC Dashboard, no recompile):
  *   Fast       : fireAtT=0.6,  returnBrakingStart=0.9  — fire while moving fast
  *   Consistent : fireAtT=0.85, returnBrakingStart=0.5  — fire while decelerating
+ *
+ * Safety: fireAll checks minShootingY so shots only queue once the robot has
+ * crossed the launch-zone line regardless of which T value triggers the callback.
  */
 public class MichianaShortCommand {
 
@@ -49,8 +56,11 @@ public class MichianaShortCommand {
         /** Max power for the full auto chain */
         public static double maxPathPower = 0.85;
 
-        /** Heading interpolation end point for the first path (start → launch) */
-        public static double firstPathHeadingInterpEnd = 0.7;
+        /**
+         * Linear heading interpolation completion weight for the first path (start → launch).
+         * Heading reaches launch heading at this T fraction, then holds for the rest of the segment.
+         */
+        public static double headingInterpEnd = 0.7;
 
         /**
          * Outbound braking start (launch → artifacts).
@@ -72,6 +82,14 @@ public class MichianaShortCommand {
          * Low  = robot decelerating when shots fire (more consistent RPM).
          */
         public static double returnBrakingStart = 0.5;
+
+        /**
+         * Minimum Y coordinate (Pedro frame, Blue alliance) the robot must reach before
+         * shots are allowed to queue. Guards against firing while still on the wrong side
+         * of the launch-zone line on deep artifact returns.
+         * For Red alliance the check is mirrored: y <= (144 - minShootingY).
+         */
+        public static double minShootingY = 65.0;
     }
 
     @Configurable
@@ -111,14 +129,24 @@ public class MichianaShortCommand {
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
         LauncherSubsystem launcher = robot.launcher;
         IntakeSubsystem intake = robot.intake;
+        Follower follower = robot.drive.getFollower();
 
+        // Shots fire only once the robot has crossed the launch-zone line.
+        // The parametric callback fires at a fixed T, but T doesn't guarantee field position
+        // on deep artifact returns, so we gate on actual pose.
         Runnable fireAll = () -> {
+            double robotY = follower.getPose().getY();
+            boolean pastLine = alliance == Alliance.BLUE
+                    ? robotY >= Config.minShootingY
+                    : robotY <= FieldConstants.FIELD_WIDTH_INCHES - Config.minShootingY;
+            if (!pastLine) return;
+
             launcher.spinUpAllLanesToLaunch();
             for (LauncherLane lane : LauncherLane.values()) launcher.queueShot(lane);
             intake.setGateAllowArtifacts();
         };
 
-        Pose start  = startOverride != null
+        Pose start   = startOverride != null
                 ? startOverride
                 : wp(Waypoints.startX, Waypoints.startY, Waypoints.startHeading, alliance);
         Pose launch  = wp(Waypoints.launchX,   Waypoints.launchY,   Waypoints.launchHeading,   alliance);
@@ -130,7 +158,7 @@ public class MichianaShortCommand {
         // Spin up at path start, fire preloads at T=fireAtT
         b.addPath(new BezierLine(start, launch))
          .setLinearHeadingInterpolation(start.getHeading(), launch.getHeading(),
-                 Config.firstPathHeadingInterpEnd)
+                 Config.headingInterpEnd)
          .addParametricCallback(0.0,           launcher::spinUpAllLanesToLaunch)
          .addParametricCallback(Config.fireAtT, fireAll);
 
@@ -139,19 +167,19 @@ public class MichianaShortCommand {
                 wp(Waypoints.art1X, Waypoints.art1Y, 0, alliance),
                 ctrl(Waypoints.art1CtrlX, Waypoints.art1CtrlY, alliance),
                 null,   // straight return, no control point
-                launch.getHeading(), fireAll, intake);
+                alliance, fireAll, intake);
 
         addCycle(b, launch,
                 wp(Waypoints.art2X, Waypoints.art2Y, 0, alliance),
                 ctrl(Waypoints.art2CtrlX, Waypoints.art2CtrlY, alliance),
                 ctrl(Waypoints.art2RetCtrlX, Waypoints.art2RetCtrlY, alliance),
-                launch.getHeading(), fireAll, intake);
+                alliance, fireAll, intake);
 
         addCycle(b, launch,
                 wp(Waypoints.art3X, Waypoints.art3Y, 0, alliance),
                 ctrl(Waypoints.art3CtrlX, Waypoints.art3CtrlY, alliance),
                 ctrl(Waypoints.art3RetCtrlX, Waypoints.art3RetCtrlY, alliance),
-                launch.getHeading(), fireAll, intake);
+                alliance, fireAll, intake);
 
         // ── Final: launch → park ─────────────────────────────────────────────
         b.addPath(new BezierCurve(launch,
@@ -180,16 +208,18 @@ public class MichianaShortCommand {
      *   - Starts intake at T=0.05
      *
      * Return (artifacts → launch):
-     *   - Constant launch heading (always aimed at goal — safe to fire any time)
+     *   - HeadingInterpolator.facingPoint() continuously aims at the fixed goal
+     *     position. The required heading changes along the path as the robot moves,
+     *     so a constant heading would drift off-target at different field positions.
      *   - Brakes starting at returnBrakingStart (tune for fast vs consistent)
-     *   - Fires at T=fireAtT
+     *   - Fires at T=fireAtT (gated by minShootingY in the fireAll runnable)
      *
      * @param retCtrl Control point for the return curve, or null for a straight line.
      */
     private static void addCycle(PathBuilder b,
                                   Pose launch, Pose artifacts,
                                   Pose outCtrl, @Nullable Pose retCtrl,
-                                  double launchHeadingRad,
+                                  Alliance alliance,
                                   Runnable fireAll, IntakeSubsystem intake) {
         // Outbound
         b.addPath(new BezierCurve(launch, outCtrl, artifacts))
@@ -197,13 +227,17 @@ public class MichianaShortCommand {
          .setBrakingStart(Config.outboundBrakingStart)
          .addParametricCallback(0.05, intake::forwardRoller);
 
-        // Return
+        // Return: dynamically face the fixed goal as the robot's field position changes
+        Pose goalCenter = alliance == Alliance.BLUE
+                ? FieldConstants.BLUE_GOAL_CENTER
+                : FieldConstants.RED_GOAL_CENTER;
+
         if (retCtrl != null) {
             b.addPath(new BezierCurve(artifacts, retCtrl, launch));
         } else {
             b.addPath(new BezierLine(artifacts, launch));
         }
-        b.setConstantHeadingInterpolation(launchHeadingRad)
+        b.setHeadingInterpolation(HeadingInterpolator.facingPoint(goalCenter.getX(), goalCenter.getY()))
          .setBrakingStart(Config.returnBrakingStart)
          .addParametricCallback(Config.fireAtT, fireAll);
     }
