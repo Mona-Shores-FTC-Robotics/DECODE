@@ -83,7 +83,9 @@ public class ArtifactColorCalibration extends LinearOpMode {
         dashboard = FtcDashboard.getInstance();
 
         // Initialize intake subsystem
-        intake = new IntakeSubsystem(hardwareMap);
+        org.firstinspires.ftc.teamcode.util.RobotProfile profile =
+                org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent();
+        intake = new IntakeSubsystem(hardwareMap, profile.gate, profile.lanePresence);
 
         telemetry.addLine("✓ Ready!");
         telemetry.addLine();

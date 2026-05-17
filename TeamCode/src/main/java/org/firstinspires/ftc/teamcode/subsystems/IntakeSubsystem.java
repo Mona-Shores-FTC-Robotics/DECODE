@@ -75,14 +75,6 @@ public class IntakeSubsystem implements Subsystem {
     public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_Robot20245 = IntakeLaneSensorConfig.lanePresenceConfig20245;
     public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_ACTIVE = RobotProfile.forCurrent().lanePresence;
 
-    /**
-     * Gets the robot-specific GateConfig based on RobotState.getRobotName().
-     * @return gateConfig19429 or gateConfig20245
-     */
-    public static IntakeGateConfig gateConfig() {
-        return RobotProfile.forCurrent().gate;
-    }
-
     public static final class LaneSample {
         public final boolean sensorPresent;
         public final boolean distanceAvailable;
@@ -257,7 +249,16 @@ public class IntakeSubsystem implements Subsystem {
     private boolean rollerEnabled = false;
     private boolean prefeedEnabled = false;
 
-    public IntakeSubsystem(HardwareMap hardwareMap) {
+    /** Per-robot gate servo positions, injected at construction. */
+    private final IntakeGateConfig gate;
+    /** Per-robot lane presence thresholds (distance / saturation), injected at construction. */
+    private final IntakeLaneSensorConfig.LanePresenceConfig lanePresence;
+
+    public IntakeSubsystem(HardwareMap hardwareMap,
+                           IntakeGateConfig gate,
+                           IntakeLaneSensorConfig.LanePresenceConfig lanePresence) {
+        this.gate = gate;
+        this.lanePresence = lanePresence;
         intakeMotor = tryGetMotor(hardwareMap, motorConfig.motorName);
         if (intakeMotor != null) {
             intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -278,10 +279,10 @@ public class IntakeSubsystem implements Subsystem {
         }
         rollerEnabled = false;
 
-        gateServo = tryGetServo(hardwareMap, gateConfig().servoName);
+        gateServo = tryGetServo(hardwareMap, gate.servoName);
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().allowArtifacts);
-            lastGatePosition = gateConfig().allowArtifacts;
+            gateServo.setPosition(gate.allowArtifacts);
+            lastGatePosition = gate.allowArtifacts;
         }
 
         for (LauncherLane lane : LauncherLane.values()) {
@@ -325,8 +326,8 @@ public class IntakeSubsystem implements Subsystem {
         }
         rollerEnabled = false;
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().allowArtifacts);
-            lastGatePosition = gateConfig().allowArtifacts;
+            gateServo.setPosition(gate.allowArtifacts);
+            lastGatePosition = gate.allowArtifacts;
         }
         prefeedEnabled = false;
     }
@@ -407,22 +408,22 @@ public class IntakeSubsystem implements Subsystem {
 
     public void setGateReverseConfig() {
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().reverseConfig);
-            lastGatePosition = gateConfig().reverseConfig;
+            gateServo.setPosition(gate.reverseConfig);
+            lastGatePosition = gate.reverseConfig;
         }
     }
 
     public void setGateAllowArtifacts() {
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().allowArtifacts);
-            lastGatePosition = gateConfig().allowArtifacts;
+            gateServo.setPosition(gate.allowArtifacts);
+            lastGatePosition = gate.allowArtifacts;
         }
     }
 
     public void setGatePreventArtifact() {
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().preventArtifacts);
-            lastGatePosition = gateConfig().preventArtifacts;
+            gateServo.setPosition(gate.preventArtifacts);
+            lastGatePosition = gate.preventArtifacts;
         }
     }
 
@@ -728,7 +729,7 @@ public class IntakeSubsystem implements Subsystem {
         boolean telemetryActive = TelemetrySettings.shouldSendDashboardPackets();
 
         // Get per-robot presence config
-        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotProfile.forCurrent().lanePresence;
+        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = lanePresence;
 
         // Skip the distance I2C read entirely when nothing needs it. Distance is consumed by
         // (a) distance-based presence detection and (b) packet telemetry. If neither is active,

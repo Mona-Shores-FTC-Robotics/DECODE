@@ -196,6 +196,31 @@ public class FusionLocalizer implements Localizer {
             setStartPose(setPose);
     }
 
+    /**
+     * Driver-asserted relocalization. Snaps position AND resets the Kalman
+     * covariance matrix P to a confident estimate, signaling "trust this
+     * position going forward." Use from manual relocalize buttons; do NOT
+     * call from Pedro lifecycle code — {@link #setPose(Pose)} is the
+     * Pedro-conformant path and intentionally leaves covariance alone
+     * (Pedro calls it during init when the filter hasn't built up
+     * uncertainty yet anyway).
+     *
+     * Also rewrites the last covariance history entry so a vision
+     * measurement arriving immediately after this call doesn't apply
+     * a stale pre-press covariance during its time-correction step.
+     *
+     * @param pose             new position (also propagated to deadReckoning)
+     * @param xyCovariance     variance for x and y after the reset
+     * @param headingCovariance variance for heading after the reset (radians)
+     */
+    public void forceRelocalize(Pose pose, double xyCovariance, double headingCovariance) {
+        setPose(pose);
+        P = Matrix.diag(xyCovariance, xyCovariance, headingCovariance);
+        if (!covarianceHistory.isEmpty()) {
+            covarianceHistory.lastEntry().setValue(P.copy());
+        }
+    }
+
     @Override
     public double getTotalHeading() { return currentPosition.getHeading(); }
 

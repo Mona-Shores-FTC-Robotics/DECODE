@@ -9,6 +9,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
+import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 
@@ -36,10 +37,14 @@ public class Robot {
             ControlHubIdentifierUtil.setRobotName(hardwareMap, null);
         }
 
+        // Resolve per-robot configs once at boot; subsystems take what they need explicitly.
+        RobotProfile profile = RobotProfile.forCurrent();
+
         vision = new VisionSubsystemLimelight(hardwareMap);
-        drive = new DriveSubsystem(hardwareMap, vision);
+        drive = new DriveSubsystem(hardwareMap, vision,
+                profile.aimAssist, profile.fixedAngleAim, profile.rightTriggerFixedAngle);
         launcher = new LauncherSubsystem(hardwareMap);
-        intake = new IntakeSubsystem(hardwareMap);
+        intake = new IntakeSubsystem(hardwareMap, profile.gate, profile.lanePresence);
         lighting = new LightingSubsystem(hardwareMap);
 
         drive.setLightingSubsystem(lighting);

@@ -73,6 +73,16 @@ public class DriveSubsystem implements Subsystem {
         public static double minTargetAreaPercent = 0.1;
         /** Estimated Limelight pipeline latency in milliseconds for timestamp compensation. */
         public static double limelightLatencyMs = 20.0;
+        /**
+         * Post-relocalize xy covariance (inches). Lower = filter trusts the
+         * manual pose more, future vision corrections pull less aggressively.
+         */
+        public static double relocalizeCovarianceXY = 0.5;
+        /**
+         * Post-relocalize heading covariance (degrees, converted to radians at use).
+         * Lower = filter trusts the manual heading more.
+         */
+        public static double relocalizeCovarianceHeadingDeg = 2.0;
     }
 
     // Robot-specific aim assist configs - visible in Panels for tuning
@@ -268,8 +278,18 @@ public class DriveSubsystem implements Subsystem {
     private boolean visionRelocalizationEnabled = false;
     private long lastAutoRelocalizeMs = 0L;
 
-    public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
-//        follower = Constants.createFollower(hardwareMap);
+    /** Per-robot aim assist tuning, injected at construction. */
+    private final DriveAimAssistConfig aimAssist;
+    /** Per-robot fixed-angle aim tuning, injected at construction. */
+    private final DriveFixedAngleAimConfig fixedAngleAim;
+    /** Per-robot right-trigger fixed-angle aim tuning, injected at construction. */
+    private final DriveRightTriggerFixedAngleConfig rightTriggerFixedAngle;
+
+    public DriveSubsystem(HardwareMap hardwareMap,
+                          VisionSubsystemLimelight vision,
+                          DriveAimAssistConfig aimAssist,
+                          DriveFixedAngleAimConfig fixedAngleAim,
+                          DriveRightTriggerFixedAngleConfig rightTriggerFixedAngle) {
         driveMotors = new Constants.Motors(hardwareMap);
         driveMotors.setRunWithoutEncoder();
 
@@ -278,6 +298,9 @@ public class DriveSubsystem implements Subsystem {
         motorLb = driveMotors.lb;
         motorRb = driveMotors.rb;
         this.vision = vision;
+        this.aimAssist = aimAssist;
+        this.fixedAngleAim = fixedAngleAim;
+        this.rightTriggerFixedAngle = rightTriggerFixedAngle;
     }
 
     public void setLightingSubsystem(LightingSubsystem lighting) {
@@ -599,7 +622,7 @@ public class DriveSubsystem implements Subsystem {
         double targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
 
         // Get per-robot aim assist config
-        DriveAimAssistConfig aimConfig = aimAssistConfig();
+        DriveAimAssistConfig aimConfig = aimAssist;
 
         double headingErrorRad = normalizeAngle(targetHeading - follower.getHeading());
         double headingErrorDeg = Math.toDegrees(headingErrorRad);
@@ -769,7 +792,7 @@ public class DriveSubsystem implements Subsystem {
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
         // Get fixed target heading based on alliance
-        DriveFixedAngleAimConfig aimConfig = fixedAngleAimConfig();
+        DriveFixedAngleAimConfig aimConfig = fixedAngleAim;
         double targetHeadingDeg = (alliance == Alliance.RED)
             ? aimConfig.redHeadingDeg
             : aimConfig.blueHeadingDeg;
@@ -818,7 +841,7 @@ public class DriveSubsystem implements Subsystem {
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
         // Get right trigger fixed target heading based on alliance
-        DriveRightTriggerFixedAngleConfig aimConfig = rightTriggerFixedAngleConfig();
+        DriveRightTriggerFixedAngleConfig aimConfig = rightTriggerFixedAngle;
         double targetHeadingDeg = (alliance == Alliance.RED)
             ? aimConfig.redParkHeadingDeg
             : aimConfig.blueParkHeadingDeg;
@@ -1240,6 +1263,24 @@ public class DriveSubsystem implements Subsystem {
         visionRelocalizeStatusMs = System.currentTimeMillis();
     }
     /**
+     * Applies a relocalized pose by resetting the FusionLocalizer's Kalman
+     * covariance AND calling Pedro's follower.setPose. Both calls are needed:
+     * the localizer update flushes filter uncertainty so the next vision
+     * correction doesn't pull the pose around against the manual override;
+     * the follower update keeps Pedro's internal path-tracking T-value
+     * consistent with the new pose.
+     */
+    private void applyRelocalizedPose(Pose pose) {
+        if (Constants.activeFusionLocalizer != null) {
+            Constants.activeFusionLocalizer.forceRelocalize(
+                    pose,
+                    FusionConfig.relocalizeCovarianceXY,
+                    Math.toRadians(FusionConfig.relocalizeCovarianceHeadingDeg));
+        }
+        follower.setPose(pose);
+    }
+
+    /**
      * Forces relocalization from vision WITHOUT jump safeguards.
      * Use ONLY for manual driver-initiated relocalization (X button) where the driver
      * intentionally wants to reset pose after a crash or bad state.
@@ -1298,7 +1339,7 @@ public class DriveSubsystem implements Subsystem {
                 return false;
             }
 
-            follower.setPose(pedroPoseMT1);
+            applyRelocalizedPose(pedroPoseMT1);
             vision.markOdometryUpdated();
 
             // Now heading is calibrated
@@ -1315,7 +1356,7 @@ public class DriveSubsystem implements Subsystem {
                 return false;
             }
 
-            follower.setPose(pedroPoseMT2);
+            applyRelocalizedPose(pedroPoseMT2);
             vision.markOdometryUpdated();
             recordRelocalizeSource("mt2", true, nowMs, snap.tagId);
             return true;
@@ -1328,7 +1369,7 @@ public class DriveSubsystem implements Subsystem {
                 return false;
             }
 
-            follower.setPose(pedroPoseMT1);
+            applyRelocalizedPose(pedroPoseMT1);
             vision.markOdometryUpdated();
             recordRelocalizeSource("mt1", true, nowMs, snap.tagId);
             return true;

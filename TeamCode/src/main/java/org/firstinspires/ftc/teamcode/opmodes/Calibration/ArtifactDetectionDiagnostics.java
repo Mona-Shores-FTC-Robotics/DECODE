@@ -62,7 +62,9 @@ public class ArtifactDetectionDiagnostics extends LinearOpMode {
         telemetry.update();
 
         dashboard = FtcDashboard.getInstance();
-        intake = new IntakeSubsystem(hardwareMap);
+        org.firstinspires.ftc.teamcode.util.RobotProfile profile =
+                org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent();
+        intake = new IntakeSubsystem(hardwareMap, profile.gate, profile.lanePresence);
         intake.initialize();
 
         telemetry.addLine("✓ Ready!");
