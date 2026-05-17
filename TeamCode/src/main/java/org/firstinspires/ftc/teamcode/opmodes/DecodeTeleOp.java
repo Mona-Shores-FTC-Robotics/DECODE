@@ -58,7 +58,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
     GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
 
     OperatorBindings operatorBindings = new OperatorBindings(operatorPad);
-    DriverBindings driverBindings = new DriverBindings(driverPad);
+    DriverBindings driverBindings = new DriverBindings(() -> gamepad1);
 
     {
         addComponents(
@@ -166,7 +166,8 @@ public class DecodeTeleOp extends NextFTCOpMode {
             prevMainLoopMs = 0.0;
         }
         lastLoopStartNs = loopStartNs;
-        BindingManager.update();
+        BindingManager.update();   // ticks legacy NextFTC bindings (OperatorBindings)
+        driverBindings.update();   // ticks new IvyBindings shim (edge-detected schedules)
         com.pedropathing.ivy.Scheduler.execute();
 
         // Auto-switch to DECODE mode when endgame threshold is reached

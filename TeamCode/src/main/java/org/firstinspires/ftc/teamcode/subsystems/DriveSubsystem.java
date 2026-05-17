@@ -1612,4 +1612,97 @@ public class DriveSubsystem {
                 : Math.max(0.0, clock.milliseconds() - lastVisionTimestamp);
     }
 
+    // =========================================================================
+    // Ivy Command factories. Traffic Cones idiom: subsystem owns its commands.
+    // Aim variants suspend the default drive command via priority + SUSPEND;
+    // when the aim command ends, default resumes.
+    // =========================================================================
+
+    private static final double DRIVE_TRANSLATION_DEADBAND = 0.05;
+    private static double applyDriveDeadband(double value) {
+        return Math.abs(value) < DRIVE_TRANSLATION_DEADBAND ? 0.0 : value;
+    }
+
+    /**
+     * Priority-0 infinite default drive Command. Reads the driver inputs each
+     * tick and passes them to driveTeleOp. Use interruptedBehavior=SUSPEND so
+     * higher-priority aim commands preempt and this resumes when they end.
+     */
+    public com.pedropathing.ivy.Command defaultDrive(
+            java.util.function.DoubleSupplier fieldX,
+            java.util.function.DoubleSupplier fieldY,
+            java.util.function.DoubleSupplier rotation,
+            java.util.function.BooleanSupplier slow,
+            java.util.function.BooleanSupplier ramp) {
+        return Commands.infinite(() -> driveTeleOp(
+                        fieldX.getAsDouble(),
+                        fieldY.getAsDouble(),
+                        rotation.getAsDouble(),
+                        slow.getAsBoolean(),
+                        ramp.getAsBoolean()))
+                .requiring(this)
+                .setPriority(0)
+                .setInterruptedBehavior(com.pedropathing.ivy.behaviors.InterruptedBehavior.SUSPEND);
+    }
+
+    /**
+     * Priority-1 infinite geometry aim Command. Higher priority preempts the
+     * default drive; the default suspends and resumes when this is cancelled.
+     */
+    public com.pedropathing.ivy.Command aimAndDriveCmd(
+            java.util.function.DoubleSupplier fieldX,
+            java.util.function.DoubleSupplier fieldY,
+            java.util.function.BooleanSupplier slow) {
+        return Commands.infinite(() -> aimAndDrive(
+                        applyDriveDeadband(fieldX.getAsDouble()),
+                        applyDriveDeadband(fieldY.getAsDouble()),
+                        slow.getAsBoolean()))
+                .requiring(this)
+                .setPriority(1);
+    }
+
+    /**
+     * Priority-1 infinite fixed-angle aim Command (driver triangle).
+     */
+    public com.pedropathing.ivy.Command aimAndDriveFixedAngleCmd(
+            java.util.function.DoubleSupplier fieldX,
+            java.util.function.DoubleSupplier fieldY,
+            java.util.function.BooleanSupplier slow) {
+        return Commands.infinite(() -> aimAndDriveFixedAngle(
+                        applyDriveDeadband(fieldX.getAsDouble()),
+                        applyDriveDeadband(fieldY.getAsDouble()),
+                        slow.getAsBoolean()))
+                .requiring(this)
+                .setPriority(1);
+    }
+
+    /**
+     * Priority-1 infinite right-trigger fixed-angle aim Command.
+     */
+    public com.pedropathing.ivy.Command aimAndDriveRightTriggerCmd(
+            java.util.function.DoubleSupplier fieldX,
+            java.util.function.DoubleSupplier fieldY,
+            java.util.function.BooleanSupplier slow) {
+        return Commands.infinite(() -> aimAndDriveRightTriggerFixedAngle(
+                        applyDriveDeadband(fieldX.getAsDouble()),
+                        applyDriveDeadband(fieldY.getAsDouble()),
+                        slow.getAsBoolean()))
+                .requiring(this)
+                .setPriority(1);
+    }
+
+    /**
+     * One-shot Command that triggers vision-driven relocalization.
+     */
+    public com.pedropathing.ivy.Command tryRelocalizeCmd() {
+        return Commands.instant(this::tryRelocalize).requiring(this);
+    }
+
+    /**
+     * One-shot Command that resets the follower's heading to field-forward.
+     */
+    public com.pedropathing.ivy.Command resetHeadingCmd() {
+        return Commands.instant(this::resetHeadingToFieldForward).requiring(this);
+    }
+
 }
