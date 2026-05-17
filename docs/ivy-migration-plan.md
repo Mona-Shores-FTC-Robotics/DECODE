@@ -118,21 +118,41 @@ PedroCommands.turnTo(Follower, double radians, PathConstraints)
 
 All return `CommandBuilder`, so `follow(...).then(score).requiring(arm)` composes naturally.
 
-### Factories (names to verify before PR 2)
+### Factories (verified from 1.0.0 source)
 
-Inferred from reference repo usage; **verify against `Commands.kt` and `Groups.kt` source** before relying on them in production:
+All confirmed against `com.pedropathing.ivy.commands.Commands` and `com.pedropathing.ivy.groups.Groups` source in the `com.pedropathing:ivy:1.0.0` AAR.
 
+`Commands.*`:
+
+```java
+Commands.instant(Runnable)                  // run once, done immediately
+Commands.infinite(Runnable)                 // run each tick forever (done=false)
+Commands.waitMs(double milliseconds)        // delay; NOTE: name is waitMs not wait
+Commands.waitUntil(BooleanSupplier)         // done when supplier returns true
+Commands.conditional(BooleanSupplier decider, Command ifTrue, Command ifFalse)
+Commands.branch(LinkedHashMap<BooleanSupplier, Command>)   // first match wins
+Commands.lazy(Supplier<Command>)            // defer command creation to start time
+Commands.match(Supplier<T extends Enum<T>>, EnumMap<T, Command>)   // enum switch
+Commands.onInterrupt(Runnable callback)     // forever-running; callback on interrupt only
 ```
-Commands.instant(Runnable)
-Commands.infinite(Runnable)
-Commands.waitMs(double)
-Commands.waitUntil(BooleanSupplier)
-Commands.conditional(BooleanSupplier, Command ifTrue, Command ifFalse)
+
+`Groups.*`:
+
+```java
 Groups.sequential(Command...)
 Groups.parallel(Command...)
-Groups.race(Command...)
-Groups.deadline(Command deadline, Command... others)   // unverified
+Groups.race(Command...)                     // ends when first finishes
+Groups.deadline(Command deadline, Command... others)   // ends when deadline finishes
+Groups.repeat(Command, int iterations)
+Groups.repeat(Command, IntSupplier iterationsSupplier)  // dynamic count at start time
+Groups.loop(Command)                        // re-run command forever until interrupted
 ```
+
+All factories return `CommandBuilder` so chaining (`.then`, `.with`, `.until`, `.unless`, `.proxy`) works.
+
+`Groups.loop(Command)` is distinct from `Commands.infinite(Runnable)`: `loop` re-runs an entire command lifecycle (start → execute → done → end → start → ...); `infinite` calls a `Runnable` each tick without any lifecycle.
+
+`Commands.match` is the cleanest replacement for our existing `switch (robotState)` / `switch (alliance)` code in places like `Robot.initializeForAuto/TeleOp` and lighting state dispatch.
 
 ## NextFTC → Ivy translation table
 
@@ -143,9 +163,11 @@ Groups.deadline(Command deadline, Command... others)   // unverified
 | `implements Subsystem` + `periodic()` | Plain class; periodic logic becomes a priority-0 `infinite` command scheduled in init |
 | `extends Command` (override start/execute/isFinished/end) | `new CommandBuilder().setStart(...).setExecute(...).setDone(...).setEnd(...)` |
 | `new SequentialGroup(a, b, c)` | `Groups.sequential(a, b, c)` or `a.then(b).then(c)` |
-| `new ParallelDeadlineGroup(deadline, others...)` | `Groups.deadline(deadline, others...)` (verify) or `new Deadline(...)` |
+| `new ParallelDeadlineGroup(deadline, others...)` | `Groups.deadline(deadline, others...)` |
 | `InstantCommand(r)` | `Commands.instant(r)` |
 | `Delay(ms)` | `Commands.waitMs(ms)` |
+| (no equivalent) | `Commands.match(stateSupplier, enumMap)` — for replacing `switch (robotState)` blocks |
+| (no equivalent) | `Commands.lazy(() -> buildCmd(currentPose))` — for commands that need state captured at start, not schedule |
 | `BindingManager` / `Button` / `Range` | `IvyBindings` shim (this doc) |
 | `dev.nextftc.extensions.pedro.FollowPath` | `PedroCommands.follow(follower, pathChain)` |
 | `dev.nextftc.extensions.pedro.PedroComponent` | Drop — `Robot` holds the `Follower` instance directly |
@@ -319,14 +341,14 @@ If adding Sloth at the same time: replace `com.acmerobotics.dashboard:dashboard:
 
 ## Known gotchas
 
-1. **`PedroCommands.turn` was renamed to `turnTo` in 1.0.0.** Reference-repo code (on snapshot Ivy) uses `turn(...)`; that signature does not exist on the public artifact.
-2. **No default-command concept.** Use priority-0 `Commands.infinite(...)` with `interruptedBehavior=SUSPEND`; higher-priority commands preempt and the default resumes when they finish.
-3. **`PedroCommands.follow` only takes `PathChain`, not `Path`.** Wrap any bare `Path` in a single-element `PathChain` at the call site.
-4. **`requiring(...)` not `requires(...)`.** Easy typo to make in mechanical porting.
-5. **`Scheduler` is process-global and static.** Call `Scheduler.reset()` in OpMode init or state from a prior OpMode (or test) will leak.
-6. **`BulkReadComponent` has no Ivy equivalent.** Manually iterate `hardwareMap.getAll(LynxModule.class)` and call `clearBulkCache()` each loop (Baron's pattern in `Robot.clearCaches()`).
-7. **The 0.0.1 → 1.0.0 jump renamed at least one method.** Don't assume reference-repo code compiles unchanged against 1.0.0. Verify against the AAR source before porting any snippet.
-8. **Two `Commands.*` / `Groups.*` factory names are unverified** at time of writing. Open the Kotlin source for `Commands` and `Groups` in External Libraries and confirm before PR 2.
+1. **`PedroCommands.turn` was renamed to `turnTo` in 1.0.0.** Reference-repo code (on snapshot Ivy) uses `turn(...)`; that signature does not exist on the public artifact. Verified against the 1.0.0 AAR.
+2. **`Commands.wait(double)` does not exist in 1.0.0.** The 1.0.0 name is `Commands.waitMs(double milliseconds)`. Baron's `22131-Decode` uses `Commands.wait(...)` because it builds against `ivy:0.0.1-LOCAL` — a personal local build, not the public artifact. MOEbo's snapshot and the 1.0.0 release both use `waitMs`.
+3. **No default-command concept.** Use priority-0 `Commands.infinite(...)` with `interruptedBehavior=SUSPEND`; higher-priority commands preempt and the default resumes when they finish.
+4. **`PedroCommands.follow` only takes `PathChain`, not `Path`.** Wrap any bare `Path` in a single-element `PathChain` at the call site.
+5. **`requiring(...)` not `requires(...)`.** Easy typo to make in mechanical porting.
+6. **`Scheduler` is process-global and static.** Call `Scheduler.reset()` in OpMode init or state from a prior OpMode (or test) will leak.
+7. **`BulkReadComponent` has no Ivy equivalent.** Manually iterate `hardwareMap.getAll(LynxModule.class)` and call `clearBulkCache()` each loop (Baron's pattern in `Robot.clearCaches()`).
+8. **0.0.1-SNAPSHOT, 0.0.1-LOCAL, and 1.0.0 differ.** Don't assume reference-repo code compiles unchanged against 1.0.0. Confirmed renames so far: `turn` → `turnTo` (snapshot → 1.0.0). Confirmed non-renames: `waitMs` exists in both. Baron's `-LOCAL` uses some method names (`wait`) that exist in neither the snapshot nor 1.0.0 — treat his code as structural reference only.
 
 ## PR sequencing
 
@@ -405,10 +427,11 @@ Acceptance:
 
 ## Open items to verify before starting
 
-1. `com.pedropathing.ivy.commands.Commands` — paste source, confirm factory names (`instant`, `infinite`, `waitMs`, `waitUntil`, `conditional`).
-2. `com.pedropathing.ivy.groups.Groups` — paste source, confirm `sequential`, `parallel`, `race`, `deadline`, `loop`, `repeat` signatures.
+1. ~~`com.pedropathing.ivy.commands.Commands` — paste source, confirm factory names.~~ **Done 2026-05-17.** All factories verified.
+2. ~~`com.pedropathing.ivy.groups.Groups` — paste source, confirm signatures.~~ **Done 2026-05-17.** All signatures verified including the bonus `repeat(int)`, `repeat(IntSupplier)`, `loop(Command)`.
 3. Whether NextFTC pulls FTC Dashboard or `com.bylazar:fullpanels` transitively at `implementation` scope (matters only if Sloth is added before NextFTC is removed). Run on dev machine: `./gradlew :TeamCode:dependencies --configuration debugRuntimeClasspath | grep -E "acmerobotics\.dashboard|com\.bylazar"`.
 4. Whether `com.pedropathing:telemetry:1.0.0` can be dropped once `Tuning.java` is replaced with whatever the current Pedro 2.1.2 quickstart uses (orthogonal to Ivy migration but worth checking at the same time).
+5. Confirm `Commands.waitMs` argument unit. The Javadoc says "the time to wait in milliseconds" so it's confirmed milliseconds; just internalize that `Commands.waitMs(1000.0)` is one second, not one millisecond.
 
 ## Style guide: 22131 Traffic Cones
 
@@ -638,18 +661,19 @@ For honesty's sake:
 
 The migration should preserve all of these.
 
-### API names confirmed from Traffic Cones code
+### API names: Traffic Cones vs 1.0.0
 
-Two more 1.0.0 verifications worth recording here (both differ from MOEbo's snapshot usage):
+Baron's `22131-Decode` builds against `com.pedropathing:ivy:0.0.1-LOCAL` — a personal local build, not the public 1.0.0 artifact. One difference is confirmed:
 
-- `Commands.wait(double ms)` — not `Commands.waitMs(double)`. Used as `Commands.wait(200.0)`, `Commands.wait(1.0)`. **Unit is presumed milliseconds** but verify against `Commands.kt` source.
-- `Commands.waitUntil(BooleanSupplier)` — confirmed, same as snapshot.
-- `Commands.infinite(Runnable)` — confirmed.
-- `Commands.instant(Runnable)` — confirmed.
-- `PedroCommands.follow(Follower, PathChain)` — confirmed.
-- `cmd.with(other)` / `cmd.then(other)` chaining — confirmed in heavy use.
+- Baron uses **`Commands.wait(double)`**; 1.0.0 has **`Commands.waitMs(double milliseconds)`**.
 
-`Groups.sequential(...)` confirmed via `import static com.pedropathing.ivy.groups.Groups.sequential;`.
+When porting Traffic Cones patterns, mechanically substitute `wait` → `waitMs`. Everything else in their code (`Commands.waitUntil`, `Commands.infinite`, `Commands.instant`, `PedroCommands.follow`, `.then(...)`, `.with(...)`, `Groups.sequential`) matches 1.0.0 verbatim.
+
+Confirmed structural patterns (independent of method names):
+- `cmd.with(other)` / `cmd.then(other)` chaining — used heavily in their autos.
+- Subsystem methods return `CommandBuilder` — the central pattern to adopt.
+- `Robot.shoot()` / `Robot.intake()` composite commands built via `Groups.sequential`.
+- `Commands.infinite(robot::periodic)` to keep subsystem state machines ticking in parallel with mission commands.
 
 ## References
 
