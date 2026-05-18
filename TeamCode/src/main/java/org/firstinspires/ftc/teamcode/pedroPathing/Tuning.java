@@ -23,6 +23,8 @@ import com.pedropathing.telemetry.SelectableOpMode;
 import com.pedropathing.util.*;
 import static com.pedropathing.math.MathFunctions.quadraticFit;
 
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
+
 import android.annotation.SuppressLint;
 
 import com.qualcomm.hardware.lynx.LynxModule;
@@ -1637,8 +1639,9 @@ class OffsetsTuner extends OpMode {
         telemetryM.debug("Total Angle: " + follower.getTotalHeading());
 
         telemetryM.debug("The following values are the offsets in inches that should be applied to your localizer.");
-        telemetryM.debug("strafeX: " + ((72.0-follower.getPose().getX()) / 2.0));
-        telemetryM.debug("forwardY: " + ((72.0-follower.getPose().getY()) / 2.0));
+        double halfField = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
+        telemetryM.debug("strafeX: " + ((halfField - follower.getPose().getX()) / 2.0));
+        telemetryM.debug("forwardY: " + ((halfField - follower.getPose().getY()) / 2.0));
         telemetryM.update(telemetry);
 
         drawCurrentAndHistory();

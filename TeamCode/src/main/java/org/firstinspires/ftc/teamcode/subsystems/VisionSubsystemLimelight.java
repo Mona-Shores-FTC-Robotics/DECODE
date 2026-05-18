@@ -776,10 +776,9 @@ public class VisionSubsystemLimelight {
             com.pedropathing.geometry.Pose pose = poseOpt.get();
             double x = pose.getX();
 
-            // Field width is 144 inches, midpoint at X = 72
-            // X < 72 means robot is physically on blue side
-            // X > 72 means robot is physically on red side
-            if (x < 72.0) {
+            // X < halfField means robot is physically on blue side
+            // X > halfField means robot is physically on red side
+            if (x < FieldConstants.FIELD_WIDTH_INCHES / 2.0) {
                 return Alliance.BLUE;
             } else {
                 return Alliance.RED;

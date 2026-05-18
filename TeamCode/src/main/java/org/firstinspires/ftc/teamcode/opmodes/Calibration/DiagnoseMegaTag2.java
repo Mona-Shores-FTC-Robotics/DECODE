@@ -16,6 +16,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 
 import java.util.List;
 
@@ -177,9 +178,10 @@ public class DiagnoseMegaTag2 extends OpMode {
                 packet.put("Diagnostic/MT2FTC Pose y", mt2YIn);
                 packet.put("Diagnostic/MT2FTC Pose heading", Math.toRadians(mt2YawDeg));
 
-                // Convert MT2 FTC pose to Pedro
-                double mt2PedroX = mt2YIn + 72; // ftcY + halfField
-                double mt2PedroY = 72 - mt2XIn; // halfField - ftcX
+                // Convert MT2 FTC pose to Pedro (same math as PoseFrames.ftcToPedro for X/Y).
+                double halfField = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
+                double mt2PedroX = mt2YIn + halfField; // ftcY + halfField
+                double mt2PedroY = halfField - mt2XIn; // halfField - ftcX
                 // Fixed 180° heading error: changed from -90° to +90° (matches VisionSubsystemLimelight)
                 double mt2PedroHeading = AngleUnit.normalizeDegrees(mt2YawDeg + 90);
 

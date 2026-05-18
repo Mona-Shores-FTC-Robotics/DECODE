@@ -37,28 +37,18 @@ public final class FieldConstants {
     }
 
 
-    public static final double FIELD_WIDTH_INCHES = 144.0;
-
     /**
-     * Pedro X position of the BLUE alliance side wall (left side in Pedro frame).
-     * Derived from FTC CAD: ftcToPedro(BLUE_GOAL_CORNER_FTC).X ≈ 1.84.
-     *
-     * MEASUREMENT PROCEDURE: place the robot touching the blue side wall, run an
-     * init that calls follower.setPose(...) only from vision, and read the
-     * follower's reported X. That value is BLUE_SIDE_WALL_X. Adjust below.
-     */
-    public static final double BLUE_SIDE_WALL_X = 1.84;
-
-    /**
-     * Pedro X position of the RED alliance side wall (right side in Pedro frame).
-     * Derived from FTC CAD: ftcToPedro(RED_GOAL_CORNER_FTC).X ≈ 142.16.
-     */
-    public static final double RED_SIDE_WALL_X = 142.16;
-
-    /**
-     * Field interior width in inches, used by {@link AutoField#poseForAlliance}
-     * (which calls Pedro's {@link Pose#mirror(double)}). For a mirror across the
-     * field center, x' = MIRROR_X_SUM - x.
+     * Field interior width and depth in inches — the single source of truth for
+     * field dimensions across the codebase. Used by:
+     * <ul>
+     *   <li>{@link AutoField#poseForAlliance} (X mirror)</li>
+     *   <li>{@link PoseFrames#ftcToPedro} / {@link PoseFrames#pedroToFtc}
+     *       (half-field offset between FTC center-origin and Pedro corner-origin frames)</li>
+     *   <li>Goal corner constants below ({@code BLUE_GOAL_CORNER_PEDRO}, etc.)
+     *       — the corner is at the walls, so its coordinate equals the field width/depth</li>
+     *   <li>Vision goal-side classification in {@code VisionSubsystemLimelight}</li>
+     *   <li>Pose-validity bounds checks in OpModes and DriveSubsystem</li>
+     * </ul>
      *
      * 141.5 matches Pedro's library hardcoded default in {@code Pose.mirror()}
      * and is consistent with an installed FTC field: 6 tiles × ~23.625" (foam
@@ -67,11 +57,11 @@ public final class FieldConstants {
      * is the design target, not the installed reality, which is consistently
      * smaller after the interlocks lose ~0.4" each.
      *
-     * The decorative BLUE_SIDE_WALL_X / RED_SIDE_WALL_X constants below are kept
-     * for documentation but no longer feed MIRROR_X_SUM. To re-derive from walls
-     * after measurement: set MIRROR_X_SUM = blueWallX + redWallX.
+     * If you measure a different field width at competition, change this one
+     * constant and every dimension-dependent calculation in the codebase
+     * updates consistently.
      */
-    public static final double MIRROR_X_SUM = 141.5;
+    public static final double FIELD_WIDTH_INCHES = 141.5;
 
     /**
      * Goal AprilTags
@@ -91,14 +81,17 @@ public final class FieldConstants {
 
     /**
      * Triangle corner locations of the goal openings (in inches) PEDRO Coordinate Frame.
+     * The corner sits at the intersection of the side wall and the back wall, so its X/Y
+     * coordinates derive from {@link #FIELD_WIDTH_INCHES}. The "FAR" point is 25" along
+     * the back wall from the corner.
      */
     public static final Pose BLUE_GOAL_LOWER_PEDRO = new Pose(0.0,   115.0, 0.0);
-    public static final Pose BLUE_GOAL_CORNER_PEDRO = new Pose(0.0,   144.0, 0.0);
-    public static final Pose BLUE_GOAL_FAR_PEDRO = new Pose(25.0,  144.0, 0.0);
+    public static final Pose BLUE_GOAL_CORNER_PEDRO = new Pose(0.0,   FIELD_WIDTH_INCHES, 0.0);
+    public static final Pose BLUE_GOAL_FAR_PEDRO = new Pose(25.0,  FIELD_WIDTH_INCHES, 0.0);
 
-    public static final Pose RED_GOAL_LOWER_PEDRO = new Pose(144.0, 115.0, 0.0);
-    public static final Pose RED_GOAL_CORNER_PEDRO = new Pose(144.0, 144.0, 0.0);
-    public static final Pose RED_GOAL_FAR_PEDRO = new Pose(119.0, 144.0, 0.0);
+    public static final Pose RED_GOAL_LOWER_PEDRO = new Pose(FIELD_WIDTH_INCHES, 115.0, 0.0);
+    public static final Pose RED_GOAL_CORNER_PEDRO = new Pose(FIELD_WIDTH_INCHES, FIELD_WIDTH_INCHES, 0.0);
+    public static final Pose RED_GOAL_FAR_PEDRO = new Pose(FIELD_WIDTH_INCHES - 25.0, FIELD_WIDTH_INCHES, 0.0);
 
     /**
      * Incenter of the triangular openings.
