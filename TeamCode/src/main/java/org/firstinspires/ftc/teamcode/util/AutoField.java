@@ -2,16 +2,15 @@ package org.firstinspires.ftc.teamcode.util;
 
 import com.pedropathing.geometry.Pose;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-
 /**
  * Utility for alliance-aware pose mirroring.
  *
  * Blue alliance poses are defined in "blue coordinates" (origin at blue corner).
- * Red alliance poses are automatically mirrored across the field center.
- *
- * NOTE: Waypoint values should be defined in the Command classes (e.g., FarTogetherCommand.Waypoints)
- * which are the source of truth for autonomous paths. Use poseForAlliance() to mirror those values.
+ * Red alliance poses are mirrored across the field center by delegating to
+ * Pedro's library method {@link Pose#mirror(double)} with the configured
+ * field-interior width ({@link FieldConstants#MIRROR_X_SUM}). A small additive
+ * fudge ({@link FieldConstants.AllianceMirrorFudge}) is applied on top in case
+ * the practice field deviates slightly from the configured width.
  */
 public final class AutoField {
 
@@ -30,14 +29,13 @@ public final class AutoField {
      */
     public static Pose poseForAlliance(double x, double y, double headingDeg, Alliance alliance) {
         Pose base = new Pose(x, y, Math.toRadians(headingDeg));
-        if (alliance == Alliance.RED) {
-            double mirroredX = FieldConstants.MIRROR_X_SUM - base.getX()
-                    + FieldConstants.AllianceMirrorFudge.redMirrorXInches;
-            double mirroredY = base.getY()
-                    + FieldConstants.AllianceMirrorFudge.redMirrorYInches;
-            double mirroredHeading = AngleUnit.normalizeRadians(Math.PI - base.getHeading());
-            return new Pose(mirroredX, mirroredY, mirroredHeading);
-        }
-        return base;
+        if (alliance != Alliance.RED) return base;
+
+        // Pedro's Pose.mirror(width): x' = width - x, y' = y, heading' = normalize(PI - heading).
+        Pose mirrored = base.mirror(FieldConstants.MIRROR_X_SUM);
+        return new Pose(
+                mirrored.getX() + FieldConstants.AllianceMirrorFudge.redMirrorXInches,
+                mirrored.getY() + FieldConstants.AllianceMirrorFudge.redMirrorYInches,
+                mirrored.getHeading());
     }
 }

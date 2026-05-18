@@ -25,25 +25,22 @@ public final class FieldConstants {
     public static BasketTargetOffsets  basketTargetOffsets = new BasketTargetOffsets();
 
     /**
-     * Live-tunable fudge factor applied to red-side alliance mirroring.
+     * Live-tunable residual fudge applied AFTER {@link Pose#mirror(double)} runs
+     * with {@link #MIRROR_X_SUM} as the field width. The primary field-width
+     * knob is MIRROR_X_SUM itself; this fudge exists for the case where the
+     * practice field still shows a small offset that isn't worth changing the
+     * constant for.
      *
-     * Symptom: blue waypoints work, but red lands a couple of inches off
-     * (e.g. aim is consistently a hair off, or the robot consistently parks
-     * a bit too close/far from its alliance wall).
-     *
-     * Root cause: if blue waypoints were defined assuming "X=0 is the blue
-     * wall" but the Pedro origin actually sits ~1.84" outside the wall, then
-     * the mirror formula 144 - X doesn't quite mirror across the physical
-     * field center, and red ends up offset by ~3.68" from the symmetric spot.
-     *
-     * Usage: nudge redMirrorXInches from FTC Dashboard during practice until
-     * the red aim/positions match blue. Typical values are 0..±4 inches.
-     * Positive pushes red poses toward the red wall (higher X).
+     * History: previously defaulted to redMirrorXInches=0.75 to compensate for
+     * our then-MIRROR_X_SUM=144.0 not matching the actual installed-tile field
+     * width (~141.5–141.75). With MIRROR_X_SUM now 141.5, that 0.75 fudge is
+     * no longer needed and defaults to 0. Use this only for residual tuning
+     * after MIRROR_X_SUM has been calibrated.
      */
     @Configurable
     public static class AllianceMirrorFudge {
-        /** Inches added to every red-mirrored X. Default 0 = legacy behavior. */
-        public static double redMirrorXInches = .75;
+        /** Inches added to every red-mirrored X. Default 0. */
+        public static double redMirrorXInches = 0.0;
         /** Inches added to every red-mirrored Y. Y is not mirrored by default,
          *  but expose this in case practice reveals an offset there too. */
         public static double redMirrorYInches = 0.0;
@@ -80,18 +77,22 @@ public final class FieldConstants {
     public static final double RED_SIDE_WALL_X = 142.16;
 
     /**
-     * Sum used for alliance mirroring: mirroredX = MIRROR_X_SUM - X.
+     * Field interior width in inches, used by {@link AutoField#poseForAlliance}
+     * (which calls Pedro's {@link Pose#mirror(double)}). For a mirror across the
+     * field center, x' = MIRROR_X_SUM - x.
      *
-     * This works because mirroring across the midpoint M satisfies
-     * mirror(X) = 2M - X, and 2M = (leftWall + rightWall). So as long as
-     * BLUE_SIDE_WALL_X + RED_SIDE_WALL_X equals 2 × (physical field center),
-     * mirroring is correct regardless of where the Pedro origin sits.
+     * 141.5 matches Pedro's library hardcoded default in {@code Pose.mirror()}
+     * and is consistent with an installed FTC field: 6 tiles × ~23.625" (foam
+     * tile with interlock loss) = 141.75". The 2025 game manual cites a nominal
+     * 144" "approximately ... bounded by the inside surface of the walls" — that
+     * is the design target, not the installed reality, which is consistently
+     * smaller after the interlocks lose ~0.4" each.
      *
-     * Defaults sum to 144.0, identical to the legacy FIELD_WIDTH_INCHES-based
-     * formula. Update BLUE_SIDE_WALL_X / RED_SIDE_WALL_X after measuring to
-     * correct any small mirror discrepancy.
+     * The decorative BLUE_SIDE_WALL_X / RED_SIDE_WALL_X constants below are kept
+     * for documentation but no longer feed MIRROR_X_SUM. To re-derive from walls
+     * after measurement: set MIRROR_X_SUM = blueWallX + redWallX.
      */
-    public static final double MIRROR_X_SUM = BLUE_SIDE_WALL_X + RED_SIDE_WALL_X;
+    public static final double MIRROR_X_SUM = 141.5;
 
     /**
      * Goal AprilTags
