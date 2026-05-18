@@ -24,27 +24,6 @@ public final class FieldConstants {
     }
     public static BasketTargetOffsets  basketTargetOffsets = new BasketTargetOffsets();
 
-    /**
-     * Live-tunable residual fudge applied AFTER {@link Pose#mirror(double)} runs
-     * with {@link #MIRROR_X_SUM} as the field width. The primary field-width
-     * knob is MIRROR_X_SUM itself; this fudge exists for the case where the
-     * practice field still shows a small offset that isn't worth changing the
-     * constant for.
-     *
-     * History: previously defaulted to redMirrorXInches=0.75 to compensate for
-     * our then-MIRROR_X_SUM=144.0 not matching the actual installed-tile field
-     * width (~141.5–141.75). With MIRROR_X_SUM now 141.5, that 0.75 fudge is
-     * no longer needed and defaults to 0. Use this only for residual tuning
-     * after MIRROR_X_SUM has been calibrated.
-     */
-    @Configurable
-    public static class AllianceMirrorFudge {
-        /** Inches added to every red-mirrored X. Default 0. */
-        public static double redMirrorXInches = 0.0;
-        /** Inches added to every red-mirrored Y. Y is not mirrored by default,
-         *  but expose this in case practice reveals an offset there too. */
-        public static double redMirrorYInches = 0.0;
-    }
 
     public static class BasketTargetOffsets {
         /** Blue basket X offset from incenter (inches). Negative = left toward corner */
