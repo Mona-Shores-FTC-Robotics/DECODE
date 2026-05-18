@@ -44,9 +44,6 @@ import org.firstinspires.ftc.teamcode.util.LauncherRange;
  * Two tuning modes (adjust on FTC Dashboard, no recompile):
  *   Fast       : fireAtT=0.6,  returnBrakingStart=0.9  — fire while moving fast
  *   Consistent : fireAtT=0.85, returnBrakingStart=0.5  — fire while decelerating
- *
- * Safety: fireAll checks minShootingY so shots only queue once the robot has
- * crossed the launch-zone line regardless of which T value triggers the callback.
  */
 public class MichianaShortCommand {
 
@@ -81,14 +78,6 @@ public class MichianaShortCommand {
          * Low  = robot decelerating when shots fire (more consistent RPM).
          */
         public static double returnBrakingStart = 0.5;
-
-        /**
-         * Minimum Y coordinate (Pedro frame, Blue alliance) the robot must reach before
-         * shots are allowed to queue. Guards against firing while still on the wrong side
-         * of the launch-zone line on deep artifact returns.
-         * For Red alliance the check is mirrored: y <= (144 - minShootingY).
-         */
-        public static double minShootingY = 65.0;
     }
 
     @Configurable
@@ -130,16 +119,7 @@ public class MichianaShortCommand {
         IntakeSubsystem intake = robot.intake;
         Follower follower = robot.drive.getFollower();
 
-        // Shots fire only once the robot has crossed the launch-zone line.
-        // The parametric callback fires at a fixed T, but T doesn't guarantee field position
-        // on deep artifact returns, so we gate on actual pose.
         Runnable fireAll = () -> {
-            double robotY = follower.getPose().getY();
-            boolean pastLine = alliance == Alliance.BLUE
-                    ? robotY >= Config.minShootingY
-                    : robotY <= FieldConstants.FIELD_WIDTH_INCHES - Config.minShootingY;
-            if (!pastLine) return;
-
             launcher.spinUpAllLanesToLaunch();
             for (LauncherLane lane : LauncherLane.values()) launcher.queueShot(lane);
             intake.setGateAllowArtifacts();
@@ -210,7 +190,7 @@ public class MichianaShortCommand {
      *     position. The required heading changes along the path as the robot moves,
      *     so a constant heading would drift off-target at different field positions.
      *   - Brakes starting at returnBrakingStart (tune for fast vs consistent)
-     *   - Fires at T=fireAtT (gated by minShootingY in the fireAll runnable)
+     *   - Fires at T=fireAtT
      *
      * @param retCtrl Control point for the return curve, or null for a straight line.
      */
