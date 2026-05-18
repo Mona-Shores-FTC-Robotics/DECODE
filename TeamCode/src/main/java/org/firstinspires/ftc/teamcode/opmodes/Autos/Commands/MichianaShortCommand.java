@@ -23,6 +23,9 @@ import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
+import org.firstinspires.ftc.teamcode.util.PpPathLoader;
+import org.firstinspires.ftc.teamcode.util.PpPathLoader.ParsedLine;
+import org.firstinspires.ftc.teamcode.util.PpPathLoader.ParsedPp;
 
 /**
  * MichianaShort: entire auto as a single PathChain with ParametricCallbacks.
@@ -169,6 +172,109 @@ public class MichianaShortCommand {
 
         // PresetRangeSpinCommand(finishWhenReady=false) runs alongside the full chain,
         // ensuring SHORT_AUTO RPM targets are always set even if something clears them.
+        return Groups.deadline(
+                PedroCommands.follow(follower, fullAuto, true, Config.maxPathPower),
+                PresetRangeSpinCommand.create(
+                        launcher, LauncherRange.SHORT_AUTO, false,
+                        robot.drive, robot.lighting, null)
+        );
+    }
+
+    /**
+     * Builds the auto from a parsed .pp file ({@link PpPathLoader.ParsedPp}). Callbacks
+     * are attached by segment-name convention (case-insensitive substring match):
+     * <ul>
+     *   <li>{@code Launch*}  → fire all lanes at T={@code Config.fireAtT},
+     *                          braking at {@code Config.returnBrakingStart}</li>
+     *   <li>{@code Artifact*} → intake roller on at T=0.05,
+     *                          braking at {@code Config.outboundBrakingStart}</li>
+     *   <li>anything else (e.g. "Open Gate", "Park") → no callbacks, geometry only</li>
+     * </ul>
+     * The first segment always also gets {@code spinUpAllLanesToLaunch} at T=0.
+     *
+     * <p>All waypoints + control points are mirrored for the active alliance via
+     * {@link AutoField#poseForAlliance}. Heading interpolation uses each segment's
+     * {@code startDeg}/{@code endDeg} (linear) or {@code degrees} (constant).
+     */
+    public static Command createFromPp(Robot robot, Alliance alliance, ParsedPp pp,
+                                       Pose startOverride) {
+        if (pp == null || pp.lines.isEmpty()) {
+            throw new IllegalArgumentException("ParsedPp has no segments");
+        }
+        LauncherSubsystem launcher = robot.launcher;
+        IntakeSubsystem intake = robot.intake;
+        Follower follower = robot.drive.getFollower();
+
+        Runnable fireAll = () -> {
+            launcher.spinUpAllLanesToLaunch();
+            for (LauncherLane lane : LauncherLane.values()) launcher.queueShot(lane);
+            intake.setGateAllowArtifacts();
+        };
+
+        Pose chainStart = startOverride != null
+                ? startOverride
+                : AutoField.poseForAlliance(pp.startX, pp.startY, pp.startHeadingDeg, alliance);
+
+        PathBuilder b = follower.pathBuilder();
+        Pose prev = chainStart;
+
+        for (int i = 0; i < pp.lines.size(); i++) {
+            ParsedLine seg = pp.lines.get(i);
+            boolean isFirst = (i == 0);
+
+            // Endpoint pose, mirrored. The heading we store on the Pose is what
+            // "linear" interpolation will reach at T=1.0 (segment endDeg).
+            Pose end = AutoField.poseForAlliance(seg.endX, seg.endY, seg.endDeg, alliance);
+
+            // Geometry: 0 control points → BezierLine; 1+ → BezierCurve.
+            if (seg.controlPoints.isEmpty()) {
+                b.addPath(new BezierLine(prev, end));
+            } else if (seg.controlPoints.size() == 1) {
+                double[] c = seg.controlPoints.get(0);
+                Pose ctrl = AutoField.poseForAlliance(c[0], c[1], 0, alliance);
+                b.addPath(new BezierCurve(prev, ctrl, end));
+            } else {
+                // Higher-order curves: Pedro BezierCurve takes (start, ctrls..., end).
+                // Build the Pose array dynamically.
+                Pose[] points = new Pose[seg.controlPoints.size() + 2];
+                points[0] = prev;
+                for (int j = 0; j < seg.controlPoints.size(); j++) {
+                    double[] c = seg.controlPoints.get(j);
+                    points[j + 1] = AutoField.poseForAlliance(c[0], c[1], 0, alliance);
+                }
+                points[points.length - 1] = end;
+                b.addPath(new BezierCurve(points));
+            }
+
+            // Heading interpolation.
+            if (seg.headingMode == PpPathLoader.HeadingMode.CONSTANT) {
+                // For constant heading we still pass the .pp's degrees value through alliance mirror.
+                double mirroredConstantRad = AutoField.poseForAlliance(0, 0, seg.constantDeg, alliance).getHeading();
+                b.setConstantHeadingInterpolation(mirroredConstantRad);
+            } else {
+                b.setLinearHeadingInterpolation(prev.getHeading(), end.getHeading(),
+                        Config.headingInterpEnd);
+            }
+
+            // Name-based callback policy.
+            String n = seg.name == null ? "" : seg.name.toLowerCase();
+            if (isFirst) {
+                b.addParametricCallback(0.0, launcher::spinUpAllLanesToLaunch);
+            }
+            if (n.contains("launch")) {
+                b.setBrakingStart(Config.returnBrakingStart);
+                b.addParametricCallback(Config.fireAtT, fireAll);
+            } else if (n.contains("artifact")) {
+                b.setBrakingStart(Config.outboundBrakingStart);
+                b.addParametricCallback(0.05, intake::forwardRoller);
+            }
+            // Everything else (Open Gate, Park, etc.) → no callbacks.
+
+            prev = end;
+        }
+
+        PathChain fullAuto = b.build();
+
         return Groups.deadline(
                 PedroCommands.follow(follower, fullAuto, true, Config.maxPathPower),
                 PresetRangeSpinCommand.create(

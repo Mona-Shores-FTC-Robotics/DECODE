@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
+import org.firstinspires.ftc.teamcode.util.PpPathLoader;
 
 import com.pedropathing.ivy.Command;
 import com.qualcomm.hardware.lynx.LynxModule;
@@ -24,6 +25,12 @@ import java.util.List;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Michiana Short", group = "Auto")
 public class DecodeAutonomousMichianaShort extends OpMode {
+
+    /**
+     * Name of the .pp file to load. We check {@code /sdcard/FIRST/<PP_FILE_NAME>} first
+     * (hot-reload via USB), then fall back to the {@code TeamCode/src/main/assets/} bundle.
+     */
+    private static final String PP_FILE_NAME = "MichianaClose.pp";
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
@@ -121,7 +128,26 @@ public class DecodeAutonomousMichianaShort extends OpMode {
             ? lastAppliedStartPosePedro
             : null;
 
-        Command autoRoutine = MichianaShortCommand.create(robot, activeAlliance, startPoseOverride);
+        // Path source: sdcard (hot-reload) → APK assets → hardcoded Waypoints fallback.
+        PpPathLoader.ParsedPp pp = PpPathLoader.loadFromSdcardOrNull(PP_FILE_NAME);
+        String pathSource;
+        if (pp != null) {
+            pathSource = "sdcard:/FIRST/" + PP_FILE_NAME;
+        } else {
+            try {
+                pp = PpPathLoader.loadFromAssets(hardwareMap.appContext, PP_FILE_NAME);
+                pathSource = "asset:" + PP_FILE_NAME;
+            } catch (Exception e) {
+                pp = null;
+                pathSource = "hardcoded (load failed: " + e.getMessage() + ")";
+            }
+        }
+        RobotState.packet.put("Auto/PathSource", pathSource);
+        telemetry.addData("Path source", pathSource);
+
+        Command autoRoutine = pp != null
+                ? MichianaShortCommand.createFromPp(robot, activeAlliance, pp, startPoseOverride)
+                : MichianaShortCommand.create(robot, activeAlliance, startPoseOverride);
 
         autoRoutine.schedule();
 
