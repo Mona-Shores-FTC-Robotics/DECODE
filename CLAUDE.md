@@ -245,7 +245,7 @@ telemetry.addData("motor_power", power);
 Make tunable parameters configurable via FTC Dashboard using `@Configurable` annotation:
 ```java
 @Configurable
-public class MySubsystem implements Subsystem {
+public class MySubsystem {
 
     @Configurable
     public static class MyConfig {
@@ -303,10 +303,14 @@ The pre-commit hook (in `.githooks/`) blocks commits that modify Gradle or SDK v
 - Configured in `Constants.java` with `FollowerConstants`, `MecanumConstants`, `PinpointConstants`
 - Tuning via `Tuning.java` OpMode
 
-**NextFTC (v1.0.1):**
-- Command-based framework
-- Hardware and bindings modules
-- Pedro extension for integration
+**Pedro Pathing Ivy (v1.0.0):**
+- Command framework + global static Scheduler
+- `com.pedropathing.ivy.Command` / `CommandBuilder` for command construction
+- `Commands.instant` / `Commands.infinite` / `Commands.waitMs` / `Commands.lazy` factories
+- `Groups.sequential` / `Groups.deadline` / `Groups.parallel` / `Groups.race` for composition
+- `PedroCommands.follow(follower, pathChain, holdEnd, maxPower)` for path following
+- Scheduler is process-global static — call `Scheduler.reset()` in OpMode init and `Scheduler.execute()` in OpMode loop
+- No bindings module ships with Ivy; we use the `util/IvyBindings.java` shim on top of SDK 11.1 gamepad edge primitives
 
 **FTC Dashboard (v0.5.1):**
 - Live tuning via web interface
