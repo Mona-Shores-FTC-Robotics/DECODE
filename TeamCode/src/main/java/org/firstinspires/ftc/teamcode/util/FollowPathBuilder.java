@@ -11,8 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import com.qualcomm.robotcore.util.Range;
 import com.pedropathing.geometry.Pose;
-import dev.nextftc.core.commands.Command;
-import dev.nextftc.extensions.pedro.FollowPath;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.pedro.PedroCommands;
 
 import org.firstinspires.ftc.teamcode.Robot;
 
@@ -241,7 +241,7 @@ public class FollowPathBuilder {
 
         double clippedPower = Range.clip(maxPower, 0.0, 1.0);
 
-        return new FollowPath(chain, true, clippedPower);
+        return PedroCommands.follow(robot.drive.getFollower(), chain, true, clippedPower);
     }
 
     // ---------------------------

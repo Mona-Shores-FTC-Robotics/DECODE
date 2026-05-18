@@ -13,9 +13,9 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
-import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
-import dev.nextftc.core.commands.groups.SequentialGroup;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
+import com.pedropathing.ivy.groups.Groups;
 
 /**
  * Generated autonomous command from Pedro Pathing .pp file
@@ -111,7 +111,7 @@ public class FarThreeAtOnceCommand {
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
         LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
-        AutoSmartIntakeCommand autoSmartIntake = new AutoSmartIntakeCommand(robot.intake);
+        Command autoSmartIntake = robot.intake.autoSmartIntakeCmd();
 
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
@@ -123,31 +123,31 @@ public class FarThreeAtOnceCommand {
             firstPathBuilder.from(start());
         }
 
-        Command mainSequence = new SequentialGroup(
+        Command mainSequence = Groups.sequential(
                 // Reset timer when auto actually starts (not when command is created)
                 ConditionalFinalLaunchCommand.createTimerReset(),
 
                 // Launch Preloads
-                new ParallelDeadlineGroup(
+                Groups.deadline(
                 firstPathBuilder
                         .to(launchFar())
                         .withConstantHeading(waypoints.launchFarHeadingDeg)
                         .build(config.maxPathPower),
-                    new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
+                    robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
                     launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Alliance Wall Artifacts
-            new ParallelDeadlineGroup(
+            Groups.deadline(
                 new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
                         .to(artifactsAllianceWall())
                         .withControl(leaveControl0())
                         .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new AutoSmartIntakeCommand(robot.intake)
+                        Groups.sequential(
+                                robot.intake.autoSmartIntakeCmd()
                         )
             ),
 
@@ -162,15 +162,15 @@ public class FarThreeAtOnceCommand {
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Artifact Set 3
-            new ParallelDeadlineGroup(
+            Groups.deadline(
                     new FollowPathBuilder(robot, alliance)
                             .from(launchFar())
                             .to(artifactsSet3())
                             .withControl(artifactsSet3Control0())
                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                             .build(config.maxPathPower),
-                    new SequentialGroup(
-                            new AutoSmartIntakeCommand(robot.intake)
+                    Groups.sequential(
+                            robot.intake.autoSmartIntakeCmd()
                     )
             ),
 
@@ -184,24 +184,24 @@ public class FarThreeAtOnceCommand {
             launcherCommands.launchAccordingToMode(false),
 
             // Pickup Artifact Set 2
-            new ParallelDeadlineGroup(
+            Groups.deadline(
                     new FollowPathBuilder(robot, alliance)
                             .from(launchFar())
                             .withControl(artifactsSet2Control0())
                             .to(artifactsSet2())
                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                             .build(config.maxPathPower),
-                    new SequentialGroup(
-                            new AutoSmartIntakeCommand(robot.intake)
+                    Groups.sequential(
+                            robot.intake.autoSmartIntakeCmd()
                     )
             ),
 
             // Conditionally return and launch if time permits, otherwise go straight to park
-            new ConditionalFinalLaunchCommand(
+            ConditionalFinalLaunchCommand.create(
                     config.autoDurationSeconds,
                     config.minTimeForFinalLaunchSeconds,
                     // If enough time: return to launch, shoot, then park
-                    new SequentialGroup(
+                    Groups.sequential(
                             new FollowPathBuilder(robot, alliance)
                                     .from(artifactsSet2())
                                     .to(launchFar())
@@ -210,19 +210,19 @@ public class FarThreeAtOnceCommand {
 
                             launcherCommands.launchAccordingToMode(false),
 
-                            new ParallelDeadlineGroup(
+                            Groups.deadline(
                                     new FollowPathBuilder(robot, alliance)
                                         .from(launchFar())
                                         .to(readyForTeleop())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower),
-                                    new SequentialGroup(
-                                            new AutoSmartIntakeCommand(robot.intake)
+                                    Groups.sequential(
+                                            robot.intake.autoSmartIntakeCmd()
                                     )
                             )
                     ),
                     // If not enough time: go straight to park
-                    new SequentialGroup(
+                    Groups.sequential(
                             new FollowPathBuilder(robot, alliance)
                                     .from(artifactsSet2())
                                     .to(readyForTeleop())

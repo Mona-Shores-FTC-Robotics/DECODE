@@ -1167,10 +1167,89 @@ public class IntakeSubsystem {
     }
     public static SmartIntakeConfig smartIntakeConfig = new SmartIntakeConfig();
 
+    /** Tunable autonomous smart-intake settings (count thresholds + debounce). */
+    public static class AutoSmartIntakeConfig {
+        public int fullCountThreshold = 2;
+        public int resumeCountThreshold = 1;
+        public double fullDebounceMs = 0;
+        public double resumeDebounceMs = 200.0;
+    }
+    public static AutoSmartIntakeConfig autoSmartIntakeConfig = new AutoSmartIntakeConfig();
+
     /** One-shot Command that sets the intake mode. */
     public com.pedropathing.ivy.Command setIntakeModeCmd(IntakeMode mode) {
         final IntakeMode resolved = mode == null ? IntakeMode.STOPPED : mode;
         return com.pedropathing.ivy.commands.Commands.instant(() -> setMode(resolved))
+                .requiring(this);
+    }
+
+    /**
+     * Autonomous smart intake: 4-state machine that auto-reverses when full and
+     * auto-resumes once the count drops below the resume threshold. Never
+     * finishes on its own — runs until interrupted by the scheduler.
+     */
+    public com.pedropathing.ivy.Command autoSmartIntakeCmd() {
+        // 0=FORWARD, 1=FULL_DEBOUNCE, 2=FULL_REVERSED, 3=RESUME_DEBOUNCE.
+        final int[] state = {0};
+        final com.qualcomm.robotcore.util.ElapsedTime timer = new com.qualcomm.robotcore.util.ElapsedTime();
+        return new com.pedropathing.ivy.CommandBuilder()
+                .setStart(() -> {
+                    // Stale "loaded" detections from before the prior launch can make the state
+                    // machine flip straight to FULL_REVERSED on tick 1 — clear them.
+                    clearLaneColors();
+                    state[0] = 0;
+                    timer.reset();
+                    setMode(IntakeMode.ACTIVE_FORWARD);
+                })
+                .setExecute(() -> {
+                    int artifactCount = getArtifactCount();
+                    boolean isFull = artifactCount >= autoSmartIntakeConfig.fullCountThreshold || isFull();
+                    boolean belowResume = artifactCount <= autoSmartIntakeConfig.resumeCountThreshold;
+                    switch (state[0]) {
+                        case 0:  // FORWARD
+                            if (isFull) {
+                                state[0] = 1;
+                                timer.reset();
+                            }
+                            break;
+                        case 1:  // FULL_DEBOUNCE
+                            if (!isFull) { state[0] = 0; break; }
+                            if (timer.milliseconds() >= autoSmartIntakeConfig.fullDebounceMs) {
+                                setMode(IntakeMode.PASSIVE_REVERSE);
+                                state[0] = 2;
+                                timer.reset();
+                            }
+                            break;
+                        case 2:  // FULL_REVERSED
+                            if (belowResume) {
+                                state[0] = 3;
+                                timer.reset();
+                            }
+                            break;
+                        case 3:  // RESUME_DEBOUNCE
+                            if (!belowResume) { state[0] = 2; break; }
+                            if (timer.milliseconds() >= autoSmartIntakeConfig.resumeDebounceMs) {
+                                setMode(IntakeMode.ACTIVE_FORWARD);
+                                state[0] = 0;
+                                timer.reset();
+                            }
+                            break;
+                    }
+                })
+                .setDone(() -> false)
+                .requiring(this);
+    }
+
+    /** Timed eject: aggressive reverse for durationMs, then stop. */
+    public com.pedropathing.ivy.Command timedEjectCmd(double durationMs) {
+        final com.qualcomm.robotcore.util.ElapsedTime timer = new com.qualcomm.robotcore.util.ElapsedTime();
+        return new com.pedropathing.ivy.CommandBuilder()
+                .setStart(() -> {
+                    setMode(IntakeMode.AGGRESSIVE_REVERSE);
+                    timer.reset();
+                })
+                .setDone(() -> timer.milliseconds() >= durationMs)
+                .setEnd(endCondition -> setMode(IntakeMode.STOPPED))
                 .requiring(this);
     }
 

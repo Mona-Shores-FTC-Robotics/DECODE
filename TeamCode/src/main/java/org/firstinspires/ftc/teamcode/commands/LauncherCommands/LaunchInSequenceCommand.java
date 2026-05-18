@@ -1,8 +1,9 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.CommandBuilder;
+import com.pedropathing.ivy.behaviors.EndCondition;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
-import dev.nextftc.core.commands.Command;
 
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchInSequenceConfig;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -18,174 +19,105 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Fires artifacts in the detected obelisk pattern sequence with optimized simultaneous firing.
+ * Fires artifacts in the detected obelisk pattern sequence with simultaneous-group optimization.
  *
- * This command:
- * 1. Gets the current motif pattern from RobotState (detected from AprilTag during init)
- * 2. Gets the manually-set motif tail from RobotState (operator visually counts field ramp)
- * 3. Rotates the pattern to complete the existing motif on the field
- * 4. Groups consecutive same-color positions for simultaneous firing
- * 5. Spins up to MID range
- * 6. Fires groups with spacing BETWEEN groups only (not within groups)
- * 7. Spins down to idle
+ * Stages: SPINNING_UP → WAITING_FOR_READY → SHOTS_QUEUED → COMPLETED.
  *
- * KEY OPTIMIZATION: Consecutive same-color artifacts fire SIMULTANEOUSLY!
- * - PPG → Groups: [[P,P], [G]] → Fire both P at t=0, G at t=525ms (~525ms total)
- * - PGP → Groups: [[P], [G], [P]] → Fire P, wait, G, wait, P (uses shorter 265ms spacing, ~530ms total)
- * - GPP → Groups: [[G], [P,P]] → Fire G at t=0, both P at t=525ms (~525ms total)
+ * Consecutive same-color positions in the rotated motif pattern fire SIMULTANEOUSLY:
+ * - PPG → [[P,P], [G]] → both purples at t=0, green at t=spacingMs
+ * - PGP → [[P], [G], [P]] → uses shorter alternating spacing to match total time
+ * - GPP → [[G], [P,P]] → green at t=0, both purples at t=spacingMs
  *
- * TIMING CONSISTENCY: PGP uses shorter spacing (alternatingSpacingMs) to match total time of other patterns.
+ * Lane selection within a same-color group prioritizes ready lanes first.
  *
- * Lane selection prioritizes ready lanes first for additional speed optimization.
- *
- * IMPORTANT: The motif tail is MANUALLY set by the operator (not automatically calculated).
- * The operator visually counts artifacts in the field ramp and updates the tail using
- * dpad buttons:
- * - Dpad Left (tail=0): 0, 3, 6, ... artifacts in field ramp
- * - Dpad Up (tail=1): 1, 4, 7, ... artifacts in field ramp
- * - Dpad Right (tail=2): 2, 5, 8, ... artifacts in field ramp
- *
- * Example: If detected pattern is PPG and operator set tail=1:
- * - Motif tail = 1 (manually set by operator)
- * - Rotated pattern = PGP (shifted left by 1 from PPG)
- * - Groups: [[P], [G], [P]]
- * - Fires Purple, wait 265ms, Green, wait 265ms, Purple (uses shorter alternating spacing)
+ * Ported from NextFTC {@code extends Command} to an Ivy static factory.
  */
-public class LaunchInSequenceCommand extends Command {
+public final class LaunchInSequenceCommand {
 
     public static LaunchInSequenceConfig sequenceConfig = new LaunchInSequenceConfig();
 
-    private enum Stage {
-        SPINNING_UP,
-        WAITING_FOR_READY,
-        SHOTS_QUEUED,
-        COMPLETED
-    }
+    private static final int STAGE_SPINNING_UP = 0;
+    private static final int STAGE_WAITING_FOR_READY = 1;
+    private static final int STAGE_SHOTS_QUEUED = 2;
+    private static final int STAGE_COMPLETED = 3;
 
-    private final LauncherSubsystem launcher;
-    private final IntakeSubsystem intake;
-    private final boolean spinDownAfterShot;
+    private LaunchInSequenceCommand() {}
 
-    private final ElapsedTime timer = new ElapsedTime();
-    private final EnumSet<LauncherLane> usedLanes = EnumSet.noneOf(LauncherLane.class);
+    public static Command create(LauncherSubsystem launcher,
+                                  IntakeSubsystem intake,
+                                  boolean spinDownAfterShot) {
+        Objects.requireNonNull(launcher, "launcher required");
+        Objects.requireNonNull(intake, "intake required");
 
-    private Stage stage = Stage.SPINNING_UP;
-    private boolean spinDownApplied = false;
-    private boolean shotsQueued = false;
+        final int[] stage = {STAGE_SPINNING_UP};
+        final EnumSet<LauncherLane> usedLanes = EnumSet.noneOf(LauncherLane.class);
+        final boolean[] spinDownApplied = {false};
+        final boolean[] shotsQueued = {false};
+        final ElapsedTime timer = new ElapsedTime();
 
-    /**
-     * Creates command that fires in obelisk pattern sequence with motif tail offset.
-     *
-     * @param launcher The launcher subsystem
-     * @param intake The intake subsystem (for prefeed roller control and artifact tracking)
-     * @param spinDownAfterShot Whether to spin down flywheels after shooting (false in autonomous)
-     */
-    public LaunchInSequenceCommand(LauncherSubsystem launcher,
-                                    IntakeSubsystem intake,
-                                    boolean spinDownAfterShot) {
-        this.launcher = Objects.requireNonNull(launcher, "launcher required");
-        this.intake = Objects.requireNonNull(intake, "intake required");
-        this.spinDownAfterShot = spinDownAfterShot;
-        requires(launcher);
-        setInterruptible(true);
-    }
-
-    @Override
-    public void start() {
-        timer.reset();
-        stage = Stage.SPINNING_UP;
-        usedLanes.clear();
-        spinDownApplied = false;
-        shotsQueued = false;
-
-        if (intake != null) {
-            intake.setGateAllowArtifacts();
-        }
-
-        // Spin up to target
-        launcher.spinUpAllLanesToLaunch();
-    }
-
-    @Override
-    public void update() {
-        switch (stage) {
-            case SPINNING_UP:
-                // Wait briefly for flywheels to start ramping
-                if (timer.milliseconds() > 100) {
-                    stage = Stage.WAITING_FOR_READY;
-                }
-                break;
-
-            case WAITING_FOR_READY:
-                // Check if we can queue shots yet
-                if (!shotsQueued && canQueueSequence()) {
-                    queueSequenceShots();
-                    shotsQueued = true;
-                    stage = Stage.SHOTS_QUEUED;
-                }
-
-                // Timeout safety
-                if (timer.seconds() >= sequenceConfig.timeoutSeconds) {
-                    if (!shotsQueued) {
-                        queueSequenceShots(); // Try to queue anyway
-                        shotsQueued = true;
+        return new CommandBuilder()
+                .setStart(() -> {
+                    timer.reset();
+                    stage[0] = STAGE_SPINNING_UP;
+                    usedLanes.clear();
+                    spinDownApplied[0] = false;
+                    shotsQueued[0] = false;
+                    intake.setGateAllowArtifacts();
+                    launcher.spinUpAllLanesToLaunch();
+                })
+                .setExecute(() -> {
+                    switch (stage[0]) {
+                        case STAGE_SPINNING_UP:
+                            if (timer.milliseconds() > 100) {
+                                stage[0] = STAGE_WAITING_FOR_READY;
+                            }
+                            break;
+                        case STAGE_WAITING_FOR_READY:
+                            if (!shotsQueued[0] && canQueueSequence(launcher)) {
+                                queueSequenceShots(launcher, intake, usedLanes);
+                                shotsQueued[0] = true;
+                                stage[0] = STAGE_SHOTS_QUEUED;
+                            }
+                            if (timer.seconds() >= sequenceConfig.timeoutSeconds) {
+                                if (!shotsQueued[0]) {
+                                    queueSequenceShots(launcher, intake, usedLanes);
+                                    shotsQueued[0] = true;
+                                }
+                                stage[0] = STAGE_SHOTS_QUEUED;
+                            }
+                            break;
+                        case STAGE_SHOTS_QUEUED:
+                            if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
+                                stage[0] = STAGE_COMPLETED;
+                                if (spinDownAfterShot && !spinDownApplied[0]) {
+                                    launcher.setAllLanesToIdle();
+                                    spinDownApplied[0] = true;
+                                }
+                            }
+                            break;
+                        default:
+                            break;
                     }
-                    stage = Stage.SHOTS_QUEUED;
-                }
-                break;
-
-            case SHOTS_QUEUED:
-                if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
-                    stage = Stage.COMPLETED;
-                    if (spinDownAfterShot && !spinDownApplied) {
+                })
+                .setDone(() -> stage[0] == STAGE_COMPLETED)
+                .setEnd(endCondition -> {
+                    intake.setGatePreventArtifact();
+                    if (spinDownApplied[0]) {
+                        launcher.clearOverrides();
+                    }
+                    boolean interrupted = endCondition == EndCondition.INTERRUPTED;
+                    if (interrupted && shotsQueued[0]) {
+                        launcher.clearQueue();
+                    }
+                    if (interrupted && spinDownAfterShot && !spinDownApplied[0]) {
                         launcher.setAllLanesToIdle();
-                        spinDownApplied = true;
+                        spinDownApplied[0] = true;
                     }
-                }
-                break;
-
-            case COMPLETED:
-            default:
-                // nothing
-                break;
-        }
+                })
+                .requiring(launcher);
     }
 
-    @Override
-    public boolean isDone() {
-        return stage == Stage.COMPLETED;
-    }
-
-    @Override
-    public void stop(boolean interrupted) {
-        if (intake != null) {
-            intake.setGatePreventArtifact();
-        }
-
-        // Only clear overrides if we explicitly spun down
-        // This preserves RPMs across multiple sequential launches in autonomous
-        // (even if interrupted, if spinDownAfterShot=false we want to keep the RPMs)
-        if (spinDownApplied) {
-            launcher.clearOverrides();
-        }
-
-        // Clear queue if interrupted
-        if (interrupted && shotsQueued) {
-            launcher.clearQueue();
-        }
-
-        // Spin down if not already done
-        if (interrupted && spinDownAfterShot && !spinDownApplied) {
-            launcher.setAllLanesToIdle();
-            spinDownApplied = true;
-        }
-    }
-
-    /**
-     * Checks if enough lanes are ready to start queuing the sequence.
-     * Waits for at least one enabled lane to be ready.
-     */
-    private boolean canQueueSequence() {
+    private static boolean canQueueSequence(LauncherSubsystem launcher) {
         for (LauncherLane lane : LauncherLane.values()) {
             if (launcher.getLaunchRpm(lane) > 0.0 && launcher.isLaneReady(lane)) {
                 return true;
@@ -194,72 +126,34 @@ public class LaunchInSequenceCommand extends Command {
         return false;
     }
 
-    /**
-     * Queues shots with optimized simultaneous firing for consecutive same-color artifacts.
-     *
-     * Key optimizations:
-     * - Groups consecutive same-color positions (e.g., PPG → [[P,P], [G]])
-     * - Fires all artifacts in each group SIMULTANEOUSLY (no delay within group)
-     * - Only adds delay BETWEEN groups
-     * - Prioritizes ready lanes when multiple lanes have the same color
-     * - Example: PPG fires both purples at t=0, green at t=500ms (50% faster!)
-     *
-     * Handles imperfect matches gracefully:
-     * - If pattern needs 2 purples but only 1 available, fires that 1
-     * - Fires all remaining unmatched artifacts simultaneously at the end
-     */
-    private void queueSequenceShots() {
-        // Get current motif pattern from RobotState
+    private static void queueSequenceShots(LauncherSubsystem launcher,
+                                            IntakeSubsystem intake,
+                                            EnumSet<LauncherLane> usedLanes) {
         MotifPattern motif = RobotState.getMotif();
         if (motif == null || motif == MotifPattern.UNKNOWN) {
-            // Default to PPG if no pattern detected
             motif = MotifPattern.PPG;
         }
-
-        // Get manually-set motif tail from RobotState
         int motifTail = RobotState.getMotifTail();
-
-        // Get rotated pattern based on motif tail
         ArtifactColor[] rotatedPattern = motif.getRotatedPattern(motifTail);
-
-        // Group consecutive same-color positions
         List<List<ArtifactColor>> groups = groupConsecutiveColors(rotatedPattern);
 
-        // Use shorter spacing for alternating patterns (3 groups = PGP-style)
-        // This keeps total sequence time consistent regardless of pattern
         double spacingMs = (groups.size() >= 3)
                 ? sequenceConfig.alternatingSpacingMs
                 : sequenceConfig.shotSpacingMs;
-
         double currentDelay = 0.0;
 
-        // Phase 1: Match and fire each group simultaneously
         for (List<ArtifactColor> group : groups) {
-            if (group.isEmpty()) {
-                continue;
-            }
-
-            ArtifactColor neededColor = group.get(0); // All same color in group
+            if (group.isEmpty()) continue;
+            ArtifactColor neededColor = group.get(0);
             int neededCount = group.size();
+            if (neededColor == null || !neededColor.isArtifact()) continue;
 
-            // Skip non-artifacts
-            if (neededColor == null || !neededColor.isArtifact()) {
-                continue;
+            List<LauncherLane> matching = findUnusedLanesWithColor(launcher, intake, usedLanes, neededColor, neededCount);
+            if (matching.isEmpty()) {
+                matching = findUnusedLanesIgnoringColor(launcher, usedLanes, neededCount);
+                if (matching.isEmpty()) continue;
             }
-
-            // Find unused lanes with this color (prioritize ready lanes, up to neededCount)
-            List<LauncherLane> matchingLanes = findUnusedLanesWithColor(neededColor, neededCount);
-
-            if (matchingLanes.isEmpty()) {
-                // Sensors failed for this color - fall back to any unused lane(s)
-                matchingLanes = findUnusedLanesIgnoringColor(neededCount);
-                if (matchingLanes.isEmpty()) {
-                    continue;
-                }
-            }
-
-            // Fire ALL lanes in this group SIMULTANEOUSLY at currentDelay
-            for (LauncherLane lane : matchingLanes) {
+            for (LauncherLane lane : matching) {
                 if (currentDelay > 0.0) {
                     launcher.queueShot(lane, currentDelay);
                 } else {
@@ -267,22 +161,15 @@ public class LaunchInSequenceCommand extends Command {
                 }
                 usedLanes.add(lane);
             }
-
-            // Only increment delay AFTER the entire group (not between individual shots)
             currentDelay += spacingMs;
         }
 
-        // Phase 2: Fire all remaining unused lanes SIMULTANEOUSLY
-        List<LauncherLane> remainingLanes = new ArrayList<>();
+        List<LauncherLane> remaining = new ArrayList<>();
         for (LauncherLane lane : LauncherLane.values()) {
-            if (!usedLanes.contains(lane)) {
-                remainingLanes.add(lane);
-            }
+            if (!usedLanes.contains(lane)) remaining.add(lane);
         }
-
-        // Fire all remaining lanes simultaneously (if any)
-        if (!remainingLanes.isEmpty()) {
-            for (LauncherLane lane : remainingLanes) {
+        if (!remaining.isEmpty()) {
+            for (LauncherLane lane : remaining) {
                 if (currentDelay > 0.0) {
                     launcher.queueShot(lane, currentDelay);
                 } else {
@@ -292,113 +179,64 @@ public class LaunchInSequenceCommand extends Command {
             }
         }
 
-        // Phase 3: Fallback if NO colors detected - fire all lanes
-        // This handles the case where color sensors aren't working or return NONE/UNKNOWN
         if (usedLanes.isEmpty()) {
             for (LauncherLane lane : LauncherLane.values()) {
-                launcher.queueShot(lane);  // Fire all simultaneously at 0ms
+                launcher.queueShot(lane);
             }
         }
     }
 
-    /**
-     * Groups consecutive same-color positions in the pattern.
-     *
-     * Example: [P, P, G] → [[P, P], [G]]
-     * Example: [P, G, P] → [[P], [G], [P]]
-     * Example: [G, P, P] → [[G], [P, P]]
-     *
-     * @param pattern The obelisk pattern
-     * @return List of groups, where each group contains consecutive same-color positions
-     */
-    private List<List<ArtifactColor>> groupConsecutiveColors(ArtifactColor[] pattern) {
+    private static List<List<ArtifactColor>> groupConsecutiveColors(ArtifactColor[] pattern) {
         List<List<ArtifactColor>> groups = new ArrayList<>();
-        if (pattern == null || pattern.length == 0) {
-            return groups;
-        }
-
-        List<ArtifactColor> currentGroup = new ArrayList<>();
-        currentGroup.add(pattern[0]);
-
+        if (pattern == null || pattern.length == 0) return groups;
+        List<ArtifactColor> current = new ArrayList<>();
+        current.add(pattern[0]);
         for (int i = 1; i < pattern.length; i++) {
             if (pattern[i] == pattern[i - 1]) {
-                // Same color - add to current group
-                currentGroup.add(pattern[i]);
+                current.add(pattern[i]);
             } else {
-                // Different color - save current group and start new one
-                groups.add(currentGroup);
-                currentGroup = new ArrayList<>();
-                currentGroup.add(pattern[i]);
+                groups.add(current);
+                current = new ArrayList<>();
+                current.add(pattern[i]);
             }
         }
-
-        // Add final group
-        groups.add(currentGroup);
+        groups.add(current);
         return groups;
     }
 
-    /**
-     * Finds unused lanes with the specified color, prioritizing ready lanes first.
-     *
-     * This optimization ensures that when we have multiple lanes with the same color,
-     * we fire the lanes that are already spun up first, reducing wait time.
-     *
-     * @param color The artifact color to search for
-     * @param maxCount Maximum number of lanes to return
-     * @return List of matching lanes (up to maxCount), sorted by readiness
-     */
-    private List<LauncherLane> findUnusedLanesWithColor(ArtifactColor color, int maxCount) {
+    private static List<LauncherLane> findUnusedLanesWithColor(LauncherSubsystem launcher,
+                                                                 IntakeSubsystem intake,
+                                                                 EnumSet<LauncherLane> usedLanes,
+                                                                 ArtifactColor color,
+                                                                 int maxCount) {
         List<LauncherLane> matching = new ArrayList<>();
-
-        // Find all unused lanes with this color
         for (LauncherLane lane : LauncherLane.values()) {
-            if (usedLanes.contains(lane)) {
-                continue;
-            }
-
-            ArtifactColor laneColor = intake.getLaneColor(lane);
-            if (laneColor == color) {
-                matching.add(lane);
-            }
+            if (usedLanes.contains(lane)) continue;
+            if (intake.getLaneColor(lane) == color) matching.add(lane);
         }
-
-        // Sort by readiness (ready lanes first)
-        matching.sort((lane1, lane2) -> {
-            boolean ready1 = launcher.isLaneReady(lane1);
-            boolean ready2 = launcher.isLaneReady(lane2);
-            if (ready1 && !ready2) {
-                return -1; // ready1 comes first
-            }
-            if (!ready1 && ready2) {
-                return 1; // ready2 comes first
-            }
-            return 0; // same readiness
+        matching.sort((a, b) -> {
+            boolean ra = launcher.isLaneReady(a);
+            boolean rb = launcher.isLaneReady(b);
+            if (ra && !rb) return -1;
+            if (!ra && rb) return 1;
+            return 0;
         });
-
-        // Return up to maxCount lanes
         return matching.subList(0, Math.min(maxCount, matching.size()));
     }
 
-    /**
-     * Returns unused lanes without checking colors, prioritized by readiness.
-     */
-    private List<LauncherLane> findUnusedLanesIgnoringColor(int maxCount) {
+    private static List<LauncherLane> findUnusedLanesIgnoringColor(LauncherSubsystem launcher,
+                                                                     EnumSet<LauncherLane> usedLanes,
+                                                                     int maxCount) {
         List<LauncherLane> matching = new ArrayList<>();
         for (LauncherLane lane : LauncherLane.values()) {
-            if (usedLanes.contains(lane)) {
-                continue;
-            }
+            if (usedLanes.contains(lane)) continue;
             matching.add(lane);
         }
-        matching.sort((lane1, lane2) -> {
-            boolean ready1 = launcher.isLaneReady(lane1);
-            boolean ready2 = launcher.isLaneReady(lane2);
-            if (ready1 && !ready2) {
-                return -1;
-            }
-            if (!ready1 && ready2) {
-                return 1;
-            }
+        matching.sort((a, b) -> {
+            boolean ra = launcher.isLaneReady(a);
+            boolean rb = launcher.isLaneReady(b);
+            if (ra && !rb) return -1;
+            if (!ra && rb) return 1;
             return 0;
         });
         return matching.subList(0, Math.min(maxCount, matching.size()));

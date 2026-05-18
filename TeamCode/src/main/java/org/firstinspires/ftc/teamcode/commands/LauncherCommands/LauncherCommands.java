@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
+import com.pedropathing.ivy.Command;
 import com.qualcomm.robotcore.hardware.Gamepad;
+
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -8,11 +10,14 @@ import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
-import dev.nextftc.core.commands.Command;
-
 /**
- * Convenience factory for launcher-related commands alongside immediate queue helpers used by
- * legacy binding paths.
+ * Thin convenience factory for launcher Commands. Each method just forwards to the
+ * underlying command's static .create(...) factory. Kept primarily for backward
+ * compatibility with callers (autos, Robot.launcherCommands) that pre-date the
+ * Ivy port.
+ *
+ * After PR 5 finishes, callers can either invoke the static .create() methods
+ * directly or this thin class can be deleted entirely.
  */
 @SuppressWarnings("UnusedReturnValue")
 public class LauncherCommands {
@@ -35,58 +40,30 @@ public class LauncherCommands {
         this.lighting = lighting;
     }
 
-    public PresetRangeSpinCommand presetRangeSpinUp(LauncherRange range, boolean finishWhenReady) {
-        PresetRangeSpinCommand cmd = new PresetRangeSpinCommand(launcher, range, finishWhenReady);
-        cmd.setDriveSubsystem(drive);
-        cmd.setReadyFeedbackTargets(lighting, operatorGamepad);
-        return cmd;
+    public Command presetRangeSpinUp(LauncherRange range, boolean finishWhenReady) {
+        return PresetRangeSpinCommand.create(launcher, range, finishWhenReady, drive, lighting, operatorGamepad);
     }
 
-    public DistanceBasedSpinCommand distanceBasedSpinUp(VisionSubsystemLimelight vision,
-                                                        DriveSubsystem drive,
-                                                        LightingSubsystem lighting,
-                                                        Gamepad gamepad) {
-        return new DistanceBasedSpinCommand(launcher, vision, drive, lighting, gamepad);
+    public Command distanceBasedSpinUp(VisionSubsystemLimelight vision,
+                                       DriveSubsystem drive,
+                                       LightingSubsystem lighting,
+                                       Gamepad gamepad) {
+        return DistanceBasedSpinCommand.create(launcher, vision, drive, lighting, gamepad);
     }
 
-    public LaunchAllCommand launchAll(boolean spinDownAfterShot) {
-        return new LaunchAllCommand(launcher, intake, spinDownAfterShot);
+    public Command launchAll(boolean spinDownAfterShot) {
+        return LaunchAllCommand.create(launcher, intake, spinDownAfterShot);
     }
 
-    /**
-     * Mode-aware launch: checks mode at RUNTIME (when command starts), not at binding time.
-     *
-     * - DECODE mode: Fires in pattern sequence with motif tail offset
-     * - THROUGHPUT mode: Fires all lanes as soon as ready
-     *
-     * @param spinDownAfterShot Whether to spin down flywheels after shooting
-     * @return Command that adapts to current launcher mode when executed
-     */
     public Command launchAccordingToMode(boolean spinDownAfterShot) {
-        return new ModeAwareLaunchCommand(launcher, intake, spinDownAfterShot);
+        return ModeAwareLaunchCommand.create(launcher, intake, spinDownAfterShot);
     }
 
-    /**
-     * Launches in obelisk pattern sequence with motif tail offset.
-     *
-     * Gets the detected motif pattern from RobotState, calculates the motif tail
-     * offset based on artifacts in ramp, rotates the pattern accordingly, and
-     * fires lanes in sequence with configurable spacing.
-     *
-     * Used for precise obelisk scoring in DECODE mode.
-     *
-     * @param spinDownAfterShot Whether to spin down flywheels after shooting (false in autonomous)
-     * @return Command that fires in motif-aware sequence
-     */
-    public LaunchInSequenceCommand launchInSequence(boolean spinDownAfterShot) {
-        return new LaunchInSequenceCommand(launcher, intake, spinDownAfterShot);
+    public Command launchInSequence(boolean spinDownAfterShot) {
+        return LaunchInSequenceCommand.create(launcher, intake, spinDownAfterShot);
     }
 
-    /**
-     * Allows teleop bindings to provide the raw operator gamepad for haptic feedback.
-     */
     public void setOperatorGamepad(Gamepad operatorGamepad) {
         this.operatorGamepad = operatorGamepad;
     }
-
 }

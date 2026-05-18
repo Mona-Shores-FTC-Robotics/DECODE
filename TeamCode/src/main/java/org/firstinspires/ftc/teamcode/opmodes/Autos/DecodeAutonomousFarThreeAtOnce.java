@@ -19,7 +19,7 @@ import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import dev.nextftc.bindings.BindingManager;
-import dev.nextftc.core.commands.Command;
+import com.pedropathing.ivy.Command;
 import dev.nextftc.core.commands.CommandManager;
 import dev.nextftc.core.components.BindingsComponent;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -365,7 +365,7 @@ public class DecodeAutonomousFarThreeAtOnce extends NextFTCOpMode {
 
         Command autoRoutine = FarThreeAtOnceCommand.create(robot, activeAlliance, startPoseOverride);
 
-        CommandManager.INSTANCE.scheduleCommand(autoRoutine);
+        autoRoutine.schedule();
 
         robot.lighting.resumeLaneTracking();
         robot.intake.forwardRoller();

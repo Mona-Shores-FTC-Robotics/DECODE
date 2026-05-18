@@ -2,9 +2,9 @@ package org.firstinspires.ftc.teamcode.bindings;
 
 import com.qualcomm.robotcore.hardware.Gamepad;
 
+import com.pedropathing.ivy.Command;
+
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpinCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.IvyBindings;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
@@ -14,8 +14,6 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Optional;
 import java.util.function.Supplier;
-
-import dev.nextftc.core.commands.Command;
 
 /**
  * Operator gamepad bindings. Uses {@link IvyBindings} on top of raw FTC gamepad
@@ -130,47 +128,28 @@ public class OperatorBindings {
 
     private void configureDistanceBasedLaunchBindings(Robot robot, Gamepad rawOperatorGamepad) {
         // Cross button: hold to distance-based spin-up; release to fire all and relocalize.
-        // Bridges to existing NextFTC commands via ::schedule until PR 5 finishes the port.
-        Command distanceBasedSpinCommand = robot.launcherCommands.distanceBasedSpinUp(
-                robot.vision, robot.drive, robot.lighting, rawOperatorGamepad);
-        Command launchCommand = robot.launcherCommands.launchAccordingToMode(true);
-
         bindings.when(() -> gp().cross)
-                .onTrue(instantRunnable(distanceBasedSpinCommand::schedule))
-                .onFalse(instantRunnable(() -> {
-                    launchCommand.schedule();
-                    robot.drive.tryRelocalizeForShot();
-                }));
+                .onTrue(robot.launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, rawOperatorGamepad))
+                .onFalse(robot.launcherCommands.launchAccordingToMode(true)
+                        .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
     }
 
     private void configurePresetRangeLaunchBindings(Robot robot) {
         // Preset range buttons. Each holds to spin up, releases to fire and relocalize.
-        Command launchShort = robot.launcherCommands.launchAccordingToMode(true);
-        PresetRangeSpinCommand spinShort = robot.launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, false);
         bindings.when(() -> gp().dpad_down)
-                .onTrue(instantRunnable(spinShort::schedule))
-                .onFalse(instantRunnable(() -> {
-                    launchShort.schedule();
-                    robot.drive.tryRelocalizeForShot();
-                }));
+                .onTrue(robot.launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, false))
+                .onFalse(robot.launcherCommands.launchAccordingToMode(true)
+                        .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
 
-        Command launchMid = robot.launcherCommands.launchAccordingToMode(true);
-        PresetRangeSpinCommand spinMid = robot.launcherCommands.presetRangeSpinUp(LauncherRange.MID, false);
         bindings.when(() -> gp().dpad_left)
-                .onTrue(instantRunnable(spinMid::schedule))
-                .onFalse(instantRunnable(() -> {
-                    launchMid.schedule();
-                    robot.drive.tryRelocalizeForShot();
-                }));
+                .onTrue(robot.launcherCommands.presetRangeSpinUp(LauncherRange.MID, false))
+                .onFalse(robot.launcherCommands.launchAccordingToMode(true)
+                        .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
 
-        Command launchFar = robot.launcherCommands.launchAccordingToMode(true);
-        PresetRangeSpinCommand spinFar = robot.launcherCommands.presetRangeSpinUp(LauncherRange.LONG, false);
         bindings.when(() -> gp().dpad_up)
-                .onTrue(instantRunnable(spinFar::schedule))
-                .onFalse(instantRunnable(() -> {
-                    launchFar.schedule();
-                    robot.drive.tryRelocalizeForShot();
-                }));
+                .onTrue(robot.launcherCommands.presetRangeSpinUp(LauncherRange.LONG, false))
+                .onFalse(robot.launcherCommands.launchAccordingToMode(true)
+                        .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
     }
 
     private boolean motifTailLeftActive() {
