@@ -97,7 +97,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
         Alliance selectorDefault = (persistedAlliance != null && persistedAlliance != Alliance.UNKNOWN)
                 ? persistedAlliance
                 : Alliance.BLUE;
-        allianceSelector = new AllianceSelector(driverPad, selectorDefault);
+        allianceSelector = new AllianceSelector(gamepad1, selectorDefault);
 
         // Subsystem periodics are scheduled as Ivy infinite Commands; no NextFTC SubsystemComponent registration.
         // Reset Ivy's process-global Scheduler to clear any leftover state from a prior OpMode.

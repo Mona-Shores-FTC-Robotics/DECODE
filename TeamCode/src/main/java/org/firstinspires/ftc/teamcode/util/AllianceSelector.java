@@ -1,9 +1,7 @@
 package org.firstinspires.ftc.teamcode.util;
 
 import com.pedropathing.geometry.Pose;
-
-import dev.nextftc.bindings.Button;
-import dev.nextftc.ftc.GamepadEx;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
@@ -19,10 +17,7 @@ import java.util.Optional;
 public final class AllianceSelector {
 
     private final Alliance defaultAlliance;
-    private final Button blueOverrideButton;
-    private final Button redOverrideButton;
-    private final Button autoOverrideButton;
-    private final Button defaultButton;
+    private final Gamepad driver;
 
     private boolean manualOverride;
     private boolean visionPreferred;
@@ -36,20 +31,20 @@ public final class AllianceSelector {
     private double detectedYaw = Double.NaN;
     private VisionSubsystemLimelight.TagSnapshot lastSnapshot;
 
-    public AllianceSelector(GamepadEx driver, Alliance defaultAlliance) {
+    public AllianceSelector(Gamepad driver, Alliance defaultAlliance) {
+        this.driver = driver;
         this.defaultAlliance = defaultAlliance;
         this.selectedAlliance = defaultAlliance == null ? Alliance.UNKNOWN : defaultAlliance;
         this.visionPreferred = (defaultAlliance == null || defaultAlliance == Alliance.UNKNOWN);
+    }
 
-        blueOverrideButton = driver.dpadLeft();
-        redOverrideButton = driver.dpadRight();
-        autoOverrideButton = driver.dpadDown();
-        defaultButton = driver.dpadUp();
-
-        blueOverrideButton.whenBecomesTrue(() -> selectAllianceManually(Alliance.BLUE));
-        redOverrideButton.whenBecomesTrue(() -> selectAllianceManually(Alliance.RED));
-        autoOverrideButton.whenBecomesTrue(this::enableVisionOverride);
-        defaultButton.whenBecomesTrue(this::clearManualOverride);
+    /** Poll dpad edges (SDK 11.1 wasPressed family). Call from updateDuringInit. */
+    private void pollOverrides() {
+        if (driver == null) return;
+        if (driver.dpadLeftWasPressed())  selectAllianceManually(Alliance.BLUE);
+        if (driver.dpadRightWasPressed()) selectAllianceManually(Alliance.RED);
+        if (driver.dpadDownWasPressed())  enableVisionOverride();
+        if (driver.dpadUpWasPressed())    clearManualOverride();
     }
 
     /**
@@ -133,6 +128,7 @@ public final class AllianceSelector {
      * @return The currently selected alliance
      */
     public Alliance updateDuringInit(VisionSubsystemLimelight vision, Robot robot, LightingSubsystem lighting) {
+        pollOverrides();
         updateFromVision(vision);
         applySelection(robot, lighting);
         return selectedAlliance;

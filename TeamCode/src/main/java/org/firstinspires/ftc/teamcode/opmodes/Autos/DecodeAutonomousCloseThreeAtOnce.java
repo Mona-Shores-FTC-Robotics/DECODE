@@ -66,8 +66,8 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
         GamepadEx driverPad = new GamepadEx(() -> gamepad1);
         GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
 
-        allianceSelector = new AllianceSelector(driverPad, Alliance.UNKNOWN);
-        modeSelector = new LauncherModeSelector(operatorPad, LauncherMode.DECODE);
+        allianceSelector = new AllianceSelector(gamepad1, Alliance.UNKNOWN);
+        modeSelector = new LauncherModeSelector(gamepad2, LauncherMode.DECODE);
 
         activeAlliance = allianceSelector.getSelectedAlliance();
 

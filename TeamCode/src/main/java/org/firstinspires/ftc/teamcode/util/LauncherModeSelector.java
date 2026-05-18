@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.util;
 
-import dev.nextftc.bindings.Button;
-import dev.nextftc.ftc.GamepadEx;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 
@@ -14,27 +13,26 @@ import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 public final class LauncherModeSelector {
 
     private final LauncherMode defaultMode;
-    private final Button throughputButton;
-    private final Button decodeButton;
+    private final Gamepad operatorPad;
 
     private boolean selectionLocked;
     private LauncherMode selectedMode;
 
     /**
      * Creates a launcher mode selector bound to operator gamepad.
-     *
-     * @param operatorPad The operator gamepad (gamepad2)
-     * @param defaultMode The default mode if no selection is made
+     * Dpad edges polled via SDK 11.1 wasPressed methods inside
+     * {@link #updateDuringInit(LightingSubsystem)}.
      */
-    public LauncherModeSelector(GamepadEx operatorPad, LauncherMode defaultMode) {
+    public LauncherModeSelector(Gamepad operatorPad, LauncherMode defaultMode) {
+        this.operatorPad = operatorPad;
         this.defaultMode = defaultMode == null ? LauncherMode.THROUGHPUT : defaultMode;
         this.selectedMode = this.defaultMode;
+    }
 
-        throughputButton = operatorPad.dpadLeft();
-        decodeButton = operatorPad.dpadRight();
-
-        throughputButton.whenBecomesTrue(() -> selectMode(LauncherMode.THROUGHPUT));
-        decodeButton.whenBecomesTrue(() -> selectMode(LauncherMode.DECODE));
+    private void pollOverrides() {
+        if (operatorPad == null) return;
+        if (operatorPad.dpadLeftWasPressed())  selectMode(LauncherMode.THROUGHPUT);
+        if (operatorPad.dpadRightWasPressed()) selectMode(LauncherMode.DECODE);
     }
 
     /**
@@ -84,6 +82,7 @@ public final class LauncherModeSelector {
      * @return The currently selected launcher mode
      */
     public LauncherMode updateDuringInit(LightingSubsystem lighting) {
+        pollOverrides();
         applySelection(lighting);
         return selectedMode;
     }
