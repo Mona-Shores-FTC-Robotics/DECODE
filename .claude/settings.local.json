@@ -67,7 +67,16 @@
       "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap /tmp/nextftc-core/dev/nextftc/core/commands/Command.class)",
       "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" ./gradlew :TeamCode:assembleDebug :TeamCode:testDebugUnitTest)",
       "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -c /tmp/nextftc-ftc/classes/dev/nextftc/ftc/GamepadEx.class)",
-      "Bash(grep -B1 -A30 'leftStickY_delegate\\\\$init')"
+      "Bash(grep -B1 -A30 'leftStickY_delegate\\\\$init')",
+      "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -p dev/nextftc/extensions/pedro/PedroComponent.class)",
+      "Bash(unzip -q -o \"/c/Users/dusti/.gradle/caches/modules-2/files-2.1/dev.nextftc.extensions/pedro/1.0.0/6f2b5965b732d78cb4f7a3845a7734953e28bf86/pedro-1.0.0.aar\")",
+      "Bash(unzip -q -o classes.jar -d classes)",
+      "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -p classes/dev/nextftc/extensions/pedro/PedroComponent.class)",
+      "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" ./gradlew :TeamCode:dependencies --configuration debugRuntimeClasspath)",
+      "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -p /tmp/caching-hw/classes/dev/frozenmilk/dairy/cachinghardware/CachingDcMotorEx.class)",
+      "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -p /tmp/caching-hw/classes/dev/frozenmilk/dairy/cachinghardware/CachingServo.class)",
+      "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -c /tmp/caching-hw/classes/dev/frozenmilk/dairy/cachinghardware/CachingDcMotorEx.class)",
+      "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -c /tmp/caching-hw/classes/dev/frozenmilk/dairy/cachinghardware/CachingServo.class)"
     ],
     "deny": [],
     "ask": []
