@@ -580,13 +580,7 @@ public class LightingSubsystem implements IntakeSubsystem.LaneColorListener {
     }
 
     private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
-        if (name == null || name.isEmpty()) return null;
-
-        try {
-            return hardwareMap.get(Servo.class, name);
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
+        return org.firstinspires.ftc.teamcode.util.CachedHardware.tryServo(hardwareMap, name);
     }
 
     /**

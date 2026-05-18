@@ -42,6 +42,11 @@ dependencies {
     implementation('com.pedropathing:telemetry:1.0.0')   // still used by Tuning.java
     implementation('com.pedropathing:ivy:1.0.0')
 
+    // Dairy CachingHardware: wraps motors/servos to skip redundant setPower/setPosition
+    // calls when the new value is within tolerance of the cached one. Orthogonal to
+    // FastColorSensor (which caches incoming I2C reads); this caches outgoing writes.
+    implementation('dev.frozenmilk.dairy:CachingHardware:1.0.0')
+
     //Panels
     implementation('com.bylazar:fullpanels:1.0.12')
 

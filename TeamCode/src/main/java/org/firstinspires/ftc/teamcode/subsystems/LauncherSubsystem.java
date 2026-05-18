@@ -73,14 +73,7 @@ public class LauncherSubsystem {
      * hardware is not connected.
      */
     private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
-        if (name == null || name.isEmpty()) {
-            return null;
-        }
-        try {
-            return hardwareMap.get(DcMotorEx.class, name);
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
+        return org.firstinspires.ftc.teamcode.util.CachedHardware.tryMotor(hardwareMap, name);
     }
 
     /**
@@ -89,14 +82,7 @@ public class LauncherSubsystem {
      * hardware is not connected.
      */
     private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
-        if (name == null || name.isEmpty()) {
-            return null;
-        }
-        try {
-            return hardwareMap.get(Servo.class, name);
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
+        return org.firstinspires.ftc.teamcode.util.CachedHardware.tryServo(hardwareMap, name);
     }
 
     public LauncherSubsystem(HardwareMap hardwareMap,

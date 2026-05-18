@@ -297,10 +297,10 @@ public class Constants {
         public final DcMotorEx lf, rf, lb, rb;
 
         public Motors(HardwareMap hw) {
-            this.lf = hw.get(DcMotorEx.class, HardwareNames.LF);
-            this.rf = hw.get(DcMotorEx.class, HardwareNames.RF);
-            this.lb = hw.get(DcMotorEx.class, HardwareNames.LB);
-            this.rb = hw.get(DcMotorEx.class, HardwareNames.RB);
+            this.lf = org.firstinspires.ftc.teamcode.util.CachedHardware.motor(hw, HardwareNames.LF);
+            this.rf = org.firstinspires.ftc.teamcode.util.CachedHardware.motor(hw, HardwareNames.RF);
+            this.lb = org.firstinspires.ftc.teamcode.util.CachedHardware.motor(hw, HardwareNames.LB);
+            this.rb = org.firstinspires.ftc.teamcode.util.CachedHardware.motor(hw, HardwareNames.RB);
 
             // Match the Pedro follower assumptions so direct velocity control shares the same axes.
             this.lf.setDirection(DcMotorSimple.Direction.REVERSE);
