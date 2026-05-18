@@ -33,8 +33,9 @@ import java.util.Map;
  * </ul>
  *
  * <p>What's not parsed: visualizer settings (velocity, friction, robot image),
- * waitBeforeMs / waitAfterMs (no Pedro hook yet), {@code reverse} (Pedro PathBuilder
- * has no reverse flag; caller can flip control points if needed), shapes.
+ * waitBeforeMs / waitAfterMs (no Pedro hook yet), shapes. {@code reverse} IS parsed
+ * and exposed on {@link ParsedLine#reverse}; caller wires it to
+ * {@code PathBuilder.setReversed()}.
  */
 public final class PpPathLoader {
 

@@ -256,6 +256,13 @@ public class MichianaShortCommand {
                         Config.headingInterpEnd);
             }
 
+            // Reverse: robot traverses the segment backward (e.g. driving rear-first
+            // through a tight gate). Pedro PathBuilder.setReversed() applies to the
+            // most recently added path.
+            if (seg.reverse) {
+                b.setReversed();
+            }
+
             // Name-based callback policy.
             String n = seg.name == null ? "" : seg.name.toLowerCase();
             if (isFirst) {
