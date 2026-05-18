@@ -46,6 +46,12 @@ public class DecodeAutonomousMichianaShort extends OpMode {
 
     private List<LynxModule> hubs;
 
+    // Parsed .pp loaded once in init() — source of truth for paths, start pose,
+    // expected position. sdcard takes priority for hot-reload; asset is the
+    // committed fallback that ships with the APK.
+    private PpPathLoader.ParsedPp parsedPp;
+    private String pathSource = "uninitialized";
+
     @Override
     public void init() {
         hubs = hardwareMap.getAll(LynxModule.class);
@@ -66,7 +72,23 @@ public class DecodeAutonomousMichianaShort extends OpMode {
 
         activeAlliance = allianceSelector.getSelectedAlliance();
 
-        applyAlliance(activeAlliance, MichianaShortCommand.getDefaultStartPose());
+        // Load .pp once at init: sdcard wins (hot-reload), then asset (bundled).
+        parsedPp = PpPathLoader.loadFromSdcardOrNull(PP_FILE_NAME);
+        if (parsedPp != null) {
+            pathSource = "sdcard:/FIRST/" + PP_FILE_NAME;
+        } else {
+            try {
+                parsedPp = PpPathLoader.loadFromAssets(hardwareMap.appContext, PP_FILE_NAME);
+                pathSource = "asset:" + PP_FILE_NAME;
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "MichianaShort: failed to load " + PP_FILE_NAME
+                                + " from sdcard or assets: " + e.getMessage(), e);
+            }
+        }
+        RobotState.packet.put("Auto/PathSource", pathSource);
+
+        applyAlliance(activeAlliance, defaultStartPoseFromPp());
 
         allianceSelector.applySelection(robot, robot.lighting);
         modeSelector.applySelection(robot.lighting);
@@ -128,26 +150,10 @@ public class DecodeAutonomousMichianaShort extends OpMode {
             ? lastAppliedStartPosePedro
             : null;
 
-        // Path source: sdcard (hot-reload) → APK assets → hardcoded Waypoints fallback.
-        PpPathLoader.ParsedPp pp = PpPathLoader.loadFromSdcardOrNull(PP_FILE_NAME);
-        String pathSource;
-        if (pp != null) {
-            pathSource = "sdcard:/FIRST/" + PP_FILE_NAME;
-        } else {
-            try {
-                pp = PpPathLoader.loadFromAssets(hardwareMap.appContext, PP_FILE_NAME);
-                pathSource = "asset:" + PP_FILE_NAME;
-            } catch (Exception e) {
-                pp = null;
-                pathSource = "hardcoded (load failed: " + e.getMessage() + ")";
-            }
-        }
-        RobotState.packet.put("Auto/PathSource", pathSource);
+        // parsedPp was loaded at init(); use it directly.
         telemetry.addData("Path source", pathSource);
-
-        Command autoRoutine = pp != null
-                ? MichianaShortCommand.createFromPp(robot, activeAlliance, pp, startPoseOverride)
-                : MichianaShortCommand.create(robot, activeAlliance, startPoseOverride);
+        Command autoRoutine =
+                MichianaShortCommand.createFromPp(robot, activeAlliance, parsedPp, startPoseOverride);
 
         autoRoutine.schedule();
 
@@ -219,7 +225,7 @@ public class DecodeAutonomousMichianaShort extends OpMode {
             // When alliance changes without vision, use LocalizeCommand default
             Pose defaultPose = lastDetectedStartPosePedro != null
                 ? lastDetectedStartPosePedro
-                : MichianaShortCommand.getDefaultStartPose();
+                : defaultStartPoseFromPp();
             applyAlliance(activeAlliance, defaultPose);
         }
 
@@ -255,16 +261,25 @@ public class DecodeAutonomousMichianaShort extends OpMode {
      * Called when alliance changes to ensure AutoPrestartHelper uses the correct reference.
      */
     private void updateExpectedStartPose() {
-        if (prestartHelper == null) {
+        if (prestartHelper == null || parsedPp == null) {
             return;
         }
         Pose expectedPose = AutoField.poseForAlliance(
-                MichianaShortCommand.Waypoints.startX,
-                MichianaShortCommand.Waypoints.startY,
-                MichianaShortCommand.Waypoints.startHeading,
+                parsedPp.startX,
+                parsedPp.startY,
+                parsedPp.startHeadingDeg,
                 activeAlliance
         );
         prestartHelper.setExpectedStartPose(expectedPose);
+    }
+
+    /** Start pose from the parsed .pp file, mirrored for the active alliance. */
+    private Pose defaultStartPoseFromPp() {
+        return AutoField.poseForAlliance(
+                parsedPp.startX,
+                parsedPp.startY,
+                parsedPp.startHeadingDeg,
+                activeAlliance);
     }
 
     /**
@@ -377,13 +392,8 @@ public class DecodeAutonomousMichianaShort extends OpMode {
         Pose followerPose = robot.drive.getFollower().getPose();
         Pose visionPose = status != null ? status.startPoseFromVision : null;
 
-        // Get default/target start pose (mirrored for current alliance)
-        Pose targetPose = AutoField.poseForAlliance(
-                MichianaShortCommand.Waypoints.startX,
-                MichianaShortCommand.Waypoints.startY,
-                MichianaShortCommand.Waypoints.startHeading,
-            activeAlliance
-        );
+        // Get default/target start pose from the parsed .pp file, mirrored for current alliance.
+        Pose targetPose = defaultStartPoseFromPp();
 
         telemetry.addData("Target", "X=%.1f Y=%.1f θ=%.0f°",
             targetPose.getX(), targetPose.getY(), Math.toDegrees(targetPose.getHeading()));
@@ -463,12 +473,7 @@ public class DecodeAutonomousMichianaShort extends OpMode {
 
         // Compare vision pose to target (not to follower)
         Pose visionPose = status.startPoseFromVision;
-        Pose targetPose = AutoField.poseForAlliance(
-                MichianaShortCommand.Waypoints.startX,
-                MichianaShortCommand.Waypoints.startY,
-                MichianaShortCommand.Waypoints.startHeading,
-            activeAlliance
-        );
+        Pose targetPose = defaultStartPoseFromPp();
 
         double dx = visionPose.getX() - targetPose.getX();
         double dy = visionPose.getY() - targetPose.getY();
