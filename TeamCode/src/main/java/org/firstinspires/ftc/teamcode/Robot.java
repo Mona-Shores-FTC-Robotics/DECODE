@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -21,8 +20,6 @@ public class Robot {
     public final LightingSubsystem lighting;
     public final VisionSubsystemLimelight vision;
     public final TelemetryService telemetry;
-
-    public final LauncherCommands launcherCommands;
 
     private final HardwareMap hardwareMap;
 
@@ -53,8 +50,6 @@ public class Robot {
         lighting = new LightingSubsystem(hardwareMap);
 
         drive.setLightingSubsystem(lighting);
-
-        launcherCommands = new LauncherCommands(launcher, intake, drive, lighting);
     }
 
     public void setAlliance(Alliance alliance) {

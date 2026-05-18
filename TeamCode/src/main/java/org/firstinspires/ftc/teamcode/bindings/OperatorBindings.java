@@ -5,6 +5,9 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.pedropathing.ivy.Command;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpinCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ModeAwareLaunchCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.IvyBindings;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
@@ -17,15 +20,7 @@ import java.util.function.Supplier;
 
 /**
  * Operator gamepad bindings. Uses {@link IvyBindings} on top of raw FTC gamepad
- * polling (no NextFTC GamepadEx).
- *
- * Bridging note: the underlying launcher Commands ({@link PresetRangeSpinCommand},
- * {@link DistanceBasedSpinCommand}, ModeAwareLaunchCommand, etc.) still extend
- * NextFTC's Command. We schedule them via {@code cmd::schedule} which calls
- * into NextFTC's CommandManager — still alive as a component on
- * {@code NextFTCOpMode} until PR 5 retires NextFTC entirely. The new
- * IntakeSubsystem factory methods return Ivy Commands and go via
- * {@code IvyBindings.when(...).onTrue(ivyCmd)}.
+ * polling.
  */
 public class OperatorBindings {
 
@@ -45,18 +40,17 @@ public class OperatorBindings {
 
     /**
      * Wire up bindings. Must be called after the Ivy Scheduler reset and before
-     * {@link #update()} is called. The raw operator gamepad is also forwarded
-     * to LauncherCommands for haptic feedback inside the spin-up commands.
+     * {@link #update()} is called. The raw operator gamepad is forwarded into
+     * the launcher Commands for haptic feedback inside the spin-up commands.
      */
     public void configureTeleopBindings(Robot robot, Gamepad rawOperatorGamepad) {
         this.robot = robot;
-        robot.launcherCommands.setOperatorGamepad(rawOperatorGamepad);
 
         configureGroundIntakeBindings(robot, rawOperatorGamepad);
         configureHumanIntakeBindings(robot);
         configureEjectBindings(robot);
         configureDistanceBasedLaunchBindings(robot, rawOperatorGamepad);
-        configurePresetRangeLaunchBindings(robot);
+        configurePresetRangeLaunchBindings(robot, rawOperatorGamepad);
 
         // Motif tail quick-set on left stick (left=0, up=1, right=2)
         bindings.when(this::motifTailLeftActive).onTrue(instantRunnable(() -> setMotifTailWithFeedback(robot, 0)));
@@ -129,26 +123,33 @@ public class OperatorBindings {
     private void configureDistanceBasedLaunchBindings(Robot robot, Gamepad rawOperatorGamepad) {
         // Cross button: hold to distance-based spin-up; release to fire all and relocalize.
         bindings.when(() -> gp().cross)
-                .onTrue(robot.launcherCommands.distanceBasedSpinUp(robot.vision, robot.drive, robot.lighting, rawOperatorGamepad))
-                .onFalse(robot.launcherCommands.launchAccordingToMode(true)
+                .onTrue(DistanceBasedSpinCommand.create(
+                        robot.launcher, robot.vision, robot.drive, robot.lighting, rawOperatorGamepad))
+                .onFalse(ModeAwareLaunchCommand.create(robot.launcher, robot.intake, true)
                         .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
     }
 
-    private void configurePresetRangeLaunchBindings(Robot robot) {
+    private void configurePresetRangeLaunchBindings(Robot robot, Gamepad rawOperatorGamepad) {
         // Preset range buttons. Each holds to spin up, releases to fire and relocalize.
         bindings.when(() -> gp().dpad_down)
-                .onTrue(robot.launcherCommands.presetRangeSpinUp(LauncherRange.SHORT, false))
-                .onFalse(robot.launcherCommands.launchAccordingToMode(true)
+                .onTrue(PresetRangeSpinCommand.create(
+                        robot.launcher, LauncherRange.SHORT, false,
+                        robot.drive, robot.lighting, rawOperatorGamepad))
+                .onFalse(ModeAwareLaunchCommand.create(robot.launcher, robot.intake, true)
                         .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
 
         bindings.when(() -> gp().dpad_left)
-                .onTrue(robot.launcherCommands.presetRangeSpinUp(LauncherRange.MID, false))
-                .onFalse(robot.launcherCommands.launchAccordingToMode(true)
+                .onTrue(PresetRangeSpinCommand.create(
+                        robot.launcher, LauncherRange.MID, false,
+                        robot.drive, robot.lighting, rawOperatorGamepad))
+                .onFalse(ModeAwareLaunchCommand.create(robot.launcher, robot.intake, true)
                         .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
 
         bindings.when(() -> gp().dpad_up)
-                .onTrue(robot.launcherCommands.presetRangeSpinUp(LauncherRange.LONG, false))
-                .onFalse(robot.launcherCommands.launchAccordingToMode(true)
+                .onTrue(PresetRangeSpinCommand.create(
+                        robot.launcher, LauncherRange.LONG, false,
+                        robot.drive, robot.lighting, rawOperatorGamepad))
+                .onFalse(ModeAwareLaunchCommand.create(robot.launcher, robot.intake, true)
                         .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
     }
 

@@ -3,7 +3,8 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ModeAwareLaunchCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
@@ -145,7 +146,6 @@ public class CloseTogetherCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
-        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
         Command autoSmartIntake = robot.intake.autoSmartIntakeCmd();
 
         // Build first path: start -> launch position
@@ -169,11 +169,13 @@ public class CloseTogetherCommand {
                                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                 .build(config.maxPathPower),
                         robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
-                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
+                        PresetRangeSpinCommand.create(
+                                robot.launcher, LauncherRange.SHORT_AUTO, true,
+                                robot.drive, robot.lighting, null) // Spin up to SHORT RPM for the whole auto
                 ),
 
 //                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 1
                 Groups.deadline(
@@ -212,7 +214,7 @@ public class CloseTogetherCommand {
                         .build(config.maxPathPower),
 
 //                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 2
                 Groups.deadline(
@@ -237,7 +239,7 @@ public class CloseTogetherCommand {
                         .build(config.maxPathPower),
 
 //                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 3
                 Groups.deadline(
@@ -266,7 +268,7 @@ public class CloseTogetherCommand {
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower),
 
-                                launcherCommands.launchAccordingToMode(false),
+                                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                                 Groups.deadline(
                                         new FollowPathBuilder(robot, alliance)

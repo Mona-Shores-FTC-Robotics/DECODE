@@ -3,7 +3,8 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ModeAwareLaunchCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
@@ -106,7 +107,6 @@ public class FarThreeAtOnceCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
-        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
         Command autoSmartIntake = robot.intake.autoSmartIntakeCmd();
 
         // Build first path: start -> launch position
@@ -130,9 +130,11 @@ public class FarThreeAtOnceCommand {
                         .withConstantHeading(waypoints.launchFarHeadingDeg)
                         .build(config.maxPathPower),
                     robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
-                    launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
+                    PresetRangeSpinCommand.create(
+                            robot.launcher, LauncherRange.FAR_AUTO, true,
+                            robot.drive, robot.lighting, null) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
-            launcherCommands.launchAccordingToMode(false),
+            ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
             // Pickup Alliance Wall Artifacts
             Groups.deadline(
@@ -155,7 +157,7 @@ public class FarThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-            launcherCommands.launchAccordingToMode(false),
+            ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
             // Pickup Artifact Set 3
             Groups.deadline(
@@ -177,7 +179,7 @@ public class FarThreeAtOnceCommand {
                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-            launcherCommands.launchAccordingToMode(false),
+            ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
             // Pickup Artifact Set 2
             Groups.deadline(
@@ -204,7 +206,7 @@ public class FarThreeAtOnceCommand {
                                     .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                     .build(config.maxPathPower),
 
-                            launcherCommands.launchAccordingToMode(false),
+                            ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                             Groups.deadline(
                                     new FollowPathBuilder(robot, alliance)
