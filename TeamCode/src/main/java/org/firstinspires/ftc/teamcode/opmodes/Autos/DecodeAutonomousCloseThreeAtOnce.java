@@ -16,17 +16,14 @@ import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
 
-import dev.nextftc.bindings.BindingManager;
 import com.pedropathing.ivy.Command;
-import dev.nextftc.core.commands.CommandManager;
-import dev.nextftc.core.components.BindingsComponent;
-import dev.nextftc.extensions.pedro.PedroComponent;
-import dev.nextftc.ftc.GamepadEx;
-import dev.nextftc.ftc.NextFTCOpMode;
-import dev.nextftc.ftc.components.BulkReadComponent;
+import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+
+import java.util.List;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Close Three At Once", group = "Auto")
-public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
+public class DecodeAutonomousCloseThreeAtOnce extends OpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
 
@@ -40,18 +37,12 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
     private Pose lastAppliedStartPosePedro;
     private Pose lastDetectedStartPosePedro;
 
-    {
-        addComponents(
-                BulkReadComponent.INSTANCE,
-                new PedroComponent(Constants::createFollower),
-                BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE
-        );
-    }
-    @Override
-    public void onInit() {
+    private List<LynxModule> hubs;
 
-        BindingManager.reset();
+    @Override
+    public void init() {
+        hubs = hardwareMap.getAll(LynxModule.class);
+        hubs.forEach(h -> h.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL));
         robot = new Robot(hardwareMap);
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
@@ -62,9 +53,6 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
         robot.initializeForAuto();
         // Wire up drive subsystem for relocalization warning checks
         robot.lighting.setDriveSubsystem(robot.drive);
-
-        GamepadEx driverPad = new GamepadEx(() -> gamepad1);
-        GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
 
         allianceSelector = new AllianceSelector(gamepad1, Alliance.UNKNOWN);
         modeSelector = new LauncherModeSelector(gamepad2, LauncherMode.DECODE);
@@ -91,7 +79,7 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
     }
 
     @Override
-    public void onWaitForStart() {
+    public void init_loop() {
 
         AutoPrestartHelper.InitStatus initStatus = prestartHelper.update(activeAlliance);
         applyInitSelections(initStatus);
@@ -123,8 +111,7 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
     }
 
     @Override
-    public void onStartButtonPressed() {
-        BindingManager.reset();
+    public void start() {
         allianceSelector.lockSelection();
         modeSelector.lockSelection();
 
@@ -144,13 +131,14 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
     }
 
     @Override
-    public void onUpdate() {
+    public void loop() {
+        for (LynxModule hub : hubs) hub.clearBulkCache();
         com.pedropathing.ivy.Scheduler.execute();
         publishTelemetry();
     }
 
     @Override
-    public void onStop() {
+    public void stop() {
         // Save final pose for TeleOp transition FIRST, before any shutdown operations
         // This gives us the best chance of capturing the pose before hub communication issues
         try {
@@ -159,12 +147,11 @@ public class DecodeAutonomousCloseThreeAtOnce extends NextFTCOpMode {
             // Ignore exceptions during shutdown
         }
 
-        // Cancel all scheduled commands to prevent them from running during cleanup
-        CommandManager.INSTANCE.cancelAll();
+        // Cancel all scheduled Ivy commands to prevent them from running during cleanup
+        com.pedropathing.ivy.Scheduler.reset();
 
         allianceSelector.unlockSelection();
         modeSelector.unlockSelection();
-        BindingManager.reset();
 
         // Wrap all subsystem stop calls in try-catch to prevent "expansion hub stopped responding"
         // errors during OpMode shutdown when the hub communication is already terminating

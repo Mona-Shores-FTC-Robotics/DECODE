@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
@@ -23,11 +24,14 @@ public class Robot {
 
     public final LauncherCommands launcherCommands;
 
+    private final HardwareMap hardwareMap;
+
     public Robot(HardwareMap hardwareMap) {
         this(hardwareMap, new TelemetryService());
     }
 
     public Robot(HardwareMap hardwareMap, TelemetryService telemetryService) {
+        this.hardwareMap = hardwareMap;
         // Note: setRobotName() is now called from OpMode.onInit() BEFORE attachPedroFollower()
         // to give WiFi more time to initialize on first boot
         telemetry = telemetryService == null ? new TelemetryService() : telemetryService;
@@ -84,6 +88,8 @@ public class Robot {
     }
 
     public void attachPedroFollower() {
+        // Build the Follower (previously done by NextFTC PedroComponent.preInit).
+        Constants.createFollower(hardwareMap);
         drive.attachFollower();
     }
 }

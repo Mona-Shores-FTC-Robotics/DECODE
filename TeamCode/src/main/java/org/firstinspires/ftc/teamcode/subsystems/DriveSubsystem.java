@@ -37,7 +37,6 @@ import org.firstinspires.ftc.teamcode.pedroPathing.FusionLocalizer;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import java.util.Optional;
-import static dev.nextftc.extensions.pedro.PedroComponent.follower;
 @Configurable
 public class DriveSubsystem {
 
@@ -303,7 +302,7 @@ public class DriveSubsystem {
     }
 
     public void attachFollower() {
-        this.follower = follower();
+        this.follower = Constants.follower();
         this.fusionLocalizer = Constants.activeFusionLocalizer;
         // Log which config set is being used for diagnostics
         if (TelemetrySettings.isVerbose()) {

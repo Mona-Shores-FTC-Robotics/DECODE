@@ -1,19 +1,12 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-
-import dev.nextftc.bindings.BindingManager;
-import dev.nextftc.core.commands.CommandManager;
-import dev.nextftc.core.components.BindingsComponent;
-import dev.nextftc.extensions.pedro.PedroComponent;
-import dev.nextftc.ftc.GamepadEx;
-import dev.nextftc.ftc.NextFTCOpMode;
-import dev.nextftc.ftc.components.BulkReadComponent;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.bindings.DriverBindings;
 import org.firstinspires.ftc.teamcode.bindings.OperatorBindings;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
@@ -23,12 +16,13 @@ import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
 @TeleOp(name = "Decode TeleOp", group = "TeleOp")
 
-public class DecodeTeleOp extends NextFTCOpMode {
+public class DecodeTeleOp extends OpMode {
 
     public static class EndgameConfig {
         /** Seconds remaining when auto-switch to DECODE mode triggers */
@@ -54,23 +48,16 @@ public class DecodeTeleOp extends NextFTCOpMode {
     // Endgame mode switch tracking
     private boolean autoSwitchedToDecodeMode = false;
 
-    GamepadEx driverPad = new GamepadEx(() -> gamepad1);
-    GamepadEx operatorPad = new GamepadEx(() -> gamepad2);
-
     OperatorBindings operatorBindings = new OperatorBindings(() -> gamepad2);
     DriverBindings driverBindings = new DriverBindings(() -> gamepad1);
 
-    {
-        addComponents(
-                BulkReadComponent.INSTANCE,
-                BindingsComponent.INSTANCE,
-                CommandManager.INSTANCE,
-                new PedroComponent(Constants::createFollower)
-        );
-    }
+    private List<LynxModule> hubs;
 
     @Override
-    public void onInit() {
+    public void init() {
+        // Cache control + expansion hub bulk reads (was BulkReadComponent's job).
+        hubs = hardwareMap.getAll(LynxModule.class);
+        hubs.forEach(h -> h.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL));
         robot = new Robot(hardwareMap);
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
@@ -112,8 +99,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
     }
 
     @Override
-    public void onWaitForStart() {
-        BindingManager.update();
+    public void init_loop() {
         if (allianceSelector != null) {
             selectedAlliance = allianceSelector.updateDuringInit(robot.vision, robot, robot.lighting);
         }
@@ -130,9 +116,7 @@ public class DecodeTeleOp extends NextFTCOpMode {
     }
 
     @Override
-    public void onStartButtonPressed() {
-        BindingManager.reset();
-
+    public void start() {
         // Initialize launcher mode to THROUGHPUT for TeleOp start
         RobotState.setLauncherMode(LauncherMode.THROUGHPUT);
         RobotState.resetMotifTail(); // Start with fresh motif tail
@@ -158,7 +142,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
     }
 
     @Override
-    public void onUpdate() {
+    public void loop() {
+        // Manual bulk cache clear (was BulkReadComponent's job).
+        for (LynxModule hub : hubs) hub.clearBulkCache();
         long loopStartNs = System.nanoTime();
         if (lastLoopStartNs != 0) {
             prevMainLoopMs = (loopStartNs - lastLoopStartNs) / 1_000_000.0;
@@ -166,7 +152,6 @@ public class DecodeTeleOp extends NextFTCOpMode {
             prevMainLoopMs = 0.0;
         }
         lastLoopStartNs = loopStartNs;
-        BindingManager.update();      // ticks any remaining NextFTC bindings (none now, but harmless)
         driverBindings.update();      // tick IvyBindings shim for driver
         operatorBindings.update();    // tick IvyBindings shim for operator
         com.pedropathing.ivy.Scheduler.execute();
@@ -210,11 +195,9 @@ public class DecodeTeleOp extends NextFTCOpMode {
     }
 
     @Override
-    public void onStop() {
-        // Cancel all scheduled commands first to prevent them from running during cleanup
-        CommandManager.INSTANCE.cancelAll();
-
-        BindingManager.reset();
+    public void stop() {
+        // Cancel all scheduled Ivy commands first to prevent them from running during cleanup
+        com.pedropathing.ivy.Scheduler.reset();
 
         // Wrap all subsystem stop calls in try-catch to prevent "expansion hub stopped responding"
         // errors during OpMode shutdown. The individual subsystem stop methods also have

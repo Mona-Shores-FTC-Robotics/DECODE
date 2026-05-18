@@ -5,20 +5,19 @@ import static org.firstinspires.ftc.teamcode.util.RobotState.packet;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-
-import dev.nextftc.extensions.pedro.PedroComponent;
-import dev.nextftc.ftc.NextFTCOpMode;
-import dev.nextftc.ftc.components.BulkReadComponent;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
+
+import java.util.List;
 
 /**
  * Diagnostic OpMode to verify MegaTag2 localization accuracy.
@@ -36,7 +35,7 @@ import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
  */
 @Disabled
 @TeleOp(name = "Diagnose MegaTag2", group = "Diagnostics")
-public class DiagnoseMegaTag2 extends NextFTCOpMode {
+public class DiagnoseMegaTag2 extends OpMode {
 
     /**
      * Heading offset to add to Pedro heading before sending to Limelight.
@@ -49,16 +48,12 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     FtcDashboard dashboard;
 
     private Robot robot;
-
-    {
-        addComponents(
-                BulkReadComponent.INSTANCE,
-                new PedroComponent(Constants::createFollower)
-        );
-    }
+    private List<LynxModule> hubs;
 
     @Override
-    public void onInit() {
+    public void init() {
+        hubs = hardwareMap.getAll(LynxModule.class);
+        hubs.forEach(h -> h.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL));
         this.dashboard = FtcDashboard.getInstance();
 
         robot = new Robot(hardwareMap);
@@ -92,7 +87,7 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     }
 
     @Override
-    public void onStartButtonPressed() {
+    public void start() {
 //        AutoField.FieldLayout currentLayout = AutoField.layoutForAlliance(Alliance.BLUE);
 //        Pose startFarPose = currentLayout.pose(AutoField.FieldPoint.START_FAR);
 //        robot.drive.getFollower().setStartingPose(startFarPose);
@@ -102,7 +97,8 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     }
 
     @Override
-    public void onUpdate() {
+    public void loop() {
+        for (LynxModule hub : hubs) hub.clearBulkCache();
         com.pedropathing.ivy.Scheduler.execute();
         // Get current odometry pose (ground truth)
 
@@ -276,7 +272,7 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     }
 
     @Override
-    public void onStop() {
+    public void stop() {
         if (robot != null) {
             robot.vision.setDiagnosticMode(false);
             robot.drive.stop();

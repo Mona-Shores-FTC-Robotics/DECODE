@@ -229,6 +229,13 @@ public class Constants {
             10,
             1);
 
+    private static Follower _follower;
+
+    /**
+     * Builds the Pedro Follower for the current robot. Caches the instance so
+     * {@link #follower()} can return it without rebuilding. Call exactly once
+     * from OpMode init (e.g. {@code Robot.attachPedroFollower()}).
+     */
     public static Follower createFollower(HardwareMap hardwareMap) {
         PinpointLocalizer pinpoint = new PinpointLocalizer(hardwareMap, localizerConstants());
         activeFusionLocalizer = new FusionLocalizer(
@@ -238,11 +245,17 @@ public class Constants {
                 new Pose(2.1561, 2.6065, 0.0248),
                 100
         );
-        return new FollowerBuilder(followerConstants(), hardwareMap)
+        _follower = new FollowerBuilder(followerConstants(), hardwareMap)
                 .setLocalizer(activeFusionLocalizer)
                 .pathConstraints(pathConstraints)
                 .mecanumDrivetrain(driveConstants())
                 .build();
+        return _follower;
+    }
+
+    /** Returns the follower built by {@link #createFollower}. */
+    public static Follower follower() {
+        return _follower;
     }
 
     // ========= Speed control configuration and helpers =========
