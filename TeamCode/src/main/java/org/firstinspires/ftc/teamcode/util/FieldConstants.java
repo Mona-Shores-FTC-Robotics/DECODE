@@ -6,6 +6,10 @@ import static org.firstinspires.ftc.teamcode.util.GoalGeometry.incenter;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.vision.apriltag.AprilTagGameDatabase;
+import org.firstinspires.ftc.vision.apriltag.AprilTagMetadata;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -64,13 +68,33 @@ public final class FieldConstants {
     public static final double FIELD_WIDTH_INCHES = 141.5;
 
     /**
-     * Goal AprilTags
+     * Goal AprilTags. The Pedro-frame positions are derived from the FTC SDK's
+     * {@link AprilTagGameDatabase#getDecodeTagLibrary()} — the authoritative
+     * source for the 2025 DECODE field, which matches the .fmap Limelight uses
+     * for MT2 localization. When FIRST publishes corrections in a future SDK
+     * release, the constants pick them up automatically.
+     *
+     * <p>The SDK stores 3D positions in FTC frame (origin at field center,
+     * with a Z height); we project to 2D and convert to Pedro frame.
      */
     public static final int BLUE_GOAL_TAG_ID = 20;
-    public static final Pose BLUE_GOAL_TAG_APRILTAG = new Pose(7.0, 140.0, 0.0);
+    public static final Pose BLUE_GOAL_TAG_APRILTAG = aprilTagPedroFromSdk(BLUE_GOAL_TAG_ID);
 
     public static final int RED_GOAL_TAG_ID = 24;
-    public static final Pose RED_GOAL_TAG_APRILTAG = new Pose(137.0, 140.0, 0.0);
+    public static final Pose RED_GOAL_TAG_APRILTAG = aprilTagPedroFromSdk(RED_GOAL_TAG_ID);
+
+    /**
+     * Looks up a tag in the FTC SDK's DECODE library and returns its position
+     * in Pedro frame (2D, ignoring Z height). Returns null if the tag has no
+     * fixed position in the database (e.g. obelisk motif tags 21–23).
+     */
+    private static Pose aprilTagPedroFromSdk(int tagId) {
+        AprilTagMetadata m = AprilTagGameDatabase.getDecodeTagLibrary().lookupTag(tagId);
+        if (m == null || m.fieldPosition == null) return null;
+        double xInches = m.distanceUnit.toInches(m.fieldPosition.get(0));
+        double yInches = m.distanceUnit.toInches(m.fieldPosition.get(1));
+        return PoseFrames.ftcToPedro(new Pose(xInches, yInches, 0.0));
+    }
 
     /**
      * Motif AprilTags
