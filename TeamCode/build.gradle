@@ -97,7 +97,7 @@ tasks.register('exportPaths', JavaExec) {
     classpath = files(
         android.sourceSets.main.java.srcDirs,
         "${buildDir}/intermediates/javac/debug/classes",
-        configurations.runtimeClasspath
+        configurations.debugRuntimeClasspath
     )
 
     mainClass = 'org.firstinspires.ftc.teamcode.util.ExportAutoPaths'
