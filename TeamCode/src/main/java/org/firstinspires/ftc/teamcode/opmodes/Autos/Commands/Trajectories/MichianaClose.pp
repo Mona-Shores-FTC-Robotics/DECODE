@@ -78,12 +78,17 @@
         "x": 36,
         "y": 107,
         "heading": "linear",
-        "reverse": false,
+        "reverse": true,
         "startDeg": 270,
         "endDeg": 134,
         "degrees": 35
       },
-      "controlPoints": [],
+      "controlPoints": [
+        {
+          "x": 50.46608527131784,
+          "y": 72.39018087855298
+        }
+      ],
       "color": "#98AAA7",
       "id": "line-uzsyiqkntn",
       "waitBeforeMs": 0,
@@ -147,7 +152,8 @@
         "heading": "linear",
         "reverse": false,
         "startDeg": 270,
-        "endDeg": 134
+        "endDeg": 134,
+        "degrees": 0
       },
       "controlPoints": [
         {
@@ -236,5 +242,5 @@
     "pathOpacity": 1
   },
   "version": "1.2.1",
-  "timestamp": "2026-05-18T02:56:15.194Z"
+  "timestamp": "2026-05-18T20:38:20.692Z"
 }

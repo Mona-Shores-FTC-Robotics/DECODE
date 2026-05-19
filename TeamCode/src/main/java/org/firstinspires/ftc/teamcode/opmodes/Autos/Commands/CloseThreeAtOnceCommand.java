@@ -205,7 +205,7 @@ public class CloseThreeAtOnceCommand {
                             .withConstantHeading(270)
                             .build(config.maxPathPower),
                     Groups.sequential(
-                        //new TimedEjectCommand(robot.intake, config.ejectTime),
+                        //new TimedEjectCommand(robot.intake, config.ejectTime),oh
                         robot.intake.autoSmartIntakeCmd()
                     )
                 ),
