@@ -76,7 +76,19 @@
       "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -p /tmp/caching-hw/classes/dev/frozenmilk/dairy/cachinghardware/CachingDcMotorEx.class)",
       "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -p /tmp/caching-hw/classes/dev/frozenmilk/dairy/cachinghardware/CachingServo.class)",
       "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -c /tmp/caching-hw/classes/dev/frozenmilk/dairy/cachinghardware/CachingDcMotorEx.class)",
-      "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -c /tmp/caching-hw/classes/dev/frozenmilk/dairy/cachinghardware/CachingServo.class)"
+      "Bash(JAVA_HOME=\"C:\\\\\\\\Users\\\\\\\\dusti\\\\\\\\.jdks\\\\\\\\corretto-17.0.12\" javap -c /tmp/caching-hw/classes/dev/frozenmilk/dairy/cachinghardware/CachingServo.class)",
+      "Bash(gh repo *)",
+      "Bash(export JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\")",
+      "Bash('/c/Program Files/Android/Android Studio/jbr/bin/java' -version)",
+      "Bash(export JAVA_HOME=\"/c/Program Files/Android/Android Studio3/jbr\")",
+      "Bash(./gradlew.bat :TeamCode:dependencies --configuration debugRuntimeClasspath)",
+      "Bash(./gradlew.bat :TeamCode:tasks --all)",
+      "Bash(./gradlew.bat :TeamCode:assembleDebug)",
+      "Bash(./gradlew.bat :TeamCode:help --task deploySloth)",
+      "Bash(./gradlew.bat :TeamCode:help --task removeSlothRemote)",
+      "Bash(./gradlew.bat :TeamCode:help --task exportPaths)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ],
     "deny": [],
     "ask": []
