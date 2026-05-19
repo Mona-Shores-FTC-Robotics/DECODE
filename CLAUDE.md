@@ -8,15 +8,37 @@ DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. I
 
 ## Build and Deployment Commands
 
-**Build the robot code:**
+**Build the robot code (compile only, no install):**
 ```bash
 ./gradlew :TeamCode:assembleDebug
 ```
 
-**Install to connected robot:**
+**Deploy to robot — two paths:**
+
+The project uses the Sloth runtime (Dairy Foundation) for hot code reload. There are two deploy commands; pick based on what changed.
+
+| Command | When to use | Speed |
+|---|---|---|
+| `./gradlew :FtcRobotController:installDebug` | First deploy after a fresh APK, library/dependency change, change outside `org.firstinspires.ftc.teamcode`, or robot-day baseline | ~40s |
+| `./gradlew :TeamCode:deploySloth` | Iterative TeamCode-only edits (subsystems, commands, opmodes, etc.) | sub-1s |
+
+`deploySloth` only swaps classes in `org.firstinspires.ftc.teamcode` and subpackages. Changes to anything else (build.gradle, libraries, FtcRobotController) require a full `installDebug`. Sloth applies the swap when the current OpMode ends — it does not interrupt a running OpMode.
+
+**Bootstrap requirement:** Sloth must be resident on the RC before `deploySloth` works. After any fresh image or `installDebug` from a non-Sloth branch, run `installDebug` once first. Subsequent iterations can use `deploySloth`.
+
+**Reset Sloth state on the robot** (if hot reload gets into a weird state):
 ```bash
-./gradlew :FtcRobotController:installDebug
+./gradlew :TeamCode:removeSlothRemote
 ```
+Follow with a fresh `installDebug` to bootstrap again.
+
+**Opting classes out of hot reload:**
+Annotate a class `@Pinned` (from `dev.frozenmilk.sinister.Pinned`) to prevent Sloth from swapping it. Useful for classes with long-lived static state that would misbehave under live reload.
+
+**Caveats:**
+- "Code that compiles ≠ code that works" under hot reload — changes to `@Pinned` classes, library code, or pinned-class instances may need a full install to take effect.
+- Do NOT rely on hot reload on competition day. Bootstrap a fresh `installDebug` from the `ivy-migration-pre-sloth` tag (or a known-good commit) before matches.
+- The Sloth-forked FTC Dashboard and Bylazar Panels keep the same package paths as the originals (`com.acmerobotics.dashboard.*`, `com.bylazar.*`), so existing `@Config`, `@Configurable`, `FtcDashboard`, `PanelsTelemetry` imports work unchanged.
 
 **Run linting:**
 ```bash
