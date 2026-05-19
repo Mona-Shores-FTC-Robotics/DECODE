@@ -41,6 +41,12 @@ allprojects {
             }
         }
     }
+
+    // Silence javac's "source/target 8 is obsolete" and "uses deprecated API" notes.
+    // FTC pins source/target to 8 for Control Hub compatibility; nothing actionable for us.
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs += ['-Xlint:-options', '-nowarn']
+    }
 }
 
 repositories {
