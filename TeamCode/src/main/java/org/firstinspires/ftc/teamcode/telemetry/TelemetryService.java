@@ -63,11 +63,28 @@ public class TelemetryService {
     }
 
     /**
-     * Prepares FullPanels for telemetry. Call once when the OpMode starts.
+     * Prepares telemetry outputs. Call once when the OpMode starts.
+     * Sends a seed packet so all Dashboard channels appear immediately
+     * without needing to run through init/play/commands first.
      */
     public void startSession() {
         if (!sessionActive) {
             sessionActive = true;
+            sendSeedPacket();
+        }
+    }
+
+    private void sendSeedPacket() {
+        if (!TelemetrySettings.shouldSendDashboardPackets()) {
+            return;
+        }
+        FtcDashboard dash = getDashboardIfNeeded();
+        if (dash == null) {
+            return;
+        }
+        TelemetryPacket seed = dashboardFormatter.createSeedPacket(TelemetrySettings.LEVEL);
+        if (seed != null) {
+            dash.sendTelemetryPacket(seed);
         }
     }
 
@@ -137,19 +154,13 @@ public class TelemetryService {
     }
 
     /**
-     * Publish driver station telemetry based on level.
+     * Publish driver station telemetry.
+     * Always sends match-level text to the DS telemetry object. In PRACTICE/VERBOSE
+     * mode the Dashboard packet carries all detailed data, so forwarding the full
+     * 7-page debug text to the DS object would flood the Dashboard Telemetry panel.
      */
     private void publishDriverStationTelemetry(Telemetry telemetry, RobotTelemetryData data) {
-        if (TelemetrySettings.LEVEL == TelemetrySettings.TelemetryLevel.MATCH) {
-            driverStationFormatter.publishMatch(telemetry, data);
-        } else {
-            // PRACTICE/VERBOSE mode - handle page navigation from driver gamepad dpad
-            driverStationFormatter.handlePageNavigation(
-                    data.gamepad.driver.dpadUp,
-                    data.gamepad.driver.dpadDown
-            );
-            driverStationFormatter.publishDebug(telemetry, data);
-        }
+        driverStationFormatter.publishMatch(telemetry, data);
     }
 
     /**

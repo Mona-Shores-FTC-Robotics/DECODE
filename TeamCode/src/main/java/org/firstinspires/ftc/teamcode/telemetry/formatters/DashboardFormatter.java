@@ -21,6 +21,111 @@ import java.util.concurrent.TimeUnit;
 public class DashboardFormatter {
 
     /**
+     * Seed packet sent once at init so all Dashboard channels appear immediately
+     * without needing to run commands first. Keys are set to zero/empty defaults.
+     */
+    public TelemetryPacket createSeedPacket(TelemetrySettings.TelemetryLevel level) {
+        if (level == TelemetrySettings.TelemetryLevel.MATCH) {
+            return null;
+        }
+        TelemetryPacket seed = new TelemetryPacket();
+
+        // Practice keys
+        seed.put("Pose/x", 0.0);
+        seed.put("Pose/y", 0.0);
+        seed.put("Pose/heading_deg", 0.0);
+        seed.put("vision/has_tag", false);
+        seed.put("vision/tag_id", 0);
+        seed.put("vision/range_in", 0.0);
+        seed.put("vision/tx_deg", 0.0);
+        seed.put("intake/count", 0);
+        seed.put("intake/mode", "");
+        seed.put("intake/left_color", "");
+        seed.put("intake/center_color", "");
+        seed.put("intake/right_color", "");
+        for (String lane : new String[]{"left", "center", "right"}) {
+            seed.put("launcher/" + lane + "/ready", false);
+            seed.put("launcher/" + lane + "/target_rpm", 0.0);
+            seed.put("launcher/" + lane + "/rpm", 0.0);
+        }
+        seed.put("timing/loop_ms", 0.0);
+
+        if (level == TelemetrySettings.TelemetryLevel.VERBOSE) {
+            // Context
+            seed.put("context/alliance", "");
+            seed.put("context/match_time_sec", 0.0);
+            seed.put("context/opmode", "");
+            seed.put("context/runtime_sec", 0.0);
+
+            // Pose (verbose representations)
+            seed.put("Pose/Pedro x", 0.0);
+            seed.put("Pose/Pedro y", 0.0);
+            seed.put("Pose/Pedro heading", 0.0);
+            seed.put("Pose/Pedro degrees", 0.0);
+            seed.put("Pose/FTC x", 0.0);
+            seed.put("Pose/FTC y", 0.0);
+            seed.put("Pose/FTC heading", 0.0);
+            seed.put("Pose/Vision x", 0.0);
+            seed.put("Pose/Vision y", 0.0);
+            seed.put("Pose/Vision heading", 0.0);
+
+            // Drive
+            seed.put("drive/aim_mode", false);
+            seed.put("drive/command/drive", 0.0);
+            seed.put("drive/command/strafe", 0.0);
+            seed.put("drive/command/turn", 0.0);
+            seed.put("drive/mode", "");
+            seed.put("drive/slow_mode", false);
+            for (String motor : new String[]{"lb", "lf", "rb", "rf"}) {
+                seed.put("drive/motors/power/" + motor, 0.0);
+                seed.put("drive/motors/vel_ips/" + motor, 0.0);
+            }
+
+            // Intake (verbose)
+            seed.put("intake/artifact_count", 0);
+            seed.put("intake/artifact_state", "");
+            seed.put("intake/motor/mode", "");
+            seed.put("intake/motor/power", 0.0);
+            seed.put("intake/roller_active", false);
+
+            // Launcher (verbose per lane)
+            for (String lane : new String[]{"left", "center", "right"}) {
+                seed.put("launcher/" + lane + "/current_rpm", 0.0);
+                seed.put("launcher/" + lane + "/feeder_position", 0.0);
+                seed.put("launcher/" + lane + "/hood_position", 0.0);
+                seed.put("launcher/" + lane + "/power", 0.0);
+                seed.put("launcher/" + lane + "/ready", false);
+                seed.put("launcher/" + lane + "/target_rpm", 0.0);
+            }
+
+            // Vision (verbose)
+            seed.put("vision/alliance", "");
+            seed.put("vision/bearing_deg", 0.0);
+            seed.put("vision/has_tag", false);
+            seed.put("vision/odometry_pending", false);
+            seed.put("vision/range_in", 0.0);
+            seed.put("vision/tag_id", 0);
+            seed.put("vision/target_area_percent", 0.0);
+            seed.put("vision/tx_deg", 0.0);
+            seed.put("vision/ty_deg", 0.0);
+            seed.put("vision/yaw_deg", 0.0);
+
+            // Timing (verbose)
+            seed.put("timing/total_loop_ms", 0.0);
+            seed.put("timing/main_loop_ms", 0.0);
+            seed.put("timing/subsystem_total_ms", 0.0);
+            seed.put("timing/subsystems/drive_ms", 0.0);
+            seed.put("timing/subsystems/intake_ms", 0.0);
+            seed.put("timing/subsystems/launcher_ms", 0.0);
+            seed.put("timing/subsystems/lighting_ms", 0.0);
+            seed.put("timing/subsystems/vision_ms", 0.0);
+            seed.put("timing/telemetry_ms", 0.0);
+        }
+
+        return seed;
+    }
+
+    /**
      * Create a telemetry packet based on the current telemetry level.
      * MATCH mode returns null (no packets sent).
      * PRACTICE mode includes lean diagnostics.
