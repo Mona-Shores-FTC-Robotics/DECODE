@@ -245,15 +245,6 @@ public class VisionSubsystemLimelight {
         }
     }
 
-    public Optional<Double> getAimAngle() {
-        Optional<Pose> poseOpt = getRobotPoseFromTagPedro();
-        Optional<Pose> target = getTargetGoalPose();
-        if (!poseOpt.isPresent() || !target.isPresent()) {
-            return Optional.empty();
-        }
-        return Optional.of(FieldConstants.getAimAngleTo(poseOpt.get(), target.get()));
-    }
-
     /**
      * Gets the vision-based aiming error in radians (robot-relative).
      * This is the horizontal offset (tx) from the Limelight, converted to radians.
@@ -479,15 +470,6 @@ public class VisionSubsystemLimelight {
         odometryUpdatePending = false;
         lastSnapshotTimestampMs = 0L;
         lastSeenTagId = -1;
-    }
-
-    public void overrideRobotPose(Pose pose) {
-        if (pose == null) {
-            return;
-        }
-        lastRobotPosePedro = pose;
-        lastRobotPoseFtc = PoseFrames.pedroToFtc(pose);
-        lastSnapshotTimestampMs = System.currentTimeMillis();
     }
 
     private static Alliance mapTagToAlliance(int tagId) {
@@ -805,29 +787,6 @@ public class VisionSubsystemLimelight {
         } catch (Throwable ignored) {
             return Double.NaN;
         }
-    }
-
-    public Optional<Alliance> detectAllianceUsingPoseOrMetadata() {
-        Optional<TagSnapshot> opt = findAllianceSnapshot(null);
-        if (!opt.isPresent()) {
-            return Optional.empty();
-        }
-
-        TagSnapshot snap = opt.get();
-
-        // First priority: Tag metadata (for Far auto)
-        Alliance meta = snap.getAlliance();
-        if (meta != Alliance.UNKNOWN) {
-            return Optional.of(meta);
-        }
-
-        // Otherwise: Pose-based inference (for Close auto)
-        Alliance inferred = snap.inferAllianceFromPose();
-        if (inferred != Alliance.UNKNOWN) {
-            return Optional.of(inferred);
-        }
-
-        return Optional.empty();
     }
 
 

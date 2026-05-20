@@ -3,8 +3,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_KNOWN;
 import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_UNKNOWN;
 
-import androidx.annotation.NonNull;
-
 import com.acmerobotics.dashboard.config.Config;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
@@ -28,7 +26,6 @@ import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseCo
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRampConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRightTriggerFixedAngleConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveTeleOpConfig;
-import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionCenteredAimConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionRelocalizeConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
@@ -40,11 +37,8 @@ import java.util.Optional;
 @Configurable
 public class DriveSubsystem {
 
-    private static final double VISION_TIMEOUT_MS = 100;
     public static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.5;
-    private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
     private static final long MAX_VISION_AGE_MS = 250L;
-    private static final String LOG_TAG = "DriveSubsystem";
 
     enum VisionCalibrationState {
         HEADING_UNKNOWN,
@@ -57,7 +51,6 @@ public class DriveSubsystem {
 
     // Global configuration instances
     public static DriveTeleOpConfig teleOpDriveConfig = new DriveTeleOpConfig();
-    public static DriveVisionCenteredAimConfig visionCenteredAimConfig = new DriveVisionCenteredAimConfig();
     public static DriveRampConfig rampConfig = new DriveRampConfig();
     public static DriveVisionRelocalizeConfig visionRelocalizeConfig = new DriveVisionRelocalizeConfig();
 
@@ -243,15 +236,8 @@ public class DriveSubsystem {
     private long lastFedSnapshotNs = -1L;
     private final ElapsedTime clock = new ElapsedTime();
 
-    private double lastGoodVisionAngle = Double.NaN;
-    private double lastVisionTimestamp = Double.NEGATIVE_INFINITY;
-    private double fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
-    private static final double DESIRED_FIELD_HEADING_RAD = Math.PI / 2.0;
-    private boolean visionHeadingCalibrated = false;
-
     public static boolean robotCentricConfig = false;
     private boolean robotCentric = robotCentricConfig;
-    private static final double ROTATION_OVERRIDE_FALLBACK = 0.05;
     private DriveMode activeMode = DriveMode.NORMAL;
     private double lastRequestFieldX = 0.0;
     private double lastRequestFieldY = 0.0;
@@ -336,9 +322,6 @@ public class DriveSubsystem {
         if (pedroFollowerSeed == null) {
             DriveInitialPoseConfig poseConfig = initialPoseConfig;
             pedroFollowerSeed = new Pose(poseConfig.startX, poseConfig.startY, Math.toRadians(poseConfig.startHeadingDeg));
-
-//            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
-//            pedroFollowerSeed = poseFromVision.orElseGet(() -> new Pose(0, 0, Math.toRadians(90.0)));
         }
         Pose ftcSeed = PoseFrames.pedroToFtc(pedroFollowerSeed);
         RobotState.putPose("Pose/FTC Coord Seed Pose",ftcSeed );
@@ -348,9 +331,6 @@ public class DriveSubsystem {
         follower.setPose(pedroFollowerSeed);
         follower.update();
         follower.breakFollowing();
-
-        fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
-        visionHeadingCalibrated = false;
 
         visionRelocalizationEnabled = true;
     }
@@ -392,17 +372,8 @@ public class DriveSubsystem {
             RobotState.packet.put("/vision/state", visionState.name());
         }
 
-        // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)
-        Pose pose = follower.getPose();
-        if (pose != null) {
-            // Convert inches to meters for AdvantageScope (SI units required)
-            double xMeters = pose.getX() * 0.0254;
-            double yMeters = pose.getY() * 0.0254;
-            double headingRadians = follower.getHeading();
-//            KoalaLog.logPose2d("Robot/Pose", xMeters, yMeters, headingRadians, true);
-        }
-
         // Heading diagnostics for waggle investigation (follower target vs current)
+        Pose pose = follower.getPose();
         if (pose != null) {
             // Pedro follower doesn't expose target heading directly; approximate using current path heading
             double currentHeading = follower.getHeading();
@@ -589,7 +560,6 @@ public class DriveSubsystem {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
-//        double[] rotated = rotateFieldInput(fieldX , fieldY);
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : normalMultiplier;
@@ -675,78 +645,6 @@ public class DriveSubsystem {
     }
 
     /**
-     * Vision-centered aiming: Uses Limelight tx (horizontal offset) to center the AprilTag.
-     * This approach directly uses the camera's measurement without coordinate calculations.
-     * Similar to the original FTC RobotAutoDriveToAprilTagOmni example.
-     *
-     * When tx = 0, the target is centered in the camera view.
-     * Positive error means robot needs to turn counter-clockwise (left),
-     * negative error means turn clockwise (right).
-     *
-     * @param fieldX Driver's X input (strafe)
-     * @param fieldY Driver's Y input (forward)
-     * @param slowMode Whether slow mode is active
-     */
-    public void aimAndDriveVisionCentered(double fieldX , double fieldY , boolean slowMode) {
-        // Invert controls for Red alliance so driver perspective matches their side of field
-        Alliance alliance = vision.getAlliance();
-        if (alliance == Alliance.RED) {
-            fieldX = -fieldX;
-            fieldY = -fieldY;
-        }
-
-        lastRequestFieldX = fieldX;
-        lastRequestFieldY = fieldY;
-        lastRequestSlowMode = slowMode;
-//        double[] rotated = rotateFieldInput(fieldX , fieldY);
-        double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
-        double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
-        double multiplier = slowMode ? slowMultiplier : normalMultiplier;
-        double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
-        double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
-
-        // Get vision aiming error (robot-relative, in radians)
-        Optional<Double> visionErrorOpt = vision.getVisionAimErrorRad();
-
-        // If no valid tag, hold current heading (zero turn)
-        if (!visionErrorOpt.isPresent()) {
-            lastCommandForward = forward;
-            lastCommandStrafeLeft = strafeLeft;
-            lastCommandTurn = 0.0;
-            lastRequestRotation = 0.0;
-            lastAimErrorRad = Double.NaN;
-            follower.setTeleOpDrive(forward, strafeLeft, 0.0, robotCentric);
-            return;
-        }
-
-        double headingError = visionErrorOpt.get();
-
-        // Deadband - stop turning if error is small enough
-        double deadbandRad = Math.toRadians(visionCenteredAimConfig.deadbandDeg);
-        if (Math.abs(headingError) < deadbandRad) {
-            headingError = 0.0;
-        }
-
-        // Convert to turn command using P controller
-        double maxTurn = Math.max(0.0, visionCenteredAimConfig.kMaxTurn);
-        // kP units: (motor power / radian) - multiply error by gain
-        double turn = Range.clip(visionCenteredAimConfig.kP * headingError, -maxTurn, maxTurn);
-
-        lastAimErrorRad = headingError; // Store for telemetry
-        lastCommandForward = forward;
-        lastCommandStrafeLeft = strafeLeft;
-        lastCommandTurn = turn;
-        lastRequestRotation = turn;
-
-        follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
-
-        // Optionally relocalize if enabled
-        if (visionRelocalizationEnabled && vision.hasValidTag()) {
-            maybeRelocalizeFromVision();
-        }
-    }
-
-    /**
      * Fixed-angle aiming: Rotates to a fixed heading based on alliance.
      * Simple and predictable - works well from specific field positions (e.g., launch line).
      * No pose or vision calculations needed.
@@ -766,7 +664,6 @@ public class DriveSubsystem {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
-//        double[] rotated = rotateFieldInput(fieldX , fieldY);
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : normalMultiplier;
@@ -968,15 +865,6 @@ public class DriveSubsystem {
 
     private static double normalizeAngle(double angle) {
         return Math.atan2(Math.sin(angle) , Math.cos(angle));
-    }
-
-    protected double[] rotateFieldInput(double fieldX , double fieldY) {
-        double cos = Math.cos(- fieldHeadingOffsetRad);
-        double sin = Math.sin(- fieldHeadingOffsetRad);
-        return new double[]{
-                cos * fieldX - sin * fieldY ,
-                sin * fieldX + cos * fieldY
-        };
     }
 
     private boolean isGoalAprilTag(int tagId) {
@@ -1447,18 +1335,6 @@ public class DriveSubsystem {
         return Double.NaN;
     }
 
-//    public boolean correctInitialHeadingFromVision() {
-//        if (!vision.hasValidTag()) {
-//            RobotLog.dd(LOG_TAG, "No AprilTag visible - cannot correct heading");
-//            return false;
-//        }
-//        boolean success = forceRelocalizeFromVision();
-//        if (!success) {
-//            RobotLog.dd(LOG_TAG, "Vision pose unavailable - cannot correct heading");
-//        }
-//        return success;
-//    }
-
     private static double distanceBetween(Pose a , Pose b) {
         return Math.hypot(a.getX() - b.getX() , a.getY() - b.getY());
     }
@@ -1599,16 +1475,6 @@ public class DriveSubsystem {
 
     public double getFollowerSpeedIps() {
         return followerVelocityIps();
-    }
-
-    public double getLastVisionAngleDeg() {
-        return Double.isNaN(lastGoodVisionAngle) ? Double.NaN : Math.toDegrees(lastGoodVisionAngle);
-    }
-
-    public double getVisionSampleAgeMs() {
-        return lastVisionTimestamp == Double.NEGATIVE_INFINITY
-                ? Double.POSITIVE_INFINITY
-                : Math.max(0.0, clock.milliseconds() - lastVisionTimestamp);
     }
 
     // =========================================================================

@@ -33,10 +33,6 @@ public final class IvyBindings {
         for (Trigger t : triggers) t.poll();
     }
 
-    public void clear() {
-        triggers.clear();
-    }
-
     public static final class Trigger {
         private final BooleanSupplier condition;
         private boolean last = false;

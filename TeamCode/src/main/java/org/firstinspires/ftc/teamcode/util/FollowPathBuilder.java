@@ -24,8 +24,6 @@ public class FollowPathBuilder {
     private Pose start;
     private Pose end;
 
-    private Double timeoutMilliSec = null;
-
 
     private final List<Pose> controlPoints = new ArrayList<>();
 
@@ -221,12 +219,6 @@ public class FollowPathBuilder {
 
         PathChain chain = builder.build();
 
-        if (timeoutMilliSec != null) {
-            // Assuming your chain only has one path
-            Path onlyPath = chain.getPath(0);
-            onlyPath.setTimeoutConstraint(timeoutMilliSec);
-        }
-
         if (headingConstraint != null) {
             // Assuming your chain only has one path
             Path onlyPath = chain.getPath(0);
@@ -262,8 +254,4 @@ public class FollowPathBuilder {
         return AutoField.poseForAlliance(x, y, headingDeg, alliance);
     }
 
-    public FollowPathBuilder withTimeout(double milliseconds) {
-        this.timeoutMilliSec = milliseconds;
-        return this;
-    }
 }

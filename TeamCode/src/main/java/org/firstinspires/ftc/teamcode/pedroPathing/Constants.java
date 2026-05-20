@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.pedroPathing;
 
-import android.health.connect.datatypes.units.Mass;
-
 import com.pedropathing.control.FilteredPIDFCoefficients;
 import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.control.PredictiveBrakingCoefficients;
@@ -57,37 +55,6 @@ public class Constants {
         public static final String PINPOINT = "pinpoint";
     }
 
-    /** Centralized naming conventions for consistency. */
-    public static final class Naming {
-        private Naming() {} // prevent instantiation
-
-        /**
-         * Prefix for all internal modules.
-         */
-        public static final String MODULE_PREFIX = "PP"; // PedroPathing
-
-        /**
-         * Names for different collections or groups of items.
-         */
-        public static final class CollectionNames {
-            private CollectionNames() {}
-
-            public static final String AUTONOMOUS_ROUTINES = "autonomous_routines";
-            public static final String TELEOP_CONFIGS = "teleop_configs";
-        }
-
-        /**
-         * Standardized field names used in data logging, telemetry, or configuration.
-         */
-        public static final class FieldNames {
-            private FieldNames() {}
-
-            public static final String MOTOR_POWER = "motor_power";
-            public static final String SERVO_POSITION = "servo_position";
-            public static final String SENSOR_VALUE = "sensor_value";
-        }
-    }
-
     // ========= Pedro follower and localization =========
     // Robot-specific follower constants
     private static FollowerConstants createFollowerConstants19429() {
@@ -106,8 +73,6 @@ public class Constants {
 
                 .headingPIDFSwitch(Math.toRadians(3.5))
                 .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .05, 0.0003))
-//                .headingPIDFSwitch(Math.toRadians(10))
-//                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.5, 0.0001, .03, .00003))
 
                 .translationalPIDFCoefficients(new PIDFCoefficients(
                         0.06,
@@ -309,25 +274,11 @@ public class Constants {
             this.rb.setDirection(DcMotorSimple.Direction.FORWARD);
         }
 
-        public void setRunUsingEncoder() {
-            safeSetMode(lf, DcMotor.RunMode.RUN_USING_ENCODER);
-            safeSetMode(rf, DcMotor.RunMode.RUN_USING_ENCODER);
-            safeSetMode(lb, DcMotor.RunMode.RUN_USING_ENCODER);
-            safeSetMode(rb, DcMotor.RunMode.RUN_USING_ENCODER);
-        }
-
         public void setRunWithoutEncoder() {
             safeSetMode(lf, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             safeSetMode(rf, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             safeSetMode(lb, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
             safeSetMode(rb, DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        }
-
-        public void setAllVelocityTps(double tpsLF, double tpsRF, double tpsLB, double tpsRB) {
-            lf.setVelocity(tpsLF);
-            rf.setVelocity(tpsRF);
-            lb.setVelocity(tpsLB);
-            rb.setVelocity(tpsRB);
         }
 
         public void stop() {
@@ -342,36 +293,4 @@ public class Constants {
         }
     }
 
-    /** Mecanum inverse kinematics. Inputs are robot frame: vx forward, vy left, wz CCW. */
-    public static class MecanumIK {
-        public static WheelSpeeds wheelSpeedsFromChassis(double vx, double vy, double wz) {
-            double k = Speed.kYaw();
-            double vFL = vx + vy - k * wz;
-            double vFR = vx - vy + k * wz;
-            double vBL = vx - vy - k * wz;
-            double vBR = vx + vy + k * wz;
-            return new WheelSpeeds(vFL, vFR, vBL, vBR);
-        }
-
-        public static class WheelSpeeds {
-            public final double vFL, vFR, vBL, vBR; // m/s
-            public WheelSpeeds(double vFL, double vFR, double vBL, double vBR) {
-                this.vFL = vFL; this.vFR = vFR; this.vBL = vBL; this.vBR = vBR;
-            }
-            public TicksPerSec toTicksPerSec() {
-                double tFL = Speed.mpsToTicksPerSec(vFL);
-                double tFR = Speed.mpsToTicksPerSec(vFR);
-                double tBL = Speed.mpsToTicksPerSec(vBL);
-                double tBR = Speed.mpsToTicksPerSec(vBR);
-                return new TicksPerSec(tFL, tFR, tBL, tBR);
-            }
-        }
-
-        public static class TicksPerSec {
-            public final double tFL, tFR, tBL, tBR;
-            public TicksPerSec(double tFL, double tFR, double tBL, double tBR) {
-                this.tFL = tFL; this.tFR = tFR; this.tBL = tBL; this.tBR = tBR;
-            }
-        }
-    }
 }

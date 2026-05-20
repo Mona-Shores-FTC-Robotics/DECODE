@@ -195,19 +195,4 @@ public class TelemetryService {
         }
     }
 
-    /**
-     * @deprecated Legacy method for compatibility. Does nothing.
-     */
-    @Deprecated
-    public void updateDriverStation(Telemetry telemetry) {
-        // No-op: driver station updates are now handled directly in publishLoopTelemetry
-    }
-
-    /**
-     * @deprecated Legacy method for autonomous routine step tracking. Will be re-added if needed.
-     */
-    @Deprecated
-    public void setRoutineStepTelemetry(String stepName, double stepOrdinal) {
-        // TODO: Re-implement if autonomous routine step tracking is needed
-    }
 }
