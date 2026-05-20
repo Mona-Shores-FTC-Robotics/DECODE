@@ -1100,9 +1100,14 @@ public class LauncherSubsystem {
 
         private void setTargetRpm(double rpm) {
             double sanitized = Math.max(0.0, rpm);
+            boolean wasActive = launchCommandActive;
+            double prevRpm = commandedRpm;
             commandedRpm = sanitized;
             launchCommandActive = sanitized > 0.0;
-            if (launchCommandActive) {
+            // Only restart the timer when the command actually changes so the
+            // fallback-ready timeout accumulates correctly across repeated calls
+            // (applyTargetRpms calls commandLaunch every loop while shots are queued).
+            if (launchCommandActive && (!wasActive || Math.abs(sanitized - prevRpm) > 1.0)) {
                 launchTimer.reset();
             }
         }

@@ -82,7 +82,10 @@ public class FusionLocalizer implements Localizer {
 
         boolean measX = !Double.isNaN(measuredPose.getX());
         boolean measY = !Double.isNaN(measuredPose.getY());
-        boolean measH = !Double.isNaN(measuredPose.getHeading());
+        // Heading comes from Pinpoint (MT2 requires it as input, so correcting it
+        // with MT2 output would be circular). getTotalHeading() delegates to
+        // deadReckoning, so KF heading corrections would also be silently ignored.
+        boolean measH = false;
 
         Matrix y = new Matrix(new double[][]{
                 {measX ? measuredPose.getX() - pastPose.getX() : 0},
@@ -121,9 +124,10 @@ public class FusionLocalizer implements Localizer {
         Pose prevPose = updatedPast;
         Matrix prevCov = updatedCovariance;
 
-        for (NavigableMap.Entry<Long, Pose> entry :
-                poseHistory.tailMap(timestamp, false).entrySet()) {
-            long t = entry.getKey();
+        // Snapshot keys before the loop — modifying poseHistory/covarianceHistory
+        // while iterating a live tailMap view causes ConcurrentModificationException.
+        Long[] replayKeys = poseHistory.tailMap(timestamp, false).keySet().toArray(new Long[0]);
+        for (long t : replayKeys) {
             Pose twist = interpolate(t, twistHistory);
             if (twist == null)
                 twist = getVelocity();
@@ -222,7 +226,7 @@ public class FusionLocalizer implements Localizer {
     }
 
     @Override
-    public double getTotalHeading() { return currentPosition.getHeading(); }
+    public double getTotalHeading() { return deadReckoning.getTotalHeading(); }
 
     @Override
     public double getForwardMultiplier() { return deadReckoning.getForwardMultiplier(); }
