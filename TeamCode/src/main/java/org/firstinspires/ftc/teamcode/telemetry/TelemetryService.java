@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.telemetry;
 
-import android.os.SystemClock;
-
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.pedropathing.geometry.Pose;
@@ -34,15 +32,12 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  */
 public class TelemetryService {
 
-    private static final long DASHBOARD_INTERVAL_MS = 50L; // 20 Hz in DEBUG mode
-
     private FtcDashboard dashboard;
     private boolean dashboardInitialized = false;
     private final DriverStationFormatter driverStationFormatter;
     private final DashboardFormatter dashboardFormatter;
 
     private boolean sessionActive = false;
-    private long lastDashboardPacketMs = 0L;
 
     /**
      * Create a new telemetry service.
@@ -171,16 +166,10 @@ public class TelemetryService {
             return;
         }
 
-        long nowMs = SystemClock.uptimeMillis();
-
-        // Throttle to 20 Hz
-        if (nowMs - lastDashboardPacketMs >= DASHBOARD_INTERVAL_MS) {
-            TelemetryPacket packet = dashboardFormatter.createPacket(data, TelemetrySettings.LEVEL);
-            if (packet != null) {
-                dash.sendTelemetryPacket(packet);
-                RobotState.packet = new TelemetryPacket();
-                lastDashboardPacketMs = nowMs;
-            }
+        TelemetryPacket packet = dashboardFormatter.createPacket(data, TelemetrySettings.LEVEL);
+        if (packet != null) {
+            dash.sendTelemetryPacket(packet);
+            RobotState.packet = new TelemetryPacket();
         }
     }
 
