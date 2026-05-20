@@ -51,6 +51,7 @@ public class DriveSubsystem {
         HEADING_KNOWN
     }
     private VisionCalibrationState visionState = HEADING_UNKNOWN;
+    private int consecutiveMt2DisagreementCount = 0;
 
     // Active robot indicator
     public static String ACTIVE_ROBOT = RobotState.getRobotName();
@@ -1324,14 +1325,34 @@ public class DriveSubsystem {
             applyRelocalizedPose(pedroPoseMT1);
             vision.markOdometryUpdated();
 
-            // Now heading is calibrated
+            // Now heading is calibrated — clear any stale disagreement count
             visionState = HEADING_KNOWN;
+            consecutiveMt2DisagreementCount = 0;
             recordRelocalizeSource("mt1_seed", true, nowMs, snap.tagId);
             return true;
         }
 
         // 2. If heading is known, prefer MT2 when it agrees with MT1 (or MT1 missing)
         boolean mt2Safe = pedroPoseMT1 != null && pedroPoseMT2 != null && posesAgreeForMt2(pedroPoseMT1, pedroPoseMT2);
+
+        // Detect wrong heading seed: if both poses are visible but consistently disagree,
+        // the initial MT1 seed likely picked the wrong ambiguity solution (180° flip).
+        // Reset to HEADING_UNKNOWN so step 1 re-seeds on the next call.
+        if (pedroPoseMT1 != null && pedroPoseMT2 != null) {
+            if (mt2Safe) {
+                consecutiveMt2DisagreementCount = 0;
+            } else {
+                consecutiveMt2DisagreementCount++;
+                RobotState.packet.put("/vision/mt2DisagreementCount", consecutiveMt2DisagreementCount);
+                if (consecutiveMt2DisagreementCount >= visionRelocalizeConfig.mt2DisagreementResetFrames) {
+                    visionState = HEADING_UNKNOWN;
+                    consecutiveMt2DisagreementCount = 0;
+                    recordRelocalizeSource("mt2_heading_reset", false, nowMs, snap.tagId);
+                    return false;
+                }
+            }
+        }
+
         if (pedroPoseMT2 != null && (mt2Safe || pedroPoseMT1 == null)) {
             // Check jump limits against reference pose
             if (referencePose != null && !isPoseJumpAllowed(pedroPoseMT2, referencePose, "mt2")) {
