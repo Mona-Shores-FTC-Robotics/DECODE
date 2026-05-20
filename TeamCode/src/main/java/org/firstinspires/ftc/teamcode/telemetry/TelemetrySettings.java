@@ -30,7 +30,7 @@ public final class TelemetrySettings {
      * MATCH (default): No Dashboard, no packets - safe for competition
      * DEBUG: Full telemetry - for tuning and development
      */
-    public static final TelemetryLevel LEVEL = TelemetryLevel.MATCH;
+    public static final TelemetryLevel LEVEL = TelemetryLevel.DEBUG;
 
     /**
      * Returns true if FTC Dashboard should be initialized.

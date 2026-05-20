@@ -10,6 +10,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+
 import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
@@ -164,6 +166,8 @@ public class LauncherSubsystem implements Subsystem {
         }
 
         applyTargetRpms();
+        double batteryVoltage = getBatteryVoltage();
+        RobotState.packet.put("system/battery_voltage", batteryVoltage);
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
             if (flywheel.motor != null) {
@@ -187,6 +191,13 @@ public class LauncherSubsystem implements Subsystem {
                 RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_feedforward" + flywheel.lane.name(), feedforward);
                 RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_feedback" + flywheel.lane.name(), feedback);
                 RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_power", totalPower);
+
+                // Log motor current draw and approximate power (W = V * A)
+                double currentAmps = flywheel.getCurrentAmps();
+                RobotState.packet.put("launcher/" + flywheel.lane.name().toLowerCase() + "/current_amps", currentAmps);
+                if (Double.isFinite(currentAmps) && Double.isFinite(batteryVoltage)) {
+                    RobotState.packet.put("launcher/" + flywheel.lane.name().toLowerCase() + "/power_watts", currentAmps * batteryVoltage);
+                }
             }
         }
 
@@ -674,11 +685,6 @@ public class LauncherSubsystem implements Subsystem {
     private void updateHumanLoadingHoods() {
         double threshold = LauncherReverseIntakeConfig.reverseRpmThreshold;
 
-        // If threshold is 0, skip speed-gating (hoods controlled elsewhere)
-        if (threshold <= 0.0) {
-            return;
-        }
-
         for (LauncherLane lane : LauncherLane.values()) {
             // Skip lanes that already had their hood retracted this session
             if (hoodsRetractedForHumanLoading.contains(lane)) {
@@ -690,17 +696,16 @@ public class LauncherSubsystem implements Subsystem {
                 continue;
             }
 
-            // Check if this lane's flywheel has reached the threshold speed
-            double currentRpm = flywheel.getCurrentRpm();
-            if (currentRpm >= threshold) {
-                // Retract this lane's hood
+            // threshold <= 0 means retract immediately; otherwise wait until the
+            // flywheel reaches the configured RPM (per-lane independent gating).
+            boolean shouldRetract = threshold <= 0.0 || flywheel.getCurrentRpm() >= threshold;
+            if (shouldRetract) {
                 Hood hood = hoods.get(lane);
                 if (hood != null) {
                     hood.setPosition(hoodConfig().retractedPosition);
                 }
                 hoodsRetractedForHumanLoading.add(lane);
 
-                // Log for debugging
                 RobotState.packet.put("launcher/humanLoading/" + lane.name() + "_hoodRetracted", true);
             }
         }
@@ -1053,6 +1058,17 @@ public class LauncherSubsystem implements Subsystem {
 
         double getMeasuredTicksPerSec() {
             return measuredTicksPerSec;
+        }
+
+        double getCurrentAmps() {
+            if (motor == null) {
+                return Double.NaN;
+            }
+            try {
+                return motor.getCurrent(CurrentUnit.AMPS);
+            } catch (Exception e) {
+                return Double.NaN;
+            }
         }
 
         boolean isAtLaunch() {
