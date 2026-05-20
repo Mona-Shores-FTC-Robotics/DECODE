@@ -59,6 +59,7 @@ dependencies {
     // AdvantageScope Lite - enables AdvantageScope connection via FTC Dashboard packets
 //    implementation("page.j5155.AdvantageScope:lite:v26.0.0")
 
+    testImplementation 'junit:junit:4.13.2'
 }
 
 /**
