@@ -1,30 +1,16 @@
 package org.firstinspires.ftc.teamcode.opmodes.Autos;
 
 import com.pedropathing.geometry.Pose;
-
-import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.MichianaShortCommand;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
-import org.firstinspires.ftc.teamcode.util.Alliance;
-import org.firstinspires.ftc.teamcode.util.AllianceSelector;
-import org.firstinspires.ftc.teamcode.util.AutoField;
-import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
-import org.firstinspires.ftc.teamcode.util.LauncherMode;
-import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
-import org.firstinspires.ftc.teamcode.util.RobotState;
-import org.firstinspires.ftc.teamcode.util.AutoPrestartHelper;
-import org.firstinspires.ftc.teamcode.util.PpPathLoader;
-
 import com.pedropathing.ivy.Command;
-import com.qualcomm.hardware.lynx.LynxModule;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
-import java.util.List;
+import org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.MichianaShortCommand;
+import org.firstinspires.ftc.teamcode.util.AutoField;
+import org.firstinspires.ftc.teamcode.util.PpPathLoader;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
-@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Michiana Short", group = "Auto")
-public class DecodeAutonomousMichianaShort extends OpMode {
+@Autonomous(name = "Michiana Short", group = "Auto")
+public class DecodeAutonomousMichianaShort extends BaseAutonomousOpMode {
 
     /**
      * Name of the .pp file to load. We check {@code /sdcard/FIRST/<PP_FILE_NAME>} first
@@ -32,47 +18,18 @@ public class DecodeAutonomousMichianaShort extends OpMode {
      */
     private static final String PP_FILE_NAME = "MichianaClose.pp";
 
-    private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
-
-    private Robot robot;
-    private AllianceSelector allianceSelector;
-    private LauncherModeSelector modeSelector;
-    private Alliance activeAlliance = Alliance.BLUE;
-    private AutoPrestartHelper prestartHelper;
-
-    // AprilTag-based start pose detection
-    private Pose lastAppliedStartPosePedro;
-    private Pose lastDetectedStartPosePedro;
-
-    private List<LynxModule> hubs;
-
-    // Parsed .pp loaded once in init() — source of truth for paths, start pose,
+    // Parsed .pp loaded once in onInit() — source of truth for paths, start pose,
     // expected position. sdcard takes priority for hot-reload; asset is the
     // committed fallback that ships with the APK.
     private PpPathLoader.ParsedPp parsedPp;
     private String pathSource = "uninitialized";
 
+    // -----------------------------------------------------------------------
+    // Hooks
+    // -----------------------------------------------------------------------
+
     @Override
-    public void init() {
-        hubs = hardwareMap.getAll(LynxModule.class);
-        hubs.forEach(h -> h.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL));
-        robot = new Robot(hardwareMap);
-        ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
-        robot.attachPedroFollower();
-
-        robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
-        robot.telemetry.startSession();
-
-        robot.initializeForAuto();
-        // Wire up drive subsystem for relocalization warning checks
-        robot.lighting.setDriveSubsystem(robot.drive);
-
-        allianceSelector = new AllianceSelector(gamepad1, Alliance.UNKNOWN);
-        modeSelector = new LauncherModeSelector(gamepad2, LauncherMode.DECODE);
-
-        activeAlliance = allianceSelector.getSelectedAlliance();
-
-        // Load .pp once at init: sdcard wins (hot-reload), then asset (bundled).
+    protected void onInit() {
         parsedPp = PpPathLoader.loadFromSdcardOrNull(PP_FILE_NAME);
         if (parsedPp != null) {
             pathSource = "sdcard:/FIRST/" + PP_FILE_NAME;
@@ -87,467 +44,41 @@ public class DecodeAutonomousMichianaShort extends OpMode {
             }
         }
         RobotState.packet.put("Auto/PathSource", pathSource);
-
-        applyAlliance(activeAlliance, defaultStartPoseFromPp());
-
-        allianceSelector.applySelection(robot, robot.lighting);
-        modeSelector.applySelection(robot.lighting);
-        prestartHelper = new AutoPrestartHelper(robot, allianceSelector);
-
-        // Set expected start pose for jump safeguards during init relocalization
-        updateExpectedStartPose();
-
-        com.pedropathing.ivy.Scheduler.reset();
-        com.pedropathing.ivy.Scheduler.schedule(
-                robot.drive.periodic(),
-                robot.launcher.periodic(),
-                robot.intake.periodic(),
-                robot.lighting.periodic(),
-                robot.vision.periodic()
-        );
     }
 
     @Override
-    public void init_loop() {
-
-        AutoPrestartHelper.InitStatus initStatus = prestartHelper.update(activeAlliance);
-        applyInitSelections(initStatus);
-
-        // Update launcher mode selection (operator dpad left/right)
-        modeSelector.updateDuringInit(robot.lighting);
-
-        updateInitTelemetry(initStatus);
-        updateDriverStationTelemetry(initStatus);
-        robot.telemetry.publishLoopTelemetry(
-                robot.drive,
-                robot.launcher,
-                robot.intake,
-                robot.vision,
-                robot.lighting,
-                null,
-                gamepad1,
-                gamepad2,
-                RobotState.getAlliance(),
-                getRuntime(),
-                Math.max(0.0, 150.0 - getRuntime()),
-                telemetry,
-                "AutoInit",
-                true,
-                null,
-                0,
-                0
-        );
-    }
-
-    @Override
-    public void start() {
-        allianceSelector.lockSelection();
-        modeSelector.lockSelection();
-
-        // Build auto with vision-detected start pose (or null to use LocalizeCommand defaults)
-        // Use follower's current pose as the source of truth (it was set from vision if available)
-        Pose startPoseOverride = lastAppliedStartPosePedro != null
-            ? lastAppliedStartPosePedro
-            : null;
-
-        // parsedPp was loaded at init(); use it directly.
+    protected void onStart() {
         telemetry.addData("Path source", pathSource);
-        Command autoRoutine =
-                MichianaShortCommand.createFromPp(robot, activeAlliance, parsedPp, startPoseOverride);
-
-        autoRoutine.schedule();
-
-        robot.lighting.resumeLaneTracking();
-        robot.intake.forwardRoller();
-        robot.intake.setGateAllowArtifacts();
     }
+
+    // -----------------------------------------------------------------------
+    // Start coordinates — sourced from the parsed .pp file
+    // -----------------------------------------------------------------------
 
     @Override
-    public void loop() {
-        for (LynxModule hub : hubs) hub.clearBulkCache();
-        com.pedropathing.ivy.Scheduler.execute();
-        publishTelemetry();
-    }
+    protected double getStartX() { return parsedPp.startX; }
 
     @Override
-    public void stop() {
-        // Save final pose for TeleOp transition FIRST, before any shutdown operations
-        // This gives us the best chance of capturing the pose before hub communication issues
-        try {
-            RobotState.setHandoffPose(robot.drive.getFollower().getPose());
-        } catch (Exception ignored) {
-            // Ignore exceptions during shutdown
-        }
+    protected double getStartY() { return parsedPp.startY; }
 
-        // Cancel all scheduled Ivy commands to prevent them from running during cleanup
-        com.pedropathing.ivy.Scheduler.reset();
-
-        allianceSelector.unlockSelection();
-        modeSelector.unlockSelection();
-
-        // Wrap all subsystem stop calls in try-catch to prevent "expansion hub stopped responding"
-        // errors during OpMode shutdown when the hub communication is already terminating
-        try {
-            robot.launcher.abort();
-        } catch (Exception ignored) {
-            // Ignore exceptions during shutdown
-        }
-        try {
-            robot.drive.stop();
-        } catch (Exception ignored) {
-            // Ignore exceptions during shutdown
-        }
-        try {
-            robot.intake.stop();
-        } catch (Exception ignored) {
-            // Ignore exceptions during shutdown
-        }
-        try {
-            robot.vision.stop();
-        } catch (Exception ignored) {
-            // Ignore exceptions during shutdown
-        }
-        try {
-            robot.lighting.stop();
-        } catch (Exception ignored) {
-            // Ignore exceptions during shutdown
-        }
-    }
-
-
-    private void applyInitSelections(AutoPrestartHelper.InitStatus status) {
-        if (status == null) {
-            return;
-        }
-
-        if (status.alliance != activeAlliance) {
-            activeAlliance = status.alliance;
-            // When alliance changes without vision, use LocalizeCommand default
-            Pose defaultPose = lastDetectedStartPosePedro != null
-                ? lastDetectedStartPosePedro
-                : defaultStartPoseFromPp();
-            applyAlliance(activeAlliance, defaultPose);
-        }
-
-        lastDetectedStartPosePedro = status.startPoseFromVision;
-        if (shouldUpdateStartPose(lastDetectedStartPosePedro)) {
-            applyAlliance(activeAlliance, lastDetectedStartPosePedro);
-        }
-    }
-
-
+    @Override
+    protected double getStartHeadingDeg() { return parsedPp.startHeadingDeg; }
 
     /**
-     * Applies alliance color and start pose to robot systems.
-     * @param alliance Alliance color (BLUE or RED)
-     * @param startPose Start pose (from vision or Command default)
+     * Override: Michiana's default pose is alliance-mirrored so the follower is
+     * set to the correct side of the field even before vision locks on.
      */
-    private void applyAlliance(Alliance alliance, Pose startPose) {
-        Alliance safeAlliance = alliance != null && alliance != Alliance.UNKNOWN ? alliance : DEFAULT_ALLIANCE;
-        activeAlliance = safeAlliance;
-        robot.setAlliance(activeAlliance);
-
-        lastAppliedStartPosePedro = copyPose(startPose);
-
-        robot.drive.getFollower().setStartingPose(startPose);
-        robot.drive.getFollower().setPose(startPose);
-
-        // Update expected start pose for jump safeguards when alliance changes
-        updateExpectedStartPose();
+    @Override
+    protected Pose getDefaultStartPose() {
+        return AutoField.poseForAlliance(parsedPp.startX, parsedPp.startY, parsedPp.startHeadingDeg, activeAlliance);
     }
 
-    /**
-     * Updates the expected start pose for vision relocalization jump safeguards.
-     * Called when alliance changes to ensure AutoPrestartHelper uses the correct reference.
-     */
-    private void updateExpectedStartPose() {
-        if (prestartHelper == null || parsedPp == null) {
-            return;
-        }
-        Pose expectedPose = AutoField.poseForAlliance(
-                parsedPp.startX,
-                parsedPp.startY,
-                parsedPp.startHeadingDeg,
-                activeAlliance
-        );
-        prestartHelper.setExpectedStartPose(expectedPose);
-    }
+    // -----------------------------------------------------------------------
+    // Routine
+    // -----------------------------------------------------------------------
 
-    /** Start pose from the parsed .pp file, mirrored for the active alliance. */
-    private Pose defaultStartPoseFromPp() {
-        return AutoField.poseForAlliance(
-                parsedPp.startX,
-                parsedPp.startY,
-                parsedPp.startHeadingDeg,
-                activeAlliance);
-    }
-
-    /**
-     * Validates that a detected pose is reasonable before applying it.
-     * Only checks that pose is on the field - no distance restrictions.
-     * This allows students to adjust robot placement without getting locked to a bad pose.
-     */
-    private boolean shouldUpdateStartPose(Pose candidate) {
-        if (candidate == null) {
-            return false;
-        }
-
-        // Sanity check: pose should be on the field
-        double fieldWidthIn = FieldConstants.FIELD_WIDTH_INCHES;
-        if (candidate.getX() < 0 || candidate.getX() > fieldWidthIn ||
-            candidate.getY() < 0 || candidate.getY() > fieldWidthIn) {
-            return false;
-        }
-
-        // Log delta for diagnostics (if we have a previous pose)
-        if (lastAppliedStartPosePedro != null) {
-            double deltaX = Math.abs(candidate.getX() - lastAppliedStartPosePedro.getX());
-            double deltaY = Math.abs(candidate.getY() - lastAppliedStartPosePedro.getY());
-            RobotState.packet.put("init/deltaX", deltaX);
-            RobotState.packet.put("init/deltaY", deltaY);
-        }
-
-        return true;
-    }
-
-    /**
-     * Creates a defensive copy of a Pose
-     */
-    private Pose copyPose(Pose pose) {
-        if (pose == null) {
-            return null;
-        }
-        return new Pose(pose.getX(), pose.getY(), pose.getHeading());
-    }
-
-    private String formatMotif(AutoPrestartHelper.InitStatus status) {
-        if (status == null || !status.hasMotif()) {
-            return "No tag yet";
-        }
-        String tagText = status.motifTagId == null ? "n/a" : status.motifTagId.toString();
-        return String.format("%s (tag %s)", status.motifPattern.name(), tagText);
-    }
-
-    private String formatRelocalize(AutoPrestartHelper.InitStatus status) {
-        if (status == null || !status.hasRelocalized()) {
-            return "Waiting for goal tag";
-        }
-        Pose pose = status.relocalizedPose;
-        if (pose == null) {
-            return "Tag locked but pose unavailable";
-        }
-        String tagText = status.relocalizeTagId > 0
-                ? String.format("%d%s", status.relocalizeTagId, isOppositeGoalTag(status.relocalizeTagId) ? " (opp)" : "")
-                : "unknown tag";
-        long ageMs = status.relocalizePoseTimestampMs > 0L
-                ? System.currentTimeMillis() - status.relocalizePoseTimestampMs
-                : 0L;
-        return String.format(
-                "%s -> (%.1f, %.1f, %.0f°) age:%dms",
-                tagText,
-                pose.getX(),
-                pose.getY(),
-                Math.toDegrees(pose.getHeading()),
-                ageMs
-        );
-    }
-
-    private void updateInitTelemetry(AutoPrestartHelper.InitStatus status) {
-        RobotState.packet.put("init/alliance", activeAlliance.name());
-        RobotState.packet.put("init/motif/name", status == null || status.motifPattern == null ? "UNKNOWN" : status.motifPattern.name());
-        RobotState.packet.put("init/motif/tag", status == null || status.motifTagId == null ? -1 : status.motifTagId);
-        RobotState.packet.put("init/relocalize/tag", status == null ? -1 : status.relocalizeTagId);
-        RobotState.packet.put("init/relocalize/has_pose", status != null && status.relocalizedPose != null);
-        if (status != null && status.relocalizedPose != null) {
-            RobotState.packet.put("init/relocalize/x", status.relocalizedPose.getX());
-            RobotState.packet.put("init/relocalize/y", status.relocalizedPose.getY());
-            RobotState.packet.put("init/relocalize/heading_deg", Math.toDegrees(status.relocalizedPose.getHeading()));
-            RobotState.packet.put("init/relocalize/age_ms", System.currentTimeMillis() - status.relocalizePoseTimestampMs);
-        }
-        RobotState.packet.put("init/start_pose/has_vision", status != null && status.startPoseFromVision != null);
-        if (status != null && status.startPoseFromVision != null) {
-            RobotState.packet.put("init/start_pose/x", status.startPoseFromVision.getX());
-            RobotState.packet.put("init/start_pose/y", status.startPoseFromVision.getY());
-            RobotState.packet.put("init/start_pose/heading_deg", Math.toDegrees(status.startPoseFromVision.getHeading()));
-        }
-        RobotState.packet.put("init/artifacts_detected", robot.intake.getArtifactCount());
-        RobotState.packet.put("init/relocalize/readable", status == null ? "Waiting" : formatRelocalize(status));
-        RobotState.packet.put("init/motif/readable", status == null ? "UNKNOWN" : formatMotif(status));
-    }
-
-    private void updateDriverStationTelemetry(AutoPrestartHelper.InitStatus status) {
-        telemetry.clear();
-
-        // Vision relocalization status
-        String visionStatus = computeVisionStatus(status);
-        telemetry.addData(">> RELOCALIZE", visionStatus);
-
-        // Motif detection status
-        String motifStatus = computeMotifStatus(status);
-        telemetry.addData(">> MOTIF", motifStatus);
-
-        telemetry.addLine();
-
-        // Current poses - compare to target
-        Pose followerPose = robot.drive.getFollower().getPose();
-        Pose visionPose = status != null ? status.startPoseFromVision : null;
-
-        // Get default/target start pose from the parsed .pp file, mirrored for current alliance.
-        Pose targetPose = defaultStartPoseFromPp();
-
-        telemetry.addData("Target", "X=%.1f Y=%.1f θ=%.0f°",
-            targetPose.getX(), targetPose.getY(), Math.toDegrees(targetPose.getHeading()));
-
-        telemetry.addData("Follower", "X=%.1f Y=%.1f θ=%.0f°",
-            followerPose.getX(), followerPose.getY(), Math.toDegrees(followerPose.getHeading()));
-
-        // Show delta from follower to target
-        double followerDx = followerPose.getX() - targetPose.getX();
-        double followerDy = followerPose.getY() - targetPose.getY();
-        double followerDistance = Math.hypot(followerDx, followerDy);
-        double followerHeadingDelta = Math.toDegrees(Math.abs(followerPose.getHeading() - targetPose.getHeading()));
-        while (followerHeadingDelta > 180) followerHeadingDelta -= 360;
-        followerHeadingDelta = Math.abs(followerHeadingDelta);
-
-        String followerDeltaStatus = (followerDistance < 3.0 && followerHeadingDelta < 10) ? "✓" : "⚠";
-        telemetry.addData("  Delta", "%s %.1f in, %.0f°", followerDeltaStatus, followerDistance, followerHeadingDelta);
-
-        if (visionPose != null) {
-            telemetry.addData("Vision", "X=%.1f Y=%.1f θ=%.0f°",
-                visionPose.getX(), visionPose.getY(), Math.toDegrees(visionPose.getHeading()));
-
-            // Show delta from vision to target
-            double visionDx = visionPose.getX() - targetPose.getX();
-            double visionDy = visionPose.getY() - targetPose.getY();
-            double visionDistance = Math.hypot(visionDx, visionDy);
-            double visionHeadingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - targetPose.getHeading()));
-            while (visionHeadingDelta > 180) visionHeadingDelta -= 360;
-            visionHeadingDelta = Math.abs(visionHeadingDelta);
-
-//            String visionDeltaStatus = (visionDistance < 3.0 && visionHeadingDelta < 10) ? "✓" : "⚠";
-//            telemetry.addData("  Delta", "%s %.1f in, %.0f°", visionDeltaStatus, visionDistance, visionHeadingDelta);
-        } else {
-            telemetry.addData("Vision", "No tag detected");
-        }
-
-        telemetry.addLine();
-        telemetry.addData("Alliance", activeAlliance.displayName());
-        telemetry.addData("Relocalize Tag", status != null && status.relocalizeTagId > 0
-            ? String.format("%d%s", status.relocalizeTagId, isOppositeGoalTag(status.relocalizeTagId) ? " (opp)" : "")
-            : "none");
-
-        if (status != null && status.hasMotif()) {
-            telemetry.addData("Motif Tag", status.motifTagId != null
-                ? String.format("%d", status.motifTagId)
-                : "none");
-            telemetry.addData("Pattern", status.motifPattern != null
-                ? status.motifPattern.name()
-                : "UNKNOWN");
-        } else {
-            telemetry.addData("Motif Tag", "none");
-        }
-
-        telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
-        telemetry.addLine();
-        telemetry.addData("Launcher Mode", modeSelector.getDisplayText());
-        telemetry.addLine();
-        telemetry.addLine("Driver D-pad: Alliance (L=BLUE R=RED)");
-        telemetry.addLine("Operator D-pad: Mode (L=THRU R=SEQ)");
-        telemetry.addLine("Press START when ready");
-        telemetry.update();
-    }
-
-    private String computeVisionStatus(AutoPrestartHelper.InitStatus status) {
-        if (status == null || status.startPoseFromVision == null) {
-            return "⚠ NO VISION - Using manual pose";
-        }
-
-        // Check vision freshness
-        long ageMs = status.relocalizePoseTimestampMs > 0L
-                ? System.currentTimeMillis() - status.relocalizePoseTimestampMs
-                : Long.MAX_VALUE;
-
-        if (ageMs > 2000) {
-            return "⚠ VISION STALE - Move robot to see tag";
-        }
-
-        // Compare vision pose to target (not to follower)
-        Pose visionPose = status.startPoseFromVision;
-        Pose targetPose = defaultStartPoseFromPp();
-
-        double dx = visionPose.getX() - targetPose.getX();
-        double dy = visionPose.getY() - targetPose.getY();
-        double distance = Math.hypot(dx, dy);
-        double headingDelta = Math.toDegrees(Math.abs(visionPose.getHeading() - targetPose.getHeading()));
-        while (headingDelta > 180) headingDelta -= 360;
-        headingDelta = Math.abs(headingDelta);
-
-        // Check vision quality against target
-        if (distance < 3.0 && headingDelta < 10) {
-            return "✓ VISION LOCKED - Ready to start";
-        } else if (distance < 12.0 && headingDelta < 30) {
-            return "⚠ VISION OK - Adjust placement for best results";
-        } else {
-            return "✗ VISION MISMATCH - Check robot placement";
-        }
-    }
-
-    private String computeMotifStatus(AutoPrestartHelper.InitStatus status) {
-        if (status == null || !status.hasMotif()) {
-            return "⚠ NO MOTIF - Point at Motif AprilTag";
-        }
-
-        // Motif detected and fresh
-        if (status.motifPattern != null) {
-            return String.format("✓ MOTIF SEEN - %s", status.motifPattern.name());
-        } else {
-            return "✓ MOTIF DETECTED - Pattern unknown";
-        }
-    }
-
-    private boolean isOppositeGoalTag(int tagId) {
-        if (activeAlliance == Alliance.UNKNOWN) {
-            return false;
-        }
-        return (activeAlliance == Alliance.BLUE && tagId == FieldConstants.RED_GOAL_TAG_ID)
-                || (activeAlliance == Alliance.RED && tagId == FieldConstants.BLUE_GOAL_TAG_ID);
-    }
-
-
-    private void publishTelemetry() {
-        Pose currentPose = robot.drive.getFollower().getPose();
-        if (currentPose != null) {
-            RobotState.packet.put("Auto/Pose/X", currentPose.getX());
-            RobotState.packet.put("Auto/Pose/Y", currentPose.getY());
-            RobotState.packet.put("Auto/Pose/Heading (deg)", Math.toDegrees(currentPose.getHeading()));
-            RobotState.packet.put("Auto/Pose/Heading (rad)", currentPose.getHeading());
-            RobotState.packet.put("Auto/Alliance", activeAlliance.name());
-            telemetry.addData("Pose",
-                    "X=%.2f Y=%.2f θ=%.1f° (%s)",
-                    currentPose.getX(),
-                    currentPose.getY(),
-                    Math.toDegrees(currentPose.getHeading()),
-                    activeAlliance.name());
-        }
-
-        robot.telemetry.publishLoopTelemetry(
-                robot.drive,
-                robot.launcher,
-                robot.intake,
-                robot.vision,
-                robot.lighting,
-                null,
-                gamepad1,
-                gamepad2,
-                RobotState.getAlliance(),
-                getRuntime(),
-                Math.max(0.0, 150.0 - getRuntime()),
-                telemetry,
-                "Auto",
-                true,
-                null,
-                0,
-                0
-        );
+    @Override
+    protected Command buildAutoRoutine(Pose startPoseOverride) {
+        return MichianaShortCommand.createFromPp(robot, activeAlliance, parsedPp, startPoseOverride);
     }
 }

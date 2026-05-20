@@ -15,11 +15,10 @@ import java.util.concurrent.TimeUnit;
  * - Page 1: Overview (alliance, time, pose, launcher, artifacts)
  * - Page 2: Drive (modes, motor powers/velocities)
  * - Page 3: Launcher (per-lane detailed info)
- * - Page 4: Vision & Intake (tag detection, intake state)
- * - Page 5: Timing (loop performance breakdown)
- * - Page 6: Color Sensors (per-lane RGB/HSV values for tuning)
+ * - Page 4: Vision &amp; Intake (tag detection, intake state)
  * - Page 5: Controls (driver and operator bindings)
  * - Page 6: Timing (loop performance metrics)
+ * - Page 7: Color Sensors (per-lane RGB/HSV values for tuning)
  * </p>
  */
 public class DriverStationFormatter {
@@ -397,7 +396,7 @@ public class DriverStationFormatter {
     }
 
     /**
-     * Page 6: Color Sensors - per-lane RGB/HSV values for tuning.
+     * Page 7: Color Sensors - per-lane RGB/HSV values for tuning.
      */
     private void publishDebugColorSensors(Telemetry telemetry, RobotTelemetryData data) {
         // Show classifier mode at top

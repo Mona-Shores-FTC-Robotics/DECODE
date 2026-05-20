@@ -964,6 +964,7 @@ public class LauncherSubsystem {
         }
     }
 
+    //region Flywheel — motor control and RPM targeting for one lane
     private class Flywheel {
         private final LauncherLane lane;
         private final DcMotorEx motor;
@@ -1161,7 +1162,9 @@ public class LauncherSubsystem {
             }
         }
     }
+    //endregion
 
+    //region Feeder — servo that pushes artifacts into the flywheel
     private class Feeder {
         private final LauncherLane lane;
         private final Servo servo;
@@ -1237,7 +1240,9 @@ public class LauncherSubsystem {
             return servo == null ? Double.NaN : servo.getPosition();
         }
     }
+    //endregion
 
+    //region Hood — angle servo that adjusts launch trajectory per lane
     private class Hood {
         private final LauncherLane lane;
         private final Servo servo;
@@ -1340,7 +1345,6 @@ public class LauncherSubsystem {
                 return clampServo(hoodConfig.hoodRight.longPosition);
         }
     }
-
-
+    //endregion
 
 }
