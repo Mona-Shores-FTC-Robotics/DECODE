@@ -191,7 +191,7 @@ public class FusionLocalizer implements Localizer {
         currentPosition = setPose.copy();
         deadReckoning.setPose(setPose);
         if (poseHistory.lastEntry() != null)
-            poseHistory.lastEntry().setValue(setPose.copy());
+            poseHistory.put(poseHistory.lastKey(), setPose.copy());
         else
             setStartPose(setPose);
     }
@@ -217,7 +217,7 @@ public class FusionLocalizer implements Localizer {
         setPose(pose);
         P = Matrix.diag(xyCovariance, xyCovariance, headingCovariance);
         if (!covarianceHistory.isEmpty()) {
-            covarianceHistory.lastEntry().setValue(P.copy());
+            covarianceHistory.put(covarianceHistory.lastKey(), P.copy());
         }
     }
 

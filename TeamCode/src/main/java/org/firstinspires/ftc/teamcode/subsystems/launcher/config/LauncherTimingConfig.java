@@ -16,10 +16,10 @@ package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 public class LauncherTimingConfig {
     // ===== SHARED VALUES (same for both robots) =====
     /** Minimum time the wheel should be commanded at launch speed before trusting fallback readiness. */
-    public double minimalSpinUpMs = 500;
+    public double minimalSpinUpMs = 100;
 
     /** If encoders are unavailable, treat the wheel as ready after this many milliseconds at full power. */
-    public double fallbackReadyMs = 500;
+    public double fallbackReadyMs = 100;
 
     /** Time to keep flywheel at launch speed after firing to ensure artifact clears (ms). */
     public double launchHoldAfterFireMs = 500;
@@ -37,8 +37,7 @@ public class LauncherTimingConfig {
     /**
      * Creates timing configuration for robot 19429.
      * Currently uses all default values - both robots have identical timing.
-     */
-    private static LauncherTimingConfig createTiming19429() {
+     */do ying19429() {
         LauncherTimingConfig timing = new LauncherTimingConfig();
         // No overrides needed - using shared defaults
         return timing;

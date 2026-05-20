@@ -128,7 +128,8 @@ public class LauncherSubsystem {
      * Scheduled once in OpMode init; runs until OpMode stop.
      */
     public Command periodic() {
-        return Commands.infinite(this::doPeriodic).requiring(this);
+
+        return Commands.infinite(this::doPeriodic);
     }
 
     private void doPeriodic() {

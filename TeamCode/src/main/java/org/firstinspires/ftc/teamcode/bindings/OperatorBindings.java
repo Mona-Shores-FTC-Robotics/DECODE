@@ -123,7 +123,7 @@ public class OperatorBindings {
     private void configureDistanceBasedLaunchBindings(Robot robot, Gamepad rawOperatorGamepad) {
         // Cross button: hold to distance-based spin-up; release to fire all and relocalize.
         bindings.when(() -> gp().cross)
-                .onTrue(DistanceBasedSpinCommand.create(
+                .whileTrue(DistanceBasedSpinCommand.create(
                         robot.launcher, robot.vision, robot.drive, robot.lighting, rawOperatorGamepad))
                 .onFalse(ModeAwareLaunchCommand.create(robot.launcher, robot.intake, true)
                         .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
@@ -132,21 +132,21 @@ public class OperatorBindings {
     private void configurePresetRangeLaunchBindings(Robot robot, Gamepad rawOperatorGamepad) {
         // Preset range buttons. Each holds to spin up, releases to fire and relocalize.
         bindings.when(() -> gp().dpad_down)
-                .onTrue(PresetRangeSpinCommand.create(
+                .whileTrue(PresetRangeSpinCommand.create(
                         robot.launcher, LauncherRange.SHORT, false,
                         robot.drive, robot.lighting, rawOperatorGamepad))
                 .onFalse(ModeAwareLaunchCommand.create(robot.launcher, robot.intake, true)
                         .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
 
         bindings.when(() -> gp().dpad_left)
-                .onTrue(PresetRangeSpinCommand.create(
+                .whileTrue(PresetRangeSpinCommand.create(
                         robot.launcher, LauncherRange.MID, false,
                         robot.drive, robot.lighting, rawOperatorGamepad))
                 .onFalse(ModeAwareLaunchCommand.create(robot.launcher, robot.intake, true)
                         .then(instantRunnable(robot.drive::tryRelocalizeForShot)));
 
         bindings.when(() -> gp().dpad_up)
-                .onTrue(PresetRangeSpinCommand.create(
+                .whileTrue(PresetRangeSpinCommand.create(
                         robot.launcher, LauncherRange.LONG, false,
                         robot.drive, robot.lighting, rawOperatorGamepad))
                 .onFalse(ModeAwareLaunchCommand.create(robot.launcher, robot.intake, true)
