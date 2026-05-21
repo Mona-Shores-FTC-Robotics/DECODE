@@ -13,6 +13,17 @@ import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetryService;
 
+/**
+ * Robot is the hardware container — it holds every subsystem and wires them together.
+ * Think of it as the robot's "parts list": motors, sensors, and servos all get built here
+ * and then the rest of the code asks Robot for what it needs.
+ *
+ * To add a new mechanism:
+ *   1. Create a subsystem class in the subsystems/ folder.
+ *   2. Add a public field for it here (e.g. "public final ArmSubsystem arm;").
+ *   3. Build it in the constructor below (e.g. "arm = new ArmSubsystem(hardwareMap);").
+ *   4. Call arm.initialize() in both initializeForTeleOp() and initializeForAuto().
+ */
 public class Robot {
     public final DriveSubsystem drive;
     public final LauncherSubsystem launcher;

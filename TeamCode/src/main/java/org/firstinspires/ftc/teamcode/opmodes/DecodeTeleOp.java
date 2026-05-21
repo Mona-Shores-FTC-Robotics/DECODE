@@ -17,11 +17,22 @@ import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 
+/**
+ * The main TeleOp OpMode — this is where driver control comes to life.
+ *
+ * FTC OpModes have a fixed lifecycle called by the Driver Station app:
+ *   init()      — runs once when INIT is pressed; builds the robot and schedules subsystems
+ *   init_loop() — loops while waiting for START; used here for alliance selection
+ *   start()     — runs once when START is pressed; activates drive and wires gamepad buttons
+ *   loop()      — runs every ~20 ms during the match; the main game loop
+ *   stop()      — runs once when STOP is pressed; shuts everything down cleanly
+ *
+ * The Ivy Scheduler (see init()) runs all subsystem periodic() methods automatically
+ * every loop, so you don't need to call them manually in loop().
+ */
 @TeleOp(name = "Decode TeleOp", group = "TeleOp")
-
 public class DecodeTeleOp extends OpMode {
 
     public static class EndgameConfig {
@@ -274,56 +285,6 @@ public class DecodeTeleOp extends OpMode {
         }
         robot.lighting.showSolidAlliance(selectedAlliance);
     }
-
-    private static final class LoopTiming {
-        final double loopMs;
-        final double telemetryMs;
-        final boolean telemetrySent;
-        final double driveMs;
-        final double intakeMs;
-        final double launcherMs;
-        final double lightingMs;
-        final double launchCoordMs;
-        final double visionMs;
-
-        LoopTiming(double loopMs,
-                   double telemetryMs,
-                   boolean telemetrySent,
-                   double driveMs,
-                   double intakeMs,
-                   double launcherMs ,
-                   double lightingMs,
-                   double launchCoordMs ,
-                   double visionMs
-                   ) {
-            this.loopMs = loopMs;
-            this.telemetryMs = telemetryMs;
-            this.telemetrySent = telemetrySent;
-            this.driveMs = driveMs;
-            this.intakeMs = intakeMs;
-            this.launcherMs = launcherMs;
-            this.lightingMs = lightingMs;
-            this.launchCoordMs = launchCoordMs;
-            this.visionMs = visionMs;
-        }
-
-    }
-
-    private static final class TelemetryTiming {
-        final boolean telemetrySent;
-        final double telemetryMs;
-        final long wallClockMs;
-
-        TelemetryTiming(boolean telemetrySent,
-                        double telemetryMs,
-                        long wallClockMs) {
-            this.telemetrySent = telemetrySent;
-            this.telemetryMs = telemetryMs;
-            this.wallClockMs = wallClockMs;
-        }
-    }
-
-
 
     private void pushInitTelemetry() {
         if (robot == null) {

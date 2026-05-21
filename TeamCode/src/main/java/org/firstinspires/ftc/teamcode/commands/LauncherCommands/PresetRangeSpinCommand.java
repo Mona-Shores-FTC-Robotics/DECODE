@@ -44,6 +44,7 @@ public final class PresetRangeSpinCommand {
 
         final ElapsedTime timer = new ElapsedTime();
         final ElapsedTime readyLossTimer = new ElapsedTime();
+        // Array wraps a mutable value so the lambda below can update it (Java requires final captures).
         final boolean[] feedbackTriggered = {false};
 
         return new CommandBuilder()

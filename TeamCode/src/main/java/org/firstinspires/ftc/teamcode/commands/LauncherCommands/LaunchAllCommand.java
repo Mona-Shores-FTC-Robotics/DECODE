@@ -24,9 +24,8 @@ import java.util.Objects;
  */
 public final class LaunchAllCommand {
 
-    private static final int STAGE_WAITING = 0;
-    private static final int STAGE_SHOTS_QUEUED = 1;
-    private static final int STAGE_COMPLETED = 2;
+    // Tracks where we are in the launch sequence.
+    private enum Stage { WAITING, SHOTS_QUEUED, COMPLETED }
 
     private LaunchAllCommand() {}
 
@@ -35,7 +34,8 @@ public final class LaunchAllCommand {
                                   boolean spinDownAfterShot) {
         Objects.requireNonNull(launcher, "launcher required");
 
-        final int[] stage = {STAGE_WAITING};
+        // Arrays wrap mutable values so lambdas (which require final captures) can update them.
+        final Stage[] stage = {Stage.WAITING};
         final EnumSet<LauncherLane> queuedLanes = EnumSet.noneOf(LauncherLane.class);
         final boolean[] spinDownApplied = {false};
         final ElapsedTime timer = new ElapsedTime();
@@ -43,7 +43,7 @@ public final class LaunchAllCommand {
         return new CommandBuilder()
                 .setStart(() -> {
                     timer.reset();
-                    stage[0] = STAGE_WAITING;
+                    stage[0] = Stage.WAITING;
                     queuedLanes.clear();
                     spinDownApplied[0] = false;
                     launcher.spinUpAllLanesToLaunch();
@@ -51,15 +51,15 @@ public final class LaunchAllCommand {
                 })
                 .setExecute(() -> {
                     switch (stage[0]) {
-                        case STAGE_WAITING:
+                        case WAITING:
                             checkLaneReadiness(launcher, queuedLanes);
                             if (queuedLanes.size() == LauncherLane.values().length) {
-                                stage[0] = STAGE_SHOTS_QUEUED;
+                                stage[0] = Stage.SHOTS_QUEUED;
                             }
                             break;
-                        case STAGE_SHOTS_QUEUED:
+                        case SHOTS_QUEUED:
                             if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
-                                stage[0] = STAGE_COMPLETED;
+                                stage[0] = Stage.COMPLETED;
                                 if (spinDownAfterShot && !spinDownApplied[0]) {
                                     launcher.clearOverrides();
                                     launcher.setAllLanesToIdle();
@@ -71,7 +71,7 @@ public final class LaunchAllCommand {
                             break;
                     }
                 })
-                .setDone(() -> stage[0] == STAGE_COMPLETED)
+                .setDone(() -> stage[0] == Stage.COMPLETED)
                 .setEnd(endCondition -> {
                     if (intake != null) intake.setGatePreventArtifact();
                     if (endCondition == EndCondition.INTERRUPTED && !queuedLanes.isEmpty()) {
