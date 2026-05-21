@@ -66,6 +66,8 @@ public final class DistanceBasedSpinCommand {
         Objects.requireNonNull(vision, "vision required");
         Objects.requireNonNull(drive, "drive required");
 
+        // Arrays wrap mutable values so the lambdas below can update them
+        // (Java requires lambda captures to be final, so we mutate state via array slots).
         final double[] lastSmoothedDistanceIn = {0.0};
         final boolean[] feedbackTriggered = {false};
         final ElapsedTime readyLossTimer = new ElapsedTime();

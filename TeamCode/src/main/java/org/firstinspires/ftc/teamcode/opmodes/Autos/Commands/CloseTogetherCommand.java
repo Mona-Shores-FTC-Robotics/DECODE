@@ -175,7 +175,6 @@ public class CloseTogetherCommand {
                                 robot.drive, robot.lighting, null) // Spin up to SHORT RPM for the whole auto
                 ),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 1
@@ -214,7 +213,6 @@ public class CloseTogetherCommand {
                         )
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 2
@@ -239,7 +237,6 @@ public class CloseTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 3
@@ -295,12 +292,7 @@ public class CloseTogetherCommand {
                 )
         );
 
-        return
-                mainSequence;
-//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
-//                new InstantCommand(()-> robot.intake.setMode(IntakeMode.ACTIVE_FORWARD))
-//                autoSmartIntake
-
+        return mainSequence;
     }
 
     private static Pose start() {

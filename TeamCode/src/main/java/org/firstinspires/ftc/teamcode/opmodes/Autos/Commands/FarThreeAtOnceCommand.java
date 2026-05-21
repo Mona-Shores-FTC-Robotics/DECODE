@@ -231,12 +231,7 @@ public class FarThreeAtOnceCommand {
             )
         );
 
-        return
-                mainSequence;
-//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
-//                new InstantCommand(()-> robot.intake.setMode(IntakeMode.ACTIVE_FORWARD))
-//                autoSmartIntake
-
+        return mainSequence;
     }
 
     private static Pose start() {

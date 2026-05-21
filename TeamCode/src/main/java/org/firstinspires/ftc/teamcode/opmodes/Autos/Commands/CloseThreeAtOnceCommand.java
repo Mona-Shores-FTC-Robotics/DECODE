@@ -169,7 +169,6 @@ public class CloseThreeAtOnceCommand {
                                 robot.drive, robot.lighting, null) // Spin up to SHORT RPM for the whole auto
                 ),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 1
@@ -181,7 +180,6 @@ public class CloseThreeAtOnceCommand {
                         .withConstantHeading(270)
                         .build(config.maxPathPower),
                         Groups.sequential(
-                                //new TimedEjectCommand(robot.intake, config.ejectTime),
                                 robot.intake.autoSmartIntakeCmd()
                         )
                 ),
@@ -194,7 +192,6 @@ public class CloseThreeAtOnceCommand {
                         .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 Groups.deadline(
@@ -206,7 +203,6 @@ public class CloseThreeAtOnceCommand {
                             .withConstantHeading(270)
                             .build(config.maxPathPower),
                     Groups.sequential(
-                        //new TimedEjectCommand(robot.intake, config.ejectTime),oh
                         robot.intake.autoSmartIntakeCmd()
                     )
                 ),
@@ -221,7 +217,6 @@ public class CloseThreeAtOnceCommand {
                         .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 3
@@ -233,7 +228,6 @@ public class CloseThreeAtOnceCommand {
                                 .withConstantHeading(270)
                                 .build(config.maxPathPower),
                         Groups.sequential(
-                                //new TimedEjectCommand(robot.intake, config.ejectTime),
                                 robot.intake.autoSmartIntakeCmd()
                         )
                 ),
@@ -262,7 +256,6 @@ public class CloseThreeAtOnceCommand {
                                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                             .build(config.lastPathsMaxPower),
                                         Groups.sequential(
-                                                //new TimedEjectCommand(robot.intake, config.ejectTime),
                                                 robot.intake.autoSmartIntakeCmd()
                                         )
                                 )
@@ -280,10 +273,6 @@ public class CloseThreeAtOnceCommand {
 
         return
                 mainSequence;
-//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
-//                new InstantCommand(()-> robot.intake.setMode(IntakeMode.ACTIVE_FORWARD))
-//                autoSmartIntake // Run the smart intake the whole time
-
     }
 
     private static Pose start() {

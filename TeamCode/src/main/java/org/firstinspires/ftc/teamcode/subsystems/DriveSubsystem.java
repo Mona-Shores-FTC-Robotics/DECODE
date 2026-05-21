@@ -67,9 +67,6 @@ public class DriveSubsystem {
     }
     private VisionCalibrationState visionState = HEADING_UNKNOWN;
 
-    // Active robot indicator
-    public static String ACTIVE_ROBOT = RobotState.getRobotName();
-
     // Global configuration instances
     public static DriveTeleOpConfig teleOpDriveConfig = new DriveTeleOpConfig();
     public static DriveRampConfig rampConfig = new DriveRampConfig();

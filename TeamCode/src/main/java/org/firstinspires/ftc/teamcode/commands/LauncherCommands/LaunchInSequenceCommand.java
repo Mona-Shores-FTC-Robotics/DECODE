@@ -57,6 +57,8 @@ public final class LaunchInSequenceCommand {
         Objects.requireNonNull(launcher, "launcher required");
         Objects.requireNonNull(intake, "intake required");
 
+        // Arrays wrap mutable values so the lambdas below can update them
+        // (Java requires lambda captures to be final, so we mutate state via array slots).
         final Stage[] stage = {Stage.SPINNING_UP};
         final EnumSet<LauncherLane> usedLanes = EnumSet.noneOf(LauncherLane.class);
         final boolean[] spinDownApplied = {false};

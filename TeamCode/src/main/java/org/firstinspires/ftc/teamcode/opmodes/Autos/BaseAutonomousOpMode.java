@@ -274,10 +274,23 @@ public abstract class BaseAutonomousOpMode extends OpMode {
 
     private void updateDriverStationTelemetry(AutoPrestartHelper.InitStatus status) {
         telemetry.clear();
+        telemetryHeader(status);
+        telemetry.addLine();
+        telemetryPoseBlock(status);
+        telemetry.addLine();
+        telemetryStatusBlock(status);
+        telemetryControlHints();
+        telemetry.update();
+    }
+
+    /** Top-of-screen status line: vision relocalize state + motif state. */
+    private void telemetryHeader(AutoPrestartHelper.InitStatus status) {
         telemetry.addData(">> RELOCALIZE", computeVisionStatus(status));
         telemetry.addData(">> MOTIF", computeMotifStatus(status));
-        telemetry.addLine();
+    }
 
+    /** Target / follower / vision pose comparison with delta indicator. */
+    private void telemetryPoseBlock(AutoPrestartHelper.InitStatus status) {
         Pose followerPose = robot.drive.getFollower().getPose();
         Pose visionPose = status != null ? status.startPoseFromVision : null;
         Pose targetPose = getTargetPose();
@@ -302,8 +315,10 @@ public abstract class BaseAutonomousOpMode extends OpMode {
         } else {
             telemetry.addData("Vision", "No tag detected");
         }
+    }
 
-        telemetry.addLine();
+    /** Alliance, relocalize tag, motif info, artifact count, launcher mode. */
+    private void telemetryStatusBlock(AutoPrestartHelper.InitStatus status) {
         telemetry.addData("Alliance", activeAlliance.displayName());
         telemetry.addData("Relocalize Tag", status != null && status.relocalizeTagId > 0
                 ? String.format("%d%s", status.relocalizeTagId, isOppositeGoalTag(status.relocalizeTagId) ? " (opp)" : "")
@@ -323,11 +338,14 @@ public abstract class BaseAutonomousOpMode extends OpMode {
         telemetry.addData("Artifacts", "%d detected", robot.intake.getArtifactCount());
         telemetry.addLine();
         telemetry.addData("Launcher Mode", modeSelector.getDisplayText());
+    }
+
+    /** Driver/operator control hints shown at the bottom of init telemetry. */
+    private void telemetryControlHints() {
         telemetry.addLine();
         telemetry.addLine("Driver D-pad: Alliance (L=BLUE R=RED)");
         telemetry.addLine("Operator D-pad: Mode (L=THRU R=SEQ)");
         telemetry.addLine("Press START when ready");
-        telemetry.update();
     }
 
     private String computeVisionStatus(AutoPrestartHelper.InitStatus status) {

@@ -68,9 +68,6 @@ import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 @Configurable
 public class IntakeSubsystem {
 
-    // Active robot indicator
-    public static String ACTIVE_ROBOT = RobotState.getRobotName();
-
     // Global configuration instances
     public static IntakeLaneSensorConfig laneSensorConfig = new IntakeLaneSensorConfig();
     public static IntakeMotorConfig motorConfig = new IntakeMotorConfig();
@@ -1181,16 +1178,19 @@ public class IntakeSubsystem {
      * auto-resumes once the count drops below the resume threshold. Never
      * finishes on its own — runs until interrupted by the scheduler.
      */
+    /** Stages of the autonomous smart-intake state machine. */
+    private enum AutoSmartIntakeStage { FORWARD, FULL_DEBOUNCE, FULL_REVERSED, RESUME_DEBOUNCE }
+
     public com.pedropathing.ivy.Command autoSmartIntakeCmd() {
-        // 0=FORWARD, 1=FULL_DEBOUNCE, 2=FULL_REVERSED, 3=RESUME_DEBOUNCE.
-        final int[] state = {0};
+        // Array wraps the enum so the lambda below can update it (lambdas need final captures).
+        final AutoSmartIntakeStage[] stage = {AutoSmartIntakeStage.FORWARD};
         final com.qualcomm.robotcore.util.ElapsedTime timer = new com.qualcomm.robotcore.util.ElapsedTime();
         return new com.pedropathing.ivy.CommandBuilder()
                 .setStart(() -> {
                     // Stale "loaded" detections from before the prior launch can make the state
                     // machine flip straight to FULL_REVERSED on tick 1 — clear them.
                     clearLaneColors();
-                    state[0] = 0;
+                    stage[0] = AutoSmartIntakeStage.FORWARD;
                     timer.reset();
                     setMode(IntakeMode.ACTIVE_FORWARD);
                 })
@@ -1198,32 +1198,32 @@ public class IntakeSubsystem {
                     int artifactCount = getArtifactCount();
                     boolean isFull = artifactCount >= autoSmartIntakeConfig.fullCountThreshold || isFull();
                     boolean belowResume = artifactCount <= autoSmartIntakeConfig.resumeCountThreshold;
-                    switch (state[0]) {
-                        case 0:  // FORWARD
+                    switch (stage[0]) {
+                        case FORWARD:
                             if (isFull) {
-                                state[0] = 1;
+                                stage[0] = AutoSmartIntakeStage.FULL_DEBOUNCE;
                                 timer.reset();
                             }
                             break;
-                        case 1:  // FULL_DEBOUNCE
-                            if (!isFull) { state[0] = 0; break; }
+                        case FULL_DEBOUNCE:
+                            if (!isFull) { stage[0] = AutoSmartIntakeStage.FORWARD; break; }
                             if (timer.milliseconds() >= autoSmartIntakeConfig.fullDebounceMs) {
                                 setMode(IntakeMode.PASSIVE_REVERSE);
-                                state[0] = 2;
+                                stage[0] = AutoSmartIntakeStage.FULL_REVERSED;
                                 timer.reset();
                             }
                             break;
-                        case 2:  // FULL_REVERSED
+                        case FULL_REVERSED:
                             if (belowResume) {
-                                state[0] = 3;
+                                stage[0] = AutoSmartIntakeStage.RESUME_DEBOUNCE;
                                 timer.reset();
                             }
                             break;
-                        case 3:  // RESUME_DEBOUNCE
-                            if (!belowResume) { state[0] = 2; break; }
+                        case RESUME_DEBOUNCE:
+                            if (!belowResume) { stage[0] = AutoSmartIntakeStage.FULL_REVERSED; break; }
                             if (timer.milliseconds() >= autoSmartIntakeConfig.resumeDebounceMs) {
                                 setMode(IntakeMode.ACTIVE_FORWARD);
-                                state[0] = 0;
+                                stage[0] = AutoSmartIntakeStage.FORWARD;
                                 timer.reset();
                             }
                             break;
@@ -1251,35 +1251,38 @@ public class IntakeSubsystem {
      * auto-reverse. Optional haptic rumble when auto-reversing. Never finishes
      * on its own — runs while the trigger button is held.
      */
+    /** Stages of the teleop smart-intake state machine (driver holds the button). */
+    private enum SmartIntakeStage { INTAKING, DEBOUNCING, AUTO_REVERSED }
+
     public com.pedropathing.ivy.Command smartIntakeCmd(com.qualcomm.robotcore.hardware.Gamepad gamepad) {
-        // 0=INTAKING, 1=DEBOUNCING, 2=AUTO_REVERSED. Per-command-instance state.
-        final int[] state = {0};
+        // Per-command-instance state. Array wraps the enum so the lambda can update it.
+        final SmartIntakeStage[] stage = {SmartIntakeStage.INTAKING};
         final com.qualcomm.robotcore.util.ElapsedTime debounceTimer = new com.qualcomm.robotcore.util.ElapsedTime();
         return new com.pedropathing.ivy.CommandBuilder()
-                .setStart(() -> state[0] = isFull() ? 2 : 0)
+                .setStart(() -> stage[0] = isFull() ? SmartIntakeStage.AUTO_REVERSED : SmartIntakeStage.INTAKING)
                 .setExecute(() -> {
                     boolean full = isFull();
-                    switch (state[0]) {
-                        case 0:  // INTAKING
+                    switch (stage[0]) {
+                        case INTAKING:
                             if (full) {
-                                state[0] = 1;
+                                stage[0] = SmartIntakeStage.DEBOUNCING;
                                 debounceTimer.reset();
                             } else {
                                 setMode(IntakeMode.ACTIVE_FORWARD);
                             }
                             break;
-                        case 1:  // DEBOUNCING
-                            if (!full) { state[0] = 0; break; }
+                        case DEBOUNCING:
+                            if (!full) { stage[0] = SmartIntakeStage.INTAKING; break; }
                             if (debounceTimer.milliseconds() >= smartIntakeConfig.fullDebounceMs) {
-                                state[0] = 2;
+                                stage[0] = SmartIntakeStage.AUTO_REVERSED;
                                 setMode(IntakeMode.PASSIVE_REVERSE);
                                 if (smartIntakeConfig.enableHapticFeedback && gamepad != null) {
                                     gamepad.rumble(smartIntakeConfig.hapticRumbleMs);
                                 }
                             }
                             break;
-                        case 2:  // AUTO_REVERSED
-                            if (!full) state[0] = 0;
+                        case AUTO_REVERSED:
+                            if (!full) stage[0] = SmartIntakeStage.INTAKING;
                             break;
                     }
                 })

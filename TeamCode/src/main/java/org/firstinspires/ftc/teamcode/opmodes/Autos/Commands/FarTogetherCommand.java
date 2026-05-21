@@ -134,7 +134,6 @@ public class FarTogetherCommand {
                                 robot.drive, robot.lighting, null) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
 
-              //  new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Alliance Wall Artifacts
@@ -156,7 +155,6 @@ public class FarTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-               // new AimAtGoalCommand(robot.drive, robot.vision),
                 Commands.waitMs(config.delayForGateToOpen * 1000.0),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
@@ -179,7 +177,6 @@ public class FarTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Released Artifacts Try 2
@@ -206,7 +203,6 @@ public class FarTogetherCommand {
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.slowPath),
 
-//                               new AimAtGoalCommand(robot.drive, robot.vision),
                                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                                 Groups.deadline(
