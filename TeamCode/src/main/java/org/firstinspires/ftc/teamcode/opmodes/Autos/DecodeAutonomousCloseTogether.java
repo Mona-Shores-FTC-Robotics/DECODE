@@ -6,6 +6,9 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.CloseTogetherCommand;
 
+/**
+ * Autonomous: drive from close start, collect samples and score together at LAUNCH_CLOSE.
+ */
 @Autonomous(name = "Close Together", group = "Auto")
 public class DecodeAutonomousCloseTogether extends BaseAutonomousOpMode {
 

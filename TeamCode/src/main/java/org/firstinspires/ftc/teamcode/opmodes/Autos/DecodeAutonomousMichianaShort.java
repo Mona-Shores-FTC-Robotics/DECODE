@@ -9,6 +9,12 @@ import org.firstinspires.ftc.teamcode.util.AutoField;
 import org.firstinspires.ftc.teamcode.util.PpPathLoader;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
+/**
+ * Autonomous variant for the Michiana regional event. Unlike the other autos,
+ * this one loads its path from a {@code .pp} file (either from the robot's
+ * SD card for hot-reload, or from the bundled APK assets as a fallback) so the
+ * routine can be re-tuned without rebuilding the code.
+ */
 @Autonomous(name = "Michiana Short", group = "Auto")
 public class DecodeAutonomousMichianaShort extends BaseAutonomousOpMode {
 

@@ -6,6 +6,9 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 import org.firstinspires.ftc.teamcode.opmodes.Autos.Commands.CloseThreeAtOnceCommand;
 
+/**
+ * Autonomous: drive from close start, collect and score three samples at LAUNCH_CLOSE.
+ */
 @Autonomous(name = "Close Three At Once", group = "Auto")
 public class DecodeAutonomousCloseThreeAtOnce extends BaseAutonomousOpMode {
 
