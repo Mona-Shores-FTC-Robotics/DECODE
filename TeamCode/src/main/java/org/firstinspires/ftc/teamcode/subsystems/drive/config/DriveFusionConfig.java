@@ -1,14 +1,16 @@
 package org.firstinspires.ftc.teamcode.subsystems.drive.config;
 
-import com.acmerobotics.dashboard.config.Config;
+import com.bylazar.configurables.annotations.Configurable;
 
 /**
  * Tuning for the pose-fusion filter that blends Pinpoint odometry with
  * Limelight AprilTag measurements. The filter lives in
  * {@code pedroPathing/FusionLocalizer.java}; these values control how much it
  * trusts each input source.
+ *
+ * <p>Single shared global (static fields) — same for both robots.
  */
-@Config
+@Configurable
 public class DriveFusionConfig {
     /**
      * Minimum target area % (ta) to accept a Limelight measurement.

@@ -1,8 +1,8 @@
 package org.firstinspires.ftc.teamcode.telemetry;
 
-import com.acmerobotics.dashboard.config.Config;
+import com.bylazar.configurables.annotations.Configurable;
 
-@Config
+@Configurable
 public final class TelemetrySettings {
     private TelemetrySettings() {}
 
@@ -15,7 +15,7 @@ public final class TelemetrySettings {
         VERBOSE
     }
 
-    /** Change via FTC Dashboard Config tab — no recompile needed. */
+    /** Change via Bylazar Panels — no recompile needed. */
     public static TelemetryLevel LEVEL = TelemetryLevel.PRACTICE;
 
     public static boolean shouldInitializeDashboard() {

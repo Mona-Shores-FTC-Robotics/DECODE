@@ -40,7 +40,7 @@ Annotate a class `@Pinned` (from `dev.frozenmilk.sinister.Pinned`) to prevent Sl
 **Caveats:**
 - "Code that compiles ≠ code that works" under hot reload — changes to `@Pinned` classes, library code, or pinned-class instances may need a full install to take effect.
 - Do NOT rely on hot reload on competition day. Bootstrap a fresh `installDebug` from the `ivy-migration-pre-sloth` tag (or a known-good commit) before matches.
-- The Sloth-forked FTC Dashboard and Bylazar Panels keep the same package paths as the originals (`com.acmerobotics.dashboard.*`, `com.bylazar.*`), so existing `@Config`, `@Configurable`, `FtcDashboard`, `PanelsTelemetry` imports work unchanged.
+- The Sloth-forked FTC Dashboard and Bylazar Panels keep the same package paths as the originals (`com.acmerobotics.dashboard.*`, `com.bylazar.*`), so existing `FtcDashboard`, `PanelsTelemetry`, and `@Configurable` imports work unchanged. (Tuning surfaces all go through `@Configurable` / Panels; the FTC Dashboard side is just the packet conduit AdvantageScope Lite reads from.)
 
 **Run linting:**
 ```bash
@@ -189,7 +189,7 @@ The robot uses Limelight's MegaTag2 algorithm for improved AprilTag-based locali
 
 ### Telemetry Levels
 
-DECODE uses three telemetry levels (`TelemetrySettings.TelemetryLevel`). Live-tunable via FTC Dashboard / Panels:
+DECODE uses three telemetry levels (`TelemetrySettings.TelemetryLevel`). Live-tunable via Bylazar Panels:
 
 ```java
 public static TelemetryLevel LEVEL = TelemetryLevel.PRACTICE;  // default
@@ -201,31 +201,31 @@ public static TelemetryLevel LEVEL = TelemetryLevel.PRACTICE;  // default
 | **PRACTICE** (default) | Practice sessions and parameter tuning |
 | **VERBOSE** | Pit testing and detailed diagnostics |
 
-`TelemetrySettings.isVerbose()` gates the heaviest debug output. Toggle the level in Dashboard, then your changes take effect immediately — no recompile needed.
+`TelemetrySettings.isVerbose()` gates the heaviest debug output. Toggle the level in Panels, then your changes take effect immediately — no recompile needed.
 
 ### Live Telemetry (During Matches)
 
-**FTC Dashboard:**
-- Web dashboard at `http://192.168.49.1:8080/dash` when connected to robot WiFi
-- All `@Configurable` classes expose tunable parameters on Config tab
-- Live graphs and telemetry
-- Telemetry packets enable AdvantageScope Lite connection
+**Bylazar Panels — THE tuning UI:**
+- Web UI at `http://192.168.49.1:8080/` when connected to robot WiFi
+- All `@Configurable` classes expose tunable parameters
+- Live graphs and field overlay
+- This is where every per-robot config and global tunable lives
+
+**FTC Dashboard — packet conduit only (no tuning here anymore):**
+- Web UI at `http://192.168.49.1:8080/dash`
+- The codebase no longer uses `@Config` for tuning surfaces; everything is `@Configurable`
+- Still useful as the transport layer that AdvantageScope Lite consumes
 
 **AdvantageScope Lite:**
-- Connects to robot via FTC Dashboard for live visualization
-- Streams telemetry data through FTC Dashboard packets (not NetworkTables)
+- Connects to the robot via the FTC Dashboard packet stream
 - View live 2D field plots and subsystem metrics
-
-**FullPanels (FTControl Panels):**
-- Team-specific live metrics panel
-- Displays detailed subsystem data during operation
 
 **Driver Station:**
 - Standard FTC telemetry display on driver station phone/tablet
 
 ### Telemetry Logging
 
-OpModes publish payload classes from `telemetry/data/` (`DriveTelemetryData`, `LauncherTelemetryData`, etc.) through `TelemetryService`, which routes them to the Driver Station, FTC Dashboard, and Bylazar Panels via the formatters in `telemetry/formatters/`.
+OpModes publish payload classes from `telemetry/data/` (`DriveTelemetryData`, `LauncherTelemetryData`, etc.) through `TelemetryService`, which routes them to the Driver Station and to FTC Dashboard packets (which Panels and AdvantageScope Lite both consume) via the formatters in `telemetry/formatters/`.
 
 ## Coding Conventions
 
@@ -290,7 +290,7 @@ leftFrontMotor.setPower(power);
 ```
 
 **Configurable Parameters:**
-Make tunable parameters configurable via FTC Dashboard using `@Configurable` annotation:
+Make tunable parameters configurable via Bylazar Panels using the `@Configurable` annotation:
 ```java
 @Configurable
 public class MySubsystem {
@@ -316,7 +316,7 @@ public class MySubsystem {
 ```
 - Always group related parameters in nested `@Configurable` static classes
 - Use descriptive JavaDoc comments for each parameter
-- Parameters appear in FTC Dashboard Config tab for live tuning
+- Parameters appear in Bylazar Panels for live tuning
 - See `DriveSubsystem.AimAssistConfig` or `CaptureAndAimCommand.CaptureAimConfig` for examples
 
 **Code Style:**
@@ -435,7 +435,7 @@ No standing unit tests yet. Add new suites under `TeamCode/src/test/java` using 
 - Ensure FTC Dashboard port 8080 is not blocked
 
 **Slow Loop Times:**
-- Switch `TelemetrySettings.LEVEL` to `MATCH` via FTC Dashboard (target <25ms)
+- Switch `TelemetrySettings.LEVEL` to `MATCH` via Bylazar Panels (target <25ms)
 - I2C sensors automatically throttled: Color sensors (200ms), Limelight (50ms)
 - Review loop timing diagnostics: Hold RT on gamepad1 in TeleOp
 - See detailed analysis in `docs/loop-timing-analysis.md`
