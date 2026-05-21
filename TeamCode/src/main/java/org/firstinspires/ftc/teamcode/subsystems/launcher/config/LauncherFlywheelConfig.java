@@ -36,8 +36,17 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_left";
         public double idleRpm = 1500;
         public boolean reversed;
+
+        /** Minimum motor power to overcome friction and start spinning (0.0–1.0).
+         *  Increase if the flywheel won't spin up from rest; decrease if it creeps when it shouldn't. */
         public double kS;
+
+        /** Extra power added per RPM of target speed (feedforward velocity gain).
+         *  This is the main tuning knob — higher values spin up faster but may overshoot. */
         public double kV;
+
+        /** How aggressively to correct RPM errors (proportional feedback gain).
+         *  Set to 0 for pure feedforward. Increase slowly if RPM drifts under load. */
         public double kP;
     }
 
@@ -46,18 +55,36 @@ public class LauncherFlywheelConfig {
         public String motorName = "launcher_center";
         public double idleRpm = 1500;
         public boolean reversed;
+
+        /** Minimum motor power to overcome friction and start spinning (0.0–1.0).
+         *  Increase if the flywheel won't spin up from rest; decrease if it creeps when it shouldn't. */
         public double kS;
+
+        /** Extra power added per RPM of target speed (feedforward velocity gain).
+         *  This is the main tuning knob — higher values spin up faster but may overshoot. */
         public double kV;
+
+        /** How aggressively to correct RPM errors (proportional feedback gain).
+         *  Set to 0 for pure feedforward. Increase slowly if RPM drifts under load. */
         public double kP;
     }
 
-    public static class RightFlywheelConfig { //actually left
+    public static class RightFlywheelConfig {
         // SHARED - hardware name same for both robots
         public String motorName = "launcher_right";
         public double idleRpm = 1500;
         public boolean reversed;
+
+        /** Minimum motor power to overcome friction and start spinning (0.0–1.0).
+         *  Increase if the flywheel won't spin up from rest; decrease if it creeps when it shouldn't. */
         public double kS;
+
+        /** Extra power added per RPM of target speed (feedforward velocity gain).
+         *  This is the main tuning knob — higher values spin up faster but may overshoot. */
         public double kV;
+
+        /** How aggressively to correct RPM errors (proportional feedback gain).
+         *  Set to 0 for pure feedforward. Increase slowly if RPM drifts under load. */
         public double kP;
     }
     // Robot-specific instances

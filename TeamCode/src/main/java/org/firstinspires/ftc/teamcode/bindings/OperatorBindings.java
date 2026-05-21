@@ -204,6 +204,25 @@ public class OperatorBindings {
         }
     }
 
+    /**
+     * Explains the launcher modes and motif concept for quick reference.
+     * Show this alongside controlsSummary() to give operators the full picture.
+     */
+    public static String[] conceptsSummary() {
+        return new String[]{
+                "--- LAUNCHER MODES ---",
+                "THROUGHPUT: fire all lanes fast, no color order (early match)",
+                "DECODE: fire in motif color order for bonus points (endgame)",
+                "Auto-switches to DECODE at ~50 s remaining; Back button toggles manually",
+                "",
+                "--- MOTIF (endgame pattern) ---",
+                "Vision reads AprilTags 21-23 to find today's color pattern (GPP / PGP / PPG)",
+                "D-pad Right: detect motif from vision",
+                "Left stick: set motif tail (0=none, 1=one artifact in ramp, 2=two in ramp)",
+                "Tail corrects for artifacts already sitting in the scoring ramp"
+        };
+    }
+
     /** Human-readable control summary for driver station telemetry. */
     public static String[] controlsSummary() {
         return new String[]{

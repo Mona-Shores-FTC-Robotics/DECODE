@@ -1,21 +1,21 @@
 package org.firstinspires.ftc.teamcode.util;
 
 /**
- * Launcher operating mode that determines firing behavior.
+ * Controls how the launcher decides which lanes to fire and in what order.
  *
- * THROUGHPUT mode: Fire all lanes rapidly for maximum scoring rate
- * DECODE mode: Fire in detected obelisk pattern sequence with spacing for precise scoring
+ * Switch between modes with the operator Back button (auto-switches at ~50 s remaining).
  */
 public enum LauncherMode {
     /**
-     * Throughput mode - rapid firing of all lanes without pattern consideration.
-     * Used during early match when speed matters more than pattern accuracy.
+     * Fire all three lanes as fast as possible — no pattern required.
+     * Best for early match when filling obelisks quickly matters more than color order.
      */
     THROUGHPUT,
 
     /**
-     * Decode mode - fires in obelisk pattern sequence with motif tail offset.
-     * Used during endgame (last 30 seconds) for precise obelisk scoring.
+     * Fire lanes in the motif color sequence (detected by vision from AprilTags 21–23).
+     * Each artifact lands in the correct left/center/right obelisk to score the bonus.
+     * Switch to this automatically at ~50 seconds remaining, or manually with Back button.
      */
     DECODE
 }
