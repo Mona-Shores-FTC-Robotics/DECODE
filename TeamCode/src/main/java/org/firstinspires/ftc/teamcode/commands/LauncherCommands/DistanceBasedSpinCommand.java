@@ -16,6 +16,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -183,9 +184,7 @@ public final class DistanceBasedSpinCommand {
             diagnostics.lastSource = "none";
             return 0.0;
         }
-        double dx = goalPose.getX() - odometryPose.getX();
-        double dy = goalPose.getY() - odometryPose.getY();
-        return Math.hypot(dx, dy);
+        return FieldConstants.getDistanceTo(odometryPose, goalPose);
     }
 
     private static void setRpmsForDistance(LauncherSubsystem launcher, double distanceIn) {

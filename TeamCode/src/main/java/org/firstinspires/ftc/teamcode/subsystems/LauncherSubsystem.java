@@ -65,9 +65,7 @@ public class LauncherSubsystem {
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
 
-    // Per-robot configs — pulled from RobotProfile so Dashboard/Panels can tune the active robot's values.
-    // The "Config" suffix avoids collision with local variables in the Flywheel/Feeder/Hood inner classes
-    // (e.g. the common `for (Hood hood : hoods.values())` loop pattern).
+    // Per-robot configs — pulled from RobotProfile so Panels can tune the active robot's values.
     public static LauncherFlywheelConfig flywheelConfig = RobotProfile.forCurrent().flywheel;
     public static LauncherFeederConfig feederConfig = RobotProfile.forCurrent().feeder;
     public static LauncherHoodConfig hoodConfig = RobotProfile.forCurrent().hood;

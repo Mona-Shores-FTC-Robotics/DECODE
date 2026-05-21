@@ -129,7 +129,7 @@ public final class RobotProfile {
                 hoodConfig(),
                 flywheelConfig(),
                 timingConfig(),
-                is19429 ? pinpointConstants19429() : pinpointConstants20245(),
+                pinpointConstants(),
                 is19429 ? followerConstants19429() : followerConstants20245(),
                 is19429 ? driveConstants19429() : driveConstants20245(),
                 aimAssistConfig(),
@@ -279,26 +279,18 @@ public final class RobotProfile {
     }
 
     private static MecanumConstants driveConstants19429() {
-        return new MecanumConstants()
-                .maxPower(1.0)
-                .xVelocity(59.1365506697527)
-                .yVelocity(53.16551100362942)
-                .rightFrontMotorName(Constants.HardwareNames.RF)
-                .rightRearMotorName(Constants.HardwareNames.RB)
-                .leftRearMotorName(Constants.HardwareNames.LB)
-                .leftFrontMotorName(Constants.HardwareNames.LF)
-                .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
-                .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
-                .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-                .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
-                .useBrakeModeInTeleOp(true);
+        return driveConstants(59.1365506697527, 53.16551100362942);
     }
 
     private static MecanumConstants driveConstants20245() {
+        return driveConstants(58.5, 50.4); // tuned 12/4
+    }
+
+    private static MecanumConstants driveConstants(double xVelocity, double yVelocity) {
         return new MecanumConstants()
                 .maxPower(1.0)
-                .xVelocity(58.5) // tuned 12/4
-                .yVelocity(50.4) // tuned 12/4
+                .xVelocity(xVelocity)
+                .yVelocity(yVelocity)
                 .rightFrontMotorName(Constants.HardwareNames.RF)
                 .rightRearMotorName(Constants.HardwareNames.RB)
                 .leftRearMotorName(Constants.HardwareNames.LB)
@@ -310,18 +302,7 @@ public final class RobotProfile {
                 .useBrakeModeInTeleOp(true);
     }
 
-    private static PinpointConstants pinpointConstants19429() {
-        return new PinpointConstants()
-                .forwardPodY(6.25)
-                .strafePodX(0)
-                .distanceUnit(DistanceUnit.INCH)
-                .hardwareMapName(Constants.HardwareNames.PINPOINT)
-                .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
-                .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
-                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
-    }
-
-    private static PinpointConstants pinpointConstants20245() {
+    private static PinpointConstants pinpointConstants() {
         return new PinpointConstants()
                 .forwardPodY(6.25)
                 .strafePodX(0)
@@ -333,23 +314,16 @@ public final class RobotProfile {
     }
 
     private static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig19429() {
-        IntakeLaneSensorConfig.LanePresenceConfig config = new IntakeLaneSensorConfig.LanePresenceConfig();
-        config.useDistance = false;
-        config.useSaturation = false;
-        config.saturationThreshold = 0.25;
-        config.useValue = true;
-        config.useHue = false;
-        config.hueThreshold = 130.0;
-        config.leftValueThreshold = 0.09;
-        config.centerValueThreshold = 0.09;
-        config.rightValueThreshold = 0.09;
-        config.leftThresholdCm = 6.5;
-        config.centerThresholdCm = 7.0;
-        config.rightThresholdCm = 5.0;
-        return config;
+        return lanePresenceConfig(0.09, 0.09, 0.09, 6.5, 7.0, 5.0);
     }
 
     private static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig20245() {
+        return lanePresenceConfig(0.04, 0.02, 0.04, 4.0, 4.0, 4.5);
+    }
+
+    private static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig(
+            double leftValue, double centerValue, double rightValue,
+            double leftCm, double centerCm, double rightCm) {
         IntakeLaneSensorConfig.LanePresenceConfig config = new IntakeLaneSensorConfig.LanePresenceConfig();
         config.useDistance = false;
         config.useSaturation = false;
@@ -357,12 +331,12 @@ public final class RobotProfile {
         config.useValue = true;
         config.useHue = false;
         config.hueThreshold = 130.0;
-        config.leftValueThreshold = 0.04;
-        config.centerValueThreshold = 0.02;
-        config.rightValueThreshold = 0.04;
-        config.leftThresholdCm = 4.0;
-        config.centerThresholdCm = 4.0;
-        config.rightThresholdCm = 4.5;
+        config.leftValueThreshold = leftValue;
+        config.centerValueThreshold = centerValue;
+        config.rightValueThreshold = rightValue;
+        config.leftThresholdCm = leftCm;
+        config.centerThresholdCm = centerCm;
+        config.rightThresholdCm = rightCm;
         return config;
     }
 
