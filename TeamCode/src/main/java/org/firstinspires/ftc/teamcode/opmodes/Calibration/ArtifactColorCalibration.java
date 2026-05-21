@@ -354,9 +354,6 @@ public class ArtifactColorCalibration extends LinearOpMode {
         packet.put("DISTANCE_BASED/purpleSatTarget", purpleSatAvg);
         packet.put("DISTANCE_BASED/purpleValTarget", purpleValAvg);
 
-        // NOTE: RANGE_BASED parameters removed - legacy mode that's less robust than DECISION_BOUNDARY
-        // If you need range-based classification for some reason, use DISTANCE_BASED mode instead
-
         // Common quality thresholds
         float minSat = Math.min(
                 min(greenSamples, s -> s.saturation),

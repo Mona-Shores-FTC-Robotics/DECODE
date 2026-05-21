@@ -51,7 +51,9 @@ public class DriverBindings {
         DoubleSupplier fieldY = () -> applyDeadband(-gp().left_stick_y, TRANSLATION_DEADBAND);
         DoubleSupplier rotationCcw = () -> applyDeadband(gp().right_stick_x, ROTATION_DEADBAND);
         BooleanSupplier slowHold = () -> gp().right_bumper;
-        BooleanSupplier rampMode = () -> false;  // unused — kept for future
+        // Ramp mode in driveTeleOp smooths abrupt stick changes. No button is bound
+        // to enable it today — flip this to `gp().<button>` if a driver wants it.
+        BooleanSupplier rampMode = () -> false;
 
         // Default drive (priority 0, SUSPEND on interrupt) runs continuously.
         robot.drive.defaultDrive(fieldX, fieldY, rotationCcw, slowHold, rampMode).schedule();

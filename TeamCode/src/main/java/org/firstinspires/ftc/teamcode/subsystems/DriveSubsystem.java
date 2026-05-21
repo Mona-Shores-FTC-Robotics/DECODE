@@ -85,18 +85,6 @@ public class DriveSubsystem {
     public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig =
             org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().rightTriggerFixedAngle;
 
-    /** @deprecated Read {@link #aimAssistConfig} directly. Kept for source compatibility. */
-    @Deprecated
-    public static DriveAimAssistConfig aimAssistConfig() { return aimAssistConfig; }
-
-    /** @deprecated Read {@link #fixedAngleAimConfig} directly. Kept for source compatibility. */
-    @Deprecated
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig() { return fixedAngleAimConfig; }
-
-    /** @deprecated Read {@link #rightTriggerFixedAngleConfig} directly. Kept for source compatibility. */
-    @Deprecated
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig() { return rightTriggerFixedAngleConfig; }
-
     /**
      * Gets the robot-specific InitialPoseConfig based on RobotState.getRobotName().
      * @return initialPoseConfig19429 or initialPoseConfig20245
