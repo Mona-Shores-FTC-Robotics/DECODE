@@ -17,19 +17,19 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * JUnit 4 tests for {@link IvyBindings}. Uses a hand-rolled CountingCommand
+ * JUnit 4 tests for {@link GamepadBindings}. Uses a hand-rolled CountingCommand
  * that overrides schedule/cancel/isScheduled so the real Ivy Scheduler is
  * never touched (it has process-global static state we don't want in tests).
  */
-public class IvyBindingsTest {
+public class GamepadBindingsTest {
 
-    private IvyBindings bindings;
+    private GamepadBindings bindings;
     private boolean triggerState;
     private CountingCommand cmd;
 
     @Before
     public void setUp() {
-        bindings = new IvyBindings();
+        bindings = new GamepadBindings();
         triggerState = false;
         cmd = new CountingCommand();
     }

@@ -19,11 +19,26 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.List;
 
 /**
- * Limelight-backed vision subsystem that mirrors the public API of the legacy VisionPortal-based
- * implementation so existing OpModes can switch to Limelight without broader structural changes.
+ * Talks to the Limelight 3A camera and turns AprilTag detections into a
+ * field-frame robot pose.
+ *
+ * <p>What it does:
+ * <ul>
+ *   <li><b>Pose from tag</b> — when the Limelight sees an AprilTag and its
+ *       MegaTag2 pipeline produces a pose, this class exposes it via
+ *       {@link #getRobotPoseFromTagPedro()} / {@link #getRobotPoseFromTagFtc()}.</li>
+ *   <li><b>Heading sync</b> — every loop, {@code DriveSubsystem} feeds the
+ *       robot's heading to the Limelight so MegaTag2 can disambiguate poses.</li>
+ *   <li><b>Update gating</b> — {@link #shouldUpdateOdometry()} returns true at
+ *       most once per fresh tag lock so callers don't repeatedly relocalize
+ *       on the same measurement.</li>
+ * </ul>
+ *
+ * <p>Field geometry (tag IDs, goal locations) lives in {@code util/FieldConstants.java}.
  */
 public class VisionSubsystemLimelight {
 
+    /** Stop trusting a tag snapshot for relocalization if it's older than this. */
     private static final long ODOMETRY_RESET_TIMEOUT_MS = 3000L;
 
 
@@ -48,7 +63,7 @@ public class VisionSubsystemLimelight {
 
     private double lastPeriodicMs = 0.0;
 
-    // Throttle vision polling to 20Hz (50ms) instead of every loop
+    /** Throttle vision polling to 20Hz (50ms) so it doesn't dominate the loop. */
     private static final long VISION_POLL_INTERVAL_MS = 50L;
     private long lastVisionPollTimeMs = 0L;
 
@@ -64,7 +79,7 @@ public class VisionSubsystemLimelight {
     // Diagnostic mode: When true, external code controls heading updates (for testing different offsets)
     private boolean diagnosticMode = false;
 
-    // Heading offset between Pedro heading (follower) and FTC heading expected by Limelight
+    /** Heading offset between Pedro (follower) and FTC (Limelight) frames. Pedro 0° is FTC 90°. */
     private static final double PEDRO_TO_FTC_HEADING_OFFSET_DEG = 90.0;
 
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
@@ -766,6 +781,7 @@ public class VisionSubsystemLimelight {
         try {
             return (double) fiducial.getClass().getMethod("getTargetArea").invoke(fiducial);
         } catch (Throwable ignored) {
+            // getTargetArea() isn't available on every Limelight SDK version — reflective access on purpose.
             return Double.NaN;
         }
     }
@@ -774,6 +790,7 @@ public class VisionSubsystemLimelight {
         try {
             return (double) fiducial.getClass().getMethod("getPoseAmbiguity").invoke(fiducial);
         } catch (Throwable ignored) {
+            // getPoseAmbiguity() isn't available on every Limelight SDK version — reflective access on purpose.
             return Double.NaN;
         }
     }

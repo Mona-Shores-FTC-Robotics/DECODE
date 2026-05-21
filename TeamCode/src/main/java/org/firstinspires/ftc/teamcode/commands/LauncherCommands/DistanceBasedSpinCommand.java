@@ -27,48 +27,12 @@ import java.util.Objects;
 @Configurable
 public final class DistanceBasedSpinCommand {
 
+    /** Exponential smoothing weight for the live distance reading (higher = trust new sample more, less smoothing). */
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;
+    /** Lane is "ready" once its actual RPM reaches this fraction of the target RPM. */
     private static final double RPM_READY_THRESHOLD_PERCENT = 0.90;
+    /** Wait this long after losing "ready" before signaling not-ready (debounces brief dips). */
     private static final double READY_LOSS_DEBOUNCE_MS = 250.0;
-
-    public static CommandRangeConfig rangeConfig_Robot19429 = createRangeConfig19429();
-    public static CommandRangeConfig rangeConfig_Robot20245 = createRangeConfig20245();
-
-    private static CommandRangeConfig createRangeConfig19429() {
-        CommandRangeConfig config = new CommandRangeConfig();
-        config.shortLeftRpm = 1900;  config.shortCenterRpm = 1900;  config.shortRightRpm = 1900;
-        config.midLeftRpm = 2500;    config.midCenterRpm = 2500;    config.midRightRpm = 2500;
-        config.longLeftRpm = 2900;   config.longCenterRpm = 2900;   config.longRightRpm = 2900;
-        config.longMinLeftRpm = 2725; config.longMinCenterRpm = 2725; config.longMinRightRpm = 2725;
-        config.longMaxLeftRpm = 2900; config.longMaxCenterRpm = 2900; config.longMaxRightRpm = 2900;
-        config.shortAutoLeftRpm = 2000; config.shortAutoCenterRpm = 2000; config.shortAutoRightRpm = 2000;
-        config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
-        config.shortHoodPosition = 1;
-        config.midHoodPosition = 0.05;
-        config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = .55;
-        config.farAutoHoodPosition = 0.0;
-        config.timeoutSeconds = 3.5;
-        return config;
-    }
-
-    private static CommandRangeConfig createRangeConfig20245() {
-        CommandRangeConfig config = new CommandRangeConfig();
-        config.shortLeftRpm = 1810;  config.shortCenterRpm = 1810;  config.shortRightRpm = 1810;
-        config.midLeftRpm = 2400;    config.midCenterRpm = 2400;    config.midRightRpm = 2400;
-        config.longLeftRpm = 2900;   config.longCenterRpm = 2900;   config.longRightRpm = 2900;
-        config.longMinLeftRpm = 2725; config.longMinCenterRpm = 2725; config.longMinRightRpm = 2725;
-        config.longMaxLeftRpm = 2800; config.longMaxCenterRpm = 2800; config.longMaxRightRpm = 2800;
-        config.shortAutoLeftRpm = 1870; config.shortAutoCenterRpm = 1870; config.shortAutoRightRpm = 1870;
-        config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
-        config.shortHoodPosition = .95;
-        config.midHoodPosition = 0.0;
-        config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = .55;
-        config.farAutoHoodPosition = 0.0;
-        config.timeoutSeconds = 3.5;
-        return config;
-    }
 
     public static class DiagnosticData {
         public double lastCalculatedDistanceIn = 0.0;

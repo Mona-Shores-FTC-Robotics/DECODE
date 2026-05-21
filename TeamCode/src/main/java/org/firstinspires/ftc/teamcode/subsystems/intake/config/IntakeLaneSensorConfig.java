@@ -33,8 +33,9 @@ import com.bylazar.configurables.annotations.Configurable;
  *
  * COLOR CLASSIFICATION is already working. Don't touch it.
  *
- * PRESENCE DETECTION needs tuning. Settings are PER-ROBOT in
- * lanePresenceConfig19429 or lanePresenceConfig20245.
+ * PRESENCE DETECTION needs tuning. Per-robot settings live in
+ * {@code util/RobotProfile.java} — look for {@code lanePresenceConfig19429()}
+ * and {@code lanePresenceConfig20245()}. Tune your robot's method there.
  *
  * You have FOUR detection methods (enable any combination):
  *
@@ -125,10 +126,6 @@ public class IntakeLaneSensorConfig {
     public static Gating gating = new Gating();
     public static ColorClassifier colorClassifier = new ColorClassifier();
 
-    // Robot-specific presence detection configs
-    public static LanePresenceConfig lanePresenceConfig19429 = createLanePresenceConfig19429();
-    public static LanePresenceConfig lanePresenceConfig20245 = createLanePresenceConfig20245();
-
     // =========================================================================
     // SENSOR POLLING
     // =========================================================================
@@ -155,15 +152,11 @@ public class IntakeLaneSensorConfig {
     // =========================================================================
 
     /**
-     * Per-robot presence detection settings.
-     *
-     * IMPORTANT: These are just field declarations with safe defaults.
-     * Actual values are set in the robot-specific factory methods below:
-     *   - createLanePresenceConfig19429()
-     *   - createLanePresenceConfig20245()
-     *
-     * To change settings, edit YOUR ROBOT'S factory method, not these defaults.
-     * RobotProfile.forCurrent().lanePresence returns the active robot's config.
+     * Per-robot presence detection settings. The DATA SHAPE lives here;
+     * actual values for each robot live in {@code util/RobotProfile.java}
+     * under {@code lanePresenceConfig19429()} / {@code lanePresenceConfig20245()}.
+     * To change settings, edit your robot's factory method there.
+     * {@code RobotProfile.forCurrent().lanePresence} returns the active robot's config.
      */
     public static class LanePresenceConfig {
         // --- DETECTION METHODS (enable any combination) ---
@@ -254,47 +247,4 @@ public class IntakeLaneSensorConfig {
         public double hueDecisionBoundary = 165.0;
     }
 
-    // =========================================================================
-    // ROBOT-SPECIFIC CONFIGS - Tune these for each robot!
-    // =========================================================================
-
-    private static LanePresenceConfig createLanePresenceConfig19429() {
-        LanePresenceConfig config = new LanePresenceConfig();
-        // Detection methods (enable any combination - all enabled must pass)
-        config.useDistance = false;
-        config.useSaturation = false;
-        config.saturationThreshold = 0.25;
-        config.useValue = true;
-        config.useHue = false;
-        config.hueThreshold = 130.0;
-        // Value thresholds (per-lane, only used when useValue = true)
-        config.leftValueThreshold = 0.09;
-        config.centerValueThreshold = 0.09;
-        config.rightValueThreshold = 0.09;
-        // Distance thresholds (only used when useDistance = true)
-        config.leftThresholdCm = 6.5;
-        config.centerThresholdCm = 7.0;
-        config.rightThresholdCm = 5.0;
-        return config;
-    }
-
-    private static LanePresenceConfig createLanePresenceConfig20245() {
-        LanePresenceConfig config = new LanePresenceConfig();
-        // Detection methods (enable any combination - all enabled must pass)
-        config.useDistance = false;
-        config.useSaturation = false;
-        config.saturationThreshold = 0.25;
-        config.useValue = true;
-        config.useHue = false;
-        config.hueThreshold = 130.0;
-        // Value thresholds (per-lane, only used when useValue = true)
-        config.leftValueThreshold = 0.04;
-        config.centerValueThreshold = 0.02;
-        config.rightValueThreshold = 0.04;
-        // Distance thresholds (only used when useDistance = true)
-        config.leftThresholdCm = 4.0;
-        config.centerThresholdCm = 4.0;
-        config.rightThresholdCm = 4.5;
-        return config;
-    }
 }

@@ -19,6 +19,7 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
  */
 public class AutoPrestartHelper {
 
+    /** Minimum time between vision-driven relocalizations during auto pre-start to avoid jitter. */
     private static final long RELOCALIZE_COOLDOWN_MS = 300L;
 
     private final Robot robot;

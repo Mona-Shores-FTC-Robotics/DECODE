@@ -179,8 +179,8 @@ public class DecodeTeleOp extends OpMode {
             prevMainLoopMs = 0.0;
         }
         lastLoopStartNs = loopStartNs;
-        driverBindings.update();      // tick IvyBindings shim for driver
-        operatorBindings.update();    // tick IvyBindings shim for operator
+        driverBindings.update();      // tick GamepadBindings shim for driver
+        operatorBindings.update();    // tick GamepadBindings shim for operator
         com.pedropathing.ivy.Scheduler.execute();
 
         // Auto-switch to DECODE mode when endgame threshold is reached

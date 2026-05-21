@@ -33,9 +33,23 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Launcher subsystem that manages three flywheels and their paired bootkicker servos.
- * Callers queue individual shots or bursts while this class coordinates spin-up,
- * feed timing, and recovery delays.
+ * Owns the launcher hardware: three flywheel motors, three feeder servos (the
+ * "boot kickers" that shove an artifact into the spinning wheel), and three
+ * hood servos that change the launch angle.
+ *
+ * <p>What it does:
+ * <ul>
+ *   <li><b>Spin-up</b> — drives each flywheel to a target RPM (using
+ *       feedforward + a small P term) and reports when it's "ready" to fire.</li>
+ *   <li><b>Shot queue</b> — callers ask to fire one lane or all lanes; this
+ *       class waits for spin-up, kicks the feeder, then enforces a recovery
+ *       dwell before the next shot.</li>
+ *   <li><b>Hood positioning</b> — moves each lane's hood to short / mid / long
+ *       angles based on the active range or measured goal distance.</li>
+ * </ul>
+ *
+ * <p>Per-robot tuning (RPMs, hood positions, feeder servo positions, kS/kV/kP)
+ * lives in {@code util/RobotProfile.java}.
  */
 public class LauncherSubsystem {
 

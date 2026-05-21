@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. It uses a command-based architecture with subsystems for drive, vision, intake, launcher, and lighting. The project integrates Pedro Pathing for autonomous navigation, NextFTC for command patterns, Limelight for AprilTag vision, and AdvantageScope Lite for telemetry logging.
+DECODE is an FTC (FIRST Tech Challenge) robotics codebase for the 2025 season. It uses a command-based architecture with subsystems for drive, vision, intake, launcher, and lighting. The project integrates Pedro Pathing for autonomous navigation, Pedro Pathing Ivy for command patterns and scheduling, Limelight for AprilTag vision, and AdvantageScope Lite for telemetry logging.
+
+The same code runs on two physical robots (19429 and 20245). The active robot is identified at boot from the Control Hub's WiFi SSID, and per-robot configuration is consolidated in `util/RobotProfile.java` — that is the single file to read or edit if you want to know what differs between the two robots.
 
 ## Build and Deployment Commands
 
@@ -67,62 +69,70 @@ Annotate a class `@Pinned` (from `dev.frozenmilk.sinister.Pinned`) to prevent Sl
 **Subsystems (in `subsystems/`):**
 - `DriveSubsystem`: Mecanum drive with field-centric control, heading alignment, AprilTag relocalization via pose fusion
 - `VisionSubsystemLimelight`: AprilTag detection and pose estimation using Limelight
-- `LauncherSubsystem`: Flywheel control for launching game pieces
-- `IntakeSubsystem`: Game piece intake mechanism
+- `LauncherSubsystem`: Flywheel control for launching game pieces (manages spin-up, hood positions, feeder timing)
+- `IntakeSubsystem`: Game piece intake mechanism with lane-color sensing
 - `LightingSubsystem`: LED control for robot state indication
-- `LauncherCoordinator`: Coordinates launcher and intake timing
 
-**Commands (in `commands/`):**
-- Commands follow NextFTC patterns
-- Grouped by subsystem: `IntakeCommands/`, `LauncherCommands/`
-- Command factories: `IntakeCommands.java`, `LauncherCommands.java`
+**Commands (in `commands/LauncherCommands/`):**
+- One class per command, built with Pedro Ivy's `CommandBuilder` (no central factory class)
+- `DistanceBasedSpinCommand`, `PresetRangeSpinCommand`, `LaunchInSequenceCommand`, `LaunchAllCommand`, `ModeAwareLaunchCommand`
+- Intake-related commands live as factory methods directly on `IntakeSubsystem` (`setIntakeModeCmd`, `smartIntakeCmd`, etc.) — there is no separate `IntakeCommands/` package
 
 **OpModes (in `opmodes/`):**
-- `DecodeTeleOp.java`: Main teleop mode
-- `DecodeAutonomousClose.java`: Close-side autonomous
-- `DecodeAutonomousFar.java`: Far-side autonomous
-- Examples in `opmodes/Examples/`
+- `TeleOp/DecodeTeleOp.java`: Main teleop mode
+- `Autos/` autonomous routines:
+  - `DecodeAutonomousCloseThreeAtOnce` / `DecodeAutonomousCloseTogether`: close-side strategies
+  - `DecodeAutonomousFarThreeAtOnce` / `DecodeAutonomousFarTogether`: far-side strategies
+  - `DecodeAutonomousMichianaShort`: regional event variant
+  - `BaseAutonomousOpMode`: shared init/alliance/start-pose logic
+- `Calibration/` diagnostic and tuning OpModes (`@Disabled` by default)
+- `Examples/` template OpModes (`@Disabled` by default)
 
 **Pedro Pathing (`pedroPathing/`):**
-- `Constants.java`: All hardware names, motor configurations, PIDF tuning, path constraints
+- `Constants.java`: hardware names, plus `followerConstants()`/`driveConstants()`/`localizerConstants()` that resolve to the active robot's values via `RobotProfile`
 - `Tuning.java`: Tuning utilities for Pedro
+- `FusionLocalizer.java`: Blends Pinpoint odometry with AprilTag vision for robust pose estimation
 - Follower configuration with Pinpoint odometry
 
 **Utilities (`util/`):**
-- `PoseFusion.java`: Blends Pinpoint odometry with AprilTag vision for robust pose estimation
-- `PoseTransforms.java`: Coordinate transformations between robot and field frames
-- `AprilTagPoseUtil.java`: AprilTag pose utilities
-- `FieldConstants.java`: Field geometry and AprilTag locations
-- `RobotState.java`: Centralized robot state (alliance, mode)
-- `Alliance.java`, `RobotMode.java`, `ArtifactColor.java`: Enums for robot state
+- `RobotProfile.java`: Per-robot configuration bundle — owns every value that differs between 19429 and 20245
+- `ControlHubIdentifierUtil.java`: Identifies the active robot from the Control Hub's WiFi SSID at boot
+- `RobotState.java`: Centralized robot state (robot identity, alliance, mode)
+- `PoseFrames.java`: Coordinate transformations between Pedro and FTC field frames
+- `FieldConstants.java`: Field geometry, AprilTag locations, and `getAimAngleTo(robot, target)`
+- `GamepadBindings.java`: Gamepad-button-to-Command binding shim on top of Pedro Ivy
+- `Alliance.java`, `RobotMode.java`, `ArtifactColor.java`, `LauncherLane.java`, `LauncherMode.java`, `LauncherRange.java`: Enums for robot state
 
 **Telemetry (`telemetry/`):**
-- `TelemetryService.java`: Unified telemetry service for FTC Dashboard and pose visualization
-- `TelemetryPublisher.java`: Publishes telemetry to FullPanels
+- `TelemetryService.java`: Unified telemetry service for FTC Dashboard, Panels, and Driver Station
 - `TelemetrySettings.java`: Global telemetry toggles
-- `RobotStatusLogger.java`: Logs robot status for AdvantageScope compatibility
+- `data/` subsystem-specific telemetry payload classes
+- `formatters/DashboardFormatter` and `formatters/DriverStationFormatter` translate those payloads to outputs
 
 ### Key Architectural Patterns
 
-**Centralized Constants:**
-All hardware names, tuning parameters, and field names are defined in `pedroPathing/Constants.java`. Use `Constants.HardwareNames.*` for device names and `Constants.Naming.FieldNames.*` for telemetry keys.
+**Centralized Hardware Names:**
+Hardware names live in `pedroPathing/Constants.HardwareNames` (e.g. `Constants.HardwareNames.LF`). Use these everywhere instead of hardcoded strings so a rename only has to happen in one place.
+
+**Per-Robot Tuning:**
+Every value that differs between robots 19429 and 20245 lives in `util/RobotProfile.java`. Subsystems consume `RobotProfile.forCurrent().<config>` (e.g. `RobotProfile.forCurrent().aimAssist`) — they never branch on robot identity themselves.
 
 **Dependency Injection:**
-Subsystems receive their dependencies (like `VisionSubsystem`) through constructor injection rather than accessing each other directly.
+Subsystems receive their dependencies (like `VisionSubsystemLimelight`) through constructor injection rather than accessing each other directly.
 
-**Command Factories:**
-Instead of instantiating commands directly, use factory classes like `LauncherCommands` and `IntakeCommands` which encapsulate command creation logic.
+**Commands:**
+Commands are built with `com.pedropathing.ivy.CommandBuilder` (start/execute/done lambdas plus `.requiring(subsystem)`). Each command lives in its own class under `commands/LauncherCommands/`; intake commands are factory methods on `IntakeSubsystem` itself.
 
 ## Drive Control
 
 **TeleOp Drive:**
-- Call `DriveSubsystem.setTeleopDrive(forward, strafeLeft, turnCW, isRobotCentric)`
-- Field-centric mode is default (`isRobotCentric = false`)
+- Call `DriveSubsystem.driveTeleOp(fieldX, fieldY, rotationInput, slowMode, rampMode)` (or the shorter `driveScaled(...)` overloads)
+- Field-centric mode is the default; toggle via `DriveSubsystem.robotCentricConfig`
 - Slow mode available via `DriveSubsystem.setDriveMode(DriveMode.SLOW)`
 
 **Aim Assist:**
-- `DriveSubsystem.aimAndDrive(forward, strafeLeft)` overrides rotation to aim at vision target
-- Uses `VisionSubsystem.getAimAngle()` which returns `Optional<Double>`
+- `DriveSubsystem.aimAndDrive(fieldX, fieldY, slowMode)` overrides rotation to aim at the vision target
+- Aim angle math lives in `FieldConstants.getAimAngleTo(robotPose, targetPose)` (returns a `double`, no `Optional`)
 
 **Autonomous:**
 - Pedro Pathing `Follower` instance owned by `DriveSubsystem`
@@ -138,9 +148,9 @@ Instead of instantiating commands directly, use factory classes like `LauncherCo
 ## Vision and Relocalization
 
 **AprilTag Vision:**
-- `VisionSubsystem.getRobotPoseFromTag()` returns current pose estimate
-- `VisionSubsystem.shouldUpdateOdometry()` returns true once per tag lock
-- `VisionSubsystem.getAimAngle()` returns aim angle for targeting
+- `VisionSubsystemLimelight.getRobotPoseFromTagPedro()` / `getRobotPoseFromTagFtc()` return the current pose estimate in Pedro/FTC coordinates
+- `VisionSubsystemLimelight.shouldUpdateOdometry()` returns true once per tag lock
+- Aim angles come from `FieldConstants.getAimAngleTo(robotPose, targetPose)`
 
 **MegaTag2 (IMU-Fused Localization):**
 The robot uses Limelight's MegaTag2 algorithm for improved AprilTag-based localization:
@@ -166,11 +176,10 @@ The robot uses Limelight's MegaTag2 algorithm for improved AprilTag-based locali
    - Validate that single-tag detections produce stable poses
 
 **Pose Fusion:**
-- `PoseFusion` blends Pinpoint odometry with AprilTag measurements
+- `pedroPathing/FusionLocalizer` blends Pinpoint odometry with AprilTag measurements
 - Configurable trust weights based on range and decision margin
 - Outlier rejection for invalid measurements
 - Diagnostics available for analysis
-- Not yet used for control, but logged for analysis
 
 **Odometry Updates:**
 - `DriveSubsystem` updates `Follower` odometry in `periodic()`
@@ -180,20 +189,19 @@ The robot uses Limelight's MegaTag2 algorithm for improved AprilTag-based locali
 
 ### Telemetry Levels
 
-DECODE uses two telemetry levels controlled by a compile-time setting. This prevents accidentally leaving debug telemetry on during competition.
-
-**Setting** (in `TelemetrySettings.java` - requires recompile to change):
+DECODE uses three telemetry levels (`TelemetrySettings.TelemetryLevel`). Live-tunable via FTC Dashboard / Panels:
 
 ```java
-public static final TelemetryLevel LEVEL = TelemetryLevel.MATCH;  // Change to DEBUG when tuning
+public static TelemetryLevel LEVEL = TelemetryLevel.PRACTICE;  // default
 ```
 
-| Level | Dashboard | Packets | Use For |
-|-------|-----------|---------|---------|
-| **MATCH** (default) | Does not start | None | Competition |
-| **DEBUG** | Starts | Full (20 Hz) | Tuning & development |
+| Level | Use For |
+|-------|---------|
+| **MATCH** | Competition — minimal output, fastest loop |
+| **PRACTICE** (default) | Practice sessions and parameter tuning |
+| **VERBOSE** | Pit testing and detailed diagnostics |
 
-**To tune:** Change `MATCH` to `DEBUG`, recompile, tune, then change back to `MATCH`.
+`TelemetrySettings.isVerbose()` gates the heaviest debug output. Toggle the level in Dashboard, then your changes take effect immediately — no recompile needed.
 
 ### Live Telemetry (During Matches)
 
@@ -217,24 +225,7 @@ public static final TelemetryLevel LEVEL = TelemetryLevel.MATCH;  // Change to D
 
 ### Telemetry Logging
 
-**Robot Status Logging:**
-OpModes use `RobotStatusLogger.logStatus()` to log robot status information:
-
-```java
-import org.firstinspires.ftc.teamcode.telemetry.RobotStatusLogger;
-
-// In main loop:
-while (opModeIsActive()) {
-    RobotStatusLogger.logStatus(this, hardwareMap, opModeIsActive());
-}
-```
-
-This logs:
-- OpMode active state
-- Stop requested state
-- OpMode name and status
-- Error and warning messages
-- Battery voltage
+OpModes publish payload classes from `telemetry/data/` (`DriveTelemetryData`, `LauncherTelemetryData`, etc.) through `TelemetryService`, which routes them to the Driver Station, FTC Dashboard, and Bylazar Panels via the formatters in `telemetry/formatters/`.
 
 ## Coding Conventions
 
@@ -251,16 +242,6 @@ motors.lf.setPower(power);
 
 // Incorrect
 leftFrontMotor.setPower(power);
-```
-
-**Telemetry Keys:**
-Always use `Constants.Naming.FieldNames.*` for telemetry:
-```java
-// Correct
-telemetry.addData(Constants.Naming.FieldNames.MOTOR_POWER, power);
-
-// Incorrect
-telemetry.addData("motor_power", power);
 ```
 
 **Configurable Parameters:**
@@ -294,10 +275,21 @@ public class MySubsystem {
 - See `DriveSubsystem.AimAssistConfig` or `CaptureAndAimCommand.CaptureAimConfig` for examples
 
 **Code Style:**
-- 4-space indentation
-- Braces on same line
+- 4-space indentation (no tabs)
+- Braces on same line (Java "Egyptian" style)
 - One public class per file
 - Annotate OpModes with `@TeleOp` or `@Autonomous`
+- String comparison: always `.equals()`, never `==`
+- Null checks: direct `if (x == null)` — `Optional<T>` is not used in this codebase
+
+**Recommended formatter (optional):**
+
+The codebase follows **Google Java Style (AOSP variant)** — Google's style with 4-space indent instead of 2-space. To match it automatically:
+
+1. **IntelliJ IDEA:** `Settings → Editor → Code Style → Java → Scheme dropdown → Import from "Google Java Style"`, then change the indent from 2 to 4 spaces. Format a file with `Ctrl+Alt+L`.
+2. **VS Code:** Install the "Google Java Format" extension and set 4-space tab width.
+
+Gradle-driven formatting (Spotless) is intentionally not wired up yet — newer Spotless releases ship Java 25 bytecode that the project's Gradle/JDK can't load. Revisit when we upgrade the Gradle wrapper.
 
 **Special Comment Rule:**
 When numbers 6 and 7 appear adjacent (e.g., in `67`), add comment: `// Why was 6 afraid of 7? Because 7 ate 9!` (team tradition for middle school students)
@@ -332,7 +324,7 @@ The pre-commit hook (in `.githooks/`) blocks commits that modify Gradle or SDK v
 - `Groups.sequential` / `Groups.deadline` / `Groups.parallel` / `Groups.race` for composition
 - `PedroCommands.follow(follower, pathChain, holdEnd, maxPower)` for path following
 - Scheduler is process-global static — call `Scheduler.reset()` in OpMode init and `Scheduler.execute()` in OpMode loop
-- No bindings module ships with Ivy; we use the `util/IvyBindings.java` shim on top of SDK 11.1 gamepad edge primitives
+- No bindings module ships with Ivy; we use the `util/GamepadBindings.java` shim on top of SDK 11.1 gamepad edge primitives
 
 **FTC Dashboard (v0.5.1):**
 - Live tuning via web interface
@@ -363,31 +355,8 @@ No standing unit tests yet. Add new suites under `TeamCode/src/test/java` using 
 
 ## Special Considerations
 
-**DevSim Mode:**
-- Legacy simulation mode from earlier scaffold
-- Controlled by `Constants.DEV_SIM_ENABLED` flag
-- When enabled, simulates robot movement without motors
-- Typically disabled for robot operation
-
-**Telemetry Configuration:**
-
-DECODE uses a tiered telemetry system to balance performance and visibility:
-
-**TelemetryLevel** (Telemetry Verbosity Control)
-- `TelemetryLevel.MATCH`: Minimal telemetry (<10ms target)
-- `TelemetryLevel.PRACTICE`: Moderate telemetry (<20ms target)
-- `TelemetryLevel.DEBUG`: Full telemetry (all diagnostics)
-- Configured via FTC Dashboard (no recompile needed)
-- Controls how much data is logged/published
-- See "Tiered Telemetry System" section above for detailed information
-
-**Competition setup:**
-- Switch to `TelemetryLevel.MATCH` via FTC Dashboard for qualification/elimination matches
-- Use `TelemetryLevel.PRACTICE` for practice sessions and parameter tuning
-- Use `TelemetryLevel.DEBUG` for pit testing and detailed diagnostics
-
 **Alliance Colors:**
-- Set via `Robot.setAlliance(Alliance.RED/BLUE)`
+- Set via `Robot.setAlliance(Alliance.RED/BLUE)` (or the on-field `AllianceSelector` D-pad picker)
 - Affects vision processing and lighting patterns
 - Must be configured in OpMode init
 
@@ -421,8 +390,7 @@ DECODE uses a tiered telemetry system to balance performance and visibility:
 - Ensure FTC Dashboard port 8080 is not blocked
 
 **Slow Loop Times:**
-- Switch to `TelemetryLevel.MATCH` via FTC Dashboard (target <25ms)
-- Verify `BulkReadComponent.INSTANCE` is registered in OpMode
+- Switch `TelemetrySettings.LEVEL` to `MATCH` via FTC Dashboard (target <25ms)
 - I2C sensors automatically throttled: Color sensors (200ms), Limelight (50ms)
 - Review loop timing diagnostics: Hold RT on gamepad1 in TeleOp
 - See detailed analysis in `docs/loop-timing-analysis.md`

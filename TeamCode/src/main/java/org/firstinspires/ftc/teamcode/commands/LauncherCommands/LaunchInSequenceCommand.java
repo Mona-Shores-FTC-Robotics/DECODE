@@ -21,25 +21,33 @@ import java.util.Objects;
 /**
  * Fires artifacts in the detected obelisk pattern sequence with simultaneous-group optimization.
  *
- * Stages: SPINNING_UP → WAITING_FOR_READY → SHOTS_QUEUED → COMPLETED.
+ * <p>Lifecycle stages (see {@link Stage}):
+ * {@code SPINNING_UP → WAITING_FOR_READY → SHOTS_QUEUED → COMPLETED}.
  *
- * Consecutive same-color positions in the rotated motif pattern fire SIMULTANEOUSLY:
- * - PPG → [[P,P], [G]] → both purples at t=0, green at t=spacingMs
- * - PGP → [[P], [G], [P]] → uses shorter alternating spacing to match total time
- * - GPP → [[G], [P,P]] → green at t=0, both purples at t=spacingMs
+ * <p>Consecutive same-color positions in the rotated motif pattern fire SIMULTANEOUSLY:
+ * <ul>
+ *   <li>PPG → [[P,P], [G]] → both purples at t=0, green at t=spacingMs</li>
+ *   <li>PGP → [[P], [G], [P]] → uses shorter alternating spacing to match total time</li>
+ *   <li>GPP → [[G], [P,P]] → green at t=0, both purples at t=spacingMs</li>
+ * </ul>
  *
- * Lane selection within a same-color group prioritizes ready lanes first.
- *
- * Ported from NextFTC {@code extends Command} to an Ivy static factory.
+ * <p>Lane selection within a same-color group prioritizes ready lanes first.
  */
 public final class LaunchInSequenceCommand {
 
     public static LaunchInSequenceConfig sequenceConfig = new LaunchInSequenceConfig();
 
-    private static final int STAGE_SPINNING_UP = 0;
-    private static final int STAGE_WAITING_FOR_READY = 1;
-    private static final int STAGE_SHOTS_QUEUED = 2;
-    private static final int STAGE_COMPLETED = 3;
+    /** Stages of a single launch-in-sequence run. */
+    private enum Stage {
+        /** Flywheels just started spinning up; brief settle delay before checking readiness. */
+        SPINNING_UP,
+        /** Waiting for at least one lane to reach target RPM (or timeout). */
+        WAITING_FOR_READY,
+        /** All shots have been handed to the launcher's internal queue. */
+        SHOTS_QUEUED,
+        /** Launcher reported idle and queue empty — command can end. */
+        COMPLETED
+    }
 
     private LaunchInSequenceCommand() {}
 
@@ -49,7 +57,7 @@ public final class LaunchInSequenceCommand {
         Objects.requireNonNull(launcher, "launcher required");
         Objects.requireNonNull(intake, "intake required");
 
-        final int[] stage = {STAGE_SPINNING_UP};
+        final Stage[] stage = {Stage.SPINNING_UP};
         final EnumSet<LauncherLane> usedLanes = EnumSet.noneOf(LauncherLane.class);
         final boolean[] spinDownApplied = {false};
         final boolean[] shotsQueued = {false};
@@ -58,7 +66,7 @@ public final class LaunchInSequenceCommand {
         return new CommandBuilder()
                 .setStart(() -> {
                     timer.reset();
-                    stage[0] = STAGE_SPINNING_UP;
+                    stage[0] = Stage.SPINNING_UP;
                     usedLanes.clear();
                     spinDownApplied[0] = false;
                     shotsQueued[0] = false;
@@ -67,28 +75,28 @@ public final class LaunchInSequenceCommand {
                 })
                 .setExecute(() -> {
                     switch (stage[0]) {
-                        case STAGE_SPINNING_UP:
+                        case SPINNING_UP:
                             if (timer.milliseconds() > 100) {
-                                stage[0] = STAGE_WAITING_FOR_READY;
+                                stage[0] = Stage.WAITING_FOR_READY;
                             }
                             break;
-                        case STAGE_WAITING_FOR_READY:
+                        case WAITING_FOR_READY:
                             if (!shotsQueued[0] && canQueueSequence(launcher)) {
                                 queueSequenceShots(launcher, intake, usedLanes);
                                 shotsQueued[0] = true;
-                                stage[0] = STAGE_SHOTS_QUEUED;
+                                stage[0] = Stage.SHOTS_QUEUED;
                             }
                             if (timer.seconds() >= sequenceConfig.timeoutSeconds) {
                                 if (!shotsQueued[0]) {
                                     queueSequenceShots(launcher, intake, usedLanes);
                                     shotsQueued[0] = true;
                                 }
-                                stage[0] = STAGE_SHOTS_QUEUED;
+                                stage[0] = Stage.SHOTS_QUEUED;
                             }
                             break;
-                        case STAGE_SHOTS_QUEUED:
+                        case SHOTS_QUEUED:
                             if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
-                                stage[0] = STAGE_COMPLETED;
+                                stage[0] = Stage.COMPLETED;
                                 if (spinDownAfterShot && !spinDownApplied[0]) {
                                     launcher.setAllLanesToIdle();
                                     spinDownApplied[0] = true;
@@ -99,7 +107,7 @@ public final class LaunchInSequenceCommand {
                             break;
                     }
                 })
-                .setDone(() -> stage[0] == STAGE_COMPLETED)
+                .setDone(() -> stage[0] == Stage.COMPLETED)
                 .setEnd(endCondition -> {
                     intake.setGatePreventArtifact();
                     if (spinDownApplied[0]) {

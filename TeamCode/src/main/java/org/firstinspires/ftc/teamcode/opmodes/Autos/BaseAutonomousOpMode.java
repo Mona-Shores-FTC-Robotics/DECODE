@@ -172,7 +172,9 @@ public abstract class BaseAutonomousOpMode extends OpMode {
     public final void stop() {
         try {
             RobotState.setHandoffPose(robot.drive.getFollower().getPose());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // Follower may already be torn down — skip the handoff and keep stop() running.
+        }
 
         com.pedropathing.ivy.Scheduler.reset();
 

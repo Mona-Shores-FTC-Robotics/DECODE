@@ -44,8 +44,25 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 /**
- * Hardware-facing intake wrapper. Handles motor power, roller servo, and lane sensor sampling
- * while higher-level coordinators decide what the subsystem should do.
+ * Owns the intake motor, the gate servo, and the three color sensors that
+ * watch each lane (left / center / right).
+ *
+ * <p>What it does:
+ * <ul>
+ *   <li><b>Run modes</b> — {@link IntakeMode#ACTIVE_FORWARD} pulls artifacts in,
+ *       {@link IntakeMode#PASSIVE_REVERSE} gently pushes them back out,
+ *       {@link IntakeMode#AGGRESSIVE_REVERSE} ejects hard,
+ *       {@link IntakeMode#STOPPED} cuts power.</li>
+ *   <li><b>Lane sensing</b> — samples each lane's color sensor every tick and
+ *       tells listeners (e.g. {@code LightingSubsystem}) what color is in
+ *       each lane (NONE / GREEN / PURPLE).</li>
+ *   <li><b>Gate control</b> — the gate servo blocks artifacts from reaching
+ *       the launcher between shots and opens when it's time to feed.</li>
+ * </ul>
+ *
+ * <p>Per-robot tuning (gate positions, lane-sensor thresholds) lives in
+ * {@code util/RobotProfile.java}. Sensor filtering/gating constants live in
+ * {@code subsystems/intake/config/IntakeLaneSensorConfig.java}.
  */
 @Configurable
 public class IntakeSubsystem {
@@ -66,15 +83,11 @@ public class IntakeSubsystem {
     public static IntakeRollerConfig rollerConfig = new IntakeRollerConfig();
     public static IntakeManualModeConfig manualModeConfig = new IntakeManualModeConfig();
 
-    // Robot-specific gate configs
-    public static IntakeGateConfig gateConfig_Robot19429 = IntakeGateConfig.gateConfig19429;
-    public static IntakeGateConfig gateConfig_Robot20245 = IntakeGateConfig.gateConfig20245;
-    public static IntakeGateConfig gateConfig_ACTIVE = RobotProfile.forCurrent().gate;
+    /** Live gate-servo tuning for the active robot — see {@code util/RobotProfile.java} for the values. */
+    public static IntakeGateConfig gateConfig = RobotProfile.forCurrent().gate;
 
-    // Robot-specific lane presence configs (distance thresholds for artifact detection)
-    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_Robot19429 = IntakeLaneSensorConfig.lanePresenceConfig19429;
-    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_Robot20245 = IntakeLaneSensorConfig.lanePresenceConfig20245;
-    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_ACTIVE = RobotProfile.forCurrent().lanePresence;
+    /** Live lane-presence detection tuning for the active robot — see {@code util/RobotProfile.java}. */
+    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig = RobotProfile.forCurrent().lanePresence;
 
     public static final class LaneSample {
         public final boolean sensorPresent;

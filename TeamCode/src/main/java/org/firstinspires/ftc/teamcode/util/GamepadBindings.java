@@ -7,20 +7,23 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 
 /**
- * Declarative button-to-command bindings for Pedro Pathing Ivy.
+ * Declarative gamepad-button-to-Command bindings.
  *
- * Ivy 1.0.0 ships no bindings module. This shim polls a list of
- * BooleanSupplier triggers each loop and fires Command.schedule() /
- * Command.cancel() on edges.
+ * <p>Pedro Pathing Ivy 1.0.0 ships no bindings module, so this shim polls a
+ * list of {@link BooleanSupplier} triggers each loop and fires
+ * {@code Command.schedule()} / {@code Command.cancel()} on rising / falling
+ * edges.
  *
- * Usage:
+ * <p>Usage:
+ * <pre>{@code
  *   bindings.when(() -> gamepad1.a).onTrue(launcher.fire());
  *   bindings.when(() -> gamepad1.right_trigger > 0.5).whileTrue(intakeCommand);
  *   bindings.when(gamepad1::aWasPressed).onTrue(toggleAimCommand);
+ * }</pre>
  *
- * Call bindings.update() once per OpMode loop before Scheduler.execute().
+ * <p>Call {@link #update()} once per OpMode loop, before {@code Scheduler.execute()}.
  */
-public final class IvyBindings {
+public final class GamepadBindings {
     private final List<Trigger> triggers = new ArrayList<>();
 
     public Trigger when(BooleanSupplier condition) {
@@ -31,6 +34,11 @@ public final class IvyBindings {
 
     public void update() {
         for (Trigger t : triggers) t.poll();
+    }
+
+    /** Removes every binding. Useful between OpModes or in test setup. */
+    public void clear() {
+        triggers.clear();
     }
 
     public static final class Trigger {
