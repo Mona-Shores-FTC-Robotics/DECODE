@@ -158,9 +158,10 @@ public final class LaunchInSequenceCommand {
             int neededCount = group.size();
             if (neededColor == null || !neededColor.isArtifact()) continue;
 
-            List<LauncherLane> matching = findUnusedLanesWithColor(launcher, intake, usedLanes, neededColor, neededCount);
+            // Prefer lanes loaded with the right color; fall back to any unused lane if none match.
+            List<LauncherLane> matching = findUnusedLanes(launcher, intake, usedLanes, neededColor, neededCount);
             if (matching.isEmpty()) {
-                matching = findUnusedLanesIgnoringColor(launcher, usedLanes, neededCount);
+                matching = findUnusedLanes(launcher, intake, usedLanes, null, neededCount);
                 if (matching.isEmpty()) continue;
             }
             for (LauncherLane lane : matching) {
@@ -214,41 +215,24 @@ public final class LaunchInSequenceCommand {
         return groups;
     }
 
-    private static List<LauncherLane> findUnusedLanesWithColor(LauncherSubsystem launcher,
-                                                                 IntakeSubsystem intake,
-                                                                 EnumSet<LauncherLane> usedLanes,
-                                                                 ArtifactColor color,
-                                                                 int maxCount) {
+    /**
+     * Returns up to {@code maxCount} unused lanes, with ready-to-fire lanes first.
+     * If {@code colorFilter} is non-null, only lanes whose current artifact matches
+     * that color are returned; pass {@code null} to ignore color.
+     */
+    private static List<LauncherLane> findUnusedLanes(LauncherSubsystem launcher,
+                                                      IntakeSubsystem intake,
+                                                      EnumSet<LauncherLane> usedLanes,
+                                                      ArtifactColor colorFilter,
+                                                      int maxCount) {
         List<LauncherLane> matching = new ArrayList<>();
         for (LauncherLane lane : LauncherLane.values()) {
             if (usedLanes.contains(lane)) continue;
-            if (intake.getLaneColor(lane) == color) matching.add(lane);
-        }
-        matching.sort((a, b) -> {
-            boolean ra = launcher.isLaneReady(a);
-            boolean rb = launcher.isLaneReady(b);
-            if (ra && !rb) return -1;
-            if (!ra && rb) return 1;
-            return 0;
-        });
-        return matching.subList(0, Math.min(maxCount, matching.size()));
-    }
-
-    private static List<LauncherLane> findUnusedLanesIgnoringColor(LauncherSubsystem launcher,
-                                                                     EnumSet<LauncherLane> usedLanes,
-                                                                     int maxCount) {
-        List<LauncherLane> matching = new ArrayList<>();
-        for (LauncherLane lane : LauncherLane.values()) {
-            if (usedLanes.contains(lane)) continue;
+            if (colorFilter != null && intake.getLaneColor(lane) != colorFilter) continue;
             matching.add(lane);
         }
-        matching.sort((a, b) -> {
-            boolean ra = launcher.isLaneReady(a);
-            boolean rb = launcher.isLaneReady(b);
-            if (ra && !rb) return -1;
-            if (!ra && rb) return 1;
-            return 0;
-        });
+        // Ready-to-fire lanes sort first (Boolean.compare(true, false) == 1, so we flip args).
+        matching.sort((a, b) -> Boolean.compare(launcher.isLaneReady(b), launcher.isLaneReady(a)));
         return matching.subList(0, Math.min(maxCount, matching.size()));
     }
 }

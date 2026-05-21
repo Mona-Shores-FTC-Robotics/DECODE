@@ -164,31 +164,11 @@ public class LauncherSubsystem {
         applyTargetRpms();
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
-            if (flywheel.motor != null && TelemetrySettings.isVerbose()) {
-                String lane = flywheel.lane.name().toLowerCase();
-                String prefix = "launcher/control/" + lane;
-
-                double velocityRpm = flywheel.getCurrentRpm();
-                double targetRpm = flywheel.getTargetRpm();
-                double error = targetRpm - velocityRpm;
-                double feedforward = kSFor(flywheel.lane) + kVFor(flywheel.lane) * targetRpm;
-                double feedback = kPFor(flywheel.lane) * error;
-                Feeder feeder = feeders.get(flywheel.lane);
-
-                RobotState.packet.put(prefix + "/velocity_tps", flywheel.getMeasuredTicksPerSec());
-                RobotState.packet.put(prefix + "/velocity_rpm", velocityRpm);
-                RobotState.packet.put(prefix + "/target_rpm", targetRpm);
-                RobotState.packet.put(prefix + "/ff_error", error);
-                RobotState.packet.put(prefix + "/ff_feedforward", feedforward);
-                RobotState.packet.put(prefix + "/ff_feedback", feedback);
-                RobotState.packet.put(prefix + "/ff_power", flywheel.getAppliedPower());
-                // Shot event marker: correlate feeder firing with RPM dip in AdvantageScope
-                RobotState.packet.put(prefix + "/feeder_busy", feeder != null && feeder.isBusy());
-            }
+            publishFlywheelTelemetry(flywheel);
         }
 
-        // Speed-gated hood retraction for human loading
-        // Each lane's hood retracts independently when its flywheel reaches the threshold
+        // When the operator triggers human-loading reverse, hoods retract per lane as each
+        // flywheel reaches reverse speed (so they can't collide with an out-bound artifact).
         if (reverseFlywheelsActive) {
             updateHumanLoadingHoods();
         }
@@ -196,6 +176,31 @@ public class LauncherSubsystem {
         updateStateMachine(now);
         updateLaneRecovery(now);
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    /** Emits per-flywheel control telemetry to AdvantageScope (verbose mode only). */
+    private void publishFlywheelTelemetry(Flywheel flywheel) {
+        if (flywheel.motor == null || !TelemetrySettings.isVerbose()) return;
+
+        String lane = flywheel.lane.name().toLowerCase();
+        String prefix = "launcher/control/" + lane;
+
+        double velocityRpm = flywheel.getCurrentRpm();
+        double targetRpm = flywheel.getTargetRpm();
+        double error = targetRpm - velocityRpm;
+        double feedforward = kSFor(flywheel.lane) + kVFor(flywheel.lane) * targetRpm;
+        double feedback = kPFor(flywheel.lane) * error;
+        Feeder feeder = feeders.get(flywheel.lane);
+
+        RobotState.packet.put(prefix + "/velocity_tps", flywheel.getMeasuredTicksPerSec());
+        RobotState.packet.put(prefix + "/velocity_rpm", velocityRpm);
+        RobotState.packet.put(prefix + "/target_rpm", targetRpm);
+        RobotState.packet.put(prefix + "/ff_error", error);
+        RobotState.packet.put(prefix + "/ff_feedforward", feedforward);
+        RobotState.packet.put(prefix + "/ff_feedback", feedback);
+        RobotState.packet.put(prefix + "/ff_power", flywheel.getAppliedPower());
+        // Shot event marker: correlate feeder firing with RPM dip in AdvantageScope
+        RobotState.packet.put(prefix + "/feeder_busy", feeder != null && feeder.isBusy());
     }
 
     /**
