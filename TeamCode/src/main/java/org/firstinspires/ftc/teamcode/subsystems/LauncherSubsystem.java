@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.configurables.annotations.IgnoreConfigurable;
+import com.bylazar.configurables.annotations.Sorter;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -61,15 +62,37 @@ public class LauncherSubsystem {
      */
     public static final double READY_LOSS_DEBOUNCE_MS = 250.0;
 
-    // Global configuration instances (shared across both robots).
-    public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
-    public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
+    // Core per-robot hardware configs — top of the Panels tree.
+    @Sorter(sort = 10) public static LauncherFlywheelConfig flywheelConfig = RobotProfile.forCurrent().flywheel;
+    @Sorter(sort = 11) public static LauncherFeederConfig feederConfig = RobotProfile.forCurrent().feeder;
+    @Sorter(sort = 12) public static LauncherHoodConfig hoodConfig = RobotProfile.forCurrent().hood;
+    @Sorter(sort = 13) public static LauncherTimingConfig timingConfig = RobotProfile.forCurrent().timing;
 
-    // Per-robot configs — pulled from RobotProfile so Panels can tune the active robot's values.
-    public static LauncherFlywheelConfig flywheelConfig = RobotProfile.forCurrent().flywheel;
-    public static LauncherFeederConfig feederConfig = RobotProfile.forCurrent().feeder;
-    public static LauncherHoodConfig hoodConfig = RobotProfile.forCurrent().hood;
-    public static LauncherTimingConfig timingConfig = RobotProfile.forCurrent().timing;
+    // Shared (both robots) launcher tunables.
+    @Sorter(sort = 20) public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
+    @Sorter(sort = 21) public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
+
+    // Command-specific tunables (kept here so Panels groups them under the launcher tree).
+    @Sorter(sort = 30) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig distanceCalibration =
+            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig();
+    @Sorter(sort = 31) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig hoodThresholds =
+            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig();
+    @Sorter(sort = 32) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchInSequenceConfig launchInSequenceConfig =
+            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchInSequenceConfig();
+
+    /** Runtime diagnostic snapshot from the distance-based spin command. Read-only from telemetry. */
+    public static class DistanceSpinDiagnostics {
+        public double lastCalculatedDistanceIn = 0.0;
+        public double lastLeftTargetRpm = 0.0;
+        public double lastCenterTargetRpm = 0.0;
+        public double lastRightTargetRpm = 0.0;
+        public double lastHoodPosition = 0.0;
+        public String lastSource = "none";
+        public int updateCount = 0;
+        public boolean robotPoseAvailable = false;
+        public boolean goalPoseAvailable = false;
+    }
+    @Sorter(sort = 90) public static DistanceSpinDiagnostics distanceSpinDiagnostics = new DistanceSpinDiagnostics();
 
     private final HardwareMap hardwareMap;
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);

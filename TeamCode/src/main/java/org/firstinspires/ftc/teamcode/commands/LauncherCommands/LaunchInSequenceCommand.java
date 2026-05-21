@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.CommandBuilder;
 import com.pedropathing.ivy.behaviors.EndCondition;
@@ -34,10 +33,10 @@ import java.util.Objects;
  *
  * <p>Lane selection within a same-color group prioritizes ready lanes first.
  */
-@Configurable
 public final class LaunchInSequenceCommand {
 
-    public static LaunchInSequenceConfig sequenceConfig = new LaunchInSequenceConfig();
+    // Tuning lives on LauncherSubsystem so Panels shows it under the launcher tree.
+    private static final LaunchInSequenceConfig sequenceConfig = LauncherSubsystem.launchInSequenceConfig;
 
     /** Stages of a single launch-in-sequence run. */
     private enum Stage {

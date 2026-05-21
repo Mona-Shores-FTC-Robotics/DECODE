@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.CommandBuilder;
 import com.qualcomm.robotcore.hardware.Gamepad;
@@ -20,9 +19,7 @@ import java.util.Objects;
 
 /**
  * Spins up launchers to preset (short/mid/long) RPM and hood targets and waits until ready.
- * Ported from NextFTC to an Ivy static factory.
  */
-@Configurable
 public final class PresetRangeSpinCommand {
 
     private PresetRangeSpinCommand() {}
