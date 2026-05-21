@@ -25,9 +25,6 @@ import java.util.Objects;
 @Configurable
 public final class PresetRangeSpinCommand {
 
-    /** Wait this long after losing "ready" before signaling not-ready (debounces brief dips). */
-    private static final double READY_LOSS_DEBOUNCE_MS = 250.0;
-
     private PresetRangeSpinCommand() {}
 
     public static CommandRangeConfig rangeConfig() {
@@ -121,7 +118,7 @@ public final class PresetRangeSpinCommand {
             if (lighting != null) lighting.flashAimAligned();
             return;
         }
-        if (readyLossTimer.milliseconds() >= READY_LOSS_DEBOUNCE_MS) {
+        if (readyLossTimer.milliseconds() >= LauncherSubsystem.READY_LOSS_DEBOUNCE_MS) {
             feedbackTriggered[0] = false;
         }
     }

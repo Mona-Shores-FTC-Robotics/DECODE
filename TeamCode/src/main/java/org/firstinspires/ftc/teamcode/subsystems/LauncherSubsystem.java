@@ -53,6 +53,13 @@ import java.util.Set;
  */
 public class LauncherSubsystem {
 
+    /**
+     * Shared debounce for "lost ready" events used by every spin command.
+     * Wait this long after the launcher loses its "ready to fire" signal
+     * before notifying drivers (avoids flicker on transient RPM dips).
+     */
+    public static final double READY_LOSS_DEBOUNCE_MS = 250.0;
+
     // Global configuration instances
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();

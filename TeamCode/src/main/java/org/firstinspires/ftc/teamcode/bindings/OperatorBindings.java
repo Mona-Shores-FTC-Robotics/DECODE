@@ -10,6 +10,7 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ModeAwareLaunchC
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.GamepadBindings;
+import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.MotifPattern;
@@ -76,17 +77,17 @@ public class OperatorBindings {
         // debounce timer starts clean.
         bindings.when(() -> gp().right_bumper)
                 .onTrue(com.pedropathing.ivy.commands.Commands.lazy(() -> robot.intake.smartIntakeCmd(rawOperatorGamepad)))
-                .onFalse(robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE));
+                .onFalse(robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE));
 
         // Smart intake on right trigger
         bindings.when(() -> gp().right_trigger > TRIGGER_THRESHOLD)
                 .onTrue(com.pedropathing.ivy.commands.Commands.lazy(() -> robot.intake.smartIntakeCmd(rawOperatorGamepad)))
-                .onFalse(robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE));
+                .onFalse(robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE));
 
         // Regular (non-smart) intake on left trigger
         bindings.when(() -> gp().left_trigger > TRIGGER_THRESHOLD)
-                .onTrue(robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                .onFalse(robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE));
+                .onTrue(robot.intake.setIntakeModeCmd(IntakeMode.ACTIVE_FORWARD))
+                .onFalse(robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE));
     }
 
     private void configureHumanIntakeBindings(Robot robot) {

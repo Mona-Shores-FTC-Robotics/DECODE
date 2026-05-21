@@ -229,10 +229,46 @@ OpModes publish payload classes from `telemetry/data/` (`DriveTelemetryData`, `L
 
 ## Coding Conventions
 
+These rules govern *where code lives* and *which pattern to pick* — the things a style guide alone doesn't cover. Apply them to new code and use them as a checklist when reviewing.
+
+### Where things live
+
+**Configs (tunable values that appear in Dashboard / Panels):**
+- One config class per file, in `subsystems/<name>/config/<Name>Config.java`
+- Name them `<Subsystem><Concern>Config` — e.g. `DriveAimAssistConfig`, `DriveFusionConfig`, `LauncherTimingConfig`, `IntakeGateConfig`
+- The data SHAPE lives in the config class. Per-robot VALUES live in `util/RobotProfile.java` (one place to diff what's different between 19429 and 20245)
+- Subsystems hold one `public static <Config> configName = RobotProfile.forCurrent().<config>;` field per config — no per-robot triplets
+
+**Enums:**
+- Used by ONE class only → nest inside that class (e.g. `LightingPattern` inside `LightingSubsystem`, the launch-sequence `Stage` inside `LaunchInSequenceCommand`)
+- Used by TWO OR MORE classes → standalone in `util/<Name>.java` (e.g. `Alliance`, `LauncherLane`, `IntakeMode`)
+
+**Commands:**
+- Trivial single-action wrapper (one method call, no state) → factory method on the owning subsystem, suffixed `Cmd` (e.g. `intake.setIntakeModeCmd(...)`, `drive.aimAndDriveCmd(...)`)
+- Multi-step, stateful, or configurable command → standalone class in `commands/<Subsystem>Commands/<Name>Command.java` with a static `create(...)` factory (e.g. `DistanceBasedSpinCommand`, `LaunchInSequenceCommand`)
+- When in doubt, prefer the standalone class — easier to find and test
+
+**Constants:**
+- Implementation detail of one class → `private static final` near where used, with a one-line Javadoc
+- Tunable from Dashboard → make it a field on a config class (not a `static final` constant)
+- Shared identity strings (hardware names, telemetry keys) → `pedroPathing/Constants.java`
+- Field geometry (tag IDs, basket positions) → `util/FieldConstants.java`
+
+### Patterns to follow
+
+**Robot identity:**
+- Never branch on `RobotState.getRobotName()` outside of `RobotProfile.java`. If you find yourself writing `if (robotName == "DECODE_19429")` somewhere else, the value belongs in `RobotProfile` instead.
+
+**Dependency injection:**
+- Subsystems take their collaborators in the constructor. Don't reach across via static singletons mid-loop.
+
+**Exception handling:**
+- A `catch (Exception ignored) { }` is acceptable ONLY when the failure is harmless (shutdown paths, optional telemetry, missing-method reflection). Add a one-line comment explaining why it's safe. If you can't explain why, don't ignore it.
+
 **Naming:**
 - Classes/Interfaces: `PascalCase`
 - Methods/Variables: `camelCase`
-- Constants: `UPPER_SNAKE_CASE` (exception: some hardware names in `Constants.java` use lowercase)
+- Constants: `UPPER_SNAKE_CASE` (exception: some hardware names in `Constants.java` use lowercase to match the FTC config XML)
 
 **Hardware Names:**
 Always use `Constants.HardwareNames.*` instead of hardcoded strings:

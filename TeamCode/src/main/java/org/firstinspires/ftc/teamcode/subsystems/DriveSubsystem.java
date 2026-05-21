@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_KNOWN;
 import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_UNKNOWN;
 
-import com.acmerobotics.dashboard.config.Config;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
@@ -22,6 +21,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveAimAssistConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFusionConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRampConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRightTriggerFixedAngleConfig;
@@ -75,26 +75,6 @@ public class DriveSubsystem {
     public static DriveRampConfig rampConfig = new DriveRampConfig();
     public static DriveVisionRelocalizeConfig visionRelocalizeConfig = new DriveVisionRelocalizeConfig();
 
-    @Config
-    public static class FusionConfig {
-        /**
-         * Minimum target area % (ta) to accept a Limelight measurement.
-         * At competition range ta is typically 0.2–2%; set to 0 to disable.
-         */
-        public static double minTargetAreaPercent = 0.1;
-        /** Estimated Limelight pipeline latency in milliseconds for timestamp compensation. */
-        public static double limelightLatencyMs = 20.0;
-        /**
-         * Post-relocalize xy covariance (inches). Lower = filter trusts the
-         * manual pose more, future vision corrections pull less aggressively.
-         */
-        public static double relocalizeCovarianceXY = 0.5;
-        /**
-         * Post-relocalize heading covariance (degrees, converted to radians at use).
-         * Lower = filter trusts the manual heading more.
-         */
-        public static double relocalizeCovarianceHeadingDeg = 2.0;
-    }
 
     /** Live aim-assist tuning for the active robot — see {@code util/RobotProfile.java} for the values. */
     public static DriveAimAssistConfig aimAssistConfig =
@@ -1056,8 +1036,8 @@ public class DriveSubsystem {
         if (Constants.activeFusionLocalizer != null) {
             Constants.activeFusionLocalizer.forceRelocalize(
                     pose,
-                    FusionConfig.relocalizeCovarianceXY,
-                    Math.toRadians(FusionConfig.relocalizeCovarianceHeadingDeg));
+                    DriveFusionConfig.relocalizeCovarianceXY,
+                    Math.toRadians(DriveFusionConfig.relocalizeCovarianceHeadingDeg));
         }
         follower.setPose(pose);
     }
@@ -1212,10 +1192,10 @@ public class DriveSubsystem {
         if (snap == null) return;
         if (snap.capturedAtNs == lastFedSnapshotNs) return;
         lastFedSnapshotNs = snap.capturedAtNs;
-        if (snap.decisionMargin < FusionConfig.minTargetAreaPercent) return;
+        if (snap.decisionMargin < DriveFusionConfig.minTargetAreaPercent) return;
         Pose pose = snap.pedroPoseMT2 != null ? snap.pedroPoseMT2 : snap.pedroPoseMT1;
         if (pose == null) return;
-        long measurementNs = snap.capturedAtNs - (long)(FusionConfig.limelightLatencyMs * 1_000_000L);
+        long measurementNs = snap.capturedAtNs - (long)(DriveFusionConfig.limelightLatencyMs * 1_000_000L);
         fusionLocalizer.addMeasurement(pose, measurementNs);
     }
 

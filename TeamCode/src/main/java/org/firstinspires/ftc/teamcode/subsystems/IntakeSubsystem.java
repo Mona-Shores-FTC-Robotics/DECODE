@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.IntakeMode.STOPPED;
+import static org.firstinspires.ftc.teamcode.util.IntakeMode.STOPPED;
 
 import android.graphics.Color;
 
@@ -27,6 +27,7 @@ import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeMotorConfig
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeRollerConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
+import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 import java.util.ArrayList;
@@ -66,13 +67,6 @@ import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
  */
 @Configurable
 public class IntakeSubsystem {
-
-    public enum IntakeMode {
-        PASSIVE_REVERSE,
-        AGGRESSIVE_REVERSE,
-        ACTIVE_FORWARD,
-        STOPPED
-    }
 
     // Active robot indicator
     public static String ACTIVE_ROBOT = RobotState.getRobotName();

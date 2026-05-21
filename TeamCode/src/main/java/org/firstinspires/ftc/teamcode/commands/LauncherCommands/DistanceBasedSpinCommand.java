@@ -9,6 +9,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
@@ -31,9 +33,8 @@ public final class DistanceBasedSpinCommand {
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;
     /** Lane is "ready" once its actual RPM reaches this fraction of the target RPM. */
     private static final double RPM_READY_THRESHOLD_PERCENT = 0.90;
-    /** Wait this long after losing "ready" before signaling not-ready (debounces brief dips). */
-    private static final double READY_LOSS_DEBOUNCE_MS = 250.0;
 
+    /** Runtime diagnostic snapshot — read by telemetry, not a tuning surface. */
     public static class DiagnosticData {
         public double lastCalculatedDistanceIn = 0.0;
         public double lastLeftTargetRpm = 0.0;
@@ -47,20 +48,8 @@ public final class DistanceBasedSpinCommand {
     }
     public static DiagnosticData diagnostics = new DiagnosticData();
 
-    public static class DistanceCalibration {
-        public double shortRangeDistanceIn = 18.4;
-        public double midRangeDistanceIn = 98.0;
-        public double longRangeMinDistanceIn = 125.4;
-        public double longRangeMaxDistanceIn = 153;
-    }
-
-    public static class HoodThresholds {
-        public double shortRangeDistanceIn = 0;
-        public double midRangeDistanceIn = 90;
-    }
-
-    public static DistanceCalibration distanceCalibration = new DistanceCalibration();
-    public static HoodThresholds hoodThresholds = new HoodThresholds();
+    public static DistanceCalibrationConfig distanceCalibration = new DistanceCalibrationConfig();
+    public static HoodThresholdsConfig hoodThresholds = new HoodThresholdsConfig();
 
     private DistanceBasedSpinCommand() {}
 
@@ -171,7 +160,7 @@ public final class DistanceBasedSpinCommand {
             if (lighting != null) lighting.flashAimAligned();
             return;
         }
-        if (readyLossTimer.milliseconds() >= READY_LOSS_DEBOUNCE_MS) {
+        if (readyLossTimer.milliseconds() >= LauncherSubsystem.READY_LOSS_DEBOUNCE_MS) {
             feedbackTriggered[0] = false;
         }
     }
