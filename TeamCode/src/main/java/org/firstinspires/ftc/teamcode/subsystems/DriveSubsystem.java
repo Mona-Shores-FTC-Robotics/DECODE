@@ -33,7 +33,6 @@ import org.firstinspires.ftc.teamcode.util.PoseFrames;
 import org.firstinspires.ftc.teamcode.pedroPathing.FusionLocalizer;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
-import java.util.Optional;
 @Configurable
 public class DriveSubsystem {
 
@@ -1027,13 +1026,12 @@ public class DriveSubsystem {
             return;
         }
 
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
-        if (!snapOpt.isPresent()) {
+        VisionSubsystemLimelight.TagSnapshot snapshot = vision.getLastSnapshot();
+        if (snapshot == null) {
             recordAutoRelocalizePacket(false , nowMs , -1 , "launch relocalize failed" , "no_snapshot");
             return;
         }
 
-        VisionSubsystemLimelight.TagSnapshot snapshot = snapOpt.get();
         if (!isGoalAprilTag(snapshot.tagId)) {
             recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , "launch relocalize failed" , "not_goal_tag");
             return;
@@ -1185,14 +1183,13 @@ public class DriveSubsystem {
      * @return {@code true} when the pose was updated.
      */
     private boolean forceRelocalizeFromVisionInternal(Pose referencePose) {
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
         long nowMs = System.currentTimeMillis();
-        if (!snapOpt.isPresent()) {
+        VisionSubsystemLimelight.TagSnapshot snap = vision.getLastSnapshot();
+        if (snap == null) {
             recordRelocalizeSource("none", false, nowMs, -1);
             return false;
         }
 
-        VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
 
         // 1. Use MT1 whenever heading is unknown
         Pose pedroPoseMT1 = snap.pedroPoseMT1;
@@ -1297,9 +1294,8 @@ public class DriveSubsystem {
 
     private void maybeFeedVisionMeasurement() {
         if (fusionLocalizer == null || vision == null) return;
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
-        if (!snapOpt.isPresent()) return;
-        VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
+        VisionSubsystemLimelight.TagSnapshot snap = vision.getLastSnapshot();
+        if (snap == null) return;
         if (snap.capturedAtNs == lastFedSnapshotNs) return;
         lastFedSnapshotNs = snap.capturedAtNs;
         if (snap.decisionMargin < FusionConfig.minTargetAreaPercent) return;

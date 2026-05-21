@@ -8,7 +8,6 @@ import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
-import java.util.Optional;
 
 /**
  * Coordinates alliance selection by combining AprilTag detections with manual overrides bound
@@ -52,7 +51,7 @@ public final class AllianceSelector {
      *
      * @return snapshot data when a valid detection was found.
      */
-    public Optional<VisionSubsystemLimelight.TagSnapshot> updateFromVision(VisionSubsystemLimelight vision) {
+    public VisionSubsystemLimelight.TagSnapshot updateFromVision(VisionSubsystemLimelight vision) {
         // Once selection is locked (after Start), do not change alliance via vision
         if (selectionLocked) {
             return getLastSnapshot();
@@ -61,17 +60,16 @@ public final class AllianceSelector {
         if (vision == null) {
             clearDetection();
             refreshSelectedAlliance();
-            return Optional.empty();
+            return null;
         }
 
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.findAllianceSnapshot(null);
-        if (!snapshotOpt.isPresent()) {
+        VisionSubsystemLimelight.TagSnapshot snapshot = vision.findAllianceSnapshot(null);
+        if (snapshot == null) {
             clearDetection();
             refreshSelectedAlliance();
-            return Optional.empty();
+            return null;
         }
 
-        VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
         lastSnapshot = snapshot;
 
         // Use pose based inference only
@@ -80,7 +78,7 @@ public final class AllianceSelector {
 
         // Merge with manual override and default alliance
         refreshSelectedAlliance();
-        return snapshotOpt;
+        return snapshot;
     }
 
 
@@ -195,8 +193,9 @@ public final class AllianceSelector {
         return selectedAlliance;
     }
 
-    public Optional<VisionSubsystemLimelight.TagSnapshot> getLastSnapshot() {
-        return Optional.ofNullable(lastSnapshot);
+    /** Returns the most recent vision snapshot, or null if none. */
+    public VisionSubsystemLimelight.TagSnapshot getLastSnapshot() {
+        return lastSnapshot;
     }
 
     public int getDetectedTagId() {

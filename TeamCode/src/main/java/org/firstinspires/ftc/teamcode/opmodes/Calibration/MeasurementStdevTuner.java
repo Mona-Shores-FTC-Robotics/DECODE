@@ -18,7 +18,6 @@ import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.WelfordVariance;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Tune the AprilTag measurement standard deviations that feed the Kalman R
@@ -108,9 +107,8 @@ public class MeasurementStdevTuner extends OpMode {
         }
         prevCross = gamepad1.cross;
 
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = robot.vision.getLastSnapshot();
-        if (snapOpt.isPresent()) {
-            VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
+        VisionSubsystemLimelight.TagSnapshot snap = robot.vision.getLastSnapshot();
+        if (snap != null) {
             Pose pose = snap.pedroPoseMT2 != null ? snap.pedroPoseMT2 : snap.pedroPoseMT1;
             if (pose != null && snap.capturedAtNs != lastSampledNs) {
                 lastSampledNs = snap.capturedAtNs;

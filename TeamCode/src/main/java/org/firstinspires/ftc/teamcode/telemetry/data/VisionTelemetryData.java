@@ -77,11 +77,12 @@ public class VisionTelemetryData {
         }
         boolean odometryPending = vision.shouldUpdateOdometry();
 
-        VisionSubsystemLimelight.TagSnapshot snapshot = vision.getLastSnapshot().orElse(null);
+        VisionSubsystemLimelight.TagSnapshot snapshot = vision.getLastSnapshot();
         if (snapshot != null) {
             double yawDeg = snapshot.getFtcYaw();
             double headingRad = Double.isNaN(yawDeg) ? Double.NaN : Math.toRadians(yawDeg);
 
+            com.pedropathing.geometry.Pose ftcPose = snapshot.getFtcPose();
             return new VisionTelemetryData(
                     hasTag,
                     tagId,
@@ -93,8 +94,8 @@ public class VisionTelemetryData {
                     snapshot.getTxDegrees(),
                     snapshot.getTyDegrees(),
                     snapshot.getTargetAreaPercent(),
-                    snapshot.getFtcPose().get().getX(),
-                    snapshot.getFtcPose().get().getY(),
+                    ftcPose != null ? ftcPose.getX() : Double.NaN,
+                    ftcPose != null ? ftcPose.getY() : Double.NaN,
                     headingRad
             );
         } else {

@@ -19,7 +19,6 @@ import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Continuously calculates distance to goal and updates launcher RPM while held.
@@ -223,13 +222,12 @@ public final class DistanceBasedSpinCommand {
         }
         diagnostics.lastSource = "odometry";
         diagnostics.robotPoseAvailable = true;
-        Optional<Pose> goalOpt = vision.getTargetGoalPose();
-        diagnostics.goalPoseAvailable = goalOpt.isPresent();
-        if (!goalOpt.isPresent()) {
+        Pose goalPose = vision.getTargetGoalPose();
+        diagnostics.goalPoseAvailable = goalPose != null;
+        if (goalPose == null) {
             diagnostics.lastSource = "none";
             return 0.0;
         }
-        Pose goalPose = goalOpt.get();
         double dx = goalPose.getX() - odometryPose.getX();
         double dy = goalPose.getY() - odometryPose.getY();
         return Math.hypot(dx, dy);

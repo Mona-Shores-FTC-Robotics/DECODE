@@ -15,7 +15,6 @@ import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.MotifPattern;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
-import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -188,9 +187,9 @@ public class OperatorBindings {
             return;
         }
 
-        Optional<Integer> motifTag = robot.vision.findMotifTagId();
-        if (motifTag.isPresent()) {
-            MotifPattern pattern = MotifPattern.fromTagId(motifTag.get());
+        Integer motifTag = robot.vision.findMotifTagId();
+        if (motifTag != null) {
+            MotifPattern pattern = MotifPattern.fromTagId(motifTag);
             RobotState.setMotif(pattern);
 
             if (robot.lighting != null) {

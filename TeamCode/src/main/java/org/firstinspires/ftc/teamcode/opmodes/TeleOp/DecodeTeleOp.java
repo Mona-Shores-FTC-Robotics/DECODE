@@ -66,39 +66,55 @@ public class DecodeTeleOp extends OpMode {
 
     @Override
     public void init() {
-        // Cache control + expansion hub bulk reads (was BulkReadComponent's job).
+        enableBulkReads();
+        createRobot();
+        restoreAlliance();
+        initSubsystems();
+        scheduleSubsystems();
+    }
+
+    /** Step 1: Enable manual bulk reads so each loop only hits hubs once. */
+    private void enableBulkReads() {
         hubs = hardwareMap.getAll(LynxModule.class);
         hubs.forEach(h -> h.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL));
+    }
+
+    /** Step 2: Build the Robot container and start the telemetry session. */
+    private void createRobot() {
         robot = new Robot(hardwareMap);
         ControlHubIdentifierUtil.setRobotName(hardwareMap, telemetry);
         robot.attachPedroFollower();
         robot.telemetry.startSession();
+    }
 
-        // Apply alliance from previous OpMode (auto) before initializing
-        // so lighting subsystem shows correct color from the start.
-        // Default to BLUE if no valid alliance from auto (never leave as UNKNOWN)
+    /**
+     * Step 3: Restore the alliance that was set during autonomous.
+     * Defaults to BLUE so the robot can always shoot even without an auto handoff.
+     */
+    private void restoreAlliance() {
         Alliance persistedAlliance = RobotState.getAlliance();
         if (persistedAlliance != null && persistedAlliance != Alliance.UNKNOWN) {
             robot.setAlliance(persistedAlliance);
             selectedAlliance = persistedAlliance;
         } else {
-            // No valid handoff from auto - default to BLUE so we can always shoot
             robot.setAlliance(Alliance.BLUE);
             selectedAlliance = Alliance.BLUE;
         }
         updateAllianceLighting();
+
+        Alliance selectorDefault = (selectedAlliance != Alliance.UNKNOWN) ? selectedAlliance : Alliance.BLUE;
+        allianceSelector = new AllianceSelector(gamepad1, selectorDefault);
+    }
+
+    /** Step 4: Initialize subsystems and wire up cross-subsystem dependencies. */
+    private void initSubsystems() {
         robot.drive.setRobotCentric(DriveSubsystem.robotCentricConfig);
         robot.initializeForTeleOp();
-        // Wire up drive subsystem for relocalization warning checks
         robot.lighting.setDriveSubsystem(robot.drive);
-        // Use persisted alliance if valid, otherwise default to BLUE (not UNKNOWN)
-        Alliance selectorDefault = (persistedAlliance != null && persistedAlliance != Alliance.UNKNOWN)
-                ? persistedAlliance
-                : Alliance.BLUE;
-        allianceSelector = new AllianceSelector(gamepad1, selectorDefault);
+    }
 
-        // Subsystem periodics are scheduled as Ivy infinite Commands; no NextFTC SubsystemComponent registration.
-        // Reset Ivy's process-global Scheduler to clear any leftover state from a prior OpMode.
+    /** Step 5: Register all subsystem periodic() loops with the Ivy Scheduler. */
+    private void scheduleSubsystems() {
         com.pedropathing.ivy.Scheduler.reset();
         com.pedropathing.ivy.Scheduler.schedule(
                 robot.drive.periodic(),

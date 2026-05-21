@@ -17,7 +17,6 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * goBILDA RGB Indicator Light wrapper.
@@ -665,9 +664,9 @@ public class LightingSubsystem implements IntakeSubsystem.LaneColorListener {
         public void updateDuringMatch() {
             if (stage != Stage.MATCH || motifPersisted) return;
 
-            Optional<Integer> motifTag = findMotifTagId();
-            if (motifTag.isPresent()) {
-                observedMotif = MotifPattern.fromTagId(motifTag.get());
+            Integer motifTag = findMotifTagId();
+            if (motifTag != null) {
+                observedMotif = MotifPattern.fromTagId(motifTag);
                 RobotState.setMotif(observedMotif);
                 motifPersisted = true;
             }
@@ -688,10 +687,10 @@ public class LightingSubsystem implements IntakeSubsystem.LaneColorListener {
                     ? Alliance.UNKNOWN
                     : allianceSelector.getSelectedAlliance();
 
-            Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = Optional.empty();
+            VisionSubsystemLimelight.TagSnapshot snapshotFromVision = null;
 
             if (allianceSelector != null && robot != null) {
-                snapshotOpt = allianceSelector.updateFromVision(robot.vision);
+                snapshotFromVision = allianceSelector.updateFromVision(robot.vision);
                 allianceSelector.applySelection(robot, lightingSubsystem);
 
                 selectedAlliance = allianceSelector.getSelectedAlliance();
@@ -702,7 +701,7 @@ public class LightingSubsystem implements IntakeSubsystem.LaneColorListener {
             }
 
             if (allianceSelector != null
-                    && snapshotOpt.isPresent()
+                    && snapshotFromVision != null
                     && !allianceSelector.isSelectionLocked()) {
                 allianceSelector.lockSelection();
             }
@@ -723,9 +722,9 @@ public class LightingSubsystem implements IntakeSubsystem.LaneColorListener {
         }
 
         private void handleMotifTracking(long now) {
-            Optional<Integer> motifTag = findMotifTagId();
-            if (motifTag.isPresent()) {
-                observedMotif = MotifPattern.fromTagId(motifTag.get());
+            Integer motifTag = findMotifTagId();
+            if (motifTag != null) {
+                observedMotif = MotifPattern.fromTagId(motifTag);
             }
 
             boolean showingAlliance = (allianceReminderUntilMs > now);
@@ -761,8 +760,8 @@ public class LightingSubsystem implements IntakeSubsystem.LaneColorListener {
             }
         }
 
-        private Optional<Integer> findMotifTagId() {
-            if (robot == null || robot.vision == null) return Optional.empty();
+        private Integer findMotifTagId() {
+            if (robot == null || robot.vision == null) return null;
             return robot.vision.findMotifTagId();
         }
 

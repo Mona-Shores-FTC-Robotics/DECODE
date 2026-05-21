@@ -5,7 +5,6 @@ import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 
-import java.util.Optional;
 
 /**
  * Shared helper for autonomous init loops.
@@ -62,10 +61,9 @@ public class AutoPrestartHelper {
         if (robot.lighting != null) {
             robot.lighting.showSolidAlliance(selectedAlliance);
         }
-        Pose startPoseFromVision = allianceSelector.getLastSnapshot()
-                .flatMap(VisionSubsystemLimelight.TagSnapshot::getRobotPosePedroMT1)
-                .map(AutoPrestartHelper::copyPose)
-                .orElse(null);
+        VisionSubsystemLimelight.TagSnapshot lastSnap = allianceSelector.getLastSnapshot();
+        Pose mt1 = lastSnap != null ? lastSnap.getRobotPosePedroMT1() : null;
+        Pose startPoseFromVision = mt1 != null ? copyPose(mt1) : null;
 
         maybeRelocalizeFromGoalTag(activeAlliance);
         maybeDetectMotif();
@@ -91,12 +89,11 @@ public class AutoPrestartHelper {
     }
 
     private void maybeRelocalizeFromGoalTag(Alliance activeAlliance) {
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = robot.vision.getLastSnapshot();
-        if (!snapshotOpt.isPresent()) {
+        VisionSubsystemLimelight.TagSnapshot snapshot = robot.vision.getLastSnapshot();
+        if (snapshot == null) {
             return;
         }
 
-        VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
         if (!isGoalTag(snapshot.tagId)) {
             return;
         }
@@ -131,12 +128,12 @@ public class AutoPrestartHelper {
     }
 
     private void maybeDetectMotif() {
-        Optional<Integer> motifTag = robot.vision.findMotifTagId();
-        if (!motifTag.isPresent()) {
+        Integer motifTag = robot.vision.findMotifTagId();
+        if (motifTag == null) {
             return;
         }
 
-        int tagId = motifTag.get();
+        int tagId = motifTag;
         if (observedMotifTagId != null && observedMotifTagId == tagId && observedMotif != MotifPattern.UNKNOWN) {
             return; // Already latched
         }

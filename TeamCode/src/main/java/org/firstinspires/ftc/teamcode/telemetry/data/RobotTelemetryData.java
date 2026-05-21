@@ -114,7 +114,7 @@ public class RobotTelemetryData {
         // Build vision pose for PoseTelemetryData (FTC Pose type from vision subsystem)
         Pose visionPose = null;
         if (visionData.hasTag && !Double.isNaN(visionData.poseXIn) && !Double.isNaN(visionData.poseYIn)) {
-            visionPose = vision.getRobotPoseFromTagFtc().orElse(null);
+            visionPose = vision.getRobotPoseFromTagFtc();
         }
 
         // Capture pose data (with optional override)
