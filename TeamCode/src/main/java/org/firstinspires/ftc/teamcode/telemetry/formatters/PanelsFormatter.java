@@ -49,17 +49,37 @@ public class PanelsFormatter {
     }
 
     private void publishText(RobotTelemetryData data, TelemetrySettings.TelemetryLevel level) {
-        // Pose
-        telemetry.debug(String.format("x: %.1f  y: %.1f  hdg: %.1f°",
-                data.pose.poseXIn, data.pose.poseYIn, Math.toDegrees(data.pose.headingRad)));
+        // --- Numeric values via addData() → appear as named series in Graph widget ---
 
-        // Launcher — one line per lane showing current/target RPM and ready state
+        // Pose
+        telemetry.addData("pose_x", data.pose.poseXIn);
+        telemetry.addData("pose_y", data.pose.poseYIn);
+        telemetry.addData("pose_hdg_deg", Math.toDegrees(data.pose.headingRad));
+
+        // Launcher RPM per lane
+        telemetry.addData("left_rpm", data.launcher.left.currentRpm);
+        telemetry.addData("left_target", data.launcher.left.targetRpm);
+        telemetry.addData("center_rpm", data.launcher.center.currentRpm);
+        telemetry.addData("center_target", data.launcher.center.targetRpm);
+        telemetry.addData("right_rpm", data.launcher.right.currentRpm);
+        telemetry.addData("right_target", data.launcher.right.targetRpm);
+
+        // Vision range (graphable — useful for distance tuning)
+        if (data.vision.hasTag) {
+            telemetry.addData("range_in", data.vision.rangeIn);
+            telemetry.addData("tx_deg", data.vision.txDeg);
+        }
+
+        // Loop time
+        telemetry.addData("loop_ms", data.timing.mainLoopMs);
+
+        // --- String/status via debug() → appear as text in Telemetry widget ---
+
         telemetry.debug(String.format("L: %s  C: %s  R: %s",
                 laneLabel(data.launcher.left),
                 laneLabel(data.launcher.center),
                 laneLabel(data.launcher.right)));
 
-        // Intake
         telemetry.debug(String.format("intake: %s x%d  [%s | %s | %s]",
                 data.intake.mode,
                 data.intake.artifactCount,
@@ -67,29 +87,21 @@ public class PanelsFormatter {
                 data.intake.laneCenterSummary.color,
                 data.intake.laneRightSummary.color));
 
-        // Vision
-        if (data.vision.hasTag) {
-            telemetry.debug(String.format("tag %d  @ %.1f\"  tx %.1f°",
-                    data.vision.tagId, data.vision.rangeIn, data.vision.txDeg));
-        } else {
-            telemetry.debug("no tag");
-        }
-
-        // Loop time
-        telemetry.debug(String.format("loop: %.1f ms", data.timing.mainLoopMs));
+        telemetry.debug(data.vision.hasTag
+                ? String.format("tag %d @ %.1f\"", data.vision.tagId, data.vision.rangeIn)
+                : "no tag");
 
         if (level == TelemetrySettings.TelemetryLevel.VERBOSE) {
-            telemetry.debug(String.format(
-                    "drive %.1f  intake %.1f  launcher %.1f  vision %.1f ms",
-                    data.timing.driveMs, data.timing.intakeMs,
-                    data.timing.launcherMs, data.timing.visionMs));
-            telemetry.debug(String.format("bearing: %.1f°  yaw: %.1f°",
-                    data.vision.bearingDeg, data.vision.yawDeg));
+            telemetry.addData("drive_ms", data.timing.driveMs);
+            telemetry.addData("intake_ms", data.timing.intakeMs);
+            telemetry.addData("launcher_ms", data.timing.launcherMs);
+            telemetry.addData("vision_ms", data.timing.visionMs);
+            telemetry.addData("bearing_deg", data.vision.bearingDeg);
             telemetry.debug(String.format("alliance: %s  opmode: %s",
                     data.context.alliance.name(), data.context.opMode));
         }
 
-        // update() with no args — sends to Panels Telemetry widget only, never touches DS
+        // update() with no args — sends to Panels only, never touches DS
         telemetry.update();
     }
 
