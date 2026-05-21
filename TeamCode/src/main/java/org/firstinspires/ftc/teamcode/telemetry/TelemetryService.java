@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.formatters.DashboardFormatter;
 import org.firstinspires.ftc.teamcode.telemetry.formatters.DriverStationFormatter;
+import org.firstinspires.ftc.teamcode.telemetry.formatters.PanelsFormatter;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -36,6 +37,7 @@ public class TelemetryService {
     private boolean dashboardInitialized = false;
     private final DriverStationFormatter driverStationFormatter;
     private final DashboardFormatter dashboardFormatter;
+    private final PanelsFormatter panelsFormatter;
 
     private boolean sessionActive = false;
 
@@ -48,6 +50,7 @@ public class TelemetryService {
         this.dashboard = null;
         this.driverStationFormatter = new DriverStationFormatter();
         this.dashboardFormatter = new DashboardFormatter();
+        this.panelsFormatter = new PanelsFormatter();
     }
 
     /**
@@ -147,9 +150,23 @@ public class TelemetryService {
         // FTC Dashboard packets (only in PRACTICE/VERBOSE mode)
         publishDashboardTelemetry(data);
 
+        // Panels Telemetry + Field widgets (only in PRACTICE/VERBOSE mode)
+        publishPanelsTelemetry(data);
+
         // Driver station telemetry (skip if autonomous and driver controls hidden)
         if (dsTelemetry != null && !isAutonomous) {
             publishDriverStationTelemetry(dsTelemetry, data);
+        }
+    }
+
+    /**
+     * Publish Panels Telemetry and Field widgets (only in PRACTICE/VERBOSE mode).
+     */
+    private void publishPanelsTelemetry(RobotTelemetryData data) {
+        try {
+            panelsFormatter.publish(data, TelemetrySettings.LEVEL);
+        } catch (Exception ignored) {
+            // Panels not available on this device — safe to skip
         }
     }
 
