@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.subsystems.intake.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Lane sensor configuration for artifact color detection.
  *
@@ -110,21 +108,20 @@ import com.bylazar.configurables.annotations.Configurable;
  *
  * ============================================================================
  */
-@Configurable
 public class IntakeLaneSensorConfig {
 
     /** Number of lanes that must have artifacts to consider intake "full" */
     public int fullCount = 3;
 
-    // Configuration groups (shown in FTC Dashboard)
-    public static Polling polling = new Polling();
+    // Configuration groups (shown in FTC Dashboard via the IntakeSubsystem.laneSensorConfig holder).
+    public Polling polling = new Polling();
     public Hardware hardware = new Hardware();
-    public static SaturationFilter saturationFilter = new SaturationFilter();
-    public static ValueFilter valueFilter = new ValueFilter();
-    public static HueFilter hueFilter = new HueFilter();
-    public static DistanceFilter distanceFilter = new DistanceFilter();
-    public static Gating gating = new Gating();
-    public static ColorClassifier colorClassifier = new ColorClassifier();
+    public SaturationFilter saturationFilter = new SaturationFilter();
+    public ValueFilter valueFilter = new ValueFilter();
+    public HueFilter hueFilter = new HueFilter();
+    public DistanceFilter distanceFilter = new DistanceFilter();
+    public Gating gating = new Gating();
+    public ColorClassifier colorClassifier = new ColorClassifier();
 
     // =========================================================================
     // SENSOR POLLING

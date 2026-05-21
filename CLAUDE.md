@@ -239,6 +239,15 @@ These rules govern *where code lives* and *which pattern to pick* — the things
 - The data SHAPE lives in the config class. Per-robot VALUES live in `util/RobotProfile.java` (one place to diff what's different between 19429 and 20245)
 - Subsystems hold one `public static <Config> configName = RobotProfile.forCurrent().<config>;` field per config — no per-robot triplets
 
+**Static vs. instance fields inside a config class — pick one pattern:**
+
+| Pattern | When to use | Example |
+|---|---|---|
+| **Instance fields** (`public double kP;`) | The value might differ per robot, OR you might want multiple independent copies. The class is held by a `public static` field on an `@Configurable` holder (a subsystem or RobotProfile). The Dashboard path is `<Holder>.<holderField>.<configField>`. | `DriveAimAssistConfig` held by `DriveSubsystem.aimAssistConfig`. `LauncherFeederConfig` injected at construction time. |
+| **Static fields** (`public static double kP = 0.5;`) | One shared global tunable. The class itself is `@Configurable` so Sloth scans it directly. The Dashboard path is `<ConfigClass>.<configField>`. | `DriveFusionConfig` — single set of vision-fusion gains for the whole robot, regardless of which physical robot is running. |
+
+Mixing both styles in one class confuses readers and creates two Dashboard paths for the same data — don't do it. If you're not sure which to use, default to **instance fields**: it composes cleanly with `RobotProfile` and the rest of the codebase.
+
 **Enums:**
 - Used by ONE class only → nest inside that class (e.g. `LightingPattern` inside `LightingSubsystem`, the launch-sequence `Stage` inside `LaunchInSequenceCommand`)
 - Used by TWO OR MORE classes → standalone in `util/<Name>.java` (e.g. `Alliance`, `LauncherLane`, `IntakeMode`)

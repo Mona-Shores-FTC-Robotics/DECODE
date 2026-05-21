@@ -51,6 +51,7 @@ import java.util.Set;
  * <p>Per-robot tuning (RPMs, hood positions, feeder servo positions, kS/kV/kP)
  * lives in {@code util/RobotProfile.java}.
  */
+@Configurable
 public class LauncherSubsystem {
 
     /**
@@ -674,7 +675,7 @@ public class LauncherSubsystem {
      * This provides graceful degradation - if one lane is jammed, other lanes still work.
      */
     private void updateHumanLoadingHoods() {
-        double threshold = LauncherReverseIntakeConfig.reverseRpmThreshold;
+        double threshold = reverseFlywheelForHumanLoadingConfig.reverseRpmThreshold;
 
         // If threshold is 0, skip speed-gating (hoods controlled elsewhere)
         if (threshold <= 0.0) {
