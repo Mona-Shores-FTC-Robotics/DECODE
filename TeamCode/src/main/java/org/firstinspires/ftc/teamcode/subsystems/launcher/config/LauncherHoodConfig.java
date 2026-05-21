@@ -1,13 +1,11 @@
 package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
 
-import com.bylazar.configurables.annotations.Configurable;
-
 /**
  * Hood servo configuration shape. Values are filled in by
  * {@code RobotProfile} — see {@code util/RobotProfile.java} for the
- * per-robot tuning.
+ * per-robot tuning. Discovered by Dashboard via
+ * {@code LauncherSubsystem.hoodConfig} (the public-static holder).
  */
-@Configurable
 public class LauncherHoodConfig {
     /** Hood retracted (fully in) servo position */
     public double retractedPosition = 1;

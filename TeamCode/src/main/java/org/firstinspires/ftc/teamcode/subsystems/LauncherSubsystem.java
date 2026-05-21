@@ -61,17 +61,17 @@ public class LauncherSubsystem {
      */
     public static final double READY_LOSS_DEBOUNCE_MS = 250.0;
 
-    // Global configuration instances
+    // Global configuration instances (shared across both robots).
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
 
-    // Per-robot configs are injected at construction. Suffixed Config to disambiguate
-    // from local variables of the Flywheel/Feeder/Hood inner classes (e.g. the common
-    // `for (Hood hood : hoods.values())` loop pattern).
-    private final LauncherFlywheelConfig flywheelConfig;
-    private final LauncherFeederConfig feederConfig;
-    private final LauncherHoodConfig hoodConfig;
-    private final LauncherTimingConfig timingConfig;
+    // Per-robot configs — pulled from RobotProfile so Dashboard/Panels can tune the active robot's values.
+    // The "Config" suffix avoids collision with local variables in the Flywheel/Feeder/Hood inner classes
+    // (e.g. the common `for (Hood hood : hoods.values())` loop pattern).
+    public static LauncherFlywheelConfig flywheelConfig = RobotProfile.forCurrent().flywheel;
+    public static LauncherFeederConfig feederConfig = RobotProfile.forCurrent().feeder;
+    public static LauncherHoodConfig hoodConfig = RobotProfile.forCurrent().hood;
+    public static LauncherTimingConfig timingConfig = RobotProfile.forCurrent().timing;
 
     private final HardwareMap hardwareMap;
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
@@ -107,16 +107,8 @@ public class LauncherSubsystem {
         return org.firstinspires.ftc.teamcode.util.CachedHardware.tryServo(hardwareMap, name);
     }
 
-    public LauncherSubsystem(HardwareMap hardwareMap,
-                             LauncherFlywheelConfig flywheelConfig,
-                             LauncherFeederConfig feederConfig,
-                             LauncherHoodConfig hoodConfig,
-                             LauncherTimingConfig timingConfig) {
+    public LauncherSubsystem(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
-        this.flywheelConfig = flywheelConfig;
-        this.feederConfig = feederConfig;
-        this.hoodConfig = hoodConfig;
-        this.timingConfig = timingConfig;
         for (LauncherLane lane : LauncherLane.values()) {
             flywheels.put(lane, new Flywheel(lane, hardwareMap));
             feeders.put(lane, new Feeder(lane, hardwareMap));
