@@ -470,7 +470,7 @@ public class DriveSubsystem implements Subsystem {
 
     public void driveScaled(double fieldX , double fieldY , double rotationInput , boolean slowMode , boolean rampMode) {
         // Invert controls for Red alliance so driver perspective matches their side of field
-        Alliance alliance = vision.getAlliance();
+        Alliance alliance = RobotState.getAlliance();
         if (alliance == Alliance.RED) {
             fieldX = -fieldX;
             fieldY = -fieldY;
@@ -558,7 +558,7 @@ public class DriveSubsystem implements Subsystem {
      */
     public void aimAndDrive(double fieldX , double fieldY , boolean slowMode) {
         // Invert controls for Red alliance so driver perspective matches their side of field
-        Alliance alliance = vision.getAlliance();
+        Alliance alliance = RobotState.getAlliance();
         if (alliance == Alliance.RED) {
             fieldX = -fieldX;
             fieldY = -fieldY;
@@ -733,7 +733,7 @@ public class DriveSubsystem implements Subsystem {
      */
     public void aimAndDriveFixedAngle(double fieldX , double fieldY , boolean slowMode) {
         // Invert controls for Red alliance so driver perspective matches their side of field
-        Alliance alliance = vision.getAlliance();
+        Alliance alliance = RobotState.getAlliance();
         if (alliance == Alliance.RED) {
             fieldX = -fieldX;
             fieldY = -fieldY;
@@ -783,7 +783,7 @@ public class DriveSubsystem implements Subsystem {
      */
     public void aimAndDriveRightTriggerFixedAngle(double fieldX , double fieldY , boolean slowMode) {
         // Invert controls for Red alliance so driver perspective matches their side of field
-        Alliance alliance = vision.getAlliance();
+        Alliance alliance = RobotState.getAlliance();
         if (alliance == Alliance.RED) {
             fieldX = -fieldX;
             fieldY = -fieldY;
@@ -840,7 +840,7 @@ public class DriveSubsystem implements Subsystem {
             return false;
         }
 
-        Alliance alliance = vision.getAlliance();
+        Alliance alliance = RobotState.getAlliance();
         Pose targetPose = (alliance == Alliance.RED)
             ? FieldConstants.getRedBasketTarget()
             : FieldConstants.getBlueBasketTarget();
