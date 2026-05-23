@@ -73,9 +73,9 @@ public final class LauncherIdleCommand {
             double rpm = launcher.getLastShotRpm(lane);
             if (rpm <= 0.0) {
                 switch (lane) {
-                    case LEFT:   rpm = cfg.midLeftRpm;   break;
-                    case CENTER: rpm = cfg.midCenterRpm; break;
-                    default:     rpm = cfg.midRightRpm;  break;
+                    case LEFT:   rpm = cfg.teleop.midRange.left;   break;
+                    case CENTER: rpm = cfg.teleop.midRange.center; break;
+                    default:     rpm = cfg.teleop.midRange.right;  break;
                 }
             }
             launcher.setLaunchRpm(lane, rpm);

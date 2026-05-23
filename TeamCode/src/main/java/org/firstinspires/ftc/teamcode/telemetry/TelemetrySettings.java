@@ -16,7 +16,7 @@ public final class TelemetrySettings {
     }
 
     /** Change via Bylazar Panels — no recompile needed. */
-    public static TelemetryLevel LEVEL = TelemetryLevel.PRACTICE;
+    public static TelemetryLevel LEVEL = TelemetryLevel.MATCH;
 
     public static boolean shouldInitializeDashboard() {
         return LEVEL != TelemetryLevel.MATCH;

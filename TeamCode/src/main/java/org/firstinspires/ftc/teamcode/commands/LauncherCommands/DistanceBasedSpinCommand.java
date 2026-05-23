@@ -203,20 +203,20 @@ public final class DistanceBasedSpinCommand {
     private static void setRpmsForDistance(LauncherSubsystem launcher, double distanceIn) {
         CommandRangeConfig cfg = rangeConfig();
         double leftRpm = interpolateRpm(distanceIn,
-                distanceCalibration.shortRangeDistanceIn, cfg.shortLeftRpm,
-                distanceCalibration.midRangeDistanceIn, cfg.midLeftRpm,
-                distanceCalibration.longRangeMinDistanceIn, cfg.longMinLeftRpm,
-                distanceCalibration.longRangeMaxDistanceIn, cfg.longMaxLeftRpm);
+                distanceCalibration.shortRangeDistanceIn, cfg.teleop.shortRange.left,
+                distanceCalibration.midRangeDistanceIn, cfg.teleop.midRange.left,
+                distanceCalibration.longRangeMinDistanceIn, cfg.teleop.longRange.minLeft,
+                distanceCalibration.longRangeMaxDistanceIn, cfg.teleop.longRange.maxLeft);
         double centerRpm = interpolateRpm(distanceIn,
-                distanceCalibration.shortRangeDistanceIn, cfg.shortCenterRpm,
-                distanceCalibration.midRangeDistanceIn, cfg.midCenterRpm,
-                distanceCalibration.longRangeMinDistanceIn, cfg.longMinCenterRpm,
-                distanceCalibration.longRangeMaxDistanceIn, cfg.longMaxCenterRpm);
+                distanceCalibration.shortRangeDistanceIn, cfg.teleop.shortRange.center,
+                distanceCalibration.midRangeDistanceIn, cfg.teleop.midRange.center,
+                distanceCalibration.longRangeMinDistanceIn, cfg.teleop.longRange.minCenter,
+                distanceCalibration.longRangeMaxDistanceIn, cfg.teleop.longRange.maxCenter);
         double rightRpm = interpolateRpm(distanceIn,
-                distanceCalibration.shortRangeDistanceIn, cfg.shortRightRpm,
-                distanceCalibration.midRangeDistanceIn, cfg.midRightRpm,
-                distanceCalibration.longRangeMinDistanceIn, cfg.longMinRightRpm,
-                distanceCalibration.longRangeMaxDistanceIn, cfg.longMaxRightRpm);
+                distanceCalibration.shortRangeDistanceIn, cfg.teleop.shortRange.right,
+                distanceCalibration.midRangeDistanceIn, cfg.teleop.midRange.right,
+                distanceCalibration.longRangeMinDistanceIn, cfg.teleop.longRange.minRight,
+                distanceCalibration.longRangeMaxDistanceIn, cfg.teleop.longRange.maxRight);
 
         launcher.setLaunchRpm(LauncherLane.LEFT, leftRpm);
         launcher.setLaunchRpm(LauncherLane.CENTER, centerRpm);
@@ -259,9 +259,9 @@ public final class DistanceBasedSpinCommand {
     private static void setHoodForDistance(LauncherSubsystem launcher, double distanceIn) {
         CommandRangeConfig cfg = rangeConfig();
         double hoodPosition = interpolateHood(distanceIn,
-                hoodThresholds.shortRangeDistanceIn, cfg.shortHoodPosition,
-                hoodThresholds.midRangeDistanceIn, cfg.midHoodPosition,
-                cfg.longHoodPosition);
+                hoodThresholds.shortRangeDistanceIn, cfg.teleop.shortRange.hood,
+                hoodThresholds.midRangeDistanceIn, cfg.teleop.midRange.hood,
+                cfg.teleop.longRange.hood);
         launcher.setAllHoodPositions(hoodPosition);
         diagnostics.lastHoodPosition = hoodPosition;
     }

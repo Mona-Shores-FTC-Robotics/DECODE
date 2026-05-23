@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFusionConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.AutoField;
@@ -15,6 +16,7 @@ import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
+import org.firstinspires.ftc.teamcode.util.PoseFrames;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.List;
@@ -33,6 +35,15 @@ import java.util.List;
 public abstract class BaseAutonomousOpMode extends OpMode {
 
     private static final Alliance DEFAULT_ALLIANCE = Alliance.BLUE;
+
+    /**
+     * Max distance (inches) a vision pose may sit from the expected start before
+     * we reject it during init reconciliation. The robot is placed at a known
+     * spot for auto, so vision should only *refine* that seed — generous enough
+     * to absorb real placement error, tight enough to block a bad single-tag fix
+     * from hijacking the start pose.
+     */
+    private static final double MAX_VISION_START_CORRECTION_IN = 18.0;
 
     // Accessible by subclasses for buildAutoRoutine() and getDefaultStartPose()
     protected Robot robot;
@@ -136,6 +147,14 @@ public abstract class BaseAutonomousOpMode extends OpMode {
         applyInitSelections(initStatus);
         modeSelector.updateDuringInit(robot.lighting);
 
+        // Publish the seeded follower pose (FTC frame) every init loop so
+        // AdvantageScope renders the robot at the auto's start pose instead of
+        // falling back to the field-center default.
+        Pose initPose = robot.drive.getFollower().getPose();
+        if (initPose != null) {
+            RobotState.putPose("Pose/Robot", PoseFrames.pedroToFtc(initPose));
+        }
+
         updateInitTelemetry(initStatus);
         updateDriverStationTelemetry(initStatus);
         robot.telemetry.publishLoopTelemetry(
@@ -213,7 +232,12 @@ public abstract class BaseAutonomousOpMode extends OpMode {
             applyAlliance(activeAlliance, defaultPose);
         }
 
-        lastDetectedStartPosePedro = status.startPoseFromVision;
+        // Only let vision override the seeded start pose when fusion is on AND init
+        // relocalization is explicitly enabled. By default init holds the configured
+        // seed so a read taken while placing the robot can't shift the start pose.
+        boolean visionStartAllowed =
+                DriveFusionConfig.fusionVisionEnabled && DriveFusionConfig.relocalizeDuringInit;
+        lastDetectedStartPosePedro = visionStartAllowed ? status.startPoseFromVision : null;
         if (shouldUpdateStartPose(lastDetectedStartPosePedro)) {
             applyAlliance(activeAlliance, lastDetectedStartPosePedro);
         }
@@ -241,6 +265,20 @@ public abstract class BaseAutonomousOpMode extends OpMode {
                 candidate.getY() < 0 || candidate.getY() > fieldWidthIn) {
             return false;
         }
+
+        // Reconcile against the known start: vision refines placement, it does not
+        // teleport us. Reject corrections beyond a sane placement-error radius so a
+        // bad single-tag solution can't hijack the auto start pose.
+        Pose expected = getTargetPose();
+        double correction = Math.hypot(
+                candidate.getX() - expected.getX(),
+                candidate.getY() - expected.getY());
+        RobotState.packet.put("init/visionCorrection_in", correction);
+        if (correction > MAX_VISION_START_CORRECTION_IN) {
+            RobotState.packet.put("init/visionCorrection_rejected", true);
+            return false;
+        }
+        RobotState.packet.put("init/visionCorrection_rejected", false);
 
         if (lastAppliedStartPosePedro != null) {
             RobotState.packet.put("init/deltaX", Math.abs(candidate.getX() - lastAppliedStartPosePedro.getX()));

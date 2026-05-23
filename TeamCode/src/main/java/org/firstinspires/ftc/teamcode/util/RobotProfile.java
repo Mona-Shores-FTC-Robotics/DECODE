@@ -380,38 +380,28 @@ public final class RobotProfile {
 
     private static CommandRangeConfig rangeConfig19429() {
         CommandRangeConfig config = new CommandRangeConfig();
-        config.shortLeftRpm = 2400;  config.shortCenterRpm = 2400;  config.shortRightRpm = 2400;
-        config.midLeftRpm = 3350;    config.midCenterRpm = 3350;    config.midRightRpm = 3350;
-        config.longMinLeftRpm = 3875; config.longMinCenterRpm = 3875; config.longMinRightRpm = 3875;
-        config.longMaxLeftRpm = 4000; config.longMaxCenterRpm = 4000; config.longMaxRightRpm = 4000;
-        config.shortAutoLeftRpm = 2000; config.shortAutoCenterRpm = 2000; config.shortAutoRightRpm = 2000;
-        config.midAutoLeftRpm = 2400;   config.midAutoCenterRpm = 2400;   config.midAutoRightRpm = 2400;
-        config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
-        config.shortHoodPosition = 1;
-        config.midHoodPosition = 0.05;
-        config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = .55;
-        config.midAutoHoodPosition = 0.1;
-        config.farAutoHoodPosition = 0.0;
+        // Teleop ranges:                     all-lanes RPM,  hood
+        config.teleop.shortRange.set(1900, 1);
+        config.teleop.midRange.set(2500, 0.05);
+        config.teleop.longRange.set(2725, 2900, 0.0); // min RPM, max RPM, hood
+        // Auto ranges:
+        config.auto.shortRange.set(2000, .55);
+        config.auto.midRange.set(2400, 0.1);
+        config.auto.farRange.set(2725, 0.0);
         config.timeoutSeconds = 3.5;
         return config;
     }
 
     private static CommandRangeConfig rangeConfig20245() {
         CommandRangeConfig config = new CommandRangeConfig();
-        config.shortLeftRpm = 2400;  config.shortCenterRpm = 2400;  config.shortRightRpm = 2400;
-        config.midLeftRpm = 3350;    config.midCenterRpm = 3350;    config.midRightRpm = 3350;
-        config.longMinLeftRpm = 3875; config.longMinCenterRpm = 3875; config.longMinRightRpm = 3875;
-        config.longMaxLeftRpm = 4000; config.longMaxCenterRpm = 4000; config.longMaxRightRpm = 4000;
-        config.shortAutoLeftRpm = 1870; config.shortAutoCenterRpm = 1870; config.shortAutoRightRpm = 1870;
-        config.midAutoLeftRpm = 2300;   config.midAutoCenterRpm = 2300;   config.midAutoRightRpm = 2300;
-        config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
-        config.shortHoodPosition = .95;
-        config.midHoodPosition = 0.0;
-        config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = .55;
-        config.midAutoHoodPosition = 0.05;
-        config.farAutoHoodPosition = 0.0;
+        // Teleop ranges:                     all-lanes RPM,  hood
+        config.teleop.shortRange.set(2400, .95);
+        config.teleop.midRange.set(3350, 0.0);
+        config.teleop.longRange.set(3875, 4000, 0.0); // min RPM, max RPM, hood
+        // Auto ranges:
+        config.auto.shortRange.set(1870, .55);
+        config.auto.midRange.set(2300, 0.05);
+        config.auto.farRange.set(2725, 0.0);
         config.timeoutSeconds = 3.5;
         return config;
     }

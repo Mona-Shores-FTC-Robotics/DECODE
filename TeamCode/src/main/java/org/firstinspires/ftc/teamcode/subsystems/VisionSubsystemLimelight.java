@@ -146,17 +146,11 @@ public class VisionSubsystemLimelight {
             return;
         }
 
-        // MegaTag2: Update Limelight with current robot heading for IMU-fused localization
-        // This must be called every loop before requesting pose estimates
-        // Skip in diagnostic mode to allow external control for testing different offsets
-        if (hasValidHeading) {
-            double pedroHeadingDeg = Math.toDegrees(currentHeadingRad);
-            double ftcHeadingDeg = AngleUnit.normalizeDegrees(
-                    pedroHeadingDeg + PEDRO_TO_FTC_HEADING_OFFSET_DEG
-            );
-
-            limelight.updateRobotOrientation(ftcHeadingDeg);
-        }
+        // MegaTag2: Update Limelight with current robot heading for IMU-fused
+        // localization, before requesting pose estimates. (Also pushed from
+        // setRobotHeading() so MT2 is correct during init, when this scheduled
+        // loop isn't running yet.)
+        pushRobotOrientationToLimelight();
 
         // Throttle Limelight polling to 20Hz (50ms) to reduce loop time
         if (nowMs - lastVisionPollTimeMs >= VISION_POLL_INTERVAL_MS) {
@@ -334,6 +328,32 @@ public class VisionSubsystemLimelight {
     public void setRobotHeading(double headingRad) {
         currentHeadingRad = headingRad;
         hasValidHeading = true;
+        // Push immediately so MegaTag2 has the heading even during init, where the
+        // scheduled vision loop (doPeriodic) isn't ticking yet. Without this, MT2
+        // solves with a stale orientation and reads wildly off during placement.
+        if (!diagnosticMode) {
+            pushRobotOrientationToLimelight();
+        }
+    }
+
+    /**
+     * Forwards the stored robot heading to the Limelight in the FTC frame
+     * (Pedro 0° = FTC 90°) so MegaTag2 can solve. Safe to call anytime; no-ops
+     * until a heading has been provided.
+     */
+    private void pushRobotOrientationToLimelight() {
+        if (limelight == null || !hasValidHeading) {
+            return;
+        }
+        double pedroHeadingDeg = Math.toDegrees(currentHeadingRad);
+        double ftcHeadingDeg = AngleUnit.normalizeDegrees(
+                pedroHeadingDeg + PEDRO_TO_FTC_HEADING_OFFSET_DEG);
+        limelight.updateRobotOrientation(ftcHeadingDeg);
+        // Diagnostic: compare this against vision/Poses/MT1 heading. If the robot is
+        // correctly placed but MT1's heading disagrees with what we feed here, the
+        // seed/offset is wrong — not MT2.
+        RobotState.packet.put("/vision/fedPedroHeadingDeg", pedroHeadingDeg);
+        RobotState.packet.put("/vision/fedFtcHeadingDeg", ftcHeadingDeg);
     }
 
     public double getLastPeriodicMs() {
@@ -605,11 +625,12 @@ public class VisionSubsystemLimelight {
             // MT1 pose (botpose)
             // -------------------------
             this.mt1Pose = result.getBotpose();
-            if (mt1Pose != null && mt1Pose.getPosition() != null) {
-                this.ftcPoseMT1 = PoseFrames.mt1ToFtc(mt1Pose);
+            Pose candidateFtcMT1 = (mt1Pose != null && mt1Pose.getPosition() != null)
+                    ? PoseFrames.mt1ToFtc(mt1Pose) : null;
+            if (candidateFtcMT1 != null && !isOriginPose(candidateFtcMT1)) {
+                this.ftcPoseMT1 = candidateFtcMT1;
                 RobotState.putPose("vision/Poses/MT1", this.ftcPoseMT1);
                 this.pedroPoseMT1 = PoseFrames.mt1ToPedro(mt1Pose);
-                //if this works that means mt1ToPedro is incorrect.
 
                 this.ftcYawMT1 = Math.toDegrees(ftcPoseMT1.getHeading());
                 this.ftcRangeMT1 = Math.hypot(ftcPoseMT1.getX(), ftcPoseMT1.getY());
@@ -626,8 +647,10 @@ public class VisionSubsystemLimelight {
             // MT2 pose (botpose_orb)
             // -------------------------
             this.mt2Pose = result.getBotpose_MT2();
-            if (mt2Pose != null && mt2Pose.getPosition() != null) {
-                this.ftcPoseMT2 = PoseFrames.mt2ToFtc(mt2Pose);
+            Pose candidateFtcMT2 = (mt2Pose != null && mt2Pose.getPosition() != null)
+                    ? PoseFrames.mt2ToFtc(mt2Pose) : null;
+            if (candidateFtcMT2 != null && !isOriginPose(candidateFtcMT2)) {
+                this.ftcPoseMT2 = candidateFtcMT2;
                 RobotState.putPose("vision/Poses/MT2", this.ftcPoseMT2);
                 this.pedroPoseMT2 = PoseFrames.ftcToPedro(ftcPoseMT2);
 
@@ -700,6 +723,19 @@ public class VisionSubsystemLimelight {
 
         public double getDecisionMargin() {
             return decisionMargin;
+        }
+
+        /**
+         * Limelight reports a botpose at the FTC field origin (0,0) when it has no
+         * valid fix. A real robot is never at exact field center during init or a
+         * match, so an origin pose is a "no solution" sentinel — NOT a real estimate.
+         * Treat it as null; otherwise it converts to Pedro (72,72) and gets fused in
+         * as a mid-field ghost that drags the pose to center. (This is the bug that
+         * broke auto init: the opposite-goal-tag fix would intermittently return
+         * origin, and the filter trusted it.)
+         */
+        private static boolean isOriginPose(Pose ftcPose) {
+            return Math.abs(ftcPose.getX()) < 1.0 && Math.abs(ftcPose.getY()) < 1.0;
         }
 
         /** Pedro-frame pose from MegaTag1 (single-tag), or null if unavailable. */

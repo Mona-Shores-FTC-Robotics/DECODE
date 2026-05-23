@@ -4,6 +4,7 @@ import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFusionConfig;
 
 
 /**
@@ -89,6 +90,11 @@ public class AutoPrestartHelper {
     }
 
     private void maybeRelocalizeFromGoalTag(Alliance activeAlliance) {
+        // Hold the seeded start pose during init unless explicitly opted in. A vision
+        // read taken while the robot is being placed should not move the start pose.
+        if (!DriveFusionConfig.relocalizeDuringInit) {
+            return;
+        }
         VisionSubsystemLimelight.TagSnapshot snapshot = robot.vision.getLastSnapshot();
         if (snapshot == null) {
             return;
@@ -111,7 +117,7 @@ public class AutoPrestartHelper {
         // Use expected start pose as reference for jump safeguards.
         // This prevents vision from wildly jumping the pose during init.
         // If no expected pose is set, falls back to no safeguard (not recommended).
-        boolean updated = robot.drive.forceRelocalizeFromVision(expectedStartPose);
+        boolean updated = robot.drive.forceRelocalizeFromVisionTrusted(expectedStartPose);
         if (!updated) {
             return;
         }

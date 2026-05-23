@@ -28,9 +28,9 @@ import com.pedropathing.ivy.groups.Groups;
 public class CloseThreeAtOnceCommand {
 
     public static class Config {
-        public double maxPathPower = 1.0;
+        public double maxPathPower = 0.8;
         public double lastPathsMaxPower = 1;
-        public double endTimeForLinearHeadingInterpolation = .8;
+        public double endTimeForLinearHeadingInterpolation = .5;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 6.8;
         /** Heading tolerance (degrees) Pedro must reach before considering a

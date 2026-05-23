@@ -1066,7 +1066,7 @@ public class DriveSubsystem {
      */
     public boolean forceRelocalizeFromVision() {
         // No reference pose = no jump safeguards (manual recovery scenario)
-        return forceRelocalizeFromVisionInternal(null);
+        return forceRelocalizeFromVisionInternal(null, false);
     }
 
     /**
@@ -1079,16 +1079,31 @@ public class DriveSubsystem {
      * @return {@code true} when the pose was updated.
      */
     public boolean forceRelocalizeFromVision(Pose referencePose) {
-        return forceRelocalizeFromVisionInternal(referencePose);
+        return forceRelocalizeFromVisionInternal(referencePose, false);
+    }
+
+    /**
+     * Forces relocalization from vision against a TRUSTED reference pose.
+     * Unlike the untrusted overload, the jump check is applied even in the
+     * HEADING_UNKNOWN seed branch. Use for auto init, where the robot is placed
+     * at a known start pose, so a far-off single-tag solution should be rejected.
+     *
+     * @param referencePose The trusted reference (e.g. the configured auto start pose).
+     * @return {@code true} when the pose was updated.
+     */
+    public boolean forceRelocalizeFromVisionTrusted(Pose referencePose) {
+        return forceRelocalizeFromVisionInternal(referencePose, true);
     }
 
     /**
      * Internal implementation of vision relocalization with optional jump safeguards.
      *
-     * @param referencePose The pose to compare against for jump limits. Null to skip jump check.
+     * @param referencePose    The pose to compare against for jump limits. Null to skip jump check.
+     * @param trustedReference When true, the jump check also gates the HEADING_UNKNOWN
+     *                         seed branch (the reference is known-good, e.g. auto start).
      * @return {@code true} when the pose was updated.
      */
-    private boolean forceRelocalizeFromVisionInternal(Pose referencePose) {
+    private boolean forceRelocalizeFromVisionInternal(Pose referencePose, boolean trustedReference) {
         long nowMs = System.currentTimeMillis();
         if (!DriveFusionConfig.fusionVisionEnabled) {
             recordRelocalizeSource("fusion_disabled", false, nowMs, -1);
@@ -1111,10 +1126,17 @@ public class DriveSubsystem {
                 return false;
             }
 
-            // Seed-from-unknown intentionally skips the jump check: the reference
-            // pose is the (untrusted) startHeadingDeg config default, so rejecting
-            // "big jumps" against it would block exactly the corrections we need
-            // when the robot is placed at a different heading than the config.
+            // Untrusted reference (e.g. teleop's startHeadingDeg config default):
+            // skip the jump check, since rejecting "big jumps" against an unknown
+            // current pose would block exactly the corrections we need when the
+            // robot is placed at a different heading than the config. With a TRUSTED
+            // reference (auto start pose), still gate it — a far single-tag solution
+            // must not hijack a known start placement.
+            if (trustedReference && referencePose != null
+                    && !isPoseJumpAllowed(pedroPoseMT1, referencePose, "mt1_seed")) {
+                recordRelocalizeSource("mt1_seed_rejected", false, nowMs, snap.tagId);
+                return false;
+            }
             applyRelocalizedPose(pedroPoseMT1);
             vision.markOdometryUpdated();
 
@@ -1226,11 +1248,42 @@ public class DriveSubsystem {
         if (fusionLocalizer == null || vision == null) return;
         VisionSubsystemLimelight.TagSnapshot snap = vision.getLastSnapshot();
         if (snap == null) return;
+        // Reject stale snapshots (e.g. one captured during init while repositioning)
+        // so they can't be replayed into the filter on the first auto loop.
+        long ageMs = (System.nanoTime() - snap.capturedAtNs) / 1_000_000L;
+        if (ageMs > DriveFusionConfig.maxMeasurementAgeMs) return;
         if (snap.capturedAtNs == lastFedSnapshotNs) return;
         lastFedSnapshotNs = snap.capturedAtNs;
         if (snap.decisionMargin < DriveFusionConfig.minTargetAreaPercent) return;
-        Pose pose = snap.pedroPoseMT2 != null ? snap.pedroPoseMT2 : snap.pedroPoseMT1;
+        // MT2 is heading-dependent and can be badly wrong when the heading seed is
+        // off (observed off-field during init while MT1 read fine). Only trust MT2
+        // when it agrees with MT1 — same gate the relocalize path uses — otherwise
+        // fall back to the heading-independent MT1. The filter only consumes X/Y
+        // from the measurement anyway (heading always comes from Pinpoint).
+        Pose mt1 = snap.pedroPoseMT1;
+        Pose mt2 = snap.pedroPoseMT2;
+        boolean mt2Safe = mt1 != null && mt2 != null && posesAgreeForMt2(mt1, mt2);
+        Pose pose = (mt2 != null && (mt2Safe || mt1 == null)) ? mt2 : mt1;
+        RobotState.packet.put("/vision/fusion/source", pose == mt2 ? "MT2" : "MT1");
         if (pose == null) return;
+        // Sanity-gate the measurement before it enters the filter. The continuous
+        // feed has no jump check of its own, so an off-field or wildly-disagreeing
+        // single-tag solution would otherwise drag the fused pose off the map.
+        if (!poseWithinField(pose)) {
+            RobotState.packet.put("/vision/fusion/rejected", "off_field");
+            return;
+        }
+        Pose currentPose = follower.getPose();
+        if (currentPose != null) {
+            double jumpIn = Math.hypot(pose.getX() - currentPose.getX(),
+                                       pose.getY() - currentPose.getY());
+            RobotState.packet.put("/vision/fusion/innovation_in", jumpIn);
+            if (jumpIn > DriveFusionConfig.maxFusionInnovationIn) {
+                RobotState.packet.put("/vision/fusion/rejected", "jump");
+                return;
+            }
+        }
+        RobotState.packet.put("/vision/fusion/rejected", "none");
         long measurementNs = snap.capturedAtNs - (long)(DriveFusionConfig.limelightLatencyMs * 1_000_000L);
         fusionLocalizer.addMeasurement(pose, measurementNs);
     }

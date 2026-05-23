@@ -53,7 +53,8 @@ public class Constants {
             0.1,   // velocityConstraint: Pedro default — was 0.08
             .1,
             Math.toRadians(.5),
-            100,
+            400, // timeoutConstraint (ms): settle window AFTER reaching path end — give the
+                 // heading PID time to pull the last few degrees in before completing. Was 100.
             1.0,
             10,
             1);

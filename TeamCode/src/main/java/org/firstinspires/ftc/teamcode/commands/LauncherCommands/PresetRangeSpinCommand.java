@@ -131,54 +131,40 @@ public final class PresetRangeSpinCommand {
     private static void setRpmsForRange(LauncherSubsystem launcher, LauncherRange range) {
         CommandRangeConfig cfg = rangeConfig();
         switch (range) {
-            case SHORT:
-                launcher.setLaunchRpm(LauncherLane.LEFT, cfg.shortLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, cfg.shortCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.shortRightRpm);
-                break;
-            case MID:
-                launcher.setLaunchRpm(LauncherLane.LEFT, cfg.midLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, cfg.midCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.midRightRpm);
-                break;
-            case LONG:
+            case SHORT:      applyRpms(launcher, cfg.teleop.shortRange); break;
+            case MID:        applyRpms(launcher, cfg.teleop.midRange);   break;
+            case LONG: {
                 // LONG preset sits at the midpoint of the distance-based
                 // interpolation window — one fewer constant to tune.
-                launcher.setLaunchRpm(LauncherLane.LEFT,
-                        (cfg.longMinLeftRpm + cfg.longMaxLeftRpm) / 2.0);
-                launcher.setLaunchRpm(LauncherLane.CENTER,
-                        (cfg.longMinCenterRpm + cfg.longMaxCenterRpm) / 2.0);
-                launcher.setLaunchRpm(LauncherLane.RIGHT,
-                        (cfg.longMinRightRpm + cfg.longMaxRightRpm) / 2.0);
+                CommandRangeConfig.LongRangeSettings l = cfg.teleop.longRange;
+                launcher.setLaunchRpm(LauncherLane.LEFT, (l.minLeft + l.maxLeft) / 2.0);
+                launcher.setLaunchRpm(LauncherLane.CENTER, (l.minCenter + l.maxCenter) / 2.0);
+                launcher.setLaunchRpm(LauncherLane.RIGHT, (l.minRight + l.maxRight) / 2.0);
                 break;
-            case SHORT_AUTO:
-                launcher.setLaunchRpm(LauncherLane.LEFT, cfg.shortAutoLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, cfg.shortAutoCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.shortAutoRightRpm);
-                break;
-            case MID_AUTO:
-                launcher.setLaunchRpm(LauncherLane.LEFT, cfg.midAutoLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, cfg.midAutoCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.midAutoRightRpm);
-                break;
-            case FAR_AUTO:
-                launcher.setLaunchRpm(LauncherLane.LEFT, cfg.farAutoLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, cfg.farAutoCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.farAutoRightRpm);
-                break;
+            }
+            case SHORT_AUTO: applyRpms(launcher, cfg.auto.shortRange); break;
+            case MID_AUTO:   applyRpms(launcher, cfg.auto.midRange);   break;
+            case FAR_AUTO:   applyRpms(launcher, cfg.auto.farRange);   break;
         }
+    }
+
+    /** Pushes a range's three lane RPMs to the launcher. */
+    private static void applyRpms(LauncherSubsystem launcher, CommandRangeConfig.RangeSettings r) {
+        launcher.setLaunchRpm(LauncherLane.LEFT, r.left);
+        launcher.setLaunchRpm(LauncherLane.CENTER, r.center);
+        launcher.setLaunchRpm(LauncherLane.RIGHT, r.right);
     }
 
     private static double hoodPositionForRange(LauncherRange range) {
         CommandRangeConfig cfg = rangeConfig();
         switch (range) {
-            case SHORT: return cfg.shortHoodPosition;
-            case MID: return cfg.midHoodPosition;
-            case LONG: return cfg.longHoodPosition;
-            case SHORT_AUTO: return cfg.shortAutoHoodPosition;
-            case MID_AUTO: return cfg.midAutoHoodPosition;
-            case FAR_AUTO: return cfg.farAutoHoodPosition;
-            default: return cfg.midHoodPosition;
+            case SHORT: return cfg.teleop.shortRange.hood;
+            case MID: return cfg.teleop.midRange.hood;
+            case LONG: return cfg.teleop.longRange.hood;
+            case SHORT_AUTO: return cfg.auto.shortRange.hood;
+            case MID_AUTO: return cfg.auto.midRange.hood;
+            case FAR_AUTO: return cfg.auto.farRange.hood;
+            default: return cfg.teleop.midRange.hood;
         }
     }
 }
