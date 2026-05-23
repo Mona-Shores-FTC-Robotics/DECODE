@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 import androidx.annotation.Nullable;
 
 import com.bylazar.configurables.annotations.Configurable;
-import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -17,7 +16,6 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AutoField;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
@@ -46,8 +44,8 @@ import dev.nextftc.extensions.pedro.FollowPath;
  *   Fast       : fireAtT=0.6,  returnBrakingStart=0.9  — fire while moving fast
  *   Consistent : fireAtT=0.85, returnBrakingStart=0.5  — fire while decelerating
  *
- * Safety: fireAll checks minShootingY so shots only queue once the robot has
- * crossed the launch-zone line regardless of which T value triggers the callback.
+ * Shots fire unconditionally at fireAtT — paths are predetermined so field position
+ * at any given T is fixed.
  */
 public class MichianaShortCommand {
 
@@ -83,13 +81,6 @@ public class MichianaShortCommand {
          */
         public static double returnBrakingStart = 0.5;
 
-        /**
-         * Minimum Y coordinate (Pedro frame, Blue alliance) the robot must reach before
-         * shots are allowed to queue. Guards against firing while still on the wrong side
-         * of the launch-zone line on deep artifact returns.
-         * For Red alliance the check is mirrored: y <= (144 - minShootingY).
-         */
-        public static double minShootingY = 65.0;
     }
 
     @Configurable
@@ -129,18 +120,8 @@ public class MichianaShortCommand {
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
         LauncherSubsystem launcher = robot.launcher;
         IntakeSubsystem intake = robot.intake;
-        Follower follower = robot.drive.getFollower();
 
-        // Shots fire only once the robot has crossed the launch-zone line.
-        // The parametric callback fires at a fixed T, but T doesn't guarantee field position
-        // on deep artifact returns, so we gate on actual pose.
         Runnable fireAll = () -> {
-            double robotY = follower.getPose().getY();
-            boolean pastLine = alliance == Alliance.BLUE
-                    ? robotY >= Config.minShootingY
-                    : robotY <= FieldConstants.FIELD_WIDTH_INCHES - Config.minShootingY;
-            if (!pastLine) return;
-
             launcher.spinUpAllLanesToLaunch();
             for (LauncherLane lane : LauncherLane.values()) launcher.queueShot(lane);
             intake.setGateAllowArtifacts();
@@ -212,7 +193,7 @@ public class MichianaShortCommand {
      *     position. The required heading changes along the path as the robot moves,
      *     so a constant heading would drift off-target at different field positions.
      *   - Brakes starting at returnBrakingStart (tune for fast vs consistent)
-     *   - Fires at T=fireAtT (gated by minShootingY in the fireAll runnable)
+     *   - Fires at T=fireAtT
      *
      * @param retCtrl Control point for the return curve, or null for a straight line.
      */
