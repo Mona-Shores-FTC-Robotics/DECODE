@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.configurables.annotations.IgnoreConfigurable;
-import com.bylazar.configurables.annotations.Sorter;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -11,8 +10,9 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import com.pedropathing.ivy.Command;
-import com.pedropathing.ivy.commands.Commands;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+
+import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
@@ -21,9 +21,8 @@ import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherReverse
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherTimingConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherVoltageCompensationConfig;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
-import org.firstinspires.ftc.teamcode.util.RobotProfile;
+import org.firstinspires.ftc.teamcode.util.RobotConfigs;
 import org.firstinspires.ftc.teamcode.util.RobotState;
-import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -34,66 +33,50 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Owns the launcher hardware: three flywheel motors, three feeder servos (the
- * "boot kickers" that shove an artifact into the spinning wheel), and three
- * hood servos that change the launch angle.
- *
- * <p>What it does:
- * <ul>
- *   <li><b>Spin-up</b> — drives each flywheel to a target RPM (using
- *       feedforward + a small P term) and reports when it's "ready" to fire.</li>
- *   <li><b>Shot queue</b> — callers ask to fire one lane or all lanes; this
- *       class waits for spin-up, kicks the feeder, then enforces a recovery
- *       dwell before the next shot.</li>
- *   <li><b>Hood positioning</b> — moves each lane's hood to short / mid / long
- *       angles based on the active range or measured goal distance.</li>
- * </ul>
- *
- * <p>Per-robot tuning (RPMs, hood positions, feeder servo positions, kS/kV/kP)
- * lives in {@code util/RobotProfile.java}.
+ * Launcher subsystem that manages three flywheels and their paired bootkicker servos.
+ * Callers queue individual shots or bursts while this class coordinates spin-up,
+ * feed timing, and recovery delays.
  */
-@Configurable
-public class LauncherSubsystem {
+public class LauncherSubsystem implements Subsystem {
 
-    /**
-     * Shared debounce for "lost ready" events used by every spin command.
-     * Wait this long after the launcher loses its "ready to fire" signal
-     * before notifying drivers (avoids flicker on transient RPM dips).
-     */
-    public static final double READY_LOSS_DEBOUNCE_MS = 250.0;
+    // Active robot indicator
+//    public static String ACTIVE_ROBOT = RobotState.getRobotName();
 
-    // Core per-robot hardware configs — top of the Panels tree.
-    @Sorter(sort = 10) public static LauncherFlywheelConfig flywheelConfig = RobotProfile.forCurrent().flywheel;
-    @Sorter(sort = 11) public static LauncherFeederConfig feederConfig = RobotProfile.forCurrent().feeder;
-    @Sorter(sort = 12) public static LauncherHoodConfig hoodConfig = RobotProfile.forCurrent().hood;
-    @Sorter(sort = 13) public static LauncherTimingConfig timingConfig = RobotProfile.forCurrent().timing;
+    // Global configuration instances
+    public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
+    public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
 
-    // Shared (both robots) launcher tunables.
-    @Sorter(sort = 20) public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
-    @Sorter(sort = 21) public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
+//    // Robot-specific timing configs
+//    public static LauncherTimingConfig timingConfig_Robot19429 = LauncherTimingConfig.timing19429;
+//    public static LauncherTimingConfig timingConfig_Robot20245 = LauncherTimingConfig.timing20245;
+//    public static LauncherTimingConfig timingConfig_ACTIVE = RobotConfigs.getTiming();
+//
+//    // Robot-specific flywheel configs
+//    public static LauncherFlywheelConfig flywheelConfig_Robot19429 = LauncherFlywheelConfig.flywheelConfig19429;
+//    public static LauncherFlywheelConfig flywheelConfig_Robot20245 = LauncherFlywheelConfig.flywheelConfig20245;
+//    public static LauncherFlywheelConfig flywheelConfig_ACTIVE = RobotConfigs.getFlywheelConfig();
+//
+//    // Robot-specific feeder configs
+//    public static LauncherFeederConfig feederConfig_Robot19429 = LauncherFeederConfig.feederConfig19429;
+//    public static LauncherFeederConfig feederConfig_Robot20245 = LauncherFeederConfig.feederConfig20245;
+//    public static LauncherFeederConfig feederConfig_ACTIVE = RobotConfigs.getFeederConfig();
+//
+//    // Robot-specific hood configs
+//    public static LauncherHoodConfig hoodConfig_Robot19429 = LauncherHoodConfig.hoodConfig19429;
+//    public static LauncherHoodConfig hoodConfig_Robot20245 = LauncherHoodConfig.hoodConfig20245;
+//    public static LauncherHoodConfig hoodConfig_ACTIVE = RobotConfigs.getHoodConfig();
 
-    // Command-specific tunables (kept here so Panels groups them under the launcher tree).
-    @Sorter(sort = 30) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig distanceCalibration =
-            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig();
-    @Sorter(sort = 31) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig hoodThresholds =
-            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig();
-    @Sorter(sort = 32) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchInSequenceConfig launchInSequenceConfig =
-            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchInSequenceConfig();
-
-    /** Runtime diagnostic snapshot from the distance-based spin command. Read-only from telemetry. */
-    public static class DistanceSpinDiagnostics {
-        public double lastCalculatedDistanceIn = 0.0;
-        public double lastLeftTargetRpm = 0.0;
-        public double lastCenterTargetRpm = 0.0;
-        public double lastRightTargetRpm = 0.0;
-        public double lastHoodPosition = 0.0;
-        public String lastSource = "none";
-        public int updateCount = 0;
-        public boolean robotPoseAvailable = false;
-        public boolean goalPoseAvailable = false;
+    // Legacy method accessors (kept for backwards compatibility)
+    public static LauncherTimingConfig timingConfig() {
+        return RobotConfigs.getTiming();
     }
-    @Sorter(sort = 90) public static DistanceSpinDiagnostics distanceSpinDiagnostics = new DistanceSpinDiagnostics();
-
+    public static LauncherFlywheelConfig flywheelConfig() {return RobotConfigs.getFlywheelConfig();}
+    public static LauncherFeederConfig feederConfig() {
+        return RobotConfigs.getFeederConfig();
+    }
+    public static LauncherHoodConfig hoodConfig() {
+        return RobotConfigs.getHoodConfig();
+    }
     private final HardwareMap hardwareMap;
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);
@@ -116,7 +99,14 @@ public class LauncherSubsystem {
      * hardware is not connected.
      */
     private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
-        return org.firstinspires.ftc.teamcode.util.CachedHardware.tryMotor(hardwareMap, name);
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(DcMotorEx.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     /**
@@ -125,7 +115,14 @@ public class LauncherSubsystem {
      * hardware is not connected.
      */
     private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
-        return org.firstinspires.ftc.teamcode.util.CachedHardware.tryServo(hardwareMap, name);
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        try {
+            return hardwareMap.get(Servo.class, name);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     public LauncherSubsystem(HardwareMap hardwareMap) {
@@ -139,6 +136,7 @@ public class LauncherSubsystem {
         }
     }
 
+    @Override
     public void initialize() {
         clock.reset();
         shotQueue.clear();
@@ -158,16 +156,8 @@ public class LauncherSubsystem {
         }
     }
 
-    /**
-     * Infinite Command that drives the launcher state machine each scheduler tick.
-     * Scheduled once in OpMode init; runs until OpMode stop.
-     */
-    public Command periodic() {
-
-        return Commands.infinite(this::doPeriodic);
-    }
-
-    private void doPeriodic() {
+    @Override
+    public void periodic() {
         long start = System.nanoTime();
         double now = clock.milliseconds();
 
@@ -176,13 +166,43 @@ public class LauncherSubsystem {
         }
 
         applyTargetRpms();
+        double batteryVoltage = getBatteryVoltage();
+        RobotState.packet.put("system/battery_voltage", batteryVoltage);
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
-            publishFlywheelTelemetry(flywheel);
+            if (flywheel.motor != null) {
+                // Log velocity measurements using cached values
+                double velocityTps = flywheel.getMeasuredTicksPerSec();
+                double velocityRpm = flywheel.getCurrentRpm();
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "velocity_tps", velocityTps);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "velocity_rpm" , velocityRpm);
+
+                // Log control diagnostics for feedforward tuning
+                double targetRpm = flywheel.getTargetRpm();
+                double error = targetRpm - velocityRpm;
+                double kS = kSFor(flywheel.lane);
+                double kV = kVFor(flywheel.lane);
+                double kP = kPFor(flywheel.lane);
+                double feedforward = kS + kV * targetRpm;
+                double feedback = kP * error;
+                double totalPower = flywheel.getAppliedPower();
+
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_error" + flywheel.lane.name(), error);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_feedforward" + flywheel.lane.name(), feedforward);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_feedback" + flywheel.lane.name(), feedback);
+                RobotState.packet.put("launcher/control/" + flywheel.lane.name() + "/ff_power", totalPower);
+
+                // Log motor current draw and approximate power (W = V * A)
+                double currentAmps = flywheel.getCurrentAmps();
+                RobotState.packet.put("launcher/" + flywheel.lane.name().toLowerCase() + "/current_amps", currentAmps);
+                if (Double.isFinite(currentAmps) && Double.isFinite(batteryVoltage)) {
+                    RobotState.packet.put("launcher/" + flywheel.lane.name().toLowerCase() + "/power_watts", currentAmps * batteryVoltage);
+                }
+            }
         }
 
-        // When the operator triggers human-loading reverse, hoods retract per lane as each
-        // flywheel reaches reverse speed (so they can't collide with an out-bound artifact).
+        // Speed-gated hood retraction for human loading
+        // Each lane's hood retracts independently when its flywheel reaches the threshold
         if (reverseFlywheelsActive) {
             updateHumanLoadingHoods();
         }
@@ -190,31 +210,6 @@ public class LauncherSubsystem {
         updateStateMachine(now);
         updateLaneRecovery(now);
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
-    }
-
-    /** Emits per-flywheel control telemetry to AdvantageScope (verbose mode only). */
-    private void publishFlywheelTelemetry(Flywheel flywheel) {
-        if (flywheel.motor == null || !TelemetrySettings.isVerbose()) return;
-
-        String lane = flywheel.lane.name().toLowerCase();
-        String prefix = "launcher/control/" + lane;
-
-        double velocityRpm = flywheel.getCurrentRpm();
-        double targetRpm = flywheel.getTargetRpm();
-        double error = targetRpm - velocityRpm;
-        double feedforward = kSFor(flywheel.lane) + kVFor(flywheel.lane) * targetRpm;
-        double feedback = kPFor(flywheel.lane) * error;
-        Feeder feeder = feeders.get(flywheel.lane);
-
-        RobotState.packet.put(prefix + "/velocity_tps", flywheel.getMeasuredTicksPerSec());
-        RobotState.packet.put(prefix + "/velocity_rpm", velocityRpm);
-        RobotState.packet.put(prefix + "/target_rpm", targetRpm);
-        RobotState.packet.put(prefix + "/ff_error", error);
-        RobotState.packet.put(prefix + "/ff_feedforward", feedforward);
-        RobotState.packet.put(prefix + "/ff_feedback", feedback);
-        RobotState.packet.put(prefix + "/ff_power", flywheel.getAppliedPower());
-        // Shot event marker: correlate feeder firing with RPM dip in AdvantageScope
-        RobotState.packet.put(prefix + "/feeder_busy", feeder != null && feeder.isBusy());
     }
 
     /**
@@ -343,7 +338,7 @@ public class LauncherSubsystem {
         double now = clock.milliseconds();
         for (LauncherLane lane : LauncherLane.values()) {
             laneLaunchHoldDeadlineMs.put(lane, 0.0);
-            laneRecoveryDeadlineMs.put(lane, now + timingConfig.recoveryMs);
+            laneRecoveryDeadlineMs.put(lane, now + timingConfig().recoveryMs);
             // Wrap hardware operations in try-catch to prevent "expansion hub stopped responding"
             // errors during OpMode shutdown when the hub communication is already terminating
             try {
@@ -424,13 +419,13 @@ public class LauncherSubsystem {
 
     public void setAllHoodsRetracted() {
         for (Hood hood : hoods.values()) {
-            hood.setPosition(hoodConfig.retractedPosition);
+            hood.setPosition(hoodConfig().retractedPosition);
         }
     }
 
     public void setAllHoodsExtended() {
         for (Hood hood : hoods.values()) {
-            hood.setPosition(hoodConfig.extendedPosition);
+            hood.setPosition(hoodConfig().extendedPosition);
         }
     }
 
@@ -658,8 +653,8 @@ public class LauncherSubsystem {
                 Feeder feeder = feeders.get(next.lane);
                 if (feeder != null && !feeder.isBusy()) {
                     feeder.fire();
-                    laneLaunchHoldDeadlineMs.put(next.lane, now + timingConfig.launchHoldAfterFireMs);
-                    laneRecoveryDeadlineMs.put(next.lane, now + timingConfig.recoveryMs);
+                    laneLaunchHoldDeadlineMs.put(next.lane, now + timingConfig().launchHoldAfterFireMs);
+                    laneRecoveryDeadlineMs.put(next.lane, now + timingConfig().recoveryMs);
                     iterator.remove();
                 }
             }
@@ -688,12 +683,7 @@ public class LauncherSubsystem {
      * This provides graceful degradation - if one lane is jammed, other lanes still work.
      */
     private void updateHumanLoadingHoods() {
-        double threshold = reverseFlywheelForHumanLoadingConfig.reverseRpmThreshold;
-
-        // If threshold is 0, skip speed-gating (hoods controlled elsewhere)
-        if (threshold <= 0.0) {
-            return;
-        }
+        double threshold = LauncherReverseIntakeConfig.reverseRpmThreshold;
 
         for (LauncherLane lane : LauncherLane.values()) {
             // Skip lanes that already had their hood retracted this session
@@ -706,20 +696,17 @@ public class LauncherSubsystem {
                 continue;
             }
 
-            // Check if this lane's flywheel has reached the threshold speed
-            double currentRpm = flywheel.getCurrentRpm();
-            if (currentRpm >= threshold) {
-                // Retract this lane's hood
+            // threshold <= 0 means retract immediately; otherwise wait until the
+            // flywheel reaches the configured RPM (per-lane independent gating).
+            boolean shouldRetract = threshold <= 0.0 || flywheel.getCurrentRpm() >= threshold;
+            if (shouldRetract) {
                 Hood hood = hoods.get(lane);
                 if (hood != null) {
-                    hood.setPosition(hoodConfig.retractedPosition);
+                    hood.setPosition(hoodConfig().retractedPosition);
                 }
                 hoodsRetractedForHumanLoading.add(lane);
 
-                // Log for debugging
-                if (TelemetrySettings.isVerbose()) {
-                    RobotState.packet.put("launcher/humanLoading/" + lane.name() + "_hoodRetracted", true);
-                }
+                RobotState.packet.put("launcher/humanLoading/" + lane.name() + "_hoodRetracted", true);
             }
         }
     }
@@ -818,135 +805,135 @@ public class LauncherSubsystem {
         }
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, flywheelConfig.flywheelLeft.idleRpm);
+                return Math.max(0.0, flywheelConfig().flywheelLeft.idleRpm);
             case CENTER:
-                return Math.max(0.0, flywheelConfig.flywheelCenter.idleRpm);
+                return Math.max(0.0, flywheelConfig().flywheelCenter.idleRpm);
             case RIGHT:
             default:
-                return Math.max(0.0, flywheelConfig.flywheelRight.idleRpm);
+                return Math.max(0.0, flywheelConfig().flywheelRight.idleRpm);
         }
     }
 
-    private double feederHoldMsFor(LauncherLane lane) {
+    private static double feederHoldMsFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return Math.max(0.0, feederConfig.left.holdMs);
+                return Math.max(0.0, feederConfig().left.holdMs);
             case CENTER:
-                return Math.max(0.0, feederConfig.center.holdMs);
+                return Math.max(0.0, feederConfig().center.holdMs);
             case RIGHT:
             default:
-                return Math.max(0.0, feederConfig.right.holdMs);
+                return Math.max(0.0, feederConfig().right.holdMs);
         }
     }
 
-    private double feederLoadPositionFor(LauncherLane lane) {
+    private static double feederLoadPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(feederConfig.left.loadPosition);
+                return clampServo(feederConfig().left.loadPosition);
             case CENTER:
-                return clampServo(feederConfig.center.loadPosition);
+                return clampServo(feederConfig().center.loadPosition);
             case RIGHT:
             default:
-                return clampServo(feederConfig.right.loadPosition);
+                return clampServo(feederConfig().right.loadPosition);
         }
     }
 
-    private double feederFirePositionFor(LauncherLane lane) {
+    private static double feederFirePositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(feederConfig.left.firePosition);
+                return clampServo(feederConfig().left.firePosition);
             case CENTER:
-                return clampServo(feederConfig.center.firePosition);
+                return clampServo(feederConfig().center.firePosition);
             case RIGHT:
             default:
-                return clampServo(feederConfig.right.firePosition);
+                return clampServo(feederConfig().right.firePosition);
         }
     }
 
-    private double feederPinchPositionFor(LauncherLane lane) {
+    private static double feederPinchPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(feederConfig.left.pinchPosition);
+                return clampServo(feederConfig().left.pinchPosition);
             case CENTER:
-                return clampServo(feederConfig.center.pinchPosition);
+                return clampServo(feederConfig().center.pinchPosition);
             case RIGHT:
             default:
-                return clampServo(feederConfig.right.pinchPosition);
+                return clampServo(feederConfig().right.pinchPosition);
         }
     }
 
-    private boolean feederReversedFor(LauncherLane lane) {
+    private static boolean feederReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return feederConfig.left.reversed;
+                return feederConfig().left.reversed;
             case CENTER:
-                return feederConfig.center.reversed;
+                return feederConfig().center.reversed;
             case RIGHT:
             default:
-                return feederConfig.right.reversed;
+                return feederConfig().right.reversed;
         }
     }
 
-    private String motorNameFor(LauncherLane lane) {
+    private static String motorNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig.flywheelLeft.motorName;
+                return flywheelConfig().flywheelLeft.motorName;
             case CENTER:
-                return flywheelConfig.flywheelCenter.motorName;
+                return flywheelConfig().flywheelCenter.motorName;
             case RIGHT:
             default:
-                return flywheelConfig.flywheelRight.motorName;
+                return flywheelConfig().flywheelRight.motorName;
         }
     }
 
-    private boolean motorReversedFor(LauncherLane lane) {
+    private static boolean motorReversedFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig.flywheelLeft.reversed;
+                return flywheelConfig().flywheelLeft.reversed;
             case CENTER:
-                return flywheelConfig.flywheelCenter.reversed;
+                return flywheelConfig().flywheelCenter.reversed;
             case RIGHT:
             default:
-                return flywheelConfig.flywheelRight.reversed;
+                return flywheelConfig().flywheelRight.reversed;
         }
     }
 
-    private String feederNameFor(LauncherLane lane) {
+    private static String feederNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return feederConfig.left.servoName;
+                return feederConfig().left.servoName;
             case CENTER:
-                return feederConfig.center.servoName;
+                return feederConfig().center.servoName;
             case RIGHT:
             default:
-                return feederConfig.right.servoName;
+                return feederConfig().right.servoName;
         }
     }
 
-    private double rpmToTicksPerSecond(double rpm) {
+    private static double rpmToTicksPerSecond(double rpm) {
         if (rpm <= 0.0) {
             return 0.0;
         }
-        return rpm * flywheelConfig.parameters.ticksPerRev * flywheelConfig.parameters.gearRatio / 60.0;
+        return rpm * flywheelConfig().parameters.ticksPerRev * flywheelConfig().parameters.gearRatio / 60.0;
     }
 
-    private double ticksPerSecondToRpm(double ticksPerSecond) {
-        return ticksPerSecond * 60.0 / (flywheelConfig.parameters.ticksPerRev * flywheelConfig.parameters.gearRatio);
+    private static double ticksPerSecondToRpm(double ticksPerSecond) {
+        return ticksPerSecond * 60.0 / (flywheelConfig().parameters.ticksPerRev * flywheelConfig().parameters.gearRatio);
     }
 
     /**
      * Gets the per-lane static friction coefficient (kS).
      * This is the minimum power needed to overcome friction and start the motor spinning.
      */
-    private double kSFor(LauncherLane lane) {
+    private static double kSFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig.flywheelLeft.kS;
+                return flywheelConfig().flywheelLeft.kS;
             case CENTER:
-                return flywheelConfig.flywheelCenter.kS;
+                return flywheelConfig().flywheelCenter.kS;
             case RIGHT:
             default:
-                return flywheelConfig.flywheelRight.kS;
+                return flywheelConfig().flywheelRight.kS;
         }
     }
 
@@ -954,15 +941,15 @@ public class LauncherSubsystem {
      * Gets the per-lane velocity gain (kV).
      * This maps target RPM to required power: power = kS + kV * rpm
      */
-    private double kVFor(LauncherLane lane) {
+    private static double kVFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig.flywheelLeft.kV;
+                return flywheelConfig().flywheelLeft.kV;
             case CENTER:
-                return flywheelConfig.flywheelCenter.kV;
+                return flywheelConfig().flywheelCenter.kV;
             case RIGHT:
             default:
-                return flywheelConfig.flywheelRight.kV;
+                return flywheelConfig().flywheelRight.kV;
         }
     }
 
@@ -971,15 +958,15 @@ public class LauncherSubsystem {
      * This adds feedback correction: power += kP * (target - actual)
      * Set to 0 for pure feedforward, >0 to add error correction.
      */
-    private double kPFor(LauncherLane lane) {
+    private static double kPFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return flywheelConfig.flywheelLeft.kP;
+                return flywheelConfig().flywheelLeft.kP;
             case CENTER:
-                return flywheelConfig.flywheelCenter.kP;
+                return flywheelConfig().flywheelCenter.kP;
             case RIGHT:
             default:
-                return flywheelConfig.flywheelRight.kP;
+                return flywheelConfig().flywheelRight.kP;
         }
     }
 
@@ -1003,7 +990,6 @@ public class LauncherSubsystem {
         }
     }
 
-    //region Flywheel — motor control and RPM targeting for one lane
     private class Flywheel {
         private final LauncherLane lane;
         private final DcMotorEx motor;
@@ -1074,6 +1060,17 @@ public class LauncherSubsystem {
             return measuredTicksPerSec;
         }
 
+        double getCurrentAmps() {
+            if (motor == null) {
+                return Double.NaN;
+            }
+            try {
+                return motor.getCurrent(CurrentUnit.AMPS);
+            } catch (Exception e) {
+                return Double.NaN;
+            }
+        }
+
         boolean isAtLaunch() {
             double launchRpm = launchRpmFor(lane);
             if (launchRpm <= 0.0) {
@@ -1083,7 +1080,7 @@ public class LauncherSubsystem {
             double error = Math.abs(currentRpm - launchRpm);
 
             // Primary check: within tolerance of target RPM
-            if (error <= flywheelConfig.parameters.rpmTolerance) {
+            if (error <= flywheelConfig().parameters.rpmTolerance) {
                 return true;
             }
 
@@ -1095,14 +1092,14 @@ public class LauncherSubsystem {
 
             // Fallback for spinning UP: allow if minimal time elapsed and we've commanded the right RPM
             // This handles encoder issues but still requires the command to be sent
-            if (elapsed >= timingConfig.fallbackReadyMs) {
+            if (elapsed >= timingConfig().fallbackReadyMs) {
                 return true;  // Timeout - assume ready
             }
 
             // For early ready (before fallback timeout), check both:
             // 1. Minimal spin-up time elapsed
             // 2. Current RPM is appropriate for target (works for both spin-up and spin-down)
-            if (elapsed >= timingConfig.minimalSpinUpMs) {
+            if (elapsed >= timingConfig().minimalSpinUpMs) {
                 // Check if we're close enough OR if spinning down, at least below a reasonable threshold
                 // Allow some headroom when spinning down (within 10% above target is acceptable)
                 double upperThreshold = launchRpm * 1.1;  // 10% overspeed tolerance
@@ -1140,14 +1137,9 @@ public class LauncherSubsystem {
 
         private void setTargetRpm(double rpm) {
             double sanitized = Math.max(0.0, rpm);
-            boolean wasActive = launchCommandActive;
-            double prevRpm = commandedRpm;
             commandedRpm = sanitized;
             launchCommandActive = sanitized > 0.0;
-            // Only restart the timer when the command actually changes so the
-            // fallback-ready timeout accumulates correctly across repeated calls
-            // (applyTargetRpms calls commandLaunch every loop while shots are queued).
-            if (launchCommandActive && (!wasActive || Math.abs(sanitized - prevRpm) > 1.0)) {
+            if (launchCommandActive) {
                 launchTimer.reset();
             }
         }
@@ -1182,9 +1174,7 @@ public class LauncherSubsystem {
 
             // Apply voltage compensation to maintain consistent performance across battery voltages
             double voltageMultiplier = getVoltageCompensationMultiplier();
-            if (TelemetrySettings.isVerbose()) {
-                RobotState.packet.put("launcher/" + lane.name().toLowerCase() + "/voltageMultiplier", voltageMultiplier);
-            }
+            RobotState.packet.put("launcher/" + lane.name().toLowerCase() + "/voltageMultiplier", voltageMultiplier);
             power = Range.clip(power * voltageMultiplier, 0.0, 1.0);
 
             motor.setPower(power);
@@ -1201,9 +1191,7 @@ public class LauncherSubsystem {
             }
         }
     }
-    //endregion
 
-    //region Feeder — servo that pushes artifacts into the flywheel
     private class Feeder {
         private final LauncherLane lane;
         private final Servo servo;
@@ -1279,10 +1267,8 @@ public class LauncherSubsystem {
             return servo == null ? Double.NaN : servo.getPosition();
         }
     }
-    //endregion
 
-    //region Hood — angle servo that adjusts launch trajectory per lane
-    private class Hood {
+    private static class Hood {
         private final LauncherLane lane;
         private final Servo servo;
 
@@ -1337,53 +1323,54 @@ public class LauncherSubsystem {
         }
     }
 
-    private String hoodNameFor(LauncherLane lane) {
+    private static String hoodNameFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return hoodConfig.hoodLeft.servoName;
+                return hoodConfig().hoodLeft.servoName;
             case CENTER:
-                return hoodConfig.hoodCenter.servoName;
+                return hoodConfig().hoodCenter.servoName;
             case RIGHT:
             default:
-                return hoodConfig.hoodRight.servoName;
+                return hoodConfig().hoodRight.servoName;
         }
     }
 
-    public double hoodShortPositionFor(LauncherLane lane) {
+    public static double hoodShortPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(hoodConfig.hoodLeft.shortPosition);
+                return clampServo(hoodConfig().hoodLeft.shortPosition);
             case CENTER:
-                return clampServo(hoodConfig.hoodCenter.shortPosition);
+                return clampServo(hoodConfig().hoodCenter.shortPosition);
             case RIGHT:
             default:
-                return clampServo(hoodConfig.hoodRight.shortPosition);
+                return clampServo(hoodConfig().hoodRight.shortPosition);
         }
     }
 
-    public double hoodMidPositionFor(LauncherLane lane) {
+    public static double hoodMidPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(hoodConfig.hoodLeft.midPosition);
+                return clampServo(hoodConfig().hoodLeft.midPosition);
             case CENTER:
-                return clampServo(hoodConfig.hoodCenter.midPosition);
+                return clampServo(hoodConfig().hoodCenter.midPosition);
             case RIGHT:
             default:
-                return clampServo(hoodConfig.hoodRight.midPosition);
+                return clampServo(hoodConfig().hoodRight.midPosition);
         }
     }
 
-    public double hoodLongPositionFor(LauncherLane lane) {
+    public static double hoodLongPositionFor(LauncherLane lane) {
         switch (lane) {
             case LEFT:
-                return clampServo(hoodConfig.hoodLeft.longPosition);
+                return clampServo(hoodConfig().hoodLeft.longPosition);
             case CENTER:
-                return clampServo(hoodConfig.hoodCenter.longPosition);
+                return clampServo(hoodConfig().hoodCenter.longPosition);
             case RIGHT:
             default:
-                return clampServo(hoodConfig.hoodRight.longPosition);
+                return clampServo(hoodConfig().hoodRight.longPosition);
         }
     }
-    //endregion
+
+
 
 }

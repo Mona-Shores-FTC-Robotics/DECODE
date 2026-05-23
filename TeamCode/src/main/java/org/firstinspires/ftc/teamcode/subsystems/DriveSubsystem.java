@@ -262,6 +262,16 @@ public class DriveSubsystem {
                 RobotState.packet.put("HeadingDiag/speed_ips", getRobotSpeedInchesPerSecond());
             }
         }
+
+        double lfA = getLfCurrentAmps();
+        double rfA = getRfCurrentAmps();
+        double lbA = getLbCurrentAmps();
+        double rbA = getRbCurrentAmps();
+        RobotState.packet.put("drive/lf/current_amps", lfA);
+        RobotState.packet.put("drive/rf/current_amps", rfA);
+        RobotState.packet.put("drive/lb/current_amps", lbA);
+        RobotState.packet.put("drive/rb/current_amps", rbA);
+        RobotState.packet.put("drive/total/current_amps", sumCurrentAmps(lfA, rfA, lbA, rbA));
     }
 
     public double getLastPeriodicMs() {
