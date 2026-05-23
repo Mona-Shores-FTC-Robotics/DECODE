@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.CommandBuilder;
@@ -8,6 +9,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
@@ -23,7 +26,25 @@ import java.util.Objects;
 /**
  * Continuously calculates distance to goal and updates launcher RPM while held.
  */
+@Configurable
 public final class DistanceBasedSpinCommand {
+
+    public static DistanceCalibrationConfig distanceCalibration = new DistanceCalibrationConfig();
+    public static HoodThresholdsConfig hoodThresholds = new HoodThresholdsConfig();
+    public static DistanceSpinDiagnostics distanceSpinDiagnostics = new DistanceSpinDiagnostics();
+
+    /** Mutable diagnostics written each loop; readable in AdvantageScope/Panels. */
+    public static class DistanceSpinDiagnostics {
+        public int updateCount;
+        public double lastCalculatedDistanceIn;
+        public double lastLeftTargetRpm;
+        public double lastCenterTargetRpm;
+        public double lastRightTargetRpm;
+        public double lastHoodPosition;
+        public String lastSource = "none";
+        public boolean robotPoseAvailable;
+        public boolean goalPoseAvailable;
+    }
 
     /** Exponential smoothing weight for the live distance reading (higher = trust new sample more, less smoothing). */
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;
@@ -31,15 +52,10 @@ public final class DistanceBasedSpinCommand {
     private static final double DISTANCE_DEAD_BAND_IN = 2.0;
     /** Lane is "ready" once its actual RPM reaches this fraction of the target RPM. */
     private static final double RPM_READY_THRESHOLD_PERCENT = 0.90;
+    /** Milliseconds a "ready" state must be continuously lost before feedback resets. */
+    private static final double READY_LOSS_DEBOUNCE_MS = 300.0;
 
-    // Tuning + diagnostics live on LauncherSubsystem so Panels shows them under the launcher tree.
-    // These aliases keep the in-file references short.
-    private static final LauncherSubsystem.DistanceSpinDiagnostics diagnostics =
-            LauncherSubsystem.distanceSpinDiagnostics;
-    private static final org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig distanceCalibration =
-            LauncherSubsystem.distanceCalibration;
-    private static final org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig hoodThresholds =
-            LauncherSubsystem.hoodThresholds;
+    private static final DistanceSpinDiagnostics diagnostics = distanceSpinDiagnostics;
 
     private DistanceBasedSpinCommand() {}
 
@@ -158,7 +174,7 @@ public final class DistanceBasedSpinCommand {
             if (lighting != null) lighting.flashAimAligned();
             return;
         }
-        if (readyLossTimer.milliseconds() >= LauncherSubsystem.READY_LOSS_DEBOUNCE_MS) {
+        if (readyLossTimer.milliseconds() >= READY_LOSS_DEBOUNCE_MS) {
             feedbackTriggered[0] = false;
         }
     }
