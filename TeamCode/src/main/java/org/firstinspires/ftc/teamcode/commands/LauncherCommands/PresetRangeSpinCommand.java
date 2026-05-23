@@ -20,6 +20,12 @@ import java.util.Objects;
 /**
  * Spins up launchers to preset (short/mid/long) RPM and hood targets and waits until ready.
  */
+// TODO (post-competition): revisit this class design. finishWhenReady=true works as a
+// sequential gate in teleop (blocks until RPM reached before next command runs), and
+// finishWhenReady=false works as a background RPM holder in deadline groups. These are
+// conceptually different enough that they may warrant two separate factory methods
+// (e.g. spinUpAndWait vs holdRpm) rather than one boolean parameter. Also reconsider
+// whether drive/lighting/gamepad feedback belongs here or in a wrapper.
 public final class PresetRangeSpinCommand {
 
     private PresetRangeSpinCommand() {}
