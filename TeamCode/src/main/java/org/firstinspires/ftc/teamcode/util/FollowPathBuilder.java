@@ -43,6 +43,8 @@ public class FollowPathBuilder {
     private LauncherSubsystem launcherForCallback = null;
     private IntakeSubsystem intakeForCallback = null;
 
+    private Double timeoutMilliSec = null;
+
     public FollowPathBuilder(Robot robot, Alliance alliance) {
         this.robot = robot;
         this.alliance = alliance;
@@ -242,11 +244,11 @@ public class FollowPathBuilder {
             Path onlyPath = chain.getPath(0);
             onlyPath.setTimeoutConstraint(timeoutMilliSec);
         }
-        if (headingConstraint != 0) {
+        if (headingConstraint != null) {
             Path onlyPath = chain.getPath(0);
             onlyPath.setHeadingConstraint(headingConstraint);
         }
-        if (translationalConstraint != 0) {
+        if (translationalConstraint != null) {
             Path onlyPath = chain.getPath(0);
             onlyPath.setTranslationalConstraint(translationalConstraint);
         }
@@ -277,6 +279,16 @@ public class FollowPathBuilder {
     public FollowPathBuilder withTimeout(double milliseconds) {
         this.timeoutMilliSec = milliseconds;
         return this;
+    }
+
+    /**
+     * Continuously rotates the robot to face a fixed field point throughout the path.
+     * Heading changes along the path as the robot's position changes — use on return
+     * paths where the goal is a fixed corner and the robot is moving toward it.
+     */
+    public FollowPathBuilder withFacingPoint(double goalX, double goalY) {
+        return withPiecewiseHeadingInterpolation(
+                HeadingInterpolator.facingPoint(goalX, goalY));
     }
 
     /**
