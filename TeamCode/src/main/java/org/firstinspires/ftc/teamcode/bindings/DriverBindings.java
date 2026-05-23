@@ -48,7 +48,11 @@ public class DriverBindings {
      */
     public void configureTeleopBindings(Robot robot) {
         DoubleSupplier fieldX = () -> applyDeadband(-gp().left_stick_x, TRANSLATION_DEADBAND);
-        DoubleSupplier fieldY = () -> applyDeadband(-gp().left_stick_y, TRANSLATION_DEADBAND);
+        // fieldY is NOT negated: with field-centric drive + Pedro's setTeleOpDrive,
+        // un-negated left_stick_y produces "push up → robot moves away" as drivers
+        // expect. The Ivy port (f8a04489, May 17) added a negation here that
+        // inverted the Y axis — this restores the original feel.
+        DoubleSupplier fieldY = () -> applyDeadband(gp().left_stick_y, TRANSLATION_DEADBAND);
         DoubleSupplier rotationCcw = () -> applyDeadband(gp().right_stick_x, ROTATION_DEADBAND);
         BooleanSupplier slowHold = () -> gp().right_bumper;
         // Ramp mode in driveTeleOp smooths abrupt stick changes. No button is bound
