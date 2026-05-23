@@ -62,10 +62,11 @@ public class PoseTelemetryData {
         // Vision pose (FTC Pose type from vision subsystem)
         if (visionPose != null) {
             this.visionPoseValid = true;
-            this.visionPoseXIn = visionPose.getX();      // FTC Pose uses inches directly
-            this.visionPoseYIn = visionPose.getY();      // FTC Pose uses inches directly
-            //TODO is this right? arent the vision poses in degrees from limelight?
-            this.visionHeadingRad = visionPose.getHeading();  // FTC Pose uses radians directly
+            // The Limelight reports heading in degrees, but VisionSubsystemLimelight
+            // converts to radians before returning a Pedro Pose — so getHeading() is rad here.
+            this.visionPoseXIn = visionPose.getX();      // Pedro Pose stores inches
+            this.visionPoseYIn = visionPose.getY();
+            this.visionHeadingRad = visionPose.getHeading();
         } else {
             this.visionPoseValid = false;
             this.visionPoseXIn = Double.NaN;

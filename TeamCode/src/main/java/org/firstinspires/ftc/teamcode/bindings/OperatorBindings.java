@@ -9,7 +9,8 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpi
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ModeAwareLaunchCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
-import org.firstinspires.ftc.teamcode.util.IvyBindings;
+import org.firstinspires.ftc.teamcode.util.GamepadBindings;
+import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 import org.firstinspires.ftc.teamcode.util.MotifPattern;
@@ -18,15 +19,17 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
 import java.util.function.Supplier;
 
 /**
- * Operator gamepad bindings. Uses {@link IvyBindings} on top of raw FTC gamepad
+ * Operator gamepad bindings. Uses {@link GamepadBindings} on top of raw FTC gamepad
  * polling.
  */
 public class OperatorBindings {
 
+    /** Stick deflection required to commit a motif-tail change (avoids accidental flicks). */
     private static final double MOTIF_TAIL_STICK_THRESHOLD = 0.6;
+    /** A trigger is "pressed" once it crosses this fraction of full pull (0.0–1.0). */
     private static final double TRIGGER_THRESHOLD = 0.2;
 
-    private final IvyBindings bindings = new IvyBindings();
+    private final GamepadBindings bindings = new GamepadBindings();
     private final Supplier<Gamepad> gamepadSupplier;
 
     private Robot robot;
@@ -74,17 +77,17 @@ public class OperatorBindings {
         // debounce timer starts clean.
         bindings.when(() -> gp().right_bumper)
                 .onTrue(com.pedropathing.ivy.commands.Commands.lazy(() -> robot.intake.smartIntakeCmd(rawOperatorGamepad)))
-                .onFalse(robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE));
+                .onFalse(robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE));
 
         // Smart intake on right trigger
         bindings.when(() -> gp().right_trigger > TRIGGER_THRESHOLD)
                 .onTrue(com.pedropathing.ivy.commands.Commands.lazy(() -> robot.intake.smartIntakeCmd(rawOperatorGamepad)))
-                .onFalse(robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE));
+                .onFalse(robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE));
 
         // Regular (non-smart) intake on left trigger
         bindings.when(() -> gp().left_trigger > TRIGGER_THRESHOLD)
-                .onTrue(robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-                .onFalse(robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE));
+                .onTrue(robot.intake.setIntakeModeCmd(IntakeMode.ACTIVE_FORWARD))
+                .onFalse(robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE));
     }
 
     private void configureHumanIntakeBindings(Robot robot) {

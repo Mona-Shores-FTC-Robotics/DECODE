@@ -221,4 +221,11 @@ public final class FieldConstants {
         return Math.atan2(dy, dx) + Math.toRadians(AimOffsets.aimAngleOffsetDeg);
     }
 
+    /** Straight-line distance (inches) between two field poses. */
+    public static double getDistanceTo(Pose robotPose, Pose targetPose) {
+        return Math.hypot(
+                targetPose.getX() - robotPose.getX(),
+                targetPose.getY() - robotPose.getY());
+    }
+
 }

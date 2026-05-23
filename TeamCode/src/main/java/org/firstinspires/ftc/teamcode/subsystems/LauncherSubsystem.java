@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.configurables.annotations.IgnoreConfigurable;
+import com.bylazar.configurables.annotations.Sorter;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -33,23 +34,65 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Launcher subsystem that manages three flywheels and their paired bootkicker servos.
- * Callers queue individual shots or bursts while this class coordinates spin-up,
- * feed timing, and recovery delays.
+ * Owns the launcher hardware: three flywheel motors, three feeder servos (the
+ * "boot kickers" that shove an artifact into the spinning wheel), and three
+ * hood servos that change the launch angle.
+ *
+ * <p>What it does:
+ * <ul>
+ *   <li><b>Spin-up</b> — drives each flywheel to a target RPM (using
+ *       feedforward + a small P term) and reports when it's "ready" to fire.</li>
+ *   <li><b>Shot queue</b> — callers ask to fire one lane or all lanes; this
+ *       class waits for spin-up, kicks the feeder, then enforces a recovery
+ *       dwell before the next shot.</li>
+ *   <li><b>Hood positioning</b> — moves each lane's hood to short / mid / long
+ *       angles based on the active range or measured goal distance.</li>
+ * </ul>
+ *
+ * <p>Per-robot tuning (RPMs, hood positions, feeder servo positions, kS/kV/kP)
+ * lives in {@code util/RobotProfile.java}.
  */
+@Configurable
 public class LauncherSubsystem {
 
-    // Global configuration instances
-    public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
-    public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
+    /**
+     * Shared debounce for "lost ready" events used by every spin command.
+     * Wait this long after the launcher loses its "ready to fire" signal
+     * before notifying drivers (avoids flicker on transient RPM dips).
+     */
+    public static final double READY_LOSS_DEBOUNCE_MS = 250.0;
 
-    // Per-robot configs are injected at construction. Suffixed Config to disambiguate
-    // from local variables of the Flywheel/Feeder/Hood inner classes (e.g. the common
-    // `for (Hood hood : hoods.values())` loop pattern).
-    private final LauncherFlywheelConfig flywheelConfig;
-    private final LauncherFeederConfig feederConfig;
-    private final LauncherHoodConfig hoodConfig;
-    private final LauncherTimingConfig timingConfig;
+    // Core per-robot hardware configs — top of the Panels tree.
+    @Sorter(sort = 10) public static LauncherFlywheelConfig flywheelConfig = RobotProfile.forCurrent().flywheel;
+    @Sorter(sort = 11) public static LauncherFeederConfig feederConfig = RobotProfile.forCurrent().feeder;
+    @Sorter(sort = 12) public static LauncherHoodConfig hoodConfig = RobotProfile.forCurrent().hood;
+    @Sorter(sort = 13) public static LauncherTimingConfig timingConfig = RobotProfile.forCurrent().timing;
+
+    // Shared (both robots) launcher tunables.
+    @Sorter(sort = 20) public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
+    @Sorter(sort = 21) public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
+
+    // Command-specific tunables (kept here so Panels groups them under the launcher tree).
+    @Sorter(sort = 30) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig distanceCalibration =
+            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig();
+    @Sorter(sort = 31) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig hoodThresholds =
+            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig();
+    @Sorter(sort = 32) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchInSequenceConfig launchInSequenceConfig =
+            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchInSequenceConfig();
+
+    /** Runtime diagnostic snapshot from the distance-based spin command. Read-only from telemetry. */
+    public static class DistanceSpinDiagnostics {
+        public double lastCalculatedDistanceIn = 0.0;
+        public double lastLeftTargetRpm = 0.0;
+        public double lastCenterTargetRpm = 0.0;
+        public double lastRightTargetRpm = 0.0;
+        public double lastHoodPosition = 0.0;
+        public String lastSource = "none";
+        public int updateCount = 0;
+        public boolean robotPoseAvailable = false;
+        public boolean goalPoseAvailable = false;
+    }
+    @Sorter(sort = 90) public static DistanceSpinDiagnostics distanceSpinDiagnostics = new DistanceSpinDiagnostics();
 
     private final HardwareMap hardwareMap;
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
@@ -85,16 +128,8 @@ public class LauncherSubsystem {
         return org.firstinspires.ftc.teamcode.util.CachedHardware.tryServo(hardwareMap, name);
     }
 
-    public LauncherSubsystem(HardwareMap hardwareMap,
-                             LauncherFlywheelConfig flywheelConfig,
-                             LauncherFeederConfig feederConfig,
-                             LauncherHoodConfig hoodConfig,
-                             LauncherTimingConfig timingConfig) {
+    public LauncherSubsystem(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
-        this.flywheelConfig = flywheelConfig;
-        this.feederConfig = feederConfig;
-        this.hoodConfig = hoodConfig;
-        this.timingConfig = timingConfig;
         for (LauncherLane lane : LauncherLane.values()) {
             flywheels.put(lane, new Flywheel(lane, hardwareMap));
             feeders.put(lane, new Feeder(lane, hardwareMap));
@@ -143,31 +178,11 @@ public class LauncherSubsystem {
         applyTargetRpms();
         for (Flywheel flywheel : flywheels.values()) {
             flywheel.updateControl();
-            if (flywheel.motor != null && TelemetrySettings.isVerbose()) {
-                String lane = flywheel.lane.name().toLowerCase();
-                String prefix = "launcher/control/" + lane;
-
-                double velocityRpm = flywheel.getCurrentRpm();
-                double targetRpm = flywheel.getTargetRpm();
-                double error = targetRpm - velocityRpm;
-                double feedforward = kSFor(flywheel.lane) + kVFor(flywheel.lane) * targetRpm;
-                double feedback = kPFor(flywheel.lane) * error;
-                Feeder feeder = feeders.get(flywheel.lane);
-
-                RobotState.packet.put(prefix + "/velocity_tps", flywheel.getMeasuredTicksPerSec());
-                RobotState.packet.put(prefix + "/velocity_rpm", velocityRpm);
-                RobotState.packet.put(prefix + "/target_rpm", targetRpm);
-                RobotState.packet.put(prefix + "/ff_error", error);
-                RobotState.packet.put(prefix + "/ff_feedforward", feedforward);
-                RobotState.packet.put(prefix + "/ff_feedback", feedback);
-                RobotState.packet.put(prefix + "/ff_power", flywheel.getAppliedPower());
-                // Shot event marker: correlate feeder firing with RPM dip in AdvantageScope
-                RobotState.packet.put(prefix + "/feeder_busy", feeder != null && feeder.isBusy());
-            }
+            publishFlywheelTelemetry(flywheel);
         }
 
-        // Speed-gated hood retraction for human loading
-        // Each lane's hood retracts independently when its flywheel reaches the threshold
+        // When the operator triggers human-loading reverse, hoods retract per lane as each
+        // flywheel reaches reverse speed (so they can't collide with an out-bound artifact).
         if (reverseFlywheelsActive) {
             updateHumanLoadingHoods();
         }
@@ -175,6 +190,31 @@ public class LauncherSubsystem {
         updateStateMachine(now);
         updateLaneRecovery(now);
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
+    }
+
+    /** Emits per-flywheel control telemetry to AdvantageScope (verbose mode only). */
+    private void publishFlywheelTelemetry(Flywheel flywheel) {
+        if (flywheel.motor == null || !TelemetrySettings.isVerbose()) return;
+
+        String lane = flywheel.lane.name().toLowerCase();
+        String prefix = "launcher/control/" + lane;
+
+        double velocityRpm = flywheel.getCurrentRpm();
+        double targetRpm = flywheel.getTargetRpm();
+        double error = targetRpm - velocityRpm;
+        double feedforward = kSFor(flywheel.lane) + kVFor(flywheel.lane) * targetRpm;
+        double feedback = kPFor(flywheel.lane) * error;
+        Feeder feeder = feeders.get(flywheel.lane);
+
+        RobotState.packet.put(prefix + "/velocity_tps", flywheel.getMeasuredTicksPerSec());
+        RobotState.packet.put(prefix + "/velocity_rpm", velocityRpm);
+        RobotState.packet.put(prefix + "/target_rpm", targetRpm);
+        RobotState.packet.put(prefix + "/ff_error", error);
+        RobotState.packet.put(prefix + "/ff_feedforward", feedforward);
+        RobotState.packet.put(prefix + "/ff_feedback", feedback);
+        RobotState.packet.put(prefix + "/ff_power", flywheel.getAppliedPower());
+        // Shot event marker: correlate feeder firing with RPM dip in AdvantageScope
+        RobotState.packet.put(prefix + "/feeder_busy", feeder != null && feeder.isBusy());
     }
 
     /**
@@ -648,7 +688,7 @@ public class LauncherSubsystem {
      * This provides graceful degradation - if one lane is jammed, other lanes still work.
      */
     private void updateHumanLoadingHoods() {
-        double threshold = LauncherReverseIntakeConfig.reverseRpmThreshold;
+        double threshold = reverseFlywheelForHumanLoadingConfig.reverseRpmThreshold;
 
         // If threshold is 0, skip speed-gating (hoods controlled elsewhere)
         if (threshold <= 0.0) {

@@ -8,6 +8,7 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinC
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
+import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import com.pedropathing.ivy.Command;
@@ -168,13 +169,12 @@ public class CloseTogetherCommand {
                                 .to(launchClose1())
                                 .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                 .build(config.maxPathPower),
-                        robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
+                        robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE),
                         PresetRangeSpinCommand.create(
                                 robot.launcher, LauncherRange.SHORT_AUTO, true,
                                 robot.drive, robot.lighting, null) // Spin up to SHORT RPM for the whole auto
                 ),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 1
@@ -213,7 +213,6 @@ public class CloseTogetherCommand {
                         )
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 2
@@ -238,7 +237,6 @@ public class CloseTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 3
@@ -294,12 +292,7 @@ public class CloseTogetherCommand {
                 )
         );
 
-        return
-                mainSequence;
-//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
-//                new InstantCommand(()-> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-//                autoSmartIntake
-
+        return mainSequence;
     }
 
     private static Pose start() {

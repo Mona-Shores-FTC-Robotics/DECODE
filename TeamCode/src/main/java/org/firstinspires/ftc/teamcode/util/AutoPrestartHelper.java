@@ -19,6 +19,7 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
  */
 public class AutoPrestartHelper {
 
+    /** Minimum time between vision-driven relocalizations during auto pre-start to avoid jitter. */
     private static final long RELOCALIZE_COOLDOWN_MS = 300L;
 
     private final Robot robot;
@@ -55,7 +56,6 @@ public class AutoPrestartHelper {
         syncHeadingForVision();
 
         // Poll Limelight once per init loop so snapshots stay fresh
-//        robot.vision.periodic();
 
         Alliance selectedAlliance = allianceSelector.updateDuringInit(robot.vision, robot, robot.lighting);
         if (robot.lighting != null) {

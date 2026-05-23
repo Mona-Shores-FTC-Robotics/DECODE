@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_KNOWN;
 import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_UNKNOWN;
 
-import com.acmerobotics.dashboard.config.Config;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
@@ -22,6 +21,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveAimAssistConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFusionConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRampConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRightTriggerFixedAngleConfig;
@@ -33,10 +33,32 @@ import org.firstinspires.ftc.teamcode.util.PoseFrames;
 import org.firstinspires.ftc.teamcode.pedroPathing.FusionLocalizer;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
+
+/**
+ * Owns the four mecanum drive motors and the Pedro Pathing follower.
+ *
+ * <p>What it does:
+ * <ul>
+ *   <li><b>Teleop driving</b> — translates joystick inputs into wheel commands,
+ *       in field-centric mode by default (push the stick "north" and the robot
+ *       moves toward the far wall regardless of which way it's facing).</li>
+ *   <li><b>Aim assist</b> — when an aim button is held, takes over rotation and
+ *       points the robot at the goal using vision + odometry.</li>
+ *   <li><b>Autonomous path following</b> — exposes the Pedro {@code Follower} so
+ *       OpModes can run pre-built paths.</li>
+ *   <li><b>Relocalization</b> — fuses Pinpoint odometry with AprilTag readings
+ *       so the robot's reported position stays accurate even after bumps.</li>
+ * </ul>
+ *
+ * <p>Per-robot tuning (PIDF gains, aim parameters, etc.) lives in
+ * {@code util/RobotProfile.java} — never branch on robot identity here.
+ */
 @Configurable
 public class DriveSubsystem {
 
+    /** Robot is considered "stationary enough to shoot" when its speed is below this (inches/sec). */
     public static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.5;
+    /** Ignore an AprilTag snapshot for relocalization once it's older than this. */
     private static final long MAX_VISION_AGE_MS = 250L;
 
     enum VisionCalibrationState {
@@ -46,166 +68,23 @@ public class DriveSubsystem {
     private VisionCalibrationState visionState = HEADING_UNKNOWN;
     private int consecutiveMt2DisagreementCount = 0;
 
-    // Active robot indicator
-    public static String ACTIVE_ROBOT = RobotState.getRobotName();
-
     // Global configuration instances
     public static DriveTeleOpConfig teleOpDriveConfig = new DriveTeleOpConfig();
     public static DriveRampConfig rampConfig = new DriveRampConfig();
     public static DriveVisionRelocalizeConfig visionRelocalizeConfig = new DriveVisionRelocalizeConfig();
 
-    @Config
-    public static class FusionConfig {
-        /**
-         * Minimum target area % (ta) to accept a Limelight measurement.
-         * At competition range ta is typically 0.2–2%; set to 0 to disable.
-         */
-        public static double minTargetAreaPercent = 0.1;
-        /** Estimated Limelight pipeline latency in milliseconds for timestamp compensation. */
-        public static double limelightLatencyMs = 20.0;
-        /**
-         * Post-relocalize xy covariance (inches). Lower = filter trusts the
-         * manual pose more, future vision corrections pull less aggressively.
-         */
-        public static double relocalizeCovarianceXY = 0.5;
-        /**
-         * Post-relocalize heading covariance (degrees, converted to radians at use).
-         * Lower = filter trusts the manual heading more.
-         */
-        public static double relocalizeCovarianceHeadingDeg = 2.0;
-    }
 
-    // Robot-specific aim assist configs - visible in Panels for tuning
-    public static DriveAimAssistConfig aimAssistConfig_Robot19429 = createAimAssistConfig19429();
-    public static DriveAimAssistConfig aimAssistConfig_Robot20245 = createAimAssistConfig20245();
-    public static DriveAimAssistConfig aimAssistConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().aimAssist;
+    /** Live aim-assist tuning for the active robot — see {@code util/RobotProfile.java} for the values. */
+    public static DriveAimAssistConfig aimAssistConfig =
+            org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().aimAssist;
 
-    /**
-     * Helper to create 19429-specific aim assist configuration.
-     * Override values here that differ from the defaults in DriveAimAssistConfig.
-     */
-    private static DriveAimAssistConfig createAimAssistConfig19429() {
-        DriveAimAssistConfig config = new DriveAimAssistConfig();
-        /** Proportional gain for geometry-based aiming when error is large */
-        config.kP = 0.35;
-        /** Inner-zone proportional gain (used when inside innerZoneDeg) to avoid overshoot */
-        config.kPInner = 2.85;
-        /** Error threshold (deg) where the controller switches to inner kP */
-       config.innerZoneDeg = 3.5;
-        /** Derivative gain on heading error rate (helps damp waggle) */
-        config.kD = 0.05;
-        /** Max turn speed when aiming (0.0-1.0) */
-        config.kMaxTurn = 0.6;
-        /** Minimum turn command to overcome drivetrain static friction */
-       config.kStatic = 0.1;
-        /** Apply kStatic only when error is above this magnitude (deg) */
-        config.staticApplyAboveDeg = 3.0;
-        /** Turn command slew rate (units per second), 0 disables slew limiting */
-        config.turnSlewRatePerSec = 8.0;
-        /** Heading deadband (degrees) where aim is considered settled */
-        config.deadbandDeg = 2.0;
-        return config;
-    }
+    /** Live fixed-angle aim tuning for the active robot — see {@code util/RobotProfile.java} for the values. */
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig =
+            org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().fixedAngleAim;
 
-    /**
-     * Helper to create 20245-specific aim assist configuration.
-     * Override values here that differ from the defaults in DriveAimAssistConfig.
-     */
-    private static DriveAimAssistConfig createAimAssistConfig20245() {
-        DriveAimAssistConfig config = new DriveAimAssistConfig();
-        /** Proportional gain for geometry-based aiming when error is large */
-        config.kP = 0.35;
-        /** Inner-zone proportional gain (used when inside innerZoneDeg) to avoid overshoot */
-        config.kPInner = 2.85;
-        /** Error threshold (deg) where the controller switches to inner kP */
-        config.innerZoneDeg = 3.5;
-        /** Derivative gain on heading error rate (helps damp waggle) */
-        config.kD = 0.05;
-        /** Max turn speed when aiming (0.0-1.0) */
-        config.kMaxTurn = 0.6;
-        /** Minimum turn command to overcome drivetrain static friction */
-        config.kStatic = 0.1;
-        /** Apply kStatic only when error is above this magnitude (deg) */
-        config.staticApplyAboveDeg = 3.0;
-        /** Turn command slew rate (units per second), 0 disables slew limiting */
-        config.turnSlewRatePerSec = 8.0;
-        /** Heading deadband (degrees) where aim is considered settled */
-        config.deadbandDeg = 2.0;        return config;
-    }
-
-    /**
-     * Gets the robot-specific AimAssistConfig based on RobotState.getRobotName().
-     * @return aimAssistConfig19429 or aimAssistConfig20245
-     */
-    public static DriveAimAssistConfig aimAssistConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().aimAssist;
-    }
-
-    // Robot-specific fixed angle aim configs - visible in Panels for tuning
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig_Robot19429 = createFixedAngleAimConfig19429();
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig_Robot20245 = createFixedAngleAimConfig20245();
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().fixedAngleAim;
-
-    /**
-     * Helper to create 19429-specific fixed angle aim configuration.
-     * Currently uses all default values - both robots have identical aiming tuning.
-     */
-    private static DriveFixedAngleAimConfig createFixedAngleAimConfig19429() {
-        DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
-        // No overrides needed - using shared defaults
-        return config;
-    }
-
-    /**
-     * Helper to create 20245-specific fixed angle aim configuration.
-     * Currently uses all default values - both robots have identical aiming tuning.
-     */
-    private static DriveFixedAngleAimConfig createFixedAngleAimConfig20245() {
-        DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
-        // No overrides needed - using shared defaults
-        return config;
-    }
-
-    /**
-     * Gets the robot-specific FixedAngleAimConfig based on RobotState.getRobotName().
-     * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245
-     */
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().fixedAngleAim;
-    }
-
-    // Robot-specific right trigger fixed angle aim configs - visible in Panels for tuning
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_Robot19429 = createRightTriggerFixedAngleConfig19429();
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_Robot20245 = createRightTriggerFixedAngleConfig20245();
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().rightTriggerFixedAngle;
-
-    /**
-     * Helper to create 19429-specific right trigger fixed angle aim configuration.
-     * Currently uses all default values - both robots have identical tuning.
-     */
-    private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig19429() {
-        DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
-        // No overrides needed - using shared defaults
-        return config;
-    }
-
-    /**
-     * Helper to create 20245-specific right trigger fixed angle aim configuration.
-     * Currently uses all default values - both robots have identical tuning.
-     */
-    private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig20245() {
-        DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
-        // No overrides needed - using shared defaults
-        return config;
-    }
-
-    /**
-     * Gets the robot-specific RightTriggerFixedAngleConfig based on RobotState.getRobotName().
-     * @return rightTriggerFixedAngleConfig19429 or rightTriggerFixedAngleConfig20245
-     */
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().rightTriggerFixedAngle;
-    }
+    /** Live right-trigger fixed-angle aim tuning for the active robot — see {@code util/RobotProfile.java}. */
+    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig =
+            org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().rightTriggerFixedAngle;
 
     /**
      * Gets the robot-specific InitialPoseConfig based on RobotState.getRobotName().
@@ -1143,8 +1022,8 @@ public class DriveSubsystem {
         if (Constants.activeFusionLocalizer != null) {
             Constants.activeFusionLocalizer.forceRelocalize(
                     pose,
-                    FusionConfig.relocalizeCovarianceXY,
-                    Math.toRadians(FusionConfig.relocalizeCovarianceHeadingDeg));
+                    DriveFusionConfig.relocalizeCovarianceXY,
+                    Math.toRadians(DriveFusionConfig.relocalizeCovarianceHeadingDeg));
         }
         follower.setPose(pose);
     }
@@ -1319,10 +1198,10 @@ public class DriveSubsystem {
         if (snap == null) return;
         if (snap.capturedAtNs == lastFedSnapshotNs) return;
         lastFedSnapshotNs = snap.capturedAtNs;
-        if (snap.decisionMargin < FusionConfig.minTargetAreaPercent) return;
+        if (snap.decisionMargin < DriveFusionConfig.minTargetAreaPercent) return;
         Pose pose = snap.pedroPoseMT2 != null ? snap.pedroPoseMT2 : snap.pedroPoseMT1;
         if (pose == null) return;
-        long measurementNs = snap.capturedAtNs - (long)(FusionConfig.limelightLatencyMs * 1_000_000L);
+        long measurementNs = snap.capturedAtNs - (long)(DriveFusionConfig.limelightLatencyMs * 1_000_000L);
         fusionLocalizer.addMeasurement(pose, measurementNs);
     }
 
@@ -1334,6 +1213,7 @@ public class DriveSubsystem {
             }
             return Math.abs(velocity.getMagnitude());
         } catch (Exception ignored) {
+            // Default to +Infinity so "is stationary?" callers fail closed (won't fire by accident).
             return Double.POSITIVE_INFINITY;
         }
     }
@@ -1369,6 +1249,7 @@ public class DriveSubsystem {
             }
             return velocity.getMagnitude();
         } catch (Exception ignored) {
+            // Telemetry-only path; falling back to 0 is preferable to crashing the loop.
             return 0.0;
         }
     }
@@ -1500,6 +1381,7 @@ public class DriveSubsystem {
     // when the aim command ends, default resumes.
     // =========================================================================
 
+    /** Joystick magnitudes below this are zeroed inside the drive command (joysticks never quite center). */
     private static final double DRIVE_TRANSLATION_DEADBAND = 0.05;
     private static double applyDriveDeadband(double value) {
         return Math.abs(value) < DRIVE_TRANSLATION_DEADBAND ? 0.0 : value;

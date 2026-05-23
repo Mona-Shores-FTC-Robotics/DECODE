@@ -8,6 +8,7 @@ import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinC
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
+import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
 import com.pedropathing.ivy.Command;
@@ -129,7 +130,7 @@ public class FarThreeAtOnceCommand {
                         .to(launchFar())
                         .withConstantHeading(waypoints.launchFarHeadingDeg)
                         .build(config.maxPathPower),
-                    robot.intake.setIntakeModeCmd(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
+                    robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE),
                     PresetRangeSpinCommand.create(
                             robot.launcher, LauncherRange.FAR_AUTO, true,
                             robot.drive, robot.lighting, null) // Spin up to FAR_AUTO speed and stay their the whole auto
@@ -230,12 +231,7 @@ public class FarThreeAtOnceCommand {
             )
         );
 
-        return
-                mainSequence;
-//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
-//                new InstantCommand(()-> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-//                autoSmartIntake
-
+        return mainSequence;
     }
 
     private static Pose start() {

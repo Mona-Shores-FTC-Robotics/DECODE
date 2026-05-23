@@ -3,14 +3,14 @@ package org.firstinspires.ftc.teamcode.bindings;
 import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.util.IvyBindings;
+import org.firstinspires.ftc.teamcode.util.GamepadBindings;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 /**
- * Driver gamepad bindings. Uses {@link IvyBindings} on top of raw FTC gamepad
+ * Driver gamepad bindings. Uses {@link GamepadBindings} on top of raw FTC gamepad
  * polling (no NextFTC GamepadEx). Trigger sources are {@link BooleanSupplier}
  * lambdas; commands come from subsystem Traffic Cones factory methods.
  *
@@ -20,11 +20,14 @@ import java.util.function.Supplier;
  */
 public class DriverBindings {
 
+    /** Stick magnitudes below this are treated as zero (joysticks never quite center). */
     private static final double TRANSLATION_DEADBAND = 0.05;
+    /** Rotation-stick magnitudes below this are treated as zero. */
     private static final double ROTATION_DEADBAND = 0.05;
+    /** A trigger is "pressed" once it crosses this fraction of full pull (0.0–1.0). */
     private static final double TRIGGER_THRESHOLD = 0.5;
 
-    private final IvyBindings bindings = new IvyBindings();
+    private final GamepadBindings bindings = new GamepadBindings();
     private final Supplier<Gamepad> gamepadSupplier;
 
     /**
@@ -48,7 +51,9 @@ public class DriverBindings {
         DoubleSupplier fieldY = () -> applyDeadband(-gp().left_stick_y, TRANSLATION_DEADBAND);
         DoubleSupplier rotationCcw = () -> applyDeadband(gp().right_stick_x, ROTATION_DEADBAND);
         BooleanSupplier slowHold = () -> gp().right_bumper;
-        BooleanSupplier rampMode = () -> false;  // unused — kept for future
+        // Ramp mode in driveTeleOp smooths abrupt stick changes. No button is bound
+        // to enable it today — flip this to `gp().<button>` if a driver wants it.
+        BooleanSupplier rampMode = () -> false;
 
         // Default drive (priority 0, SUSPEND on interrupt) runs continuously.
         robot.drive.defaultDrive(fieldX, fieldY, rotationCcw, slowHold, rampMode).schedule();

@@ -89,11 +89,6 @@ public class DiagnoseMegaTag2 extends OpMode {
 
     @Override
     public void start() {
-//        AutoField.FieldLayout currentLayout = AutoField.layoutForAlliance(Alliance.BLUE);
-//        Pose startFarPose = currentLayout.pose(AutoField.FieldPoint.START_FAR);
-//        robot.drive.getFollower().setStartingPose(startFarPose);
-//        robot.drive.getFollower().setPose(startFarPose);
-
         // Nothing special needed on start
     }
 

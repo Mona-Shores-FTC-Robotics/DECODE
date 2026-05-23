@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode.pedroPathing;
 
-import com.pedropathing.control.FilteredPIDFCoefficients;
-import com.pedropathing.control.PIDFCoefficients;
-import com.pedropathing.control.PredictiveBrakingCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
@@ -12,7 +9,6 @@ import com.pedropathing.ftc.localization.localizers.PinpointLocalizer;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathConstraints;
 
-import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -25,26 +21,20 @@ public class Constants {
 
     public static FusionLocalizer activeFusionLocalizer;
 
-    public static FollowerConstants followerConstants19429 = createFollowerConstants19429();
-    public static FollowerConstants followerConstants20245 = createFollowerConstants20245();
+    /** Pedro follower constants for the active robot. See {@code util/RobotProfile.java} for per-robot tuning. */
     public static FollowerConstants followerConstants() {
         return RobotProfile.forCurrent().follower;
     }
 
-    public static PinpointConstants pinpointConstants19429 = createPinpointConstants19429();
-    public static PinpointConstants pinpointConstants20245 = createPinpointConstants20245();
+    /** Pinpoint localizer constants for the active robot. See {@code util/RobotProfile.java} for per-robot tuning. */
     public static PinpointConstants localizerConstants() {
         return RobotProfile.forCurrent().pinpoint;
     }
 
-    public static MecanumConstants driveConstants19429 = createDriveConstants19429();
-    public static MecanumConstants driveConstants20245 = createDriveConstants20245();
+    /** Mecanum drive constants for the active robot. See {@code util/RobotProfile.java} for per-robot tuning. */
     public static MecanumConstants driveConstants() {
         return RobotProfile.forCurrent().drive;
     }
-
-
-
 
     /** Centralized hardware names. Use these everywhere. */
     public static class HardwareNames {
@@ -53,132 +43,6 @@ public class Constants {
         public static final String LB = "lb";
         public static final String RB = "rb";
         public static final String PINPOINT = "pinpoint";
-    }
-
-    // ========= Pedro follower and localization =========
-    // Robot-specific follower constants
-    private static FollowerConstants createFollowerConstants19429() {
-        return new FollowerConstants()
-                .forwardZeroPowerAcceleration(-29.294739328) //19429
-                .lateralZeroPowerAcceleration(-77.6639) //19429
-                .useSecondaryTranslationalPIDF(true)
-                .useSecondaryHeadingPIDF(true)
-                .useSecondaryDrivePIDF(true)
-
-                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.005, 0, 0.0005, 0.6, 0.0001)) //was .005p
-                .drivePIDFSwitch(5)
-                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.015, 0, .0001, 0.6, 0.0001))
-
-                .headingPIDFCoefficients(new PIDFCoefficients(.6, .01, .0001, .0005))  // Increased P and D, reduced F
-
-                .headingPIDFSwitch(Math.toRadians(3.5))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .05, 0.0003))
-
-                .translationalPIDFCoefficients(new PIDFCoefficients(
-                        0.06,
-                        0,
-                        0,
-                        .05))
-                .translationalPIDFSwitch(5)
-                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(
-                        .1,
-                        0.0001,
-                        .0006,
-                        .00015))
-                .centripetalScaling(0)
-                .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.1, 0.04, 0.0016))
-                .mass(15.4221); //34 pounds 11/16/25
-    }
-
-    private static FollowerConstants createFollowerConstants20245() {
-        return new FollowerConstants()
-                .forwardZeroPowerAcceleration(-31.2) //20245
-                .lateralZeroPowerAcceleration(-82) //20245
-                .useSecondaryTranslationalPIDF(true)
-                .useSecondaryHeadingPIDF(true)
-                .useSecondaryDrivePIDF(true)
-
-                .drivePIDFCoefficients(new FilteredPIDFCoefficients(.005, 0, 0.0005, 0.6, .0001)) // tuned 12/4
-                .drivePIDFSwitch(3)
-                .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.02, 0, 0, 0.6, .0001))
-
-                .headingPIDFCoefficients(new PIDFCoefficients(.48, 0.01, .001, .0005))  // Increased P and D, reduced F
-                .headingPIDFSwitch(Math.toRadians(3))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .001, .0003))
-
-                .translationalPIDFCoefficients(new PIDFCoefficients(
-                        .06,
-                        0,
-                        0,
-                        .05)) // TODO: Tune for 20245
-                .translationalPIDFSwitch(5)
-                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(
-                        .1,
-                        0.0001,
-                        .0006,
-                        .00015))
-
-                .centripetalScaling(0)
-                .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.1, 0.0655, 0.0015))
-                .mass(15.4221); // TODO: Update mass for 20245
-    }
-
-    // Robot-specific drive constants
-    private static MecanumConstants createDriveConstants19429() {
-        return new MecanumConstants()
-                .maxPower(1.0)
-                .xVelocity(59.1365506697527)
-                .yVelocity(53.16551100362942)
-                .rightFrontMotorName(HardwareNames.RF)
-                .rightRearMotorName(HardwareNames.RB)
-                .leftRearMotorName(HardwareNames.LB)
-                .leftFrontMotorName(HardwareNames.LF)
-                .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
-                .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
-                .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-                .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
-                .useBrakeModeInTeleOp(true);
-    }
-
-    private static MecanumConstants createDriveConstants20245() {
-        return new MecanumConstants()
-                .maxPower(1.0)
-                .xVelocity(58.5) //tuned 12/4
-                .yVelocity(50.4) //tuned 12/4
-                .rightFrontMotorName(HardwareNames.RF)
-                .rightRearMotorName(HardwareNames.RB)
-                .leftRearMotorName(HardwareNames.LB)
-                .leftFrontMotorName(HardwareNames.LF)
-                .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
-                .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
-                .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-                .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
-                .useBrakeModeInTeleOp(true);
-    }
-
-
-
-    // Robot-specific localizer constants
-    private static PinpointConstants createPinpointConstants19429() {
-        return new PinpointConstants()
-                .forwardPodY(6.25) //19429
-                .strafePodX(0) //19429
-                .distanceUnit(DistanceUnit.INCH)
-                .hardwareMapName(HardwareNames.PINPOINT)
-                .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
-                .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
-                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
-    }
-
-    private static PinpointConstants createPinpointConstants20245() {
-        return new PinpointConstants()
-                .forwardPodY(6.25) //20245
-                .strafePodX(0) //20245
-                .distanceUnit(DistanceUnit.INCH)
-                .hardwareMapName(HardwareNames.PINPOINT)
-                .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
-                .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
-                .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     }
 
     // PathConstraints parameter order:

@@ -4,7 +4,7 @@ This document explains the reorganized telemetry system for the DECODE FTC robot
 
 ## Overview
 
-The telemetry system provides tiered output (MATCH/PRACTICE/DEBUG) to three destinations:
+The telemetry system provides tiered output (MATCH/PRACTICE/VERBOSE) to three destinations:
 - **Driver Station**: FTC telemetry display on driver station phone/tablet
 - **FTC Dashboard**: Web dashboard (`http://192.168.49.1:8080/dash`) and AdvantageScope Lite
 - **FullPanels**: FTControl Panels for detailed live metrics
@@ -22,10 +22,8 @@ The telemetry system provides tiered output (MATCH/PRACTICE/DEBUG) to three dest
 
 ```
 telemetry/
-├── TelemetryService.java          # Thin orchestrator (~280 lines, down from 867!)
+├── TelemetryService.java          # Thin orchestrator
 ├── TelemetrySettings.java         # Configuration (levels, intervals)
-├── TelemetryPublisher.java        # Legacy (deprecated, use formatters)
-├── RobotStatusLogger.java         # FTC status logging (currently disabled)
 │
 ├── data/                           # Telemetry data models
 │   ├── RobotTelemetryData.java    # Root container for all telemetry
@@ -38,8 +36,7 @@ telemetry/
 │
 ├── formatters/                     # Telemetry formatters
 │   ├── DriverStationFormatter.java # Formats for driver station display
-│   ├── DashboardFormatter.java     # Formats for FTC Dashboard packets
-│   └── FullPanelsFormatter.java    # Formats for FullPanels (FTControl)
+│   └── DashboardFormatter.java     # Formats for FTC Dashboard packets (also feeds Panels and AdvantageScope Lite)
 │
 └── README.md                       # This file
 ```
@@ -62,12 +59,12 @@ Change telemetry level via FTC Dashboard → Config → TelemetrySettings → le
 **FTC Dashboard:** Essential metrics (10 Hz / 100ms, ~20 fields)
 **FullPanels:** Configurable (can be enabled/disabled)
 
-### DEBUG Mode
+### VERBOSE Mode
 **Use for:** Development, bench testing, detailed diagnostics
 **Target:** No performance limit
 **Driver Station:** Full detail (per-motor powers/velocities, per-lane launcher, hood/feeder positions)
 **FTC Dashboard:** Comprehensive (20 Hz / 50ms, ~80 fields)
-**FullPanels:** **ENABLED** (full diagnostics)
+**Panels:** Full diagnostics (same packets as Dashboard)
 
 ## How to Add New Telemetry
 
@@ -260,39 +257,7 @@ robot.telemetry.publishLoopTelemetry(
 - Telemetry overhead: <20ms
 - Dashboard at 10 Hz (100ms interval)
 
-**DEBUG Mode:**
+**VERBOSE Mode:**
 - No performance target
 - Dashboard at 20 Hz (50ms interval)
 - Full diagnostics enabled
-
-## Key Improvements Over Old System
-
-1. **Reduced code size**: TelemetryService is ~280 lines (down from 867)
-2. **Single data capture**: Telemetry extracted once per loop, not 3x for each formatter
-3. **Easy to extend**: New fields added in 1-2 places, not scattered across 800 lines
-4. **Clear naming**: `isAutonomous` instead of confusing `suppressDriveTelemetry`
-5. **Complete data**: Hood positions, feeder positions, match time, full intake state
-6. **Better organization**: Four-motor drive hierarchy, per-lane launcher data
-7. **Hierarchical fields**: Alphabetically sensible dashboard field naming
-8. **Type safety**: Data models prevent typos and ensure consistency
-
-## Migration Notes
-
-### Deprecated APIs
-
-- `TelemetryService.publisher()` - Use formatters directly
-- `TelemetryService.panelsTelemetry()` - Use FullPanelsFormatter
-- `TelemetryService.updateDriverStation()` - No-op, handled in publishLoopTelemetry
-- `TelemetryService.setRoutineStepTelemetry()` - TODO: Re-implement if needed
-
-### Breaking Changes
-
-- `publishLoopTelemetry()` now requires `IntakeSubsystem` parameter
-- All OpModes updated to pass `robot.intake`
-
-## Future Enhancements
-
-- Re-implement autonomous routine step tracking
-- Add match time estimation based on FTC field data
-- Integration with AdvantageScope Lite streaming
-- Custom telemetry profiles per competition/practice venue

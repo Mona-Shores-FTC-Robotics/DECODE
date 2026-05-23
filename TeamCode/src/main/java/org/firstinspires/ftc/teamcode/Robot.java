@@ -55,8 +55,7 @@ public class Robot {
         vision = new VisionSubsystemLimelight(hardwareMap);
         drive = new DriveSubsystem(hardwareMap, vision,
                 profile.aimAssist, profile.fixedAngleAim, profile.rightTriggerFixedAngle);
-        launcher = new LauncherSubsystem(hardwareMap,
-                profile.flywheel, profile.feeder, profile.hood, profile.timing);
+        launcher = new LauncherSubsystem(hardwareMap);
         intake = new IntakeSubsystem(hardwareMap, profile.gate, profile.lanePresence);
         lighting = new LightingSubsystem(hardwareMap);
 
@@ -71,18 +70,16 @@ public class Robot {
 
     public void initializeForAuto() {
         drive.setTeleOpControlEnabled(false);
-        vision.initialize();
-        drive.initialize();
-        launcher.initialize();
-        lighting.initialize();
-        intake.initialize();
-
-        // Wire lighting to receive lane color updates from intake
-        intake.addLaneColorListener(lighting);
+        initializeAllSubsystems();
     }
 
     public void initializeForTeleOp() {
         drive.setTeleOpControlEnabled(true);
+        initializeAllSubsystems();
+    }
+
+    /** Shared subsystem-init sequence used by both Auto and TeleOp. */
+    private void initializeAllSubsystems() {
         vision.initialize();
         drive.initialize();
         launcher.initialize();

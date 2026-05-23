@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.CommandBuilder;
@@ -14,6 +13,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -22,81 +22,22 @@ import java.util.Objects;
 
 /**
  * Continuously calculates distance to goal and updates launcher RPM while held.
- * Ported from NextFTC to an Ivy static factory.
  */
-@Configurable
 public final class DistanceBasedSpinCommand {
 
+    /** Exponential smoothing weight for the live distance reading (higher = trust new sample more, less smoothing). */
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;
+    /** Lane is "ready" once its actual RPM reaches this fraction of the target RPM. */
     private static final double RPM_READY_THRESHOLD_PERCENT = 0.90;
-    private static final double READY_LOSS_DEBOUNCE_MS = 250.0;
 
-    public static CommandRangeConfig rangeConfig_Robot19429 = createRangeConfig19429();
-    public static CommandRangeConfig rangeConfig_Robot20245 = createRangeConfig20245();
-
-    private static CommandRangeConfig createRangeConfig19429() {
-        CommandRangeConfig config = new CommandRangeConfig();
-        config.shortLeftRpm = 1900;  config.shortCenterRpm = 1900;  config.shortRightRpm = 1900;
-        config.midLeftRpm = 2500;    config.midCenterRpm = 2500;    config.midRightRpm = 2500;
-        config.longLeftRpm = 2900;   config.longCenterRpm = 2900;   config.longRightRpm = 2900;
-        config.longMinLeftRpm = 2725; config.longMinCenterRpm = 2725; config.longMinRightRpm = 2725;
-        config.longMaxLeftRpm = 2900; config.longMaxCenterRpm = 2900; config.longMaxRightRpm = 2900;
-        config.shortAutoLeftRpm = 2000; config.shortAutoCenterRpm = 2000; config.shortAutoRightRpm = 2000;
-        config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
-        config.shortHoodPosition = 1;
-        config.midHoodPosition = 0.05;
-        config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = .55;
-        config.farAutoHoodPosition = 0.0;
-        config.timeoutSeconds = 3.5;
-        return config;
-    }
-
-    private static CommandRangeConfig createRangeConfig20245() {
-        CommandRangeConfig config = new CommandRangeConfig();
-        config.shortLeftRpm = 1810;  config.shortCenterRpm = 1810;  config.shortRightRpm = 1810;
-        config.midLeftRpm = 2400;    config.midCenterRpm = 2400;    config.midRightRpm = 2400;
-        config.longLeftRpm = 2900;   config.longCenterRpm = 2900;   config.longRightRpm = 2900;
-        config.longMinLeftRpm = 2725; config.longMinCenterRpm = 2725; config.longMinRightRpm = 2725;
-        config.longMaxLeftRpm = 2800; config.longMaxCenterRpm = 2800; config.longMaxRightRpm = 2800;
-        config.shortAutoLeftRpm = 1870; config.shortAutoCenterRpm = 1870; config.shortAutoRightRpm = 1870;
-        config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
-        config.shortHoodPosition = .95;
-        config.midHoodPosition = 0.0;
-        config.longHoodPosition = 0.0;
-        config.shortAutoHoodPosition = .55;
-        config.farAutoHoodPosition = 0.0;
-        config.timeoutSeconds = 3.5;
-        return config;
-    }
-
-    public static class DiagnosticData {
-        public double lastCalculatedDistanceIn = 0.0;
-        public double lastLeftTargetRpm = 0.0;
-        public double lastCenterTargetRpm = 0.0;
-        public double lastRightTargetRpm = 0.0;
-        public double lastHoodPosition = 0.0;
-        public String lastSource = "none";
-        public int updateCount = 0;
-        public boolean robotPoseAvailable = false;
-        public boolean goalPoseAvailable = false;
-    }
-    public static DiagnosticData diagnostics = new DiagnosticData();
-
-    public static class DistanceCalibration {
-        public double shortRangeDistanceIn = 18.4;
-        public double midRangeDistanceIn = 98.0;
-        public double longRangeMinDistanceIn = 125.4;
-        public double longRangeMaxDistanceIn = 153;
-    }
-
-    public static class HoodThresholds {
-        public double shortRangeDistanceIn = 0;
-        public double midRangeDistanceIn = 90;
-    }
-
-    public static DistanceCalibration distanceCalibration = new DistanceCalibration();
-    public static HoodThresholds hoodThresholds = new HoodThresholds();
+    // Tuning + diagnostics live on LauncherSubsystem so Panels shows them under the launcher tree.
+    // These aliases keep the in-file references short.
+    private static final LauncherSubsystem.DistanceSpinDiagnostics diagnostics =
+            LauncherSubsystem.distanceSpinDiagnostics;
+    private static final org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig distanceCalibration =
+            LauncherSubsystem.distanceCalibration;
+    private static final org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig hoodThresholds =
+            LauncherSubsystem.hoodThresholds;
 
     private DistanceBasedSpinCommand() {}
 
@@ -113,6 +54,8 @@ public final class DistanceBasedSpinCommand {
         Objects.requireNonNull(vision, "vision required");
         Objects.requireNonNull(drive, "drive required");
 
+        // Arrays wrap mutable values so the lambdas below can update them
+        // (Java requires lambda captures to be final, so we mutate state via array slots).
         final double[] lastSmoothedDistanceIn = {0.0};
         final boolean[] feedbackTriggered = {false};
         final ElapsedTime readyLossTimer = new ElapsedTime();
@@ -207,7 +150,7 @@ public final class DistanceBasedSpinCommand {
             if (lighting != null) lighting.flashAimAligned();
             return;
         }
-        if (readyLossTimer.milliseconds() >= READY_LOSS_DEBOUNCE_MS) {
+        if (readyLossTimer.milliseconds() >= LauncherSubsystem.READY_LOSS_DEBOUNCE_MS) {
             feedbackTriggered[0] = false;
         }
     }
@@ -228,9 +171,7 @@ public final class DistanceBasedSpinCommand {
             diagnostics.lastSource = "none";
             return 0.0;
         }
-        double dx = goalPose.getX() - odometryPose.getX();
-        double dy = goalPose.getY() - odometryPose.getY();
-        return Math.hypot(dx, dy);
+        return FieldConstants.getDistanceTo(odometryPose, goalPose);
     }
 
     private static void setRpmsForDistance(LauncherSubsystem launcher, double distanceIn) {

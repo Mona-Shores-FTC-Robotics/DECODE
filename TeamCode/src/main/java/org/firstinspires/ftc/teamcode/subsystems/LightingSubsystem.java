@@ -57,9 +57,6 @@ public class LightingSubsystem implements IntakeSubsystem.LaneColorListener {
         ALLIANCE
     }
 
-    // Active robot indicator
-    public static String ACTIVE_ROBOT = RobotState.getRobotName();
-
     // Global configuration instances
     public static LightingIndicatorConfig indicatorConfig = new LightingIndicatorConfig();
     public static LightingColorPositionConfig colorPositionConfig = new LightingColorPositionConfig();

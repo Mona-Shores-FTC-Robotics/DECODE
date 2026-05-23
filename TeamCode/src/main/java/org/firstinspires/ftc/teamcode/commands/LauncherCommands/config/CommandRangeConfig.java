@@ -1,13 +1,10 @@
 package org.firstinspires.ftc.teamcode.commands.LauncherCommands.config;
 
 /**
- * Shared tunable RPM and hood positions for SHORT/MID/LONG ranges.
- * Both distance-based and preset-based commands should reference this single
- * config so field tuning only needs to happen in one place.
- *
- * Robot-specific instances are defined as static fields on DistanceBasedSpinCommand
- * (which has @Configurable), allowing Dashboard/Panels to edit the instance fields
- * of these config objects live. Access via RobotProfile.forCurrent().commandRange.
+ * Tunable RPM and hood positions for SHORT/MID/LONG ranges. The data SHAPE
+ * lives here; per-robot values live in {@code util/RobotProfile.java} under
+ * {@code rangeConfig19429()} / {@code rangeConfig20245()}. Access the live
+ * config via {@code RobotProfile.forCurrent().commandRange}.
  */
 public class CommandRangeConfig {
     /** Short range RPMs */

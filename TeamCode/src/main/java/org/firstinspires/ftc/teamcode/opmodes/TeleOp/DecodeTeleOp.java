@@ -13,6 +13,7 @@ import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.AllianceSelector;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
+import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -154,7 +155,7 @@ public class DecodeTeleOp extends OpMode {
         driverBindings.configureTeleopBindings(robot);
         operatorBindings.configureTeleopBindings(robot, gamepad2);
 
-        robot.intake.setMode(IntakeSubsystem.IntakeMode.PASSIVE_REVERSE);
+        robot.intake.setMode(IntakeMode.PASSIVE_REVERSE);
         if (allianceSelector != null) {
             allianceSelector.lockSelection();
             allianceSelector.applySelection(robot, robot.lighting);
@@ -179,8 +180,8 @@ public class DecodeTeleOp extends OpMode {
             prevMainLoopMs = 0.0;
         }
         lastLoopStartNs = loopStartNs;
-        driverBindings.update();      // tick IvyBindings shim for driver
-        operatorBindings.update();    // tick IvyBindings shim for operator
+        driverBindings.update();      // tick GamepadBindings shim for driver
+        operatorBindings.update();    // tick GamepadBindings shim for operator
         com.pedropathing.ivy.Scheduler.execute();
 
         // Auto-switch to DECODE mode when endgame threshold is reached
