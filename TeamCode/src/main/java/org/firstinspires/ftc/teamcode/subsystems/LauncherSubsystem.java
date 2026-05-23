@@ -45,6 +45,8 @@ public class LauncherSubsystem implements Subsystem {
     // Global configuration instances
     public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
+    public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LauncherIdleConfig launcherIdleConfig =
+            new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LauncherIdleConfig();
 
 //    // Robot-specific timing configs
 //    public static LauncherTimingConfig timingConfig_Robot19429 = LauncherTimingConfig.timing19429;
@@ -818,10 +820,6 @@ public class LauncherSubsystem implements Subsystem {
         if (override != null && override >= 0.0) {
             return override;
         }
-        Double lastShot = lastShotRpms.get(lane);
-        if (lastShot != null && lastShot > 0.0) {
-            return lastShot;
-        }
         switch (lane) {
             case LEFT:
                 return Math.max(0.0, flywheelConfig().flywheelLeft.idleRpm);
@@ -831,6 +829,12 @@ public class LauncherSubsystem implements Subsystem {
             default:
                 return Math.max(0.0, flywheelConfig().flywheelRight.idleRpm);
         }
+    }
+
+    /** Returns the RPM recorded from the last shot for the given lane, or 0 if no shot history. */
+    public double getLastShotRpm(LauncherLane lane) {
+        Double rpm = lastShotRpms.get(lane);
+        return rpm != null && rpm > 0.0 ? rpm : 0.0;
     }
 
     private static double feederHoldMsFor(LauncherLane lane) {

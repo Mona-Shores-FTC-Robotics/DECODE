@@ -6,6 +6,7 @@ import com.pedropathing.ivy.Command;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.DistanceBasedSpinCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherIdleCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ModeAwareLaunchCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -51,6 +52,7 @@ public class OperatorBindings {
         configureGroundIntakeBindings(robot, rawOperatorGamepad);
         configureHumanIntakeBindings(robot);
         configureEjectBindings(robot);
+        bindings.when(() -> true).whileTrue(LauncherIdleCommand.create(robot.launcher, robot.intake));
         configureDistanceBasedLaunchBindings(robot, rawOperatorGamepad);
         configurePresetRangeLaunchBindings(robot, rawOperatorGamepad);
 
