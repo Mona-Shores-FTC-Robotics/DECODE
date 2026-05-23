@@ -8,7 +8,6 @@ import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.util.Alliance;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -118,12 +117,6 @@ public class MichianaGateLeaveArt1Command {
     }
 
     public static Command create(Robot robot, Alliance alliance, @Nullable Pose startOverride) {
-        Pose goalCenter = alliance == Alliance.BLUE
-                ? FieldConstants.BLUE_GOAL_CENTER
-                : FieldConstants.RED_GOAL_CENTER;
-        double goalX = goalCenter.getX();
-        double goalY = goalCenter.getY();
-
         // ── Preloads: start → preload zone via curve, fire on fly ─────────────
         FollowPathBuilder preloadBuilder = new FollowPathBuilder(robot, alliance);
         if (startOverride != null) {
@@ -181,14 +174,14 @@ public class MichianaGateLeaveArt1Command {
                 new FollowPathBuilder(robot, alliance)
                         .from(art2()).to(shootZone())
                         .withControl(shoot2Ctrl())
-                        .withFacingPoint(goalX, goalY)
+                        .withLinearHeadingCompletion(Config.headingInterpEnd)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower),
 
                 // ── Art3, Art4, Art5: gate slant cycles ───────────────────────────
-                gateSlantCycle(robot, alliance, goalX, goalY),
-                gateSlantCycle(robot, alliance, goalX, goalY),
-                gateSlantCycle(robot, alliance, goalX, goalY),
+                gateSlantCycle(robot, alliance),
+                gateSlantCycle(robot, alliance),
+                gateSlantCycle(robot, alliance),
 
                 // ── Art1 pickup: switch back to SHORT_AUTO while driving ──────────
                 Groups.deadline(
@@ -213,14 +206,13 @@ public class MichianaGateLeaveArt1Command {
                 new FollowPathBuilder(robot, alliance)
                         .from(art1()).to(finalShot())
                         .withControl(finalShotCtrl())
-                        .withFacingPoint(goalX, goalY)
+                        .withLinearHeadingCompletion(Config.headingInterpEnd)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower)
         );
     }
 
-    private static Command gateSlantCycle(Robot robot, Alliance alliance,
-                                           double goalX, double goalY) {
+    private static Command gateSlantCycle(Robot robot, Alliance alliance) {
         return Groups.sequential(
                 Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
@@ -234,7 +226,7 @@ public class MichianaGateLeaveArt1Command {
                 new FollowPathBuilder(robot, alliance)
                         .from(gateSlant()).to(shootZone())
                         .withControl(gateSlantCtrl())
-                        .withFacingPoint(goalX, goalY)
+                        .withLinearHeadingCompletion(Config.headingInterpEnd)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower)
         );

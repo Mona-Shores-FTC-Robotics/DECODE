@@ -8,7 +8,6 @@ import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.util.Alliance;
-import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
@@ -110,12 +109,6 @@ public class MichianaGateCommand {
     }
 
     public static Command create(Robot robot, Alliance alliance, @Nullable Pose startOverride) {
-        Pose goalCenter = alliance == Alliance.BLUE
-                ? FieldConstants.BLUE_GOAL_CENTER
-                : FieldConstants.RED_GOAL_CENTER;
-        double goalX = goalCenter.getX();
-        double goalY = goalCenter.getY();
-
         // ── Preloads: start → preload zone (close first stop, fire on fly) ────
         FollowPathBuilder preloadBuilder = new FollowPathBuilder(robot, alliance);
         if (startOverride != null) {
@@ -158,7 +151,7 @@ public class MichianaGateCommand {
                         .build(Config.maxPathPower),
                 new FollowPathBuilder(robot, alliance)
                         .from(openGate()).to(shootZone())
-                        .withFacingPoint(goalX, goalY)
+                        .withLinearHeadingCompletion(Config.headingInterpEnd)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower),
 
@@ -184,18 +177,18 @@ public class MichianaGateCommand {
                         .build(Config.maxPathPower),
                 new FollowPathBuilder(robot, alliance)
                         .from(openGate()).to(shootZone())
-                        .withFacingPoint(goalX, goalY)
+                        .withLinearHeadingCompletion(Config.headingInterpEnd)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower),
 
                 // ── Art3: slant gate cycle → shoot zone ───────────────────────
-                gateSlantCycle(robot, alliance, goalX, goalY, shootZone()),
+                gateSlantCycle(robot, alliance, shootZone()),
 
                 // ── Art4: slant gate cycle → shoot zone ───────────────────────
-                gateSlantCycle(robot, alliance, goalX, goalY, shootZone()),
+                gateSlantCycle(robot, alliance, shootZone()),
 
                 // ── Art5: slant gate cycle → final shoot spot ─────────────────
-                gateSlantCycle(robot, alliance, goalX, goalY, finalShoot()),
+                gateSlantCycle(robot, alliance, finalShoot()),
 
                 // ── Conditional park ──────────────────────────────────────────
                 ConditionalFinalLaunchCommand.create(
@@ -210,8 +203,7 @@ public class MichianaGateCommand {
         );
     }
 
-    private static Command gateSlantCycle(Robot robot, Alliance alliance,
-                                           double goalX, double goalY, Pose returnTarget) {
+    private static Command gateSlantCycle(Robot robot, Alliance alliance, Pose returnTarget) {
         return Groups.sequential(
                 Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
@@ -223,7 +215,7 @@ public class MichianaGateCommand {
                 Commands.waitMs(Config.gateSlantWaitMs),
                 new FollowPathBuilder(robot, alliance)
                         .from(gateSlant()).to(returnTarget)
-                        .withFacingPoint(goalX, goalY)
+                        .withLinearHeadingCompletion(Config.headingInterpEnd)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower)
         );
