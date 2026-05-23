@@ -58,20 +58,7 @@ If the ball rotates fast or has many holes:
 2. Increase `keepAliveMs` from 400 to 600-800
 3. Test again - detection should survive longer gaps between good readings
 
-### Issue 2: Detection never clears when ball is removed
-
-**Fix:** Adjust Distance Clearance Margin
-
-If the ball sits at the edge of detection range and doesn't trigger distance-based clearing:
-
-1. FTC Dashboard → Config → IntakeSubsystem → laneSensorConfig → gating
-2. **Decrease** `distanceClearanceMarginCm` from 2.0 to 1.0-1.5
-   - This makes clearing more sensitive - artifact clears as soon as distance exceeds exit threshold by this margin
-3. Check your exit thresholds in `lanePresenceConfig20245` - they should be larger than typical artifact distance
-   - Example: If artifact is at 4-5cm, set `exitDistanceCm` to 6-7cm
-4. Test: Remove ball and watch FTC Dashboard `intake/sample/{lane}/distance_cm` - should jump to >10cm and clear instantly
-
-### Issue 3: Detection clears too slowly after removing ball
+### Issue 2: Detection clears too slowly after removing ball
 
 **Fix:** Reduce Clear Confirmations
 

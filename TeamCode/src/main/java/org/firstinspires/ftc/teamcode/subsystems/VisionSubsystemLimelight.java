@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -14,17 +16,29 @@ import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
-import dev.nextftc.core.subsystems.Subsystem;
-
 import java.util.List;
-import java.util.Optional;
 
 /**
- * Limelight-backed vision subsystem that mirrors the public API of the legacy VisionPortal-based
- * implementation so existing OpModes can switch to Limelight without broader structural changes.
+ * Talks to the Limelight 3A camera and turns AprilTag detections into a
+ * field-frame robot pose.
+ *
+ * <p>What it does:
+ * <ul>
+ *   <li><b>Pose from tag</b> — when the Limelight sees an AprilTag and its
+ *       MegaTag2 pipeline produces a pose, this class exposes it via
+ *       {@link #getRobotPoseFromTagPedro()} / {@link #getRobotPoseFromTagFtc()}.</li>
+ *   <li><b>Heading sync</b> — every loop, {@code DriveSubsystem} feeds the
+ *       robot's heading to the Limelight so MegaTag2 can disambiguate poses.</li>
+ *   <li><b>Update gating</b> — {@link #shouldUpdateOdometry()} returns true at
+ *       most once per fresh tag lock so callers don't repeatedly relocalize
+ *       on the same measurement.</li>
+ * </ul>
+ *
+ * <p>Field geometry (tag IDs, goal locations) lives in {@code util/FieldConstants.java}.
  */
-public class VisionSubsystemLimelight implements Subsystem {
+public class VisionSubsystemLimelight {
 
+    /** Stop trusting a tag snapshot for relocalization if it's older than this. */
     private static final long ODOMETRY_RESET_TIMEOUT_MS = 3000L;
 
 
@@ -49,7 +63,7 @@ public class VisionSubsystemLimelight implements Subsystem {
 
     private double lastPeriodicMs = 0.0;
 
-    // Throttle vision polling to 20Hz (50ms) instead of every loop
+    /** Throttle vision polling to 20Hz (50ms) so it doesn't dominate the loop. */
     private static final long VISION_POLL_INTERVAL_MS = 50L;
     private long lastVisionPollTimeMs = 0L;
 
@@ -65,7 +79,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     // Diagnostic mode: When true, external code controls heading updates (for testing different offsets)
     private boolean diagnosticMode = false;
 
-    // Heading offset between Pedro heading (follower) and FTC heading expected by Limelight
+    /** Heading offset between Pedro (follower) and FTC (Limelight) frames. Pedro 0° is FTC 90°. */
     private static final double PEDRO_TO_FTC_HEADING_OFFSET_DEG = 90.0;
 
     public VisionSubsystemLimelight(HardwareMap hardwareMap) {
@@ -104,7 +118,6 @@ public class VisionSubsystemLimelight implements Subsystem {
         this.limelightAvailable = available;
     }
 
-    @Override
     public void initialize() {
         if (!limelightAvailable || limelight == null) {
             state = VisionState.OFF;
@@ -115,8 +128,15 @@ public class VisionSubsystemLimelight implements Subsystem {
         state = VisionState.STREAMING;
     }
 
-    @Override
-    public void periodic() {
+    /**
+     * Infinite Command that drives the vision update loop each scheduler tick.
+     * Scheduled once in OpMode init; runs until OpMode stop.
+     */
+    public Command periodic() {
+        return Commands.infinite(this::doPeriodic);
+    }
+
+    private void doPeriodic() {
         long start = System.nanoTime();
         long nowMs = System.currentTimeMillis();
 
@@ -205,14 +225,16 @@ public class VisionSubsystemLimelight implements Subsystem {
         return lastSnapshot == null ? -1 : lastSnapshot.getTagId();
     }
 
-    public Optional<Pose> getRobotPoseFromTagPedro() {
+    /** Returns the latest Pedro-frame robot pose from the tag, or null if none. */
+    public Pose getRobotPoseFromTagPedro() {
         refreshSnapshotIfStale();
-        return Optional.ofNullable(lastRobotPosePedro);
+        return lastRobotPosePedro;
     }
 
-    public Optional<Pose> getRobotPoseFromTagFtc() {
+    /** Returns the latest FTC-frame robot pose from the tag, or null if none. */
+    public Pose getRobotPoseFromTagFtc() {
         refreshSnapshotIfStale();
-        return Optional.ofNullable(lastRobotPoseFtc);
+        return lastRobotPoseFtc;
     }
 
     public boolean shouldUpdateOdometry() {
@@ -224,28 +246,17 @@ public class VisionSubsystemLimelight implements Subsystem {
         odometryUpdatePending = false;
     }
 
-    public Optional<Pose> getTargetGoalPose() {
+    /** Returns the target goal pose for the current alliance, or null if alliance is unknown. */
+    public Pose getTargetGoalPose() {
         Alliance alliance = activeAlliance;
         if (alliance == Alliance.UNKNOWN) {
             alliance = RobotState.getAlliance();
         }
         switch (alliance) {
-            case BLUE:
-                return Optional.of(FieldConstants.getBlueBasketTarget());
-            case RED:
-                return Optional.of(FieldConstants.getRedBasketTarget());
-            default:
-                return Optional.empty();
+            case BLUE:  return FieldConstants.getBlueBasketTarget();
+            case RED:   return FieldConstants.getRedBasketTarget();
+            default:    return null;
         }
-    }
-
-    public Optional<Double> getAimAngle() {
-        Optional<Pose> poseOpt = getRobotPoseFromTagPedro();
-        Optional<Pose> target = getTargetGoalPose();
-        if (!poseOpt.isPresent() || !target.isPresent()) {
-            return Optional.empty();
-        }
-        return Optional.of(FieldConstants.getAimAngleTo(poseOpt.get(), target.get()));
     }
 
     /**
@@ -255,65 +266,54 @@ public class VisionSubsystemLimelight implements Subsystem {
      *
      * @return The aiming error in radians, or empty if no valid tag
      */
-    public Optional<Double> getVisionAimErrorRad() {
+    /** Returns the horizontal aim error in radians, or null if no valid tag. */
+    public Double getVisionAimErrorRad() {
         refreshSnapshotIfStale();
-        if (lastSnapshot == null) {
-            return Optional.empty();
-        }
+        if (lastSnapshot == null) return null;
         double tx = lastSnapshot.getTxDegrees();
-        if (Double.isNaN(tx)) {
-            return Optional.empty();
-        }
-        // Negate tx because positive tx (target right) requires negative turn (clockwise)
-        return Optional.of(-Math.toRadians(tx));
+        if (Double.isNaN(tx)) return null;
+        // Negate: positive tx (target right) requires negative turn (clockwise)
+        return -Math.toRadians(tx);
     }
 
-    public Optional<TagSnapshot> findAllianceSnapshot(Alliance preferredAlliance) {
-        TagSnapshot snapshot = selectSnapshot(preferredAlliance);
-        return Optional.ofNullable(snapshot);
+    /** Returns a snapshot matching the preferred alliance, or null if none found. */
+    public TagSnapshot findAllianceSnapshot(Alliance preferredAlliance) {
+        return selectSnapshot(preferredAlliance);
     }
 
-    public Optional<Integer> findMotifTagId() {
-        if (!limelightAvailable || limelight == null) {
-            return Optional.empty();
-        }
+    /**
+     * Returns the tag ID of the best visible motif tag (21–23), or null if none seen.
+     * The motif tag tells the robot which color pattern to use in DECODE mode.
+     */
+    public Integer findMotifTagId() {
+        if (!limelightAvailable || limelight == null) return null;
 
         LLResult result = limelight.getLatestResult();
-        if (result == null || !result.isValid()) {
-            return Optional.empty();
-        }
+        if (result == null || !result.isValid()) return null;
 
         List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
-        if (fiducials == null || fiducials.isEmpty()) {
-            return Optional.empty();
-        }
+        if (fiducials == null || fiducials.isEmpty()) return null;
 
         double bestScore = Double.NEGATIVE_INFINITY;
         int bestTag = -1;
         for (LLResultTypes.FiducialResult fiducial : fiducials) {
             int tagId = fiducial.getFiducialId();
-            if (!isMotifTag(tagId)) {
-                continue;
-            }
+            if (!isMotifTag(tagId)) continue;
             double score = getTargetAreaSafe(fiducial);
-            if (Double.isNaN(score)) {
-                score = 0.0;
-            }
+            if (Double.isNaN(score)) score = 0.0;
             if (score > bestScore) {
                 bestScore = score;
                 bestTag = tagId;
             }
         }
 
-        if (bestTag < 0) {
-            return Optional.empty();
-        }
-        return Optional.of(bestTag);
+        return bestTag < 0 ? null : bestTag;
     }
 
-    public Optional<TagSnapshot> getLastSnapshot() {
+    /** Returns the most recent tag snapshot, or null if no tag has been seen. */
+    public TagSnapshot getLastSnapshot() {
         refreshSnapshotIfStale();
-        return Optional.ofNullable(lastSnapshot);
+        return lastSnapshot;
     }
 
     public void setAlliance(Alliance alliance) {
@@ -411,14 +411,13 @@ public class VisionSubsystemLimelight implements Subsystem {
         lastSnapshot = snapshot;
         lastSnapshotTimestampMs = now;
         // Bandaid: MT2 poses have been unstable, prefer MT1 for now
-        Optional<Pose> poseOpt = snapshot.getRobotPosePedroMT1();
-        if (!poseOpt.isPresent()) {
-            poseOpt = snapshot.getRobotPosePeroMT2();
+        Pose pose = snapshot.getRobotPosePedroMT1();
+        if (pose == null) {
+            pose = snapshot.getRobotPosePedroMT2();
         }
-        Optional<Pose> ftcPoseOpt = snapshot.getFtcPose();
-        if (poseOpt.isPresent()) {
-            lastRobotPosePedro = poseOpt.get();
-            lastRobotPoseFtc = ftcPoseOpt.orElse(null);
+        if (pose != null) {
+            lastRobotPosePedro = pose;
+            lastRobotPoseFtc = snapshot.getFtcPose();
             boolean newTag = snapshot.getTagId() != lastSeenTagId;
             if (newTag || stale) {
                 odometryUpdatePending = true;
@@ -473,15 +472,6 @@ public class VisionSubsystemLimelight implements Subsystem {
         odometryUpdatePending = false;
         lastSnapshotTimestampMs = 0L;
         lastSeenTagId = -1;
-    }
-
-    public void overrideRobotPose(Pose pose) {
-        if (pose == null) {
-            return;
-        }
-        lastRobotPosePedro = pose;
-        lastRobotPoseFtc = PoseFrames.pedroToFtc(pose);
-        lastSnapshotTimestampMs = System.currentTimeMillis();
     }
 
     private static Alliance mapTagToAlliance(int tagId) {
@@ -546,6 +536,7 @@ public class VisionSubsystemLimelight implements Subsystem {
     }
     public static class TagSnapshot {
 
+        public final long capturedAtNs;
         public final Alliance alliance;
         public final int tagId;
 
@@ -599,6 +590,7 @@ public class VisionSubsystemLimelight implements Subsystem {
                 double ty,
                 double ta
         ) {
+            this.capturedAtNs = System.nanoTime();
             this.alliance = alliance == null ? Alliance.UNKNOWN : alliance;
             this.tagId = tagId;
 
@@ -710,12 +702,14 @@ public class VisionSubsystemLimelight implements Subsystem {
             return decisionMargin;
         }
 
-        public Optional<Pose> getRobotPosePedroMT1() {
-            return Optional.ofNullable(pedroPoseMT1);
+        /** Pedro-frame pose from MegaTag1 (single-tag), or null if unavailable. */
+        public Pose getRobotPosePedroMT1() {
+            return pedroPoseMT1;
         }
 
-        public Optional<Pose> getRobotPosePeroMT2() {
-            return Optional.ofNullable(pedroPoseMT2) ;
+        /** Pedro-frame pose from MegaTag2 (IMU-fused, more accurate), or null if unavailable. */
+        public Pose getRobotPosePedroMT2() {
+            return pedroPoseMT2;
         }
 
 
@@ -731,8 +725,9 @@ public class VisionSubsystemLimelight implements Subsystem {
         return pedroPose == null ? Double.NaN : Math.toDegrees(pedroPose.getHeading());
     }
 
-        public Optional<Pose> getFtcPose() {
-            return Optional.ofNullable(ftcPose);
+        /** FTC-frame pose, or null if unavailable. */
+        public Pose getFtcPose() {
+            return ftcPose;
         }
 
         public double getFtcRange() {
@@ -760,18 +755,16 @@ public class VisionSubsystemLimelight implements Subsystem {
         }
 
         public Alliance inferAllianceFromPose() {
-            java.util.Optional<com.pedropathing.geometry.Pose> poseOpt = getRobotPosePedroMT1();
-            if (!poseOpt.isPresent()) {
+            com.pedropathing.geometry.Pose pose = getRobotPosePedroMT1();
+            if (pose == null) {
                 return Alliance.UNKNOWN;
             }
 
-            com.pedropathing.geometry.Pose pose = poseOpt.get();
             double x = pose.getX();
 
-            // Field width is 144 inches, midpoint at X = 72
-            // X < 72 means robot is physically on blue side
-            // X > 72 means robot is physically on red side
-            if (x < 72.0) {
+            // X < halfField means robot is physically on blue side
+            // X > halfField means robot is physically on red side
+            if (x < FieldConstants.FIELD_WIDTH_INCHES / 2.0) {
                 return Alliance.BLUE;
             } else {
                 return Alliance.RED;
@@ -788,6 +781,7 @@ public class VisionSubsystemLimelight implements Subsystem {
         try {
             return (double) fiducial.getClass().getMethod("getTargetArea").invoke(fiducial);
         } catch (Throwable ignored) {
+            // getTargetArea() isn't available on every Limelight SDK version — reflective access on purpose.
             return Double.NaN;
         }
     }
@@ -796,31 +790,9 @@ public class VisionSubsystemLimelight implements Subsystem {
         try {
             return (double) fiducial.getClass().getMethod("getPoseAmbiguity").invoke(fiducial);
         } catch (Throwable ignored) {
+            // getPoseAmbiguity() isn't available on every Limelight SDK version — reflective access on purpose.
             return Double.NaN;
         }
-    }
-
-    public Optional<Alliance> detectAllianceUsingPoseOrMetadata() {
-        Optional<TagSnapshot> opt = findAllianceSnapshot(null);
-        if (!opt.isPresent()) {
-            return Optional.empty();
-        }
-
-        TagSnapshot snap = opt.get();
-
-        // First priority: Tag metadata (for Far auto)
-        Alliance meta = snap.getAlliance();
-        if (meta != Alliance.UNKNOWN) {
-            return Optional.of(meta);
-        }
-
-        // Otherwise: Pose-based inference (for Close auto)
-        Alliance inferred = snap.inferAllianceFromPose();
-        if (inferred != Alliance.UNKNOWN) {
-            return Optional.of(inferred);
-        }
-
-        return Optional.empty();
     }
 
 

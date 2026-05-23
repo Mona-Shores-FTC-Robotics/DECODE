@@ -83,7 +83,9 @@ public class ArtifactColorCalibration extends LinearOpMode {
         dashboard = FtcDashboard.getInstance();
 
         // Initialize intake subsystem
-        intake = new IntakeSubsystem(hardwareMap);
+        org.firstinspires.ftc.teamcode.util.RobotProfile profile =
+                org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent();
+        intake = new IntakeSubsystem(hardwareMap, profile.gate, profile.lanePresence);
 
         telemetry.addLine("✓ Ready!");
         telemetry.addLine();
@@ -352,9 +354,6 @@ public class ArtifactColorCalibration extends LinearOpMode {
         packet.put("DISTANCE_BASED/purpleSatTarget", purpleSatAvg);
         packet.put("DISTANCE_BASED/purpleValTarget", purpleValAvg);
 
-        // NOTE: RANGE_BASED parameters removed - legacy mode that's less robust than DECISION_BOUNDARY
-        // If you need range-based classification for some reason, use DISTANCE_BASED mode instead
-
         // Common quality thresholds
         float minSat = Math.min(
                 min(greenSamples, s -> s.saturation),
@@ -366,14 +365,11 @@ public class ArtifactColorCalibration extends LinearOpMode {
         );
 
         float recMinSat = (float) Math.max(0.05f, minSat - 0.05f);
-        float recMinVal = (float) Math.max(0.01f, minVal - 0.02f);
 
         telemetry.addLine("→ Common (all modes):");
         telemetry.addData("  minSaturation", "%.2f", recMinSat);
-        telemetry.addData("  minValue", "%.2f", recMinVal);
 
         packet.put("Common/minSaturation", recMinSat);
-        packet.put("Common/minValue", recMinVal);
     }
 
     /**
@@ -496,13 +492,10 @@ public class ArtifactColorCalibration extends LinearOpMode {
             packet.put("Recommended/purpleGreenMax", recPurpleGMax);
         }
 
-        float recMinValue = (float) Math.max(0.01f, valMin - 0.02f);
         float recMinSat = (float) Math.max(0.05f, satMin - 0.05f);
 
-        telemetry.addData("  → minValue", "%.2f", recMinValue);
         telemetry.addData("  → minSaturation", "%.2f", recMinSat);
 
-        packet.put("Recommended/minValue", recMinValue);
         packet.put("Recommended/minSaturation", recMinSat);
     }
 

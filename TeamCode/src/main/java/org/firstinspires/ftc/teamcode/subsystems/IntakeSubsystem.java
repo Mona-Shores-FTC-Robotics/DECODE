@@ -1,9 +1,10 @@
 package org.firstinspires.ftc.teamcode.subsystems;
 
-import static org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.IntakeMode.STOPPED;
+import static org.firstinspires.ftc.teamcode.util.IntakeMode.STOPPED;
 
 import android.graphics.Color;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -16,16 +17,17 @@ import com.qualcomm.robotcore.hardware.SwitchableLight;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import dev.nextftc.core.subsystems.Subsystem;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
 
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeGateConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeLaneSensorConfig;
-import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeLaneSensorConfig.ClassifierMode;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeManualModeConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeMotorConfig;
 import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeRollerConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ArtifactColor;
+import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 import java.util.ArrayList;
@@ -35,26 +37,36 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 import org.firstinspires.ftc.teamcode.util.CircularMovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.MovingAverageFilter;
-import org.firstinspires.ftc.teamcode.util.RobotConfigs;
+import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 /**
- * Hardware-facing intake wrapper. Handles motor power, roller servo, and lane sensor sampling
- * while higher-level coordinators decide what the subsystem should do.
+ * Owns the intake motor, the gate servo, and the three color sensors that
+ * watch each lane (left / center / right).
+ *
+ * <p>What it does:
+ * <ul>
+ *   <li><b>Run modes</b> — {@link IntakeMode#ACTIVE_FORWARD} pulls artifacts in,
+ *       {@link IntakeMode#PASSIVE_REVERSE} gently pushes them back out,
+ *       {@link IntakeMode#AGGRESSIVE_REVERSE} ejects hard,
+ *       {@link IntakeMode#STOPPED} cuts power.</li>
+ *   <li><b>Lane sensing</b> — samples each lane's color sensor every tick and
+ *       tells listeners (e.g. {@code LightingSubsystem}) what color is in
+ *       each lane (NONE / GREEN / PURPLE).</li>
+ *   <li><b>Gate control</b> — the gate servo blocks artifacts from reaching
+ *       the launcher between shots and opens when it's time to feed.</li>
+ * </ul>
+ *
+ * <p>Per-robot tuning (gate positions, lane-sensor thresholds) lives in
+ * {@code util/RobotProfile.java}. Sensor filtering/gating constants live in
+ * {@code subsystems/intake/config/IntakeLaneSensorConfig.java}.
  */
-public class IntakeSubsystem implements Subsystem {
-
-    public enum IntakeMode {
-        PASSIVE_REVERSE,
-        AGGRESSIVE_REVERSE,
-        ACTIVE_FORWARD,
-        STOPPED
-    }
-
-    // Active robot indicator
-    public static String ACTIVE_ROBOT = RobotState.getRobotName();
+@Configurable
+public class IntakeSubsystem {
 
     // Global configuration instances
     public static IntakeLaneSensorConfig laneSensorConfig = new IntakeLaneSensorConfig();
@@ -62,29 +74,17 @@ public class IntakeSubsystem implements Subsystem {
     public static IntakeRollerConfig rollerConfig = new IntakeRollerConfig();
     public static IntakeManualModeConfig manualModeConfig = new IntakeManualModeConfig();
 
-    // Robot-specific gate configs
-    public static IntakeGateConfig gateConfig_Robot19429 = IntakeGateConfig.gateConfig19429;
-    public static IntakeGateConfig gateConfig_Robot20245 = IntakeGateConfig.gateConfig20245;
-    public static IntakeGateConfig gateConfig_ACTIVE = RobotConfigs.getGateConfig();
+    /** Live gate-servo tuning for the active robot — see {@code util/RobotProfile.java} for the values. */
+    public static IntakeGateConfig gateConfig = RobotProfile.forCurrent().gate;
 
-    // Robot-specific lane presence configs (distance thresholds for artifact detection)
-    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_Robot19429 = IntakeLaneSensorConfig.lanePresenceConfig19429;
-    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_Robot20245 = IntakeLaneSensorConfig.lanePresenceConfig20245;
-    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig_ACTIVE = RobotConfigs.getLanePresenceConfig();
-
-    /**
-     * Gets the robot-specific GateConfig based on RobotState.getRobotName().
-     * @return gateConfig19429 or gateConfig20245
-     */
-    public static IntakeGateConfig gateConfig() {
-        return RobotConfigs.getGateConfig();
-    }
+    /** Live lane-presence detection tuning for the active robot — see {@code util/RobotProfile.java}. */
+    public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig = RobotProfile.forCurrent().lanePresence;
 
     public static final class LaneSample {
         public final boolean sensorPresent;
         public final boolean distanceAvailable;
         public final double distanceCm;
-        public final boolean withinDistance;
+        public final boolean presenceDetected;
         public final int scaledRed;
         public final int scaledGreen;
         public final int scaledBlue;
@@ -97,23 +97,20 @@ public class IntakeSubsystem implements Subsystem {
         public final float value;
         public final ArtifactColor hsvColor;
         public final ArtifactColor color;
-        /** Classification confidence (0.0 = uncertain, 1.0 = very confident) */
-        public final double confidence;
 
         private LaneSample(boolean sensorPresent,
                            boolean distanceAvailable,
                            double distanceCm,
-                           boolean withinDistance,
+                           boolean presenceDetected,
                            int scaledRed, int scaledGreen, int scaledBlue,
                            float normalizedRed, float normalizedGreen, float normalizedBlue,
                            float hue, float saturation, float value,
                            ArtifactColor hsvColor,
-                           ArtifactColor color,
-                           double confidence) {
+                           ArtifactColor color) {
             this.sensorPresent = sensorPresent;
             this.distanceAvailable = distanceAvailable;
             this.distanceCm = distanceCm;
-            this.withinDistance = withinDistance;
+            this.presenceDetected = presenceDetected;
             this.scaledRed = scaledRed;
             this.scaledGreen = scaledGreen;
             this.scaledBlue = scaledBlue;
@@ -125,37 +122,104 @@ public class IntakeSubsystem implements Subsystem {
             this.value = value;
             this.hsvColor = hsvColor == null ? ArtifactColor.NONE : hsvColor;
             this.color = color == null ? ArtifactColor.NONE : color;
-            this.confidence = confidence;
         }
 
         private static LaneSample absent() {
             return new LaneSample(false, false, Double.NaN, false,
                     0, 0, 0,
                     0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                    ArtifactColor.NONE, ArtifactColor.NONE, 0.0);
+                    ArtifactColor.NONE, ArtifactColor.NONE);
         }
 
         private static LaneSample present(boolean distanceAvailable,
                                           double distanceCm,
-                                          boolean withinDistance,
+                                          boolean presenceDetected,
                                           int scaledRed, int scaledGreen, int scaledBlue,
                                           float normalizedRed, float normalizedGreen, float normalizedBlue,
                                           float hue, float saturation, float value,
                                           ArtifactColor hsvColor,
-                                          ArtifactColor color,
-                                          double confidence) {
+                                          ArtifactColor color) {
             return new LaneSample(true,
                     distanceAvailable,
                     distanceCm,
-                    withinDistance,
+                    presenceDetected,
                     scaledRed, scaledGreen, scaledBlue,
                     normalizedRed, normalizedGreen, normalizedBlue,
                     hue, saturation, value,
-                    hsvColor, color, confidence);
+                    hsvColor, color);
         }
     }
 
     private static final LaneSample ABSENT_SAMPLE = LaneSample.absent();
+
+    /** Pre-computed packet keys per lane so the hot path avoids string concat allocations. */
+    private static final class LaneKeys {
+        final String sensorPresent;
+        final String distanceRawCm;
+        final String distanceCm;
+        final String presenceDetected;
+        final String scaledR;
+        final String scaledG;
+        final String scaledB;
+        final String normR;
+        final String normG;
+        final String normB;
+        final String hueRaw;
+        final String hue;
+        final String satRaw;
+        final String sat;
+        final String valRaw;
+        final String val;
+        final String totalIntensity;
+        final String classifierPresenceDistanceValid;
+        final String classifierPresencePresenceDetected;
+        final String classifierPresenceTotalIntensity;
+        final String classifierReason;
+        final String classifierHueUnwrapped;
+        final String classifierHueBoundary;
+        final String classifierHueDistanceFromBoundary;
+        final String classifierColor;
+
+        LaneKeys(String prefix) {
+            String sample = "intake/sample/" + prefix + "/";
+            String classifier = "intake/classifier/" + prefix + "/";
+            sensorPresent = sample + "sensor_present";
+            distanceRawCm = sample + "distance_raw_cm";
+            distanceCm = sample + "distance_cm";
+            presenceDetected = sample + "presence_detected";
+            scaledR = sample + "scaled_r";
+            scaledG = sample + "scaled_g";
+            scaledB = sample + "scaled_b";
+            normR = sample + "norm_r";
+            normG = sample + "norm_g";
+            normB = sample + "norm_b";
+            hueRaw = sample + "hue_raw";
+            hue = sample + "hue";
+            satRaw = sample + "sat_raw";
+            sat = sample + "sat";
+            valRaw = sample + "val_raw";
+            val = sample + "val";
+            totalIntensity = sample + "total_intensity";
+            classifierPresenceDistanceValid = classifier + "presence_distance_valid";
+            classifierPresencePresenceDetected = classifier + "presence_presence_detected";
+            classifierPresenceTotalIntensity = classifier + "presence_total_intensity";
+            classifierReason = classifier + "reason";
+            classifierHueUnwrapped = classifier + "hue_unwrapped";
+            classifierHueBoundary = classifier + "hue_boundary";
+            classifierHueDistanceFromBoundary = classifier + "hue_distance_from_boundary";
+            classifierColor = classifier + "color";
+        }
+    }
+
+    private static final LaneKeys[] LANE_KEYS;
+    static {
+        LauncherLane[] lanes = LauncherLane.values();
+        LaneKeys[] keys = new LaneKeys[lanes.length];
+        for (LauncherLane lane : lanes) {
+            keys[lane.ordinal()] = new LaneKeys(lane.name().toLowerCase(Locale.US));
+        }
+        LANE_KEYS = keys;
+    }
 
     private final ElapsedTime sensorTimer = new ElapsedTime();
 
@@ -164,12 +228,13 @@ public class IntakeSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, NormalizedColorSensor> laneSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, DistanceSensor> laneDistanceSensors = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, MovingAverageFilter> laneDistanceFilters = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, MovingAverageFilter> laneSaturationFilters = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, MovingAverageFilter> laneValueFilters = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, CircularMovingAverageFilter> laneHueFilters = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, LaneSample> laneSamples = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Boolean> lanePresenceState = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, ArtifactColor> laneCandidateColor = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Integer> laneCandidateCount = new EnumMap<>(LauncherLane.class);
-    private final EnumMap<LauncherLane, Double> laneLastGoodDetectionMs = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Integer> laneClearCandidateCount = new EnumMap<>(LauncherLane.class);
     private final float[] hsvBuffer = new float[3];
     private final List<LaneColorListener> laneColorListeners = new ArrayList<>();
@@ -189,7 +254,16 @@ public class IntakeSubsystem implements Subsystem {
     private boolean rollerEnabled = false;
     private boolean prefeedEnabled = false;
 
-    public IntakeSubsystem(HardwareMap hardwareMap) {
+    /** Per-robot gate servo positions, injected at construction. */
+    private final IntakeGateConfig gate;
+    /** Per-robot lane presence thresholds (distance / saturation), injected at construction. */
+    private final IntakeLaneSensorConfig.LanePresenceConfig lanePresence;
+
+    public IntakeSubsystem(HardwareMap hardwareMap,
+                           IntakeGateConfig gate,
+                           IntakeLaneSensorConfig.LanePresenceConfig lanePresence) {
+        this.gate = gate;
+        this.lanePresence = lanePresence;
         intakeMotor = tryGetMotor(hardwareMap, motorConfig.motorName);
         if (intakeMotor != null) {
             intakeMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -210,10 +284,10 @@ public class IntakeSubsystem implements Subsystem {
         }
         rollerEnabled = false;
 
-        gateServo = tryGetServo(hardwareMap, gateConfig().servoName);
+        gateServo = tryGetServo(hardwareMap, gate.servoName);
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().allowArtifacts);
-            lastGatePosition = gateConfig().allowArtifacts;
+            gateServo.setPosition(gate.allowArtifacts);
+            lastGatePosition = gate.allowArtifacts;
         }
 
         for (LauncherLane lane : LauncherLane.values()) {
@@ -222,17 +296,16 @@ public class IntakeSubsystem implements Subsystem {
             lanePresenceState.put(lane, false);
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
-            laneLastGoodDetectionMs.put(lane, 0.0);
             laneClearCandidateCount.put(lane, 0);
-            // Initialize distance filters with configured window size
+            // Initialize filters with configured window sizes
             laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
-            // Initialize hue filters with configured window size
+            laneSaturationFilters.put(lane, new MovingAverageFilter(laneSensorConfig.saturationFilter.windowSize));
+            laneValueFilters.put(lane, new MovingAverageFilter(laneSensorConfig.valueFilter.windowSize));
             laneHueFilters.put(lane, new CircularMovingAverageFilter(laneSensorConfig.hueFilter.windowSize));
         }
         bindLaneSensors(hardwareMap);
     }
 
-    @Override
     public void initialize() {
         clearLaneColors();
         for (LauncherLane lane : LauncherLane.values()) {
@@ -240,11 +313,11 @@ public class IntakeSubsystem implements Subsystem {
             lanePresenceState.put(lane, false);
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
-            laneLastGoodDetectionMs.put(lane, 0.0);
             laneClearCandidateCount.put(lane, 0);
-            // Reset distance filters (recreate with current config in case window size changed)
+            // Reset filters (recreate with current config in case window size changed)
             laneDistanceFilters.put(lane, new MovingAverageFilter(laneSensorConfig.distanceFilter.windowSize));
-            // Reset hue filters (recreate with current config in case window size changed)
+            laneSaturationFilters.put(lane, new MovingAverageFilter(laneSensorConfig.saturationFilter.windowSize));
+            laneValueFilters.put(lane, new MovingAverageFilter(laneSensorConfig.valueFilter.windowSize));
             laneHueFilters.put(lane, new CircularMovingAverageFilter(laneSensorConfig.hueFilter.windowSize));
         }
         sensorTimer.reset();
@@ -257,16 +330,23 @@ public class IntakeSubsystem implements Subsystem {
         }
         rollerEnabled = false;
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().allowArtifacts);
-            lastGatePosition = gateConfig().allowArtifacts;
+            gateServo.setPosition(gate.allowArtifacts);
+            lastGatePosition = gate.allowArtifacts;
         }
         prefeedEnabled = false;
     }
 
 
 
-    @Override
-    public void periodic() {
+    /**
+     * Infinite Command that drives the intake sense + actuate loop each scheduler tick.
+     * Scheduled once in OpMode init; runs until OpMode stop.
+     */
+    public Command periodic() {
+        return Commands.infinite(this::doPeriodic);
+    }
+
+    private void doPeriodic() {
 
         long start = System.nanoTime();
 
@@ -339,22 +419,22 @@ public class IntakeSubsystem implements Subsystem {
 
     public void setGateReverseConfig() {
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().reverseConfig);
-            lastGatePosition = gateConfig().reverseConfig;
+            gateServo.setPosition(gate.reverseConfig);
+            lastGatePosition = gate.reverseConfig;
         }
     }
 
     public void setGateAllowArtifacts() {
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().allowArtifacts);
-            lastGatePosition = gateConfig().allowArtifacts;
+            gateServo.setPosition(gate.allowArtifacts);
+            lastGatePosition = gate.allowArtifacts;
         }
     }
 
     public void setGatePreventArtifact() {
         if (gateServo != null) {
-            gateServo.setPosition(gateConfig().preventArtifacts);
-            lastGatePosition = gateConfig().preventArtifacts;
+            gateServo.setPosition(gate.preventArtifacts);
+            lastGatePosition = gate.preventArtifacts;
         }
     }
 
@@ -480,8 +560,9 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     /**
-     * Applies debounce + confidence gating before updating lane color to reduce flicker from holes/background.
-     * Includes temporal hysteresis (keep-alive) to handle whiffle ball holes.
+     * Applies debounce before updating lane color to reduce flicker.
+     * Uses consecutive sample confirmations for both detection and clearing.
+     * Saturation filtering handles whiffle ball hole flicker before this is called.
      */
     private void applyGatedLaneColor(LauncherLane lane, LaneSample sample) {
         if (lane == null || sample == null) {
@@ -490,37 +571,11 @@ public class IntakeSubsystem implements Subsystem {
 
         ArtifactColor candidate = sample.color == null ? ArtifactColor.NONE : sample.color;
         ArtifactColor currentLaneColor = laneColors.getOrDefault(lane, ArtifactColor.NONE);
-        double currentTimeMs = sensorTimer.milliseconds();
-
-        // --- CHECK IF ARTIFACT IS CLEARLY GONE (distance-based override) ---
-        // If distance shows artifact is beyond threshold + margin, it's definitely gone - clear immediately
-        if (currentLaneColor.isArtifact() && sample.distanceAvailable && !Double.isNaN(sample.distanceCm)) {
-            IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
-            double threshold = getThreshold(presenceCfg, lane);
-            double clearanceMargin = laneSensorConfig.gating.distanceClearanceMarginCm;
-
-            if (sample.distanceCm > threshold + clearanceMargin) {
-                // Artifact is definitely gone - clear immediately regardless of keep-alive
-                laneCandidateColor.put(lane, ArtifactColor.NONE);
-                laneCandidateCount.put(lane, 0);
-                laneClearCandidateCount.put(lane, 0);
-                laneLastGoodDetectionMs.put(lane, 0.0);
-                updateLaneColor(lane, ArtifactColor.NONE);
-                return;
-            }
-        }
 
         // --- ARTIFACT DETECTION PATH ---
-        if (candidate.isArtifact() && sample.confidence >= laneSensorConfig.gating.minConfidenceToAccept) {
-            // Good artifact reading - record timestamp ONLY if not currently in clearing process
-            int clearCount = laneClearCandidateCount.getOrDefault(lane, 0);
-
-            // If we're already trying to clear (clearCount > 0), don't reset the timer
-            // This prevents a whiffle ball from "reviving" detection after we've started clearing
-            if (clearCount == 0) {
-                laneLastGoodDetectionMs.put(lane, currentTimeMs);
-            }
-
+        // If presence detected an artifact, trust the color classification
+        // (misclassification is better than false negative)
+        if (candidate.isArtifact()) {
             // Standard debounce logic for artifact confirmation
             ArtifactColor previousCandidate = laneCandidateColor.getOrDefault(lane, ArtifactColor.NONE);
             int count = laneCandidateCount.getOrDefault(lane, 0);
@@ -544,20 +599,10 @@ public class IntakeSubsystem implements Subsystem {
         }
 
         // --- NON-ARTIFACT / CLEARING PATH ---
-        // We got a bad reading (NONE, BACKGROUND, UNKNOWN, or low confidence)
+        // Presence detection said nothing there (NONE)
 
-        // If we currently have an artifact detected, check keep-alive window
         if (currentLaneColor.isArtifact()) {
-            double lastGoodMs = laneLastGoodDetectionMs.getOrDefault(lane, 0.0);
-            double timeSinceGoodMs = currentTimeMs - lastGoodMs;
-
-            // Within keep-alive window? Keep current detection alive (likely just hit a hole)
-            if (timeSinceGoodMs < laneSensorConfig.gating.keepAliveMs) {
-                // Keep alive - don't clear, don't update counters
-                return;
-            }
-
-            // Outside keep-alive window - start counting consecutive clear confirmations
+            // Count consecutive clear confirmations before removing artifact
             int clearCount = laneClearCandidateCount.getOrDefault(lane, 0);
             clearCount++;
             laneClearCandidateCount.put(lane, clearCount);
@@ -568,7 +613,6 @@ public class IntakeSubsystem implements Subsystem {
                 laneCandidateColor.put(lane, ArtifactColor.NONE);
                 laneCandidateCount.put(lane, 0);
                 laneClearCandidateCount.put(lane, 0);
-                laneLastGoodDetectionMs.put(lane, 0.0);
                 updateLaneColor(lane, ArtifactColor.NONE);
             }
         } else {
@@ -601,14 +645,7 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
-        if (name == null || name.isEmpty()) {
-            return null;
-        }
-        try {
-            return hardwareMap.get(DcMotorEx.class, name);
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
+        return org.firstinspires.ftc.teamcode.util.CachedHardware.tryMotor(hardwareMap, name);
     }
 
     private static NormalizedColorSensor tryGetColorSensor(HardwareMap hardwareMap, String name) {
@@ -650,17 +687,10 @@ public class IntakeSubsystem implements Subsystem {
     }
 
     private static Servo tryGetServo(HardwareMap hardwareMap, String name) {
-        if (name == null || name.isEmpty()) {
-            return null;
-        }
-        try {
-            return hardwareMap.get(Servo.class, name);
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
+        return org.firstinspires.ftc.teamcode.util.CachedHardware.tryServo(hardwareMap, name);
     }
 
-    private static double getThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
+    private static double getDistanceThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
         switch (lane) {
             case LEFT:
                 return config.leftThresholdCm;
@@ -673,6 +703,19 @@ public class IntakeSubsystem implements Subsystem {
         }
     }
 
+    private static double getValueThreshold(IntakeLaneSensorConfig.LanePresenceConfig config, LauncherLane lane) {
+        switch (lane) {
+            case LEFT:
+                return config.leftValueThreshold;
+            case CENTER:
+                return config.centerValueThreshold;
+            case RIGHT:
+                return config.rightValueThreshold;
+            default:
+                return config.centerValueThreshold;
+        }
+    }
+
     private LaneSample sampleLane(LauncherLane lane) {
         NormalizedColorSensor colorSensor = laneSensors.get(lane);
         DistanceSensor distanceSensor = laneDistanceSensors.get(lane);
@@ -680,10 +723,19 @@ public class IntakeSubsystem implements Subsystem {
             return ABSENT_SAMPLE;
         }
 
+        boolean telemetryActive = TelemetrySettings.shouldSendDashboardPackets();
+
+        // Get per-robot presence config
+        IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = lanePresence;
+
+        // Skip the distance I2C read entirely when nothing needs it. Distance is consumed by
+        // (a) distance-based presence detection and (b) packet telemetry. If neither is active,
+        // we save one I2C transaction per lane per poll cycle.
         boolean distanceAvailable = distanceSensor != null;
+        boolean distanceNeeded = distanceAvailable && (presenceCfg.useDistance || telemetryActive);
         double rawDistanceCm = Double.NaN;
         double distanceCm = Double.NaN;
-        if (distanceAvailable) {
+        if (distanceNeeded) {
             rawDistanceCm = distanceSensor.getDistance(DistanceUnit.CM);
             // Apply moving average filter if enabled
             if (laneSensorConfig.distanceFilter.enableFilter) {
@@ -698,18 +750,17 @@ public class IntakeSubsystem implements Subsystem {
             }
         }
 
-        boolean distanceValid = distanceAvailable && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
-        boolean withinDistance = false;
+        boolean distanceValid = distanceNeeded && !Double.isNaN(distanceCm) && !Double.isInfinite(distanceCm);
+        boolean presenceDetected = false;
 
-        // Simple threshold check - moving average filter handles noise smoothing
-        if (!distanceAvailable || !laneSensorConfig.presence.useDistance || !distanceValid) {
-            withinDistance = false;
+        // Distance-based presence check
+        if (!distanceAvailable || !presenceCfg.useDistance || !distanceValid) {
+            presenceDetected = false;
         } else {
-            IntakeLaneSensorConfig.LanePresenceConfig presenceCfg = RobotConfigs.getLanePresenceConfig();
-            double threshold = getThreshold(presenceCfg, lane);
-            withinDistance = distanceCm <= threshold;
+            double threshold = getDistanceThreshold(presenceCfg, lane);
+            presenceDetected = distanceCm <= threshold;
         }
-        lanePresenceState.put(lane, withinDistance);
+        lanePresenceState.put(lane, presenceDetected);
 
         // SINGLE I2C read for all color channels (red, green, blue, alpha)
         NormalizedRGBA colors = colorSensor.getNormalizedColors();
@@ -738,7 +789,25 @@ public class IntakeSubsystem implements Subsystem {
             value = hsvBuffer[2];
         }
 
-        // Apply circular moving average filter to hue for smoother classification
+        // Apply saturation filter for presence detection smoothing (handles whiffle ball holes)
+        float filteredSaturation = saturation;
+        if (laneSensorConfig.saturationFilter.enableFilter && maxComponent > 0) {
+            MovingAverageFilter satFilter = laneSaturationFilters.get(lane);
+            if (satFilter != null) {
+                filteredSaturation = (float) satFilter.calculate(saturation);
+            }
+        }
+
+        // Apply value filter for presence detection smoothing (handles whiffle ball holes)
+        float filteredValue = value;
+        if (laneSensorConfig.valueFilter.enableFilter && maxComponent > 0) {
+            MovingAverageFilter valFilter = laneValueFilters.get(lane);
+            if (valFilter != null) {
+                filteredValue = (float) valFilter.calculate(value);
+            }
+        }
+
+        // Apply circular moving average filter to hue for smoother GREEN vs PURPLE classification
         float filteredHue = rawHue;
         if (laneSensorConfig.hueFilter.enableFilter && maxComponent > 0) {
             CircularMovingAverageFilter hueFilter = laneHueFilters.get(lane);
@@ -747,72 +816,115 @@ public class IntakeSubsystem implements Subsystem {
             }
         }
 
-        // Compute total RGB intensity for presence detection (preserve fractional contribution)
+        // Saturation-based presence detection: colorful artifact vs dull background
+        // Can be used alone or combined with distance (AND logic)
+        if (presenceCfg.useSaturation) {
+            boolean satPresent = filteredSaturation >= presenceCfg.saturationThreshold;
+            // If distance is also enabled, require BOTH to pass (AND logic)
+            if (presenceCfg.useDistance) {
+                presenceDetected = presenceDetected && satPresent;
+            } else {
+                presenceDetected = satPresent;
+            }
+            lanePresenceState.put(lane, presenceDetected);
+        }
+
+        // Value-based presence detection: bright artifact vs dark background
+        // Can be used alone or combined with other methods (AND logic)
+        if (presenceCfg.useValue) {
+            double valueThreshold = getValueThreshold(presenceCfg, lane);
+            boolean valuePresent = filteredValue >= valueThreshold;
+            // If other methods are enabled, require ALL to pass (AND logic)
+            if (presenceCfg.useDistance || presenceCfg.useSaturation) {
+                presenceDetected = presenceDetected && valuePresent;
+            } else {
+                presenceDetected = valuePresent;
+            }
+            lanePresenceState.put(lane, presenceDetected);
+        }
+
+        // Hue-based presence detection: artifact hue vs background hue
+        // Can be used alone or combined with other methods (AND logic)
+        if (presenceCfg.useHue) {
+            boolean huePresent = filteredHue >= presenceCfg.hueThreshold;
+            // If other methods are enabled, require ALL to pass (AND logic)
+            if (presenceCfg.useDistance || presenceCfg.useSaturation || presenceCfg.useValue) {
+                presenceDetected = presenceDetected && huePresent;
+            } else {
+                presenceDetected = huePresent;
+            }
+            lanePresenceState.put(lane, presenceDetected);
+        }
+
+        // Compute total RGB intensity for telemetry
         int totalIntensity = Math.round(scaledRedFloat + scaledGreenFloat + scaledBlueFloat);
 
-        String lanePrefix = lane == null ? "unknown" : lane.name().toLowerCase(Locale.US);
+        LaneKeys keys = lane == null ? null : LANE_KEYS[lane.ordinal()];
 
-        // Classify color using selected classifier mode with enhanced presence/background detection
-        // Use filtered hue for stable classification
+        // Classify color using selected classifier mode
         ClassificationResult result = classifyColor(
-                filteredHue, saturation, value,
+                filteredHue, filteredSaturation, filteredValue,
                 maxComponent > 0,
                 totalIntensity,
                 distanceValid ? distanceCm : Double.NaN,
-                withinDistance,
-                lanePrefix
+                presenceDetected,
+                keys,
+                telemetryActive
         );
         ArtifactColor hsvColor = result.color;
-        double confidence = result.confidence;
 
         // Final color already accounts for distance, presence, and background checks
         ArtifactColor finalColor = hsvColor;
 
-        // Publish raw sensor metrics every poll so we can see empty vs artifact behavior even when classification fails
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/sensor_present", true);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/distance_raw_cm", distanceAvailable ? rawDistanceCm : Double.NaN);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/distance_cm", distanceValid ? distanceCm : Double.NaN);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/within_distance", withinDistance);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_r", scaledRed);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_g", scaledGreen);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/scaled_b", scaledBlue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_r", normalizedRed);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_g", normalizedGreen);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/norm_b", normalizedBlue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/hue_raw", rawHue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/hue", filteredHue);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/sat", saturation);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/val", value);
-        RobotState.packet.put("intake/sample/" + lanePrefix + "/total_intensity", totalIntensity);
+        // Publish raw sensor metrics every poll so we can see empty vs artifact behavior even when classification fails.
+        // Skipped entirely in MATCH mode (no dashboard packets sent) to avoid string/autobox allocations in the hot path.
+        // Skipped in PRACTICE mode — 17 fields × 3 lanes is too much for lean telemetry; use VERBOSE for raw sensor data.
+        if (TelemetrySettings.isVerbose() && telemetryActive && keys != null) {
+            RobotState.packet.put(keys.sensorPresent, true);
+            RobotState.packet.put(keys.distanceRawCm, distanceAvailable ? rawDistanceCm : Double.NaN);
+            RobotState.packet.put(keys.distanceCm, distanceValid ? distanceCm : Double.NaN);
+            RobotState.packet.put(keys.presenceDetected, presenceDetected);
+            RobotState.packet.put(keys.scaledR, scaledRed);
+            RobotState.packet.put(keys.scaledG, scaledGreen);
+            RobotState.packet.put(keys.scaledB, scaledBlue);
+            RobotState.packet.put(keys.normR, normalizedRed);
+            RobotState.packet.put(keys.normG, normalizedGreen);
+            RobotState.packet.put(keys.normB, normalizedBlue);
+            RobotState.packet.put(keys.hueRaw, rawHue);
+            RobotState.packet.put(keys.hue, filteredHue);
+            RobotState.packet.put(keys.satRaw, saturation);
+            RobotState.packet.put(keys.sat, filteredSaturation);
+            RobotState.packet.put(keys.valRaw, value);
+            RobotState.packet.put(keys.val, filteredValue);
+            RobotState.packet.put(keys.totalIntensity, totalIntensity);
+        }
 
         return LaneSample.present(
                 distanceAvailable,
                 distanceValid ? distanceCm : Double.NaN,
-                withinDistance,
+                presenceDetected,
                 scaledRed, scaledGreen, scaledBlue,
                 normalizedRed, normalizedGreen, normalizedBlue,
-                filteredHue, saturation, value,
+                filteredHue, filteredSaturation, filteredValue,
                 hsvColor,
-                finalColor,
-                confidence
+                finalColor
         );
     }
 
     /**
-     * Classification result with color and confidence.
+     * Classification result with color.
      */
     private static class ClassificationResult {
         final ArtifactColor color;
-        final double confidence;  // 0.0 = very uncertain, 1.0 = very confident
 
-        ClassificationResult(ArtifactColor color, double confidence) {
+        ClassificationResult(ArtifactColor color) {
             this.color = color;
-            this.confidence = confidence;
         }
     }
 
     /**
-     * Classify color using the configured classifier mode with enhanced presence and background detection.
+     * Classify color using the configured classifier mode.
+     * Presence detection (distance/saturation) is handled in sampleLane() before this is called.
      *
      * @param hue Hue value (0-360°)
      * @param saturation Saturation value (0-1)
@@ -820,78 +932,57 @@ public class IntakeSubsystem implements Subsystem {
      * @param hasSignal Whether sensor has a valid signal
      * @param totalIntensity Total RGB intensity (0-765)
      * @param distanceCm Distance reading in cm (or NaN if unavailable)
-     * @param withinDistance Whether distance is within presence threshold
-     * @return Classification result with color and confidence
+     * @param presenceDetected Whether presence detection indicates artifact present
+     * @param keys Pre-computed telemetry keys for this lane (null if no lane)
+     * @param telemetryActive Whether dashboard packets are being sent this build
+     * @return Classification result with color
      */
     private ClassificationResult classifyColor(float hue, float saturation, float value,
                                                boolean hasSignal, int totalIntensity,
-                                               double distanceCm, boolean withinDistance,
-                                               String lanePrefix) {
-        String reason = "classified";
+                                               double distanceCm, boolean presenceDetected,
+                                               LaneKeys keys, boolean telemetryActive) {
+        boolean writeTelemetry = telemetryActive && keys != null;
 
-        // Distance-only presence gate: if we're outside hysteresis window, treat as empty.
-        if (laneSensorConfig.presence.useDistance && !withinDistance) {
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_score", 0.0);
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_distance_valid", !Double.isNaN(distanceCm));
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_within_distance", false);
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/presence_total_intensity", totalIntensity);
-            reason = "distance_out";
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
-            return new ClassificationResult(ArtifactColor.NONE, 0.0);
+        // Presence gate: presenceDetected is already computed by sampleLane() using distance or saturation
+        if (!presenceDetected) {
+            if (writeTelemetry) {
+                RobotState.packet.put(keys.classifierPresenceDistanceValid, !Double.isNaN(distanceCm));
+                RobotState.packet.put(keys.classifierPresencePresenceDetected, false);
+                RobotState.packet.put(keys.classifierPresenceTotalIntensity, totalIntensity);
+                RobotState.packet.put(keys.classifierReason, "no_presence");
+            }
+            return new ClassificationResult(ArtifactColor.NONE);
         }
 
-        // Basic quality check - no signal
-        if (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation) {
-            reason = "no_signal";
-            RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
-            return new ClassificationResult(ArtifactColor.NONE, 0.0);
+        // Basic quality check - no signal from sensor
+        if (!hasSignal) {
+            if (writeTelemetry) {
+                RobotState.packet.put(keys.classifierReason, "no_signal");
+            }
+            return new ClassificationResult(ArtifactColor.NONE);
         }
 
-        // Parse classifier mode
-        ClassifierMode mode;
-        try {
-            mode = ClassifierMode.valueOf(laneSensorConfig.classifier.mode.toUpperCase(Locale.US));
-        } catch (IllegalArgumentException e) {
-            mode = ClassifierMode.DECISION_BOUNDARY; // Default
-        }
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/mode", mode.name());
+        // Classify GREEN vs PURPLE using hue decision boundary
+        ClassificationResult result = classifyByHue(hue, keys, writeTelemetry);
 
-        // Route to appropriate color classifier (GREEN vs PURPLE)
-        ClassificationResult result;
-        switch (mode) {
-            case DECISION_BOUNDARY:
-                result = classifyColorDecisionBoundary(hue, saturation, value, hasSignal, lanePrefix);
-                break;
-            case DISTANCE_BASED:
-                result = classifyColorDistanceBased(hue, saturation, value, hasSignal, lanePrefix);
-                break;
-            default:
-                // Fallback to decision boundary if mode is invalid
-                result = classifyColorDecisionBoundary(hue, saturation, value, hasSignal, lanePrefix);
-                break;
+        // Tag the reason as the chosen color
+        if (writeTelemetry) {
+            RobotState.packet.put(keys.classifierReason, result.color == null ? "none" : result.color.name());
         }
-
-        // Tag the reason as the chosen color to make empty vs artifact easier to spot on the dashboard
-        reason = result.color == null ? "none" : result.color.name();
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/reason", reason);
 
         return result;
     }
 
     /**
-     * DECISION_BOUNDARY classifier: Single hue threshold between green and purple (recommended).
-     * Always returns GREEN or PURPLE, never UNKNOWN (two-class problem).
+     * Classify artifact color as GREEN or PURPLE using hue decision boundary.
+     * GREEN if hue < boundary, PURPLE otherwise.
      */
-    private ClassificationResult classifyColorDecisionBoundary(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
-        if (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation) {
-            return new ClassificationResult(ArtifactColor.NONE, 0.0);
-        }
+    private ClassificationResult classifyByHue(float hue, LaneKeys keys, boolean writeTelemetry) {
+        double boundary = laneSensorConfig.colorClassifier.hueDecisionBoundary;
 
-        // Unwrap hue to handle purple wrap-around
-        // Purple spans across 0°; we map low-end hues onto the high side relative to the boundary.
+        // Unwrap hue to handle purple wrap-around (purple spans across 0°)
         float unwrappedHue = hue;
-        // Dynamic wrap window: anything more than 180° below the boundary is considered wrap-side purple
-        float wrapThreshold = (float) (laneSensorConfig.classifier.decision.hueDecisionBoundary - 180.0);
+        float wrapThreshold = (float) (boundary - 180.0);
         if (hue < wrapThreshold) {
             unwrappedHue = hue + 360.0f;
         }
@@ -900,84 +991,21 @@ public class IntakeSubsystem implements Subsystem {
         ArtifactColor color;
         float distanceFromBoundary;
 
-        if (unwrappedHue < laneSensorConfig.classifier.decision.hueDecisionBoundary) {
+        if (unwrappedHue < boundary) {
             color = ArtifactColor.GREEN;
-            distanceFromBoundary = (float) (laneSensorConfig.classifier.decision.hueDecisionBoundary - unwrappedHue);
+            distanceFromBoundary = (float) (boundary - unwrappedHue);
         } else {
             color = ArtifactColor.PURPLE;
-            distanceFromBoundary = (float) (unwrappedHue - laneSensorConfig.classifier.decision.hueDecisionBoundary);
+            distanceFromBoundary = (float) (unwrappedHue - boundary);
         }
 
-        // Confidence based on distance from boundary
-        // High confidence if far from boundary, low if close
-        double confidence = Math.min(1.0, distanceFromBoundary / laneSensorConfig.classifier.decision.lowConfidenceMargin);
-
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_unwrapped_hue", unwrappedHue);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_boundary", laneSensorConfig.classifier.decision.hueDecisionBoundary);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_distance_from_boundary", distanceFromBoundary);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_result", color.name());
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/decision_confidence", confidence);
-        return new ClassificationResult(color, confidence);
-    }
-
-    /**
-     * DISTANCE_BASED classifier: Euclidean distance in HSV space to color targets.
-     * Picks the closer target (green or purple).
-     */
-    private ClassificationResult classifyColorDistanceBased(float hue, float saturation, float value, boolean hasSignal, String lanePrefix) {
-        if (!hasSignal || value < laneSensorConfig.quality.minValue || saturation < laneSensorConfig.quality.minSaturation) {
-            return new ClassificationResult(ArtifactColor.NONE, 0.0);
+        if (writeTelemetry && keys != null) {
+            RobotState.packet.put(keys.classifierHueUnwrapped, unwrappedHue);
+            RobotState.packet.put(keys.classifierHueBoundary, boundary);
+            RobotState.packet.put(keys.classifierHueDistanceFromBoundary, distanceFromBoundary);
+            RobotState.packet.put(keys.classifierColor, color.name());
         }
-
-        // Compute weighted distance to green target
-        double distToGreen = hsvDistance(hue, saturation, value,
-                laneSensorConfig.classifier.distance.greenHueTarget,
-                laneSensorConfig.classifier.distance.greenSatTarget,
-                laneSensorConfig.classifier.distance.greenValTarget);
-
-        // Compute weighted distance to purple target
-        double distToPurple = hsvDistance(hue, saturation, value,
-                laneSensorConfig.classifier.distance.purpleHueTarget,
-                laneSensorConfig.classifier.distance.purpleSatTarget,
-                laneSensorConfig.classifier.distance.purpleValTarget);
-
-        // Pick closer color
-        ArtifactColor color = (distToGreen < distToPurple) ? ArtifactColor.GREEN : ArtifactColor.PURPLE;
-
-        // Confidence based on separation between distances
-        // High confidence if one is much closer than the other
-        double minDist = Math.min(distToGreen, distToPurple);
-        double maxDist = Math.max(distToGreen, distToPurple);
-        double separation = maxDist - minDist;
-        double confidence = Math.min(1.0, separation / 30.0); // 30° weighted separation for full confidence
-
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_green", distToGreen);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_purple", distToPurple);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_separation", separation);
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_result", color.name());
-        RobotState.packet.put("intake/classifier/" + lanePrefix + "/distance_confidence", confidence);
-        return new ClassificationResult(color, confidence);
-    }
-
-    /**
-     * Compute weighted distance in HSV space, handling hue wrap-around.
-     */
-    private double hsvDistance(float hue, float saturation, float value,
-                               double targetHue, double targetSat, double targetVal) {
-        // Hue distance (circular, 0-360°)
-        double hueDiff = Math.abs(hue - targetHue);
-        if (hueDiff > 180.0) {
-            hueDiff = 360.0 - hueDiff;  // Shortest path on circle
-        }
-
-        // Saturation and value differences (linear, 0-1)
-        double satDiff = Math.abs(saturation - targetSat);
-        double valDiff = Math.abs(value - targetVal);
-
-        // Weighted Euclidean distance
-        return laneSensorConfig.classifier.distance.hueWeight * hueDiff
-                + laneSensorConfig.classifier.distance.saturationWeight * satDiff * 100.0  // Scale to ~0-100
-                + laneSensorConfig.classifier.distance.valueWeight * valDiff * 100.0;      // Scale to ~0-100
+        return new ClassificationResult(color);
     }
 
     public boolean hasLaneSensors() {
@@ -1003,7 +1031,6 @@ public class IntakeSubsystem implements Subsystem {
             updateLaneColor(lane, ArtifactColor.NONE);
             laneCandidateColor.put(lane, ArtifactColor.NONE);
             laneCandidateCount.put(lane, 0);
-            laneLastGoodDetectionMs.put(lane, 0.0);
             laneClearCandidateCount.put(lane, 0);
         }
     }
@@ -1012,7 +1039,6 @@ public class IntakeSubsystem implements Subsystem {
         updateLaneColor(lane, ArtifactColor.NONE);
         laneCandidateColor.put(lane, ArtifactColor.NONE);
         laneCandidateCount.put(lane, 0);
-        laneLastGoodDetectionMs.put(lane, 0.0);
         laneClearCandidateCount.put(lane, 0);
     }
 
@@ -1105,16 +1131,162 @@ public class IntakeSubsystem implements Subsystem {
         return null;
     }
 
+    /**
+     * Check if intake is full based on debounced artifact count.
+     * Uses the same source of truth as getArtifactCount() for consistency.
+     */
     public boolean isFull() {
-        int count = 0;
-        for (LauncherLane lane : LauncherLane.values()) {
-            if (getLaneSample(lane).withinDistance) count++;
-        }
-        return count >= laneSensorConfig.fullCount;
+        return getArtifactCount() >= laneSensorConfig.fullCount;
     }
 
     public interface LaneColorListener {
         void onLaneColorChanged(LauncherLane lane, ArtifactColor color);
     }
 
+    // =========================================================================
+    // Ivy Command factories. Subsystem owns its commands (Traffic Cones idiom).
+    // =========================================================================
+
+    /** Tunable smart-intake debounce + haptic settings. */
+    public static class SmartIntakeConfig {
+        /** Continue intaking this long after isFull() goes true (ms). */
+        public double fullDebounceMs = 150;
+        /** Strong rumble (ms) on auto-reverse. */
+        public int hapticRumbleMs = 500;
+        public boolean enableHapticFeedback = true;
+    }
+    public static SmartIntakeConfig smartIntakeConfig = new SmartIntakeConfig();
+
+    /** Tunable autonomous smart-intake settings (count thresholds + debounce). */
+    public static class AutoSmartIntakeConfig {
+        public int fullCountThreshold = 2;
+        public int resumeCountThreshold = 1;
+        public double fullDebounceMs = 0;
+        public double resumeDebounceMs = 200.0;
+    }
+    public static AutoSmartIntakeConfig autoSmartIntakeConfig = new AutoSmartIntakeConfig();
+
+    /** One-shot Command that sets the intake mode. */
+    public com.pedropathing.ivy.Command setIntakeModeCmd(IntakeMode mode) {
+        final IntakeMode resolved = mode == null ? IntakeMode.STOPPED : mode;
+        return com.pedropathing.ivy.commands.Commands.instant(() -> setMode(resolved))
+                .requiring(this);
+    }
+
+    /**
+     * Autonomous smart intake: 4-state machine that auto-reverses when full and
+     * auto-resumes once the count drops below the resume threshold. Never
+     * finishes on its own — runs until interrupted by the scheduler.
+     */
+    /** Stages of the autonomous smart-intake state machine. */
+    private enum AutoSmartIntakeStage { FORWARD, FULL_DEBOUNCE, FULL_REVERSED, RESUME_DEBOUNCE }
+
+    public com.pedropathing.ivy.Command autoSmartIntakeCmd() {
+        // Array wraps the enum so the lambda below can update it (lambdas need final captures).
+        final AutoSmartIntakeStage[] stage = {AutoSmartIntakeStage.FORWARD};
+        final com.qualcomm.robotcore.util.ElapsedTime timer = new com.qualcomm.robotcore.util.ElapsedTime();
+        return new com.pedropathing.ivy.CommandBuilder()
+                .setStart(() -> {
+                    // Stale "loaded" detections from before the prior launch can make the state
+                    // machine flip straight to FULL_REVERSED on tick 1 — clear them.
+                    clearLaneColors();
+                    stage[0] = AutoSmartIntakeStage.FORWARD;
+                    timer.reset();
+                    setMode(IntakeMode.ACTIVE_FORWARD);
+                })
+                .setExecute(() -> {
+                    int artifactCount = getArtifactCount();
+                    boolean isFull = artifactCount >= autoSmartIntakeConfig.fullCountThreshold || isFull();
+                    boolean belowResume = artifactCount <= autoSmartIntakeConfig.resumeCountThreshold;
+                    switch (stage[0]) {
+                        case FORWARD:
+                            if (isFull) {
+                                stage[0] = AutoSmartIntakeStage.FULL_DEBOUNCE;
+                                timer.reset();
+                            }
+                            break;
+                        case FULL_DEBOUNCE:
+                            if (!isFull) { stage[0] = AutoSmartIntakeStage.FORWARD; break; }
+                            if (timer.milliseconds() >= autoSmartIntakeConfig.fullDebounceMs) {
+                                setMode(IntakeMode.PASSIVE_REVERSE);
+                                stage[0] = AutoSmartIntakeStage.FULL_REVERSED;
+                                timer.reset();
+                            }
+                            break;
+                        case FULL_REVERSED:
+                            if (belowResume) {
+                                stage[0] = AutoSmartIntakeStage.RESUME_DEBOUNCE;
+                                timer.reset();
+                            }
+                            break;
+                        case RESUME_DEBOUNCE:
+                            if (!belowResume) { stage[0] = AutoSmartIntakeStage.FULL_REVERSED; break; }
+                            if (timer.milliseconds() >= autoSmartIntakeConfig.resumeDebounceMs) {
+                                setMode(IntakeMode.ACTIVE_FORWARD);
+                                stage[0] = AutoSmartIntakeStage.FORWARD;
+                                timer.reset();
+                            }
+                            break;
+                    }
+                })
+                .setDone(() -> false)
+                .requiring(this);
+    }
+
+    /** Timed eject: aggressive reverse for durationMs, then stop. */
+    public com.pedropathing.ivy.Command timedEjectCmd(double durationMs) {
+        final com.qualcomm.robotcore.util.ElapsedTime timer = new com.qualcomm.robotcore.util.ElapsedTime();
+        return new com.pedropathing.ivy.CommandBuilder()
+                .setStart(() -> {
+                    setMode(IntakeMode.AGGRESSIVE_REVERSE);
+                    timer.reset();
+                })
+                .setDone(() -> timer.milliseconds() >= durationMs)
+                .setEnd(endCondition -> setMode(IntakeMode.STOPPED))
+                .requiring(this);
+    }
+
+    /**
+     * Smart intake Command: forward while not full, debounce on full, then
+     * auto-reverse. Optional haptic rumble when auto-reversing. Never finishes
+     * on its own — runs while the trigger button is held.
+     */
+    /** Stages of the teleop smart-intake state machine (driver holds the button). */
+    private enum SmartIntakeStage { INTAKING, DEBOUNCING, AUTO_REVERSED }
+
+    public com.pedropathing.ivy.Command smartIntakeCmd(com.qualcomm.robotcore.hardware.Gamepad gamepad) {
+        // Per-command-instance state. Array wraps the enum so the lambda can update it.
+        final SmartIntakeStage[] stage = {SmartIntakeStage.INTAKING};
+        final com.qualcomm.robotcore.util.ElapsedTime debounceTimer = new com.qualcomm.robotcore.util.ElapsedTime();
+        return new com.pedropathing.ivy.CommandBuilder()
+                .setStart(() -> stage[0] = isFull() ? SmartIntakeStage.AUTO_REVERSED : SmartIntakeStage.INTAKING)
+                .setExecute(() -> {
+                    boolean full = isFull();
+                    switch (stage[0]) {
+                        case INTAKING:
+                            if (full) {
+                                stage[0] = SmartIntakeStage.DEBOUNCING;
+                                debounceTimer.reset();
+                            } else {
+                                setMode(IntakeMode.ACTIVE_FORWARD);
+                            }
+                            break;
+                        case DEBOUNCING:
+                            if (!full) { stage[0] = SmartIntakeStage.INTAKING; break; }
+                            if (debounceTimer.milliseconds() >= smartIntakeConfig.fullDebounceMs) {
+                                stage[0] = SmartIntakeStage.AUTO_REVERSED;
+                                setMode(IntakeMode.PASSIVE_REVERSE);
+                                if (smartIntakeConfig.enableHapticFeedback && gamepad != null) {
+                                    gamepad.rumble(smartIntakeConfig.hapticRumbleMs);
+                                }
+                            }
+                            break;
+                        case AUTO_REVERSED:
+                            if (!full) stage[0] = SmartIntakeStage.INTAKING;
+                            break;
+                    }
+                })
+                .setDone(() -> false)
+                .requiring(this);
+    }
 }

@@ -15,11 +15,10 @@ import java.util.concurrent.TimeUnit;
  * - Page 1: Overview (alliance, time, pose, launcher, artifacts)
  * - Page 2: Drive (modes, motor powers/velocities)
  * - Page 3: Launcher (per-lane detailed info)
- * - Page 4: Vision & Intake (tag detection, intake state)
- * - Page 5: Timing (loop performance breakdown)
- * - Page 6: Color Sensors (per-lane RGB/HSV values for tuning)
+ * - Page 4: Vision &amp; Intake (tag detection, intake state)
  * - Page 5: Controls (driver and operator bindings)
  * - Page 6: Timing (loop performance metrics)
+ * - Page 7: Color Sensors (per-lane RGB/HSV values for tuning)
  * </p>
  */
 public class DriverStationFormatter {
@@ -60,6 +59,12 @@ public class DriverStationFormatter {
     private boolean lastDpadUp = false;
     private boolean lastDpadDown = false;
 
+    private static final double SPIKE_THRESHOLD_MS = 100.0;
+    private static final long LOOP_STATS_WINDOW_NS = 5_000_000_000L;
+    private double rollingMaxLoopMs = 0.0;
+    private int rollingSpikeCount = 0;
+    private long rollingWindowStartNs = 0L;
+
     /**
      * Handle page navigation from gamepad dpad input.
      * Call this before publishing DEBUG telemetry.
@@ -97,6 +102,23 @@ public class DriverStationFormatter {
         if (telemetry == null) {
             return;
         }
+
+        // Loop timing (cheap; useful for spike comparison vs DEBUG mode)
+        double loopMs = data.timing.mainLoopMs;
+        long nowNs = System.nanoTime();
+        if (rollingWindowStartNs == 0L || (nowNs - rollingWindowStartNs) > LOOP_STATS_WINDOW_NS) {
+            rollingMaxLoopMs = 0.0;
+            rollingSpikeCount = 0;
+            rollingWindowStartNs = nowNs;
+        }
+        if (loopMs > rollingMaxLoopMs) {
+            rollingMaxLoopMs = loopMs;
+        }
+        if (loopMs > SPIKE_THRESHOLD_MS) {
+            rollingSpikeCount++;
+        }
+        telemetry.addData("Loop", "%.1f ms (max 5s: %.1f, spikes>%dms: %d)",
+                loopMs, rollingMaxLoopMs, (int) SPIKE_THRESHOLD_MS, rollingSpikeCount);
 
         // Alliance
         telemetry.addData("Alliance", data.context.alliance.displayName());
@@ -374,18 +396,18 @@ public class DriverStationFormatter {
     }
 
     /**
-     * Page 6: Color Sensors - per-lane RGB/HSV values for tuning.
+     * Page 7: Color Sensors - per-lane RGB/HSV values for tuning.
      */
     private void publishDebugColorSensors(Telemetry telemetry, RobotTelemetryData data) {
         // Show classifier mode at top
-        String classifierMode = org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.laneSensorConfig.classifier.mode;
-        telemetry.addData("Classifier", classifierMode);
+//        String classifierMode = org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.laneSensorConfig.classifier.mode;
+//        telemetry.addData("Classifier", classifierMode);
 
         // Left lane
         IntakeSubsystem.LaneSample leftSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.LEFT);
-        telemetry.addData("LEFT", "%s | conf=%.2f",
-                data.intake.laneLeftSummary.color,
-                leftSample != null ? leftSample.confidence : 0.0);
+//        telemetry.addData("LEFT", "%s | conf=%.2f",
+//                data.intake.laneLeftSummary.color,
+//                leftSample != null ? leftSample.confidence : 0.0);
 
         if (leftSample != null && leftSample.sensorPresent) {
             telemetry.addData("  HSV", "H=%.0f° S=%.3f V=%.3f",
@@ -400,9 +422,9 @@ public class DriverStationFormatter {
 
         // Center lane
         IntakeSubsystem.LaneSample centerSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.CENTER);
-        telemetry.addData("CENTER", "%s | conf=%.2f",
-                data.intake.laneCenterSummary.color,
-                centerSample != null ? centerSample.confidence : 0.0);
+//        telemetry.addData("CENTER", "%s | conf=%.2f",
+//                data.intake.laneCenterSummary.color,
+//                centerSample != null ? centerSample.confidence : 0.0);
 
         if (centerSample != null && centerSample.sensorPresent) {
             telemetry.addData("  HSV", "H=%.0f° S=%.3f V=%.3f",
@@ -417,9 +439,9 @@ public class DriverStationFormatter {
 
         // Right lane
         IntakeSubsystem.LaneSample rightSample = data.intake.laneSamples.get(org.firstinspires.ftc.teamcode.util.LauncherLane.RIGHT);
-        telemetry.addData("RIGHT", "%s | conf=%.2f",
-                data.intake.laneRightSummary.color,
-                rightSample != null ? rightSample.confidence : 0.0);
+//        telemetry.addData("RIGHT", "%s | conf=%.2f",
+//                data.intake.laneRightSummary.color,
+//                rightSample != null ? rightSample.confidence : 0.0);
 
         if (rightSample != null && rightSample.sensorPresent) {
             telemetry.addData("  HSV", "H=%.0f° S=%.3f V=%.3f",

@@ -137,7 +137,7 @@ public class IntakeTelemetryData {
         static LaneTelemetrySummary fromSample(IntakeSubsystem.LaneSample sample) {
             return new LaneTelemetrySummary(
                     sample.sensorPresent,
-                    sample.withinDistance,
+                    sample.presenceDetected,
                     sample.distanceCm,
                     sample.color.name(),
                     sample.hsvColor.name()

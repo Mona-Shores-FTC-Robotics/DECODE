@@ -6,20 +6,17 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.TimedEjectCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ModeAwareLaunchCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
+import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
-import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
-import dev.nextftc.core.commands.groups.SequentialGroup;
-import dev.nextftc.core.commands.utility.InstantCommand;
-import dev.nextftc.extensions.pedro.FollowPath;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
+import com.pedropathing.ivy.groups.Groups;
 
 /**
  * Generated autonomous command from Pedro Pathing .pp file
@@ -31,12 +28,15 @@ import dev.nextftc.extensions.pedro.FollowPath;
 public class CloseThreeAtOnceCommand {
 
     public static class Config {
-        public double maxPathPower = .8;
+        public double maxPathPower = 1.0;
         public double lastPathsMaxPower = 1;
-        public double endTimeForLinearHeadingInterpolation = .7;
+        public double endTimeForLinearHeadingInterpolation = .8;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 6.8;
-        public double ejectTime = 1200;
+        /** Heading tolerance (degrees) Pedro must reach before considering a
+         *  launch-position path complete. Tighter = waits longer for the
+         *  heading PID to settle before the launcher fires. */
+        public double launchHeadingConstraintDeg = 1.0;
     }
 
     public static class Waypoints {
@@ -47,15 +47,15 @@ public class CloseThreeAtOnceCommand {
         // LaunchClose1
         public double launchClose1X = 36;
         public double launchClose1Y = 107.0;
-        public double launchClose1Heading = 134.0;
+        public double launchClose1Heading = 125;
 
         // ArtifactsSet1
-        public double artifactsSet1X = 24;
+        public double artifactsSet1X = 21;
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet1Control0X = 24;
+        public double artifactsSet1Control0X = 23;
         public double artifactsSet1Control0Y = 113;
 
         // LaunchClose2
@@ -64,7 +64,7 @@ public class CloseThreeAtOnceCommand {
         public double launchClose2Heading = 134.0;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 24;
+        public double artifactsSet2X = 21;
         public double artifactsSet2Y = 61.0;
         public double artifactsSet2Heading = 260;
 
@@ -82,12 +82,12 @@ public class CloseThreeAtOnceCommand {
         public double launchClose3Control0Y = 72;
 
         // ArtifactsSet3
-        public double artifactsSet3X = 24;
+        public double artifactsSet3X = 21;
         public double artifactsSet3Y = 35.5;
         public double artifactsSet3Heading = 260;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet3Control0X = 24;
+        public double artifactsSet3Control0X = 23;
         public double artifactsSet3Control0Y = 100;
 
         // LaunchClose4
@@ -141,8 +141,6 @@ public class CloseThreeAtOnceCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
-        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
-
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
         if (startOverride != null) {
@@ -153,34 +151,35 @@ public class CloseThreeAtOnceCommand {
             firstPathBuilder.from(start());
         }
 
-        Command mainSequence = new SequentialGroup(
+        Command mainSequence = Groups.sequential(
                 // Reset timer when auto actually starts (not when command is created)
                 ConditionalFinalLaunchCommand.createTimerReset(),
 
                 // Launch Preloads
-                new ParallelDeadlineGroup(
+                Groups.deadline(
                         firstPathBuilder
                             .to(launchClose1())
                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                            .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
                             .build(config.maxPathPower),
-                        new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
-                        launcherCommands.presetRangeSpinUp(LauncherRange.SHORT_AUTO, true) // Spin up to SHORT RPM for the whole auto
+                        robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE),
+                        PresetRangeSpinCommand.create(
+                                robot.launcher, LauncherRange.SHORT_AUTO, true,
+                                robot.drive, robot.lighting, null) // Spin up to SHORT RPM for the whole auto
                 ),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 1
-                new ParallelDeadlineGroup(
+                Groups.deadline(
                     new FollowPathBuilder(robot, alliance)
                         .from(launchClose1())
                         .to(artifactsSet1())
                         .withControl(artifactsSet1Control0())
                         .withConstantHeading(270)
                         .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new TimedEjectCommand(robot.intake, config.ejectTime),
-                                new AutoSmartIntakeCommand(robot.intake)
+                        Groups.sequential(
+                                robot.intake.autoSmartIntakeCmd()
                         )
                 ),
 
@@ -189,12 +188,12 @@ public class CloseThreeAtOnceCommand {
                         .from(artifactsSet1())
                         .to( launchClose2())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
-                new ParallelDeadlineGroup(
+                Groups.deadline(
                     // Pickup Artifact Set 2
                     new FollowPathBuilder(robot, alliance)
                             .from(launchClose2())
@@ -202,9 +201,8 @@ public class CloseThreeAtOnceCommand {
                             .withControl(artifactsSet2Control0())
                             .withConstantHeading(270)
                             .build(config.maxPathPower),
-                    new SequentialGroup(
-                        new TimedEjectCommand(robot.intake, config.ejectTime),
-                        new AutoSmartIntakeCommand(robot.intake)
+                    Groups.sequential(
+                        robot.intake.autoSmartIntakeCmd()
                     )
                 ),
 
@@ -215,55 +213,54 @@ public class CloseThreeAtOnceCommand {
                         .to(launchClose3())
                         .withControl(launchClose3Control0())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Artifact Set 3
-                new ParallelDeadlineGroup(
+                Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
                                 .from(launchClose3())
                                 .to(artifactsSet3())
                                 .withControl(artifactsSet3Control0())
                                 .withConstantHeading(270)
                                 .build(config.maxPathPower),
-                        new SequentialGroup(
-                                new TimedEjectCommand(robot.intake, config.ejectTime),
-                                new AutoSmartIntakeCommand(robot.intake)
+                        Groups.sequential(
+                                robot.intake.autoSmartIntakeCmd()
                         )
                 ),
 
                 // Conditionally return and launch if time permits, otherwise go straight to park
-                new ConditionalFinalLaunchCommand(
+                ConditionalFinalLaunchCommand.create(
                         config.autoDurationSeconds,
                         config.minTimeForFinalLaunchSeconds,
                         // If enough time: return to launch, shoot, then park
-                        new SequentialGroup(
+                        Groups.sequential(
                                 new FollowPathBuilder(robot, alliance)
                                         .from(artifactsSet3())
                                         .to(launchClose4())
                                         .withControl(launchClose4Control0())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                                        .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
                                         .build(config.lastPathsMaxPower),
 
-                                launcherCommands.launchAccordingToMode(false),
+                                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
-                                new ParallelDeadlineGroup(
+                                Groups.deadline(
                                         new FollowPathBuilder(robot, alliance)
                                             .from(launchClose4())
                                             .to(nearGate())
                                             .withControl(nearGateControl0())
                                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                             .build(config.lastPathsMaxPower),
-                                        new SequentialGroup(
-                                                new TimedEjectCommand(robot.intake, config.ejectTime),
-                                                new AutoSmartIntakeCommand(robot.intake)
+                                        Groups.sequential(
+                                                robot.intake.autoSmartIntakeCmd()
                                         )
                                 )
                         ),
                         // If not enough time: go straight to park
-                        new SequentialGroup(
+                        Groups.sequential(
                                 new FollowPathBuilder(robot, alliance)
                                         .from(artifactsSet3())
                                         .to(nearGate())
@@ -275,10 +272,6 @@ public class CloseThreeAtOnceCommand {
 
         return
                 mainSequence;
-//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
-//                new InstantCommand(()-> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-//                autoSmartIntake // Run the smart intake the whole time
-
     }
 
     private static Pose start() {

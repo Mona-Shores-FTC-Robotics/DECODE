@@ -3,18 +3,17 @@ package org.firstinspires.ftc.teamcode.opmodes.Autos.Commands;
 import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.AutoSmartIntakeCommand;
-import org.firstinspires.ftc.teamcode.commands.IntakeCommands.SetIntakeModeCommand;
-import org.firstinspires.ftc.teamcode.commands.LauncherCommands.LauncherCommands;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ModeAwareLaunchCommand;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
+import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
-import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.commands.delays.Delay;
-import dev.nextftc.core.commands.groups.ParallelDeadlineGroup;
-import dev.nextftc.core.commands.groups.SequentialGroup;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.commands.Commands;
+import com.pedropathing.ivy.groups.Groups;
 
 /**
  * Generated autonomous command from Pedro Pathing .pp file
@@ -31,7 +30,7 @@ public class FarTogetherCommand {
         public double delayForGateToOpen = 1.0;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.0;
-        public double ejectTime = 1000;
+        public double slowPath = .75;
     }
 
     public static class Waypoints {
@@ -40,37 +39,39 @@ public class FarTogetherCommand {
         public double startHeading = 90.0;
 
         // LaunchFar
-        public double launchFarX = 58;
-        public double launchFarY = 11;
-        public double launchFarHeadingDeg = 108;
+        public double launchFarX = 55;
+        public double launchFarY = 14;
+        public double launchFarHeadingDeg = 110;
 
         // Artifacts at Alliance Wall)
-        public double artifactsWallX = 10;
+        public double artifactsWallX = 9;
         public double artifactsWallY = 6.5;
-        public double artifactsWallHeading = 180;
+        public double artifactsWallHeading = 185;
 
         // Control point for segment: leavewall
         public double wallControlPointX = 27.5;
-        public double wallControlPointY = 10;
-
+        public double wallControlPointY = 18;
 
         // Chute Released Artifacts Try 1
-        public double releasedTry1X = 10;
-        public double releasedTry1Y = 23;
+        public double releasedTry1X = 15;
+        public double releasedTry1Y = 6.5;
         public double releasedTry1Heading = 180;
 
+        public double releasedTry1controlX = 35.3;
+        public double releasedTry1controlY = 13.6;
+
         // Chute Released Artifacts Try 1
-        public double releasedTry2X = 10;
-        public double releasedTry2Y = 37;
-        public double releasedTry2Heading = 180;
+        public double releasedTry2X = 9;
+        public double releasedTry2Y = 6.5;
+        public double releasedTry2Heading = 185;
 
         public double releasedTry2controlX = 35.3;
-        public double releasedTry2controlY = 13.6;
+        public double releasedTry2controlY = 18;
 
         // Off Line
-        public double readyForTeleopX = 58;
-        public double readyForTeleopY = 36;
-        public double readyForTeleopHeading = 0;
+        public double readyForTeleopX = 33;
+        public double readyForTeleopY = 12;
+        public double readyForTeleopHeading = 90;
 
     }
 
@@ -106,9 +107,6 @@ public class FarTogetherCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
-        LauncherCommands launcherCommands = new LauncherCommands(robot.launcher, robot.intake, robot.drive, robot.lighting);
-        AutoSmartIntakeCommand autoSmartIntake = new AutoSmartIntakeCommand(robot.intake);
-
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
         if (startOverride != null) {
@@ -119,32 +117,33 @@ public class FarTogetherCommand {
             firstPathBuilder.from(start());
         }
 
-        Command mainSequence = new SequentialGroup(
+        Command mainSequence = Groups.sequential(
                 // Reset timer when auto actually starts (not when command is created)
                 ConditionalFinalLaunchCommand.createTimerReset(),
 
                 // Launch Preloads
-                new ParallelDeadlineGroup(
+                Groups.deadline(
                         firstPathBuilder
                                 .to(launchFar())
                                 .withConstantHeading(waypoints.launchFarHeadingDeg)
                                 .build(config.maxPathPower),
-                        new SetIntakeModeCommand(robot.intake, IntakeSubsystem.IntakeMode.PASSIVE_REVERSE),
-                        launcherCommands.presetRangeSpinUp(LauncherRange.FAR_AUTO, true) // Spin up to FAR_AUTO speed and stay their the whole auto
+                        robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE),
+                        PresetRangeSpinCommand.create(
+                                robot.launcher, LauncherRange.FAR_AUTO, true,
+                                robot.drive, robot.lighting, null) // Spin up to FAR_AUTO speed and stay their the whole auto
                 ),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Alliance Wall Artifacts
-                new ParallelDeadlineGroup(
+                Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
                             .from(launchFar())
                             .to(artifactsAllianceWall())
                             .withControl(wallControl())
                             .withConstantHeading(waypoints.artifactsWallHeading)
                             .build(config.maxPathPower),
-                        new AutoSmartIntakeCommand(robot.intake)
+                        robot.intake.autoSmartIntakeCmd()
                 ),
 
                 // Return and launch alliance wall artifacts
@@ -155,84 +154,77 @@ public class FarTogetherCommand {
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                         .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                new Delay(config.delayForGateToOpen),
-                launcherCommands.launchAccordingToMode(false),
+                Commands.waitMs(config.delayForGateToOpen * 1000.0),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Released Artifacts Try 1
-                new ParallelDeadlineGroup(
+                Groups.deadline(
                     new FollowPathBuilder(robot, alliance)
                             .from(launchFar())
-                            .to(artifactsAllianceWall())
-                            .withControl(wallControl())
-                            .withConstantHeading(waypoints.artifactsWallHeading)
-                            .build(config.maxPathPower),
-                        new AutoSmartIntakeCommand(robot.intake)
+                            .to(releasedArtifacts1())
+                            .withControl(releasedArtifacts1Control0())
+                            .withConstantHeading(waypoints.releasedTry1Heading)
+                            .build(config.slowPath),
+                        robot.intake.autoSmartIntakeCmd()
                 ),
 
                 // Return and Launch
                 new FollowPathBuilder(robot, alliance)
-                    .from(artifactsAllianceWall())
-                    .to(launchFar())
-                        .withControl(wallControl())
+                        .from(releasedArtifacts1())
+                        .to(launchFar())
+                        .withControl(releasedArtifacts1Control0())
                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                     .build(config.maxPathPower),
 
-//                new AimAtGoalCommand(robot.drive, robot.vision),
-                launcherCommands.launchAccordingToMode(false),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
                 // Pickup Released Artifacts Try 2
-                new ParallelDeadlineGroup(
+                Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
                                 .from(launchFar())
-                                .to(artifactsAllianceWall())
-                                .withControl(wallControl())
-                                .withConstantHeading(waypoints.artifactsWallHeading)
-                                .build(config.maxPathPower),
-                        new AutoSmartIntakeCommand(robot.intake)
+                                .to(releasedArtifacts2())
+                                .withControl(releasedArtifacts2Control0())
+                                .withConstantHeading(waypoints.releasedTry2Heading)
+                                .build(config.slowPath),
+                        robot.intake.autoSmartIntakeCmd()
                 ),
 
                 // Conditionally return and launch if time permits, otherwise go straight to park
-                new ConditionalFinalLaunchCommand(
+                ConditionalFinalLaunchCommand.create(
                         config.autoDurationSeconds,
                         config.minTimeForFinalLaunchSeconds,
                         // If enough time: return to launch, shoot, then park
-                        new SequentialGroup(
+                        Groups.sequential(
                                 new FollowPathBuilder(robot, alliance)
-                                        .from(artifactsAllianceWall())
+                                        .from(releasedArtifacts2())
                                         .to(launchFar())
-                                        .withControl(wallControl())
+                                        .withControl(releasedArtifacts2Control0())
                                         .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                        .build(config.maxPathPower),
+                                        .build(config.slowPath),
 
-                                launcherCommands.launchAccordingToMode(false),
+                                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
-                                new ParallelDeadlineGroup(
+                                Groups.deadline(
                                         new FollowPathBuilder(robot, alliance)
                                             .from(launchFar())
                                             .to(readyForTeleop())
                                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                             .build(config.maxPathPower),
-                                        new AutoSmartIntakeCommand(robot.intake)
+                                        robot.intake.autoSmartIntakeCmd()
                                 )
                         ),
                         // If not enough time: go straight to park
-                        new SequentialGroup(
+                        Groups.sequential(
                                 new FollowPathBuilder(robot, alliance)
-                                        .from(artifactsAllianceWall())
+                                        .from(releasedArtifacts2())
                                         .to(readyForTeleop())
-                                        .withConstantHeading(90)
+                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                         .build(config.maxPathPower)
                         )
                 )
         );
 
-        return
-                mainSequence;
-//todo CONSIDER CHANGING IF ROBOT NOT INTAKING DURING AUTO
-//                new InstantCommand(()-> robot.intake.setMode(IntakeSubsystem.IntakeMode.ACTIVE_FORWARD))
-//                autoSmartIntake
-
+        return mainSequence;
     }
 
     private static Pose start() {
@@ -253,6 +245,10 @@ public class FarTogetherCommand {
 
     private static Pose releasedArtifacts1() {
         return new Pose(waypoints.releasedTry1X , waypoints.releasedTry1Y , Math.toRadians(waypoints.releasedTry1Heading));
+    }
+
+    private static Pose releasedArtifacts1Control0() {
+        return new Pose(waypoints.releasedTry1controlX, waypoints.releasedTry1controlY, 0);
     }
 
     private static Pose releasedArtifacts2() {

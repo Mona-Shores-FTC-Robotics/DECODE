@@ -2,18 +2,21 @@ package org.firstinspires.ftc.teamcode.util;
 
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
+import com.pedropathing.paths.HeadingInterpolator;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
-
 import java.util.ArrayList;
 import java.util.List;
 import com.qualcomm.robotcore.util.Range;
 import com.pedropathing.geometry.Pose;
-import dev.nextftc.core.commands.Command;
-import dev.nextftc.extensions.pedro.FollowPath;
+import com.pedropathing.ivy.Command;
+import com.pedropathing.ivy.pedro.PedroCommands;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 public class FollowPathBuilder {
 
@@ -23,18 +26,24 @@ public class FollowPathBuilder {
     private Pose start;
     private Pose end;
 
-    private Double timeoutMilliSec = 0.0;
-
 
     private final List<Pose> controlPoints = new ArrayList<>();
 
     private boolean constantHeading = false;
     private double constantHeadingDeg = 0;
-    private double translationalConstraint = 3;
-    private double headingConstraint = 2;
+    private Double translationalConstraint = null;
+    private Double headingConstraint = null;
 
+    private boolean usePiecewiseHeading = false;
+    private HeadingInterpolator piecewiseInterpolator = null;
 
     private double linearInterpWeight = 0.7;
+
+    private Double fireAtT = null;
+    private LauncherSubsystem launcherForCallback = null;
+    private IntakeSubsystem intakeForCallback = null;
+
+    private Double timeoutMilliSec = null;
 
     public FollowPathBuilder(Robot robot, Alliance alliance) {
         this.robot = robot;
@@ -102,7 +111,62 @@ public class FollowPathBuilder {
         return this;
     }
 
+    public FollowPathBuilder withPiecewiseHeadingInterpolation(HeadingInterpolator interpolator) {
+        this.usePiecewiseHeading = true;
+        this.piecewiseInterpolator = interpolator;
+        return this;
+    }
 
+    /**
+     * Helper method to create piecewise heading interpolation with alliance mirroring.
+     * First section: constant heading from t=0 to constantEndT
+     * Second section: linear heading from constantEndT to t=1
+     *
+     * @param constantHeadingDeg Constant heading in degrees (will be mirrored for red alliance)
+     * @param constantEndT T-value where constant section ends (0.0 to 1.0)
+     * @param linearEndHeadingDeg End heading for linear section in degrees (will be mirrored for red alliance)
+     * @return This returns itself with the updated data
+     */
+    public FollowPathBuilder withPiecewiseConstantThenLinear(
+            double constantHeadingDeg,
+            double constantEndT,
+            double linearEndHeadingDeg) {
+
+        // Mirror headings for red alliance
+        double mirroredConstantHeading = mirrorHeading(constantHeadingDeg);
+        double mirroredLinearEndHeading = mirrorHeading(linearEndHeadingDeg);
+
+        HeadingInterpolator interpolator = HeadingInterpolator.piecewise(
+                new HeadingInterpolator.PiecewiseNode(
+                        0.0,
+                        constantEndT,
+                        HeadingInterpolator.constant(Math.toRadians(mirroredConstantHeading))
+                ),
+                HeadingInterpolator.PiecewiseNode.linear(
+                        constantEndT,
+                        1.0,
+                        Math.toRadians(mirroredConstantHeading),
+                        Math.toRadians(mirroredLinearEndHeading)
+                )
+        );
+
+        return withPiecewiseHeadingInterpolation(interpolator);
+    }
+
+    /**
+     * Mirrors a heading for red alliance using the same logic as poseForAlliance
+     */
+    private double mirrorHeading(double headingDeg) {
+        if (alliance == Alliance.RED) {
+            double headingRad = Math.toRadians(headingDeg);
+            double mirroredRad = Math.PI - headingRad;
+            // Normalize to 0-360 range
+            double mirroredDeg = Math.toDegrees(mirroredRad);
+            return (mirroredDeg % 360 + 360) % 360;
+        } else {
+            return headingDeg;
+        }
+    }
 
     // ---------------------------
     // Build
@@ -137,40 +201,61 @@ public class FollowPathBuilder {
             }
         }
 
-        if (constantHeading) {
+        if (usePiecewiseHeading) {
+            builder.setHeadingInterpolation(piecewiseInterpolator);
+        } else if (constantHeading) {
             builder.setConstantHeadingInterpolation(Math.toRadians(constantHeadingDeg));
         } else {
+            // Force shortest-direction rotation. Pedro's linear interp uses raw
+            // start/end values, so if end-start lands outside [-π, π] the robot
+            // turns the long way. Blue waypoints come in unnormalized
+            // (Math.toRadians(deg)) while red mirrors go through
+            // AngleUnit.normalizeRadians, so the two alliances can land on
+            // different sides of the wrap for the same physical motion.
+            double startHeading = start.getHeading();
+            double endHeading = end.getHeading();
+            double diff = endHeading - startHeading;
+            while (diff > Math.PI)  { endHeading -= 2 * Math.PI; diff = endHeading - startHeading; }
+            while (diff < -Math.PI) { endHeading += 2 * Math.PI; diff = endHeading - startHeading; }
             builder.setLinearHeadingInterpolation(
-                    start.getHeading(),
-                    end.getHeading(),
+                    startHeading,
+                    endHeading,
                     linearInterpWeight
             );
         }
 
+        if (fireAtT != null && launcherForCallback != null) {
+            LauncherSubsystem launcher = launcherForCallback;
+            IntakeSubsystem intake = intakeForCallback;
+            builder.addParametricCallback(fireAtT, () -> {
+                launcher.spinUpAllLanesToLaunch();
+                for (LauncherLane lane : LauncherLane.values()) {
+                    launcher.queueShot(lane);
+                }
+                if (intake != null) {
+                    intake.setGateAllowArtifacts();
+                }
+            });
+        }
 
         PathChain chain = builder.build();
 
         if (timeoutMilliSec != null) {
-            // Assuming your chain only has one path
             Path onlyPath = chain.getPath(0);
             onlyPath.setTimeoutConstraint(timeoutMilliSec);
         }
-
-        if (headingConstraint != 0) {
-            // Assuming your chain only has one path
+        if (headingConstraint != null) {
             Path onlyPath = chain.getPath(0);
             onlyPath.setHeadingConstraint(headingConstraint);
         }
-
-        if (translationalConstraint != 0) {
-            // Assuming your chain only has one path
+        if (translationalConstraint != null) {
             Path onlyPath = chain.getPath(0);
             onlyPath.setTranslationalConstraint(translationalConstraint);
         }
 
         double clippedPower = Range.clip(maxPower, 0.0, 1.0);
 
-        return new FollowPath(chain, true, clippedPower);
+        return PedroCommands.follow(robot.drive.getFollower(), chain, true, clippedPower);
     }
 
     // ---------------------------
@@ -193,6 +278,29 @@ public class FollowPathBuilder {
 
     public FollowPathBuilder withTimeout(double milliseconds) {
         this.timeoutMilliSec = milliseconds;
+        return this;
+    }
+
+    /**
+     * Continuously rotates the robot to face a fixed field point throughout the path.
+     * Heading changes along the path as the robot's position changes — use on return
+     * paths where the goal is a fixed corner and the robot is moving toward it.
+     */
+    public FollowPathBuilder withFacingPoint(double goalX, double goalY) {
+        return withPiecewiseHeadingInterpolation(
+                HeadingInterpolator.facingPoint(goalX, goalY));
+    }
+
+    /**
+     * Attaches a ParametricCallback that fires all launcher lanes when path T >= fireAtT.
+     * Must be called before build(). fireAtT should be greater than the linearInterpWeight so
+     * heading is already settled when shots queue.
+     * Uses Pedro's built-in callback system — no parallel command wrapper needed.
+     */
+    public FollowPathBuilder withFireAtT(double t, LauncherSubsystem launcher, IntakeSubsystem intake) {
+        this.fireAtT = t;
+        this.launcherForCallback = launcher;
+        this.intakeForCallback = intake;
         return this;
     }
 }

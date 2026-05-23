@@ -102,7 +102,7 @@ public class RobotTelemetryData {
                 matchTimeSec,
                 opMode,
                 isAutonomous,
-                org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName(),
+                org.firstinspires.ftc.teamcode.util.RobotProfile.activeName(),
                 RobotState.getLauncherMode().name(),
                 RobotState.getMotif().name(),
                 RobotState.getMotifTail()
@@ -114,7 +114,7 @@ public class RobotTelemetryData {
         // Build vision pose for PoseTelemetryData (FTC Pose type from vision subsystem)
         Pose visionPose = null;
         if (visionData.hasTag && !Double.isNaN(visionData.poseXIn) && !Double.isNaN(visionData.poseYIn)) {
-            visionPose = vision.getRobotPoseFromTagFtc().orElse(null);
+            visionPose = vision.getRobotPoseFromTagFtc();
         }
 
         // Capture pose data (with optional override)

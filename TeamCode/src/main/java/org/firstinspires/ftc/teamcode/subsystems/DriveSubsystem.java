@@ -3,21 +3,16 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_KNOWN;
 import static org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem.VisionCalibrationState.HEADING_UNKNOWN;
 
-import androidx.annotation.NonNull;
-
-import com.acmerobotics.dashboard.config.Config;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.ivy.commands.Commands;
 import com.pedropathing.math.Vector;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
-
-import dev.nextftc.core.commands.Command;
-import dev.nextftc.core.subsystems.Subsystem;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
@@ -26,174 +21,70 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveAimAssistConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFixedAngleAimConfig;
+import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFusionConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveInitialPoseConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRampConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveRightTriggerFixedAngleConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveTeleOpConfig;
-import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionCenteredAimConfig;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveVisionRelocalizeConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
-import org.firstinspires.ftc.teamcode.util.PoseFusion;
+import org.firstinspires.ftc.teamcode.pedroPathing.FusionLocalizer;
 import org.firstinspires.ftc.teamcode.util.RobotState;
-import java.util.Optional;
-import static dev.nextftc.extensions.pedro.PedroComponent.follower;
-@Configurable
-public class DriveSubsystem implements Subsystem {
+import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
-    private static final double VISION_TIMEOUT_MS = 100;
+/**
+ * Owns the four mecanum drive motors and the Pedro Pathing follower.
+ *
+ * <p>What it does:
+ * <ul>
+ *   <li><b>Teleop driving</b> — translates joystick inputs into wheel commands,
+ *       in field-centric mode by default (push the stick "north" and the robot
+ *       moves toward the far wall regardless of which way it's facing).</li>
+ *   <li><b>Aim assist</b> — when an aim button is held, takes over rotation and
+ *       points the robot at the goal using vision + odometry.</li>
+ *   <li><b>Autonomous path following</b> — exposes the Pedro {@code Follower} so
+ *       OpModes can run pre-built paths.</li>
+ *   <li><b>Relocalization</b> — fuses Pinpoint odometry with AprilTag readings
+ *       so the robot's reported position stays accurate even after bumps.</li>
+ * </ul>
+ *
+ * <p>Per-robot tuning (PIDF gains, aim parameters, etc.) lives in
+ * {@code util/RobotProfile.java} — never branch on robot identity here.
+ */
+@Configurable
+public class DriveSubsystem {
+
+    /** Robot is considered "stationary enough to shoot" when its speed is below this (inches/sec). */
     public static final double STATIONARY_SPEED_THRESHOLD_IN_PER_SEC = 1.5;
-    private static final double ODOMETRY_RELOCALIZE_DISTANCE_IN = 6.0;
+    /** Ignore an AprilTag snapshot for relocalization once it's older than this. */
     private static final long MAX_VISION_AGE_MS = 250L;
-    private static final String LOG_TAG = "DriveSubsystem";
 
     enum VisionCalibrationState {
         HEADING_UNKNOWN,
         HEADING_KNOWN
     }
     private VisionCalibrationState visionState = HEADING_UNKNOWN;
-
-    // Active robot indicator
-    public static String ACTIVE_ROBOT = RobotState.getRobotName();
+    private int consecutiveMt2DisagreementCount = 0;
 
     // Global configuration instances
     public static DriveTeleOpConfig teleOpDriveConfig = new DriveTeleOpConfig();
-    public static DriveVisionCenteredAimConfig visionCenteredAimConfig = new DriveVisionCenteredAimConfig();
     public static DriveRampConfig rampConfig = new DriveRampConfig();
     public static DriveVisionRelocalizeConfig visionRelocalizeConfig = new DriveVisionRelocalizeConfig();
 
-    // Robot-specific aim assist configs - visible in Panels for tuning
-    public static DriveAimAssistConfig aimAssistConfig_Robot19429 = createAimAssistConfig19429();
-    public static DriveAimAssistConfig aimAssistConfig_Robot20245 = createAimAssistConfig20245();
-    public static DriveAimAssistConfig aimAssistConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotConfigs.getAimAssistConfig();
 
-    /**
-     * Helper to create 19429-specific aim assist configuration.
-     * Override values here that differ from the defaults in DriveAimAssistConfig.
-     */
-    private static DriveAimAssistConfig createAimAssistConfig19429() {
-        DriveAimAssistConfig config = new DriveAimAssistConfig();
-        /** Proportional gain for geometry-based aiming when error is large */
-        config.kP = 0.35;
-        /** Inner-zone proportional gain (used when inside innerZoneDeg) to avoid overshoot */
-        config.kPInner = 2.85;
-        /** Error threshold (deg) where the controller switches to inner kP */
-       config.innerZoneDeg = 3.5;
-        /** Derivative gain on heading error rate (helps damp waggle) */
-        config.kD = 0.05;
-        /** Max turn speed when aiming (0.0-1.0) */
-        config.kMaxTurn = 0.6;
-        /** Minimum turn command to overcome drivetrain static friction */
-       config.kStatic = 0.1;
-        /** Apply kStatic only when error is above this magnitude (deg) */
-        config.staticApplyAboveDeg = 3.0;
-        /** Turn command slew rate (units per second), 0 disables slew limiting */
-        config.turnSlewRatePerSec = 8.0;
-        /** Heading deadband (degrees) where aim is considered settled */
-        config.deadbandDeg = 2.0;
-        return config;
-    }
+    /** Live aim-assist tuning for the active robot — see {@code util/RobotProfile.java} for the values. */
+    public static DriveAimAssistConfig aimAssistConfig =
+            org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().aimAssist;
 
-    /**
-     * Helper to create 20245-specific aim assist configuration.
-     * Override values here that differ from the defaults in DriveAimAssistConfig.
-     */
-    private static DriveAimAssistConfig createAimAssistConfig20245() {
-        DriveAimAssistConfig config = new DriveAimAssistConfig();
-        /** Proportional gain for geometry-based aiming when error is large */
-        config.kP = 0.35;
-        /** Inner-zone proportional gain (used when inside innerZoneDeg) to avoid overshoot */
-        config.kPInner = 2.85;
-        /** Error threshold (deg) where the controller switches to inner kP */
-        config.innerZoneDeg = 3.5;
-        /** Derivative gain on heading error rate (helps damp waggle) */
-        config.kD = 0.05;
-        /** Max turn speed when aiming (0.0-1.0) */
-        config.kMaxTurn = 0.6;
-        /** Minimum turn command to overcome drivetrain static friction */
-        config.kStatic = 0.1;
-        /** Apply kStatic only when error is above this magnitude (deg) */
-        config.staticApplyAboveDeg = 3.0;
-        /** Turn command slew rate (units per second), 0 disables slew limiting */
-        config.turnSlewRatePerSec = 8.0;
-        /** Heading deadband (degrees) where aim is considered settled */
-        config.deadbandDeg = 2.0;        return config;
-    }
+    /** Live fixed-angle aim tuning for the active robot — see {@code util/RobotProfile.java} for the values. */
+    public static DriveFixedAngleAimConfig fixedAngleAimConfig =
+            org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().fixedAngleAim;
 
-    /**
-     * Gets the robot-specific AimAssistConfig based on RobotState.getRobotName().
-     * @return aimAssistConfig19429 or aimAssistConfig20245
-     */
-    public static DriveAimAssistConfig aimAssistConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getAimAssistConfig();
-    }
-
-    // Robot-specific fixed angle aim configs - visible in Panels for tuning
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig_Robot19429 = createFixedAngleAimConfig19429();
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig_Robot20245 = createFixedAngleAimConfig20245();
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
-
-    /**
-     * Helper to create 19429-specific fixed angle aim configuration.
-     * Currently uses all default values - both robots have identical aiming tuning.
-     */
-    private static DriveFixedAngleAimConfig createFixedAngleAimConfig19429() {
-        DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
-        // No overrides needed - using shared defaults
-        return config;
-    }
-
-    /**
-     * Helper to create 20245-specific fixed angle aim configuration.
-     * Currently uses all default values - both robots have identical aiming tuning.
-     */
-    private static DriveFixedAngleAimConfig createFixedAngleAimConfig20245() {
-        DriveFixedAngleAimConfig config = new DriveFixedAngleAimConfig();
-        // No overrides needed - using shared defaults
-        return config;
-    }
-
-    /**
-     * Gets the robot-specific FixedAngleAimConfig based on RobotState.getRobotName().
-     * @return fixedAngleAimConfig19429 or fixedAngleAimConfig20245
-     */
-    public static DriveFixedAngleAimConfig fixedAngleAimConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getFixedAngleAimConfig();
-    }
-
-    // Robot-specific right trigger fixed angle aim configs - visible in Panels for tuning
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_Robot19429 = createRightTriggerFixedAngleConfig19429();
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_Robot20245 = createRightTriggerFixedAngleConfig20245();
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig_ACTIVE = org.firstinspires.ftc.teamcode.util.RobotConfigs.getRightTriggerFixedAngleConfig();
-
-    /**
-     * Helper to create 19429-specific right trigger fixed angle aim configuration.
-     * Currently uses all default values - both robots have identical tuning.
-     */
-    private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig19429() {
-        DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
-        // No overrides needed - using shared defaults
-        return config;
-    }
-
-    /**
-     * Helper to create 20245-specific right trigger fixed angle aim configuration.
-     * Currently uses all default values - both robots have identical tuning.
-     */
-    private static DriveRightTriggerFixedAngleConfig createRightTriggerFixedAngleConfig20245() {
-        DriveRightTriggerFixedAngleConfig config = new DriveRightTriggerFixedAngleConfig();
-        // No overrides needed - using shared defaults
-        return config;
-    }
-
-    /**
-     * Gets the robot-specific RightTriggerFixedAngleConfig based on RobotState.getRobotName().
-     * @return rightTriggerFixedAngleConfig19429 or rightTriggerFixedAngleConfig20245
-     */
-    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig() {
-        return org.firstinspires.ftc.teamcode.util.RobotConfigs.getRightTriggerFixedAngleConfig();
-    }
+    /** Live right-trigger fixed-angle aim tuning for the active robot — see {@code util/RobotProfile.java}. */
+    public static DriveRightTriggerFixedAngleConfig rightTriggerFixedAngleConfig =
+            org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().rightTriggerFixedAngle;
 
     /**
      * Gets the robot-specific InitialPoseConfig based on RobotState.getRobotName().
@@ -220,22 +111,12 @@ public class DriveSubsystem implements Subsystem {
     private final DcMotorEx motorRb;
     private final VisionSubsystemLimelight vision;
     private LightingSubsystem lighting;
-    private final PoseFusion poseFusion = new PoseFusion();
+    private FusionLocalizer fusionLocalizer;
+    private long lastFedSnapshotNs = -1L;
     private final ElapsedTime clock = new ElapsedTime();
-
-    // Default command for NextFTC command scheduler
-    private Command driveDefaultCommand = null;
-
-    private double lastGoodVisionAngle = Double.NaN;
-    private double lastVisionTimestamp = Double.NEGATIVE_INFINITY;
-    private long lastFusionVisionTimestampMs = 0L;
-    private double fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
-    private static final double DESIRED_FIELD_HEADING_RAD = Math.PI / 2.0;
-    private boolean visionHeadingCalibrated = false;
 
     public static boolean robotCentricConfig = false;
     private boolean robotCentric = robotCentricConfig;
-    private static final double ROTATION_OVERRIDE_FALLBACK = 0.05;
     private DriveMode activeMode = DriveMode.NORMAL;
     private double lastRequestFieldX = 0.0;
     private double lastRequestFieldY = 0.0;
@@ -256,8 +137,18 @@ public class DriveSubsystem implements Subsystem {
     private boolean visionRelocalizationEnabled = false;
     private long lastAutoRelocalizeMs = 0L;
 
-    public DriveSubsystem(HardwareMap hardwareMap , VisionSubsystemLimelight vision) {
-//        follower = Constants.createFollower(hardwareMap);
+    /** Per-robot aim assist tuning, injected at construction. */
+    private final DriveAimAssistConfig aimAssist;
+    /** Per-robot fixed-angle aim tuning, injected at construction. */
+    private final DriveFixedAngleAimConfig fixedAngleAim;
+    /** Per-robot right-trigger fixed-angle aim tuning, injected at construction. */
+    private final DriveRightTriggerFixedAngleConfig rightTriggerFixedAngle;
+
+    public DriveSubsystem(HardwareMap hardwareMap,
+                          VisionSubsystemLimelight vision,
+                          DriveAimAssistConfig aimAssist,
+                          DriveFixedAngleAimConfig fixedAngleAim,
+                          DriveRightTriggerFixedAngleConfig rightTriggerFixedAngle) {
         driveMotors = new Constants.Motors(hardwareMap);
         driveMotors.setRunWithoutEncoder();
 
@@ -266,6 +157,9 @@ public class DriveSubsystem implements Subsystem {
         motorLb = driveMotors.lb;
         motorRb = driveMotors.rb;
         this.vision = vision;
+        this.aimAssist = aimAssist;
+        this.fixedAngleAim = fixedAngleAim;
+        this.rightTriggerFixedAngle = rightTriggerFixedAngle;
     }
 
     public void setLightingSubsystem(LightingSubsystem lighting) {
@@ -273,27 +167,12 @@ public class DriveSubsystem implements Subsystem {
     }
 
     public void attachFollower() {
-        this.follower = follower();
+        this.follower = Constants.follower();
+        this.fusionLocalizer = Constants.activeFusionLocalizer;
         // Log which config set is being used for diagnostics
-        RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotConfigs.getActiveConfigName());
-    }
-
-    /**
-     * Sets the default command for this subsystem.
-     * The default command runs whenever no other command requires this subsystem.
-     */
-    public void setDefaultCommand(Command command) {
-        this.driveDefaultCommand = command;
-    }
-
-    /**
-     * Gets the default command for this subsystem.
-     * Overrides the Subsystem interface property to return our configured command.
-     */
-    @NonNull
-    @Override
-    public Command getDefaultCommand() {
-        return driveDefaultCommand != null ? driveDefaultCommand : Subsystem.super.getDefaultCommand();
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("_Config/Active Config Set", org.firstinspires.ftc.teamcode.util.RobotProfile.activeName());
+        }
     }
 
     public void setRobotCentric(boolean enabled) {
@@ -305,7 +184,6 @@ public class DriveSubsystem implements Subsystem {
         teleOpControlEnabled = enabled;
     }
 
-    @Override
     public void initialize() {
         // Defensive check: ensure follower is attached before initialization
         if (follower == null) {
@@ -323,9 +201,6 @@ public class DriveSubsystem implements Subsystem {
         if (pedroFollowerSeed == null) {
             DriveInitialPoseConfig poseConfig = initialPoseConfig;
             pedroFollowerSeed = new Pose(poseConfig.startX, poseConfig.startY, Math.toRadians(poseConfig.startHeadingDeg));
-
-//            Optional<Pose> poseFromVision = vision.getRobotPoseFromTagPedro();
-//            pedroFollowerSeed = poseFromVision.orElseGet(() -> new Pose(0, 0, Math.toRadians(90.0)));
         }
         Pose ftcSeed = PoseFrames.pedroToFtc(pedroFollowerSeed);
         RobotState.putPose("Pose/FTC Coord Seed Pose",ftcSeed );
@@ -336,11 +211,6 @@ public class DriveSubsystem implements Subsystem {
         follower.update();
         follower.breakFollowing();
 
-        fieldHeadingOffsetRad = DESIRED_FIELD_HEADING_RAD;
-        visionHeadingCalibrated = false;
-
-        poseFusion.reset(pedroFollowerSeed, System.currentTimeMillis());
-        lastFusionVisionTimestampMs = vision.getLastPoseTimestampMs();
         visionRelocalizationEnabled = true;
     }
 
@@ -356,8 +226,15 @@ public class DriveSubsystem implements Subsystem {
 
     private double lastPeriodicMs = 0.0;
 
-    @Override
-    public void periodic() {
+    /**
+     * Infinite Command that drives the Pedro follower update + vision feed each scheduler tick.
+     * Scheduled once in OpMode init; runs until OpMode stop.
+     */
+    public com.pedropathing.ivy.Command periodic() {
+        return Commands.infinite(this::doPeriodic);
+    }
+
+    private void doPeriodic() {
         long start = System.nanoTime();
         follower.update();
         lastPeriodicMs = (System.nanoTime() - start) / 1_000_000.0;
@@ -369,27 +246,32 @@ public class DriveSubsystem implements Subsystem {
             vision.setRobotHeading(headingRad);
         }
 
-        updatePoseFusion();
-        RobotState.packet.put("/vision/state", visionState.name());
-
-        // Log robot pose for AdvantageScope field visualization (required for WPILOG replay)
-        Pose pose = follower.getPose();
-        if (pose != null) {
-            // Convert inches to meters for AdvantageScope (SI units required)
-            double xMeters = pose.getX() * 0.0254;
-            double yMeters = pose.getY() * 0.0254;
-            double headingRadians = follower.getHeading();
-//            KoalaLog.logPose2d("Robot/Pose", xMeters, yMeters, headingRadians, true);
+        maybeFeedVisionMeasurement();
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/state", visionState.name());
         }
 
         // Heading diagnostics for waggle investigation (follower target vs current)
+        Pose pose = follower.getPose();
         if (pose != null) {
             // Pedro follower doesn't expose target heading directly; approximate using current path heading
             double currentHeading = follower.getHeading();
-            RobotState.packet.put("HeadingDiag/current_deg", Math.toDegrees(currentHeading));
-            RobotState.packet.put("HeadingDiag/mode", follower.isBusy() ? "path_follow" : "idle/hold");
-            RobotState.packet.put("HeadingDiag/speed_ips", getRobotSpeedInchesPerSecond());
+            if (TelemetrySettings.isVerbose()) {
+                RobotState.packet.put("HeadingDiag/current_deg", Math.toDegrees(currentHeading));
+                RobotState.packet.put("HeadingDiag/mode", follower.isBusy() ? "path_follow" : "idle/hold");
+                RobotState.packet.put("HeadingDiag/speed_ips", getRobotSpeedInchesPerSecond());
+            }
         }
+
+        double lfA = getLfCurrentAmps();
+        double rfA = getRfCurrentAmps();
+        double lbA = getLbCurrentAmps();
+        double rbA = getRbCurrentAmps();
+        RobotState.packet.put("drive/lf/current_amps", lfA);
+        RobotState.packet.put("drive/rf/current_amps", rfA);
+        RobotState.packet.put("drive/lb/current_amps", lbA);
+        RobotState.packet.put("drive/rb/current_amps", rbA);
+        RobotState.packet.put("drive/total/current_amps", sumCurrentAmps(lfA, rfA, lbA, rbA));
     }
 
     public double getLastPeriodicMs() {
@@ -567,7 +449,6 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
-//        double[] rotated = rotateFieldInput(fieldX , fieldY);
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : normalMultiplier;
@@ -582,7 +463,7 @@ public class DriveSubsystem implements Subsystem {
         double targetHeading = FieldConstants.getAimAngleTo(pose , targetPose);
 
         // Get per-robot aim assist config
-        DriveAimAssistConfig aimConfig = aimAssistConfig();
+        DriveAimAssistConfig aimConfig = aimAssist;
 
         double headingErrorRad = normalizeAngle(targetHeading - follower.getHeading());
         double headingErrorDeg = Math.toDegrees(headingErrorRad);
@@ -631,16 +512,18 @@ public class DriveSubsystem implements Subsystem {
         lastAimTurnCommand = turn;
         double errorRateDegPerSec = Math.toDegrees(errorRateRadPerSec);
 
-        RobotState.packet.put("Command/AimAndDrive/Aim Error (deg)", headingErrorDeg);
-        RobotState.packet.put("Command/AimAndDrive/Aim Error Rate (deg/s)", errorRateDegPerSec);
-        RobotState.packet.put("Command/AimAndDrive/Aim Target Heading (deg)", Math.toDegrees(targetHeading));
-        RobotState.packet.put("Command/AimAndDrive/Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
-        RobotState.packet.put("Command/AimAndDrive/P Gain", pGain);
-        RobotState.packet.put("Command/AimAndDrive/P Term", pTerm);
-        RobotState.packet.put("Command/AimAndDrive/D Term", dTerm);
-        RobotState.packet.put("Command/AimAndDrive/Static Applied", staticApplied);
-        RobotState.packet.put("Command/AimAndDrive/Turn Cmd Raw", turnRaw);
-        RobotState.packet.put("Command/AimAndDrive/Turn Cmd (slewed)", turn);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("Command/AimAndDrive/Aim Error (deg)", headingErrorDeg);
+            RobotState.packet.put("Command/AimAndDrive/Aim Error Rate (deg/s)", errorRateDegPerSec);
+            RobotState.packet.put("Command/AimAndDrive/Aim Target Heading (deg)", Math.toDegrees(targetHeading));
+            RobotState.packet.put("Command/AimAndDrive/Aim Odo Heading (deg)", Math.toDegrees(follower.getHeading()));
+            RobotState.packet.put("Command/AimAndDrive/P Gain", pGain);
+            RobotState.packet.put("Command/AimAndDrive/P Term", pTerm);
+            RobotState.packet.put("Command/AimAndDrive/D Term", dTerm);
+            RobotState.packet.put("Command/AimAndDrive/Static Applied", staticApplied);
+            RobotState.packet.put("Command/AimAndDrive/Turn Cmd Raw", turnRaw);
+            RobotState.packet.put("Command/AimAndDrive/Turn Cmd (slewed)", turn);
+        }
 
         lastCommandForward = forward;
         lastCommandStrafeLeft = strafeLeft;
@@ -648,78 +531,6 @@ public class DriveSubsystem implements Subsystem {
         lastRequestRotation = turn;
 
         follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
-    }
-
-    /**
-     * Vision-centered aiming: Uses Limelight tx (horizontal offset) to center the AprilTag.
-     * This approach directly uses the camera's measurement without coordinate calculations.
-     * Similar to the original FTC RobotAutoDriveToAprilTagOmni example.
-     *
-     * When tx = 0, the target is centered in the camera view.
-     * Positive error means robot needs to turn counter-clockwise (left),
-     * negative error means turn clockwise (right).
-     *
-     * @param fieldX Driver's X input (strafe)
-     * @param fieldY Driver's Y input (forward)
-     * @param slowMode Whether slow mode is active
-     */
-    public void aimAndDriveVisionCentered(double fieldX , double fieldY , boolean slowMode) {
-        // Invert controls for Red alliance so driver perspective matches their side of field
-        Alliance alliance = vision.getAlliance();
-        if (alliance == Alliance.RED) {
-            fieldX = -fieldX;
-            fieldY = -fieldY;
-        }
-
-        lastRequestFieldX = fieldX;
-        lastRequestFieldY = fieldY;
-        lastRequestSlowMode = slowMode;
-//        double[] rotated = rotateFieldInput(fieldX , fieldY);
-        double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
-        double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
-        double multiplier = slowMode ? slowMultiplier : normalMultiplier;
-        double forward = Range.clip(fieldY * multiplier , - 1.0 , 1.0);
-        double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
-
-        // Get vision aiming error (robot-relative, in radians)
-        Optional<Double> visionErrorOpt = vision.getVisionAimErrorRad();
-
-        // If no valid tag, hold current heading (zero turn)
-        if (!visionErrorOpt.isPresent()) {
-            lastCommandForward = forward;
-            lastCommandStrafeLeft = strafeLeft;
-            lastCommandTurn = 0.0;
-            lastRequestRotation = 0.0;
-            lastAimErrorRad = Double.NaN;
-            follower.setTeleOpDrive(forward, strafeLeft, 0.0, robotCentric);
-            return;
-        }
-
-        double headingError = visionErrorOpt.get();
-
-        // Deadband - stop turning if error is small enough
-        double deadbandRad = Math.toRadians(visionCenteredAimConfig.deadbandDeg);
-        if (Math.abs(headingError) < deadbandRad) {
-            headingError = 0.0;
-        }
-
-        // Convert to turn command using P controller
-        double maxTurn = Math.max(0.0, visionCenteredAimConfig.kMaxTurn);
-        // kP units: (motor power / radian) - multiply error by gain
-        double turn = Range.clip(visionCenteredAimConfig.kP * headingError, -maxTurn, maxTurn);
-
-        lastAimErrorRad = headingError; // Store for telemetry
-        lastCommandForward = forward;
-        lastCommandStrafeLeft = strafeLeft;
-        lastCommandTurn = turn;
-        lastRequestRotation = turn;
-
-        follower.setTeleOpDrive(forward, strafeLeft, turn, robotCentric);
-
-        // Optionally relocalize if enabled
-        if (visionRelocalizationEnabled && vision.hasValidTag()) {
-            maybeRelocalizeFromVision();
-        }
     }
 
     /**
@@ -742,7 +553,6 @@ public class DriveSubsystem implements Subsystem {
         lastRequestFieldX = fieldX;
         lastRequestFieldY = fieldY;
         lastRequestSlowMode = slowMode;
-//        double[] rotated = rotateFieldInput(fieldX , fieldY);
         double slowMultiplier = Range.clip(teleOpDriveConfig.slowMultiplier , 0.0 , 1.0);
         double normalMultiplier = Range.clip(teleOpDriveConfig.normalMultiplier , 0.0 , 1.0);
         double multiplier = slowMode ? slowMultiplier : normalMultiplier;
@@ -750,7 +560,7 @@ public class DriveSubsystem implements Subsystem {
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
         // Get fixed target heading based on alliance
-        DriveFixedAngleAimConfig aimConfig = fixedAngleAimConfig();
+        DriveFixedAngleAimConfig aimConfig = fixedAngleAim;
         double targetHeadingDeg = (alliance == Alliance.RED)
             ? aimConfig.redHeadingDeg
             : aimConfig.blueHeadingDeg;
@@ -799,7 +609,7 @@ public class DriveSubsystem implements Subsystem {
         double strafeLeft = Range.clip(- fieldX * multiplier , - 1.0 , 1.0);
 
         // Get right trigger fixed target heading based on alliance
-        DriveRightTriggerFixedAngleConfig aimConfig = rightTriggerFixedAngleConfig();
+        DriveRightTriggerFixedAngleConfig aimConfig = rightTriggerFixedAngle;
         double targetHeadingDeg = (alliance == Alliance.RED)
             ? aimConfig.redParkHeadingDeg
             : aimConfig.blueParkHeadingDeg;
@@ -946,15 +756,6 @@ public class DriveSubsystem implements Subsystem {
         return Math.atan2(Math.sin(angle) , Math.cos(angle));
     }
 
-    protected double[] rotateFieldInput(double fieldX , double fieldY) {
-        double cos = Math.cos(- fieldHeadingOffsetRad);
-        double sin = Math.sin(- fieldHeadingOffsetRad);
-        return new double[]{
-                cos * fieldX - sin * fieldY ,
-                sin * fieldX + cos * fieldY
-        };
-    }
-
     private boolean isGoalAprilTag(int tagId) {
         return tagId == FieldConstants.BLUE_GOAL_TAG_ID || tagId == FieldConstants.RED_GOAL_TAG_ID;
     }
@@ -980,40 +781,48 @@ public class DriveSubsystem implements Subsystem {
     }
 
     private void recordVisionAgreementTelemetry(double distance , double headingErrorDeg , boolean mt2Safe) {
-        RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distance);
-        RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
-        RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
-        RobotState.packet.put("/vision/Poses/mt2DistanceThreshold", mt2DistanceThresholdInches());
-        RobotState.packet.put("/vision/Poses/mt2HeadingThresholdDeg", visionRelocalizeConfig.MT2HeadingThresholdDeg);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/Poses/distanceBetweenMT1MT2", distance);
+            RobotState.packet.put("/vision/Poses/relocalizeWithMT2", mt2Safe);
+            RobotState.packet.put("/vision/Poses/headingErrorMT1MT2", headingErrorDeg);
+            RobotState.packet.put("/vision/Poses/mt2DistanceThreshold", mt2DistanceThresholdInches());
+            RobotState.packet.put("/vision/Poses/mt2HeadingThresholdDeg", visionRelocalizeConfig.MT2HeadingThresholdDeg);
+        }
     }
 
     private void recordVisionPoseTelemetry(Pose mt1 , Pose mt2) {
-        double mt1HeadingDeg = mt1 == null ? Double.NaN : Math.toDegrees(mt1.getHeading());
-        double mt2HeadingDeg = mt2 == null ? Double.NaN : Math.toDegrees(mt2.getHeading());
+        if (TelemetrySettings.isVerbose()) {
+            double mt1HeadingDeg = mt1 == null ? Double.NaN : Math.toDegrees(mt1.getHeading());
+            double mt2HeadingDeg = mt2 == null ? Double.NaN : Math.toDegrees(mt2.getHeading());
 
-        RobotState.packet.put("/vision/Poses/mt1/x", mt1 == null ? Double.NaN : mt1.getX());
-        RobotState.packet.put("/vision/Poses/mt1/y", mt1 == null ? Double.NaN : mt1.getY());
-        RobotState.packet.put("/vision/Poses/mt1/heading_deg", mt1HeadingDeg);
+            RobotState.packet.put("/vision/Poses/mt1/x", mt1 == null ? Double.NaN : mt1.getX());
+            RobotState.packet.put("/vision/Poses/mt1/y", mt1 == null ? Double.NaN : mt1.getY());
+            RobotState.packet.put("/vision/Poses/mt1/heading_deg", mt1HeadingDeg);
 
-        RobotState.packet.put("/vision/Poses/mt2/x", mt2 == null ? Double.NaN : mt2.getX());
-        RobotState.packet.put("/vision/Poses/mt2/y", mt2 == null ? Double.NaN : mt2.getY());
-        RobotState.packet.put("/vision/Poses/mt2/heading_deg", mt2HeadingDeg);
+            RobotState.packet.put("/vision/Poses/mt2/x", mt2 == null ? Double.NaN : mt2.getX());
+            RobotState.packet.put("/vision/Poses/mt2/y", mt2 == null ? Double.NaN : mt2.getY());
+            RobotState.packet.put("/vision/Poses/mt2/heading_deg", mt2HeadingDeg);
+        }
     }
 
     private void recordRelocalizeSource(String source , boolean success , long timestampMs , int tagId) {
         lastRelocalizeSource = source;
-        RobotState.packet.put("/vision/relocalize/last/source", source);
-        RobotState.packet.put("/vision/relocalize/last/success", success);
-        RobotState.packet.put("/vision/relocalize/last/timestamp_ms", timestampMs);
-        RobotState.packet.put("/vision/relocalize/last/tag", tagId);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/relocalize/last/source", source);
+            RobotState.packet.put("/vision/relocalize/last/success", success);
+            RobotState.packet.put("/vision/relocalize/last/timestamp_ms", timestampMs);
+            RobotState.packet.put("/vision/relocalize/last/tag", tagId);
+        }
     }
 
     private void recordAutoRelocalizePacket(boolean success , long timestampMs , int tagId , String status , String source) {
-        RobotState.packet.put("/vision/relocalize/auto/success", success);
-        RobotState.packet.put("/vision/relocalize/auto/timestamp_ms", timestampMs);
-        RobotState.packet.put("/vision/relocalize/auto/tag", tagId);
-        RobotState.packet.put("/vision/relocalize/auto/status", status);
-        RobotState.packet.put("/vision/relocalize/auto/source", source);
+        if (TelemetrySettings.isVerbose()) {
+            RobotState.packet.put("/vision/relocalize/auto/success", success);
+            RobotState.packet.put("/vision/relocalize/auto/timestamp_ms", timestampMs);
+            RobotState.packet.put("/vision/relocalize/auto/tag", tagId);
+            RobotState.packet.put("/vision/relocalize/auto/status", status);
+            RobotState.packet.put("/vision/relocalize/auto/source", source);
+        }
     }
 
     private boolean poseWithinField(Pose pose) {
@@ -1064,7 +873,9 @@ public class DriveSubsystem implements Subsystem {
             return;
         }
 
-        if (forceRelocalizeFromVision()) {
+        // Use current odometry as reference - reject large jumps during automatic relocalization
+        Pose currentOdometry = follower.getPose();
+        if (forceRelocalizeFromVision(currentOdometry)) {
             // Successful re-localization already recorded inside the helper.
         }
     }
@@ -1105,13 +916,12 @@ public class DriveSubsystem implements Subsystem {
             return;
         }
 
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
-        if (!snapOpt.isPresent()) {
+        VisionSubsystemLimelight.TagSnapshot snapshot = vision.getLastSnapshot();
+        if (snapshot == null) {
             recordAutoRelocalizePacket(false , nowMs , -1 , "launch relocalize failed" , "no_snapshot");
             return;
         }
 
-        VisionSubsystemLimelight.TagSnapshot snapshot = snapOpt.get();
         if (!isGoalAprilTag(snapshot.tagId)) {
             recordAutoRelocalizePacket(false , nowMs , snapshot.tagId , "launch relocalize failed" , "not_goal_tag");
             return;
@@ -1151,7 +961,9 @@ public class DriveSubsystem implements Subsystem {
             recordVisionAgreementTelemetry(distanceBetween(pedroPoseMT1, pedroPoseMT2), headingErrorDegrees(pedroPoseMT1, pedroPoseMT2), mt2Safe);
         }
 
-        if (forceRelocalizeFromVision()) {
+        // Use current odometry as reference - reject large jumps during shot correction
+        Pose currentOdometry = follower.getPose();
+        if (forceRelocalizeFromVision(currentOdometry)) {
             lastAutoRelocalizeMs = nowMs;
             visionRelocalizeStatus = "Re-localized on launch";
             visionRelocalizeStatusMs = nowMs;
@@ -1203,21 +1015,71 @@ public class DriveSubsystem implements Subsystem {
         Pose correctedPose = new Pose(currentPose.getX() , currentPose.getY() , targetHeading);
 
         follower.setPose(correctedPose);
-        poseFusion.reset(correctedPose , System.currentTimeMillis());
         vision.markOdometryUpdated();
 
         visionRelocalizeStatus = "Heading reset to field-forward (square to wall)";
         visionRelocalizeStatusMs = System.currentTimeMillis();
     }
+    /**
+     * Applies a relocalized pose by resetting the FusionLocalizer's Kalman
+     * covariance AND calling Pedro's follower.setPose. Both calls are needed:
+     * the localizer update flushes filter uncertainty so the next vision
+     * correction doesn't pull the pose around against the manual override;
+     * the follower update keeps Pedro's internal path-tracking T-value
+     * consistent with the new pose.
+     */
+    private void applyRelocalizedPose(Pose pose) {
+        if (Constants.activeFusionLocalizer != null) {
+            Constants.activeFusionLocalizer.forceRelocalize(
+                    pose,
+                    DriveFusionConfig.relocalizeCovarianceXY,
+                    Math.toRadians(DriveFusionConfig.relocalizeCovarianceHeadingDeg));
+        }
+        follower.setPose(pose);
+    }
+
+    /**
+     * Forces relocalization from vision WITHOUT jump safeguards.
+     * Use ONLY for manual driver-initiated relocalization (X button) where the driver
+     * intentionally wants to reset pose after a crash or bad state.
+     *
+     * For all other relocalization (auto init, shot correction), use the overloaded
+     * version with a reference pose for jump safeguards.
+     *
+     * @return {@code true} when the pose was updated.
+     */
     public boolean forceRelocalizeFromVision() {
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapOpt = vision.getLastSnapshot();
+        // No reference pose = no jump safeguards (manual recovery scenario)
+        return forceRelocalizeFromVisionInternal(null);
+    }
+
+    /**
+     * Forces relocalization from vision WITH jump safeguards.
+     * Compares the proposed vision pose against the reference pose and rejects
+     * if the jump exceeds configured thresholds.
+     *
+     * @param referencePose The pose to compare against (expected start pose or current odometry).
+     *                      If null, no jump check is performed (same as forceRelocalizeFromVision()).
+     * @return {@code true} when the pose was updated.
+     */
+    public boolean forceRelocalizeFromVision(Pose referencePose) {
+        return forceRelocalizeFromVisionInternal(referencePose);
+    }
+
+    /**
+     * Internal implementation of vision relocalization with optional jump safeguards.
+     *
+     * @param referencePose The pose to compare against for jump limits. Null to skip jump check.
+     * @return {@code true} when the pose was updated.
+     */
+    private boolean forceRelocalizeFromVisionInternal(Pose referencePose) {
         long nowMs = System.currentTimeMillis();
-        if (!snapOpt.isPresent()) {
+        VisionSubsystemLimelight.TagSnapshot snap = vision.getLastSnapshot();
+        if (snap == null) {
             recordRelocalizeSource("none", false, nowMs, -1);
             return false;
         }
 
-        VisionSubsystemLimelight.TagSnapshot snap = snapOpt.get();
 
         // 1. Use MT1 whenever heading is unknown
         Pose pedroPoseMT1 = snap.pedroPoseMT1;
@@ -1229,21 +1091,49 @@ public class DriveSubsystem implements Subsystem {
                 return false;
             }
 
-            follower.setPose(pedroPoseMT1);
-            poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
+            // Even for initial seed, apply jump check if reference provided
+            if (referencePose != null && !isPoseJumpAllowed(pedroPoseMT1, referencePose, "mt1_seed")) {
+                return false;
+            }
+
+            applyRelocalizedPose(pedroPoseMT1);
             vision.markOdometryUpdated();
 
-            // Now heading is calibrated
+            // Now heading is calibrated — clear any stale disagreement count
             visionState = HEADING_KNOWN;
+            consecutiveMt2DisagreementCount = 0;
             recordRelocalizeSource("mt1_seed", true, nowMs, snap.tagId);
             return true;
         }
 
         // 2. If heading is known, prefer MT2 when it agrees with MT1 (or MT1 missing)
         boolean mt2Safe = pedroPoseMT1 != null && pedroPoseMT2 != null && posesAgreeForMt2(pedroPoseMT1, pedroPoseMT2);
+
+        // Detect wrong heading seed: if both poses are visible but consistently disagree,
+        // the initial MT1 seed likely picked the wrong ambiguity solution (180° flip).
+        // Reset to HEADING_UNKNOWN so step 1 re-seeds on the next call.
+        if (pedroPoseMT1 != null && pedroPoseMT2 != null) {
+            if (mt2Safe) {
+                consecutiveMt2DisagreementCount = 0;
+            } else {
+                consecutiveMt2DisagreementCount++;
+                RobotState.packet.put("/vision/mt2DisagreementCount", consecutiveMt2DisagreementCount);
+                if (consecutiveMt2DisagreementCount >= visionRelocalizeConfig.mt2DisagreementResetFrames) {
+                    visionState = HEADING_UNKNOWN;
+                    consecutiveMt2DisagreementCount = 0;
+                    recordRelocalizeSource("mt2_heading_reset", false, nowMs, snap.tagId);
+                    return false;
+                }
+            }
+        }
+
         if (pedroPoseMT2 != null && (mt2Safe || pedroPoseMT1 == null)) {
-            follower.setPose(pedroPoseMT2);
-            poseFusion.reset(pedroPoseMT2, System.currentTimeMillis());
+            // Check jump limits against reference pose
+            if (referencePose != null && !isPoseJumpAllowed(pedroPoseMT2, referencePose, "mt2")) {
+                return false;
+            }
+
+            applyRelocalizedPose(pedroPoseMT2);
             vision.markOdometryUpdated();
             recordRelocalizeSource("mt2", true, nowMs, snap.tagId);
             return true;
@@ -1251,8 +1141,12 @@ public class DriveSubsystem implements Subsystem {
 
         // 3. Fallback to MT1 if MT2 unavailable or unsafe
         if (pedroPoseMT1 != null) {
-            follower.setPose(pedroPoseMT1);
-            poseFusion.reset(pedroPoseMT1, System.currentTimeMillis());
+            // Check jump limits against reference pose
+            if (referencePose != null && !isPoseJumpAllowed(pedroPoseMT1, referencePose, "mt1")) {
+                return false;
+            }
+
+            applyRelocalizedPose(pedroPoseMT1);
             vision.markOdometryUpdated();
             recordRelocalizeSource("mt1", true, nowMs, snap.tagId);
             return true;
@@ -1262,45 +1156,63 @@ public class DriveSubsystem implements Subsystem {
         return false;
     }
 
-    private void updatePoseFusion() {
-        long timestampMs = System.currentTimeMillis();
-
-        // 1. Always update with odometry
-        poseFusion.updateWithOdometry(follower.getPose(), timestampMs);
-
-        // 2. Get the latest LL tag snapshot
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.getLastSnapshot();
-        if (!snapshotOpt.isPresent()) {
-            return;
+    /**
+     * Checks if a proposed vision pose is within allowed jump limits of the reference pose.
+     * Logs rejection telemetry if the jump is too large.
+     *
+     * @param proposedPose The vision-reported pose
+     * @param referencePose The pose to compare against (expected start or current odometry)
+     * @param source Label for telemetry logging (e.g., "mt1", "mt2", "mt1_seed")
+     * @return true if the jump is allowed, false if it exceeds limits
+     */
+    private boolean isPoseJumpAllowed(Pose proposedPose, Pose referencePose, String source) {
+        if (proposedPose == null || referencePose == null) {
+            return true; // Can't check, allow by default
         }
 
-        VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
-        Pose visionPose = snapshot.getRobotPosePedroMT1().orElse(null);
-        //  Pose visionPose = snapshot.getRobotPosePedroMT2().orElse(null);  // try this once we think mt2 is working
+        double jumpDistance = distanceBetween(proposedPose, referencePose);
+        double jumpHeadingDeg = Math.abs(Math.toDegrees(normalizeAngle(
+                proposedPose.getHeading() - referencePose.getHeading())));
 
-        if (visionPose == null) {
-            return;
+        double maxDistance = visionRelocalizeConfig.maxJumpDistanceInches;
+        double maxHeadingDeg = visionRelocalizeConfig.maxJumpHeadingDeg;
+
+        boolean distanceOk = jumpDistance <= maxDistance;
+        boolean headingOk = jumpHeadingDeg <= maxHeadingDeg;
+
+        // Log jump diagnostics
+        RobotState.packet.put("/vision/relocalize/jump/distance_in", jumpDistance);
+        RobotState.packet.put("/vision/relocalize/jump/heading_deg", jumpHeadingDeg);
+        RobotState.packet.put("/vision/relocalize/jump/max_distance_in", maxDistance);
+        RobotState.packet.put("/vision/relocalize/jump/max_heading_deg", maxHeadingDeg);
+        RobotState.packet.put("/vision/relocalize/jump/distance_ok", distanceOk);
+        RobotState.packet.put("/vision/relocalize/jump/heading_ok", headingOk);
+
+        if (!distanceOk || !headingOk) {
+            String reason = !distanceOk && !headingOk ? "distance_and_heading"
+                    : !distanceOk ? "distance" : "heading";
+            recordRelocalizeSource(source + "_jump_rejected_" + reason, false,
+                    System.currentTimeMillis(), -1);
+            RobotState.packet.put("/vision/relocalize/jump/rejected", true);
+            RobotState.packet.put("/vision/relocalize/jump/reject_reason", reason);
+            return false;
         }
 
-        // 3. Only use fresh measurements
-        long visionTimestamp = vision.getLastPoseTimestampMs();
-        if (visionTimestamp <= lastFusionVisionTimestampMs) {
-            return;
-        }
-
-        // 4. Use vision measurement
-        poseFusion.addVisionMeasurement(
-                visionPose,
-                visionTimestamp,
-                snapshot.getFtcRange(),
-                snapshot.getDecisionMargin()
-        );
-
-        lastFusionVisionTimestampMs = visionTimestamp;
+        RobotState.packet.put("/vision/relocalize/jump/rejected", false);
+        return true;
     }
 
-    public PoseFusion.State getPoseFusionStateSnapshot() {
-        return poseFusion.getStateSnapshot();
+    private void maybeFeedVisionMeasurement() {
+        if (fusionLocalizer == null || vision == null) return;
+        VisionSubsystemLimelight.TagSnapshot snap = vision.getLastSnapshot();
+        if (snap == null) return;
+        if (snap.capturedAtNs == lastFedSnapshotNs) return;
+        lastFedSnapshotNs = snap.capturedAtNs;
+        if (snap.decisionMargin < DriveFusionConfig.minTargetAreaPercent) return;
+        Pose pose = snap.pedroPoseMT2 != null ? snap.pedroPoseMT2 : snap.pedroPoseMT1;
+        if (pose == null) return;
+        long measurementNs = snap.capturedAtNs - (long)(DriveFusionConfig.limelightLatencyMs * 1_000_000L);
+        fusionLocalizer.addMeasurement(pose, measurementNs);
     }
 
     public double getRobotSpeedInchesPerSecond() {
@@ -1311,6 +1223,7 @@ public class DriveSubsystem implements Subsystem {
             }
             return Math.abs(velocity.getMagnitude());
         } catch (Exception ignored) {
+            // Default to +Infinity so "is stationary?" callers fail closed (won't fire by accident).
             return Double.POSITIVE_INFINITY;
         }
     }
@@ -1329,18 +1242,6 @@ public class DriveSubsystem implements Subsystem {
         return Double.NaN;
     }
 
-//    public boolean correctInitialHeadingFromVision() {
-//        if (!vision.hasValidTag()) {
-//            RobotLog.dd(LOG_TAG, "No AprilTag visible - cannot correct heading");
-//            return false;
-//        }
-//        boolean success = forceRelocalizeFromVision();
-//        if (!success) {
-//            RobotLog.dd(LOG_TAG, "Vision pose unavailable - cannot correct heading");
-//        }
-//        return success;
-//    }
-
     private static double distanceBetween(Pose a , Pose b) {
         return Math.hypot(a.getX() - b.getX() , a.getY() - b.getY());
     }
@@ -1358,6 +1259,7 @@ public class DriveSubsystem implements Subsystem {
             }
             return velocity.getMagnitude();
         } catch (Exception ignored) {
+            // Telemetry-only path; falling back to 0 is preferable to crashing the loop.
             return 0.0;
         }
     }
@@ -1483,87 +1385,98 @@ public class DriveSubsystem implements Subsystem {
         return followerVelocityIps();
     }
 
-    public double getLastVisionAngleDeg() {
-        return Double.isNaN(lastGoodVisionAngle) ? Double.NaN : Math.toDegrees(lastGoodVisionAngle);
+    // =========================================================================
+    // Ivy Command factories. Traffic Cones idiom: subsystem owns its commands.
+    // Aim variants suspend the default drive command via priority + SUSPEND;
+    // when the aim command ends, default resumes.
+    // =========================================================================
+
+    /** Joystick magnitudes below this are zeroed inside the drive command (joysticks never quite center). */
+    private static final double DRIVE_TRANSLATION_DEADBAND = 0.05;
+    private static double applyDriveDeadband(double value) {
+        return Math.abs(value) < DRIVE_TRANSLATION_DEADBAND ? 0.0 : value;
     }
 
-    public double getVisionSampleAgeMs() {
-        return lastVisionTimestamp == Double.NEGATIVE_INFINITY
-                ? Double.POSITIVE_INFINITY
-                : Math.max(0.0, clock.milliseconds() - lastVisionTimestamp);
+    /**
+     * Priority-0 infinite default drive Command. Reads the driver inputs each
+     * tick and passes them to driveTeleOp. Use interruptedBehavior=SUSPEND so
+     * higher-priority aim commands preempt and this resumes when they end.
+     */
+    public com.pedropathing.ivy.Command defaultDrive(
+            java.util.function.DoubleSupplier fieldX,
+            java.util.function.DoubleSupplier fieldY,
+            java.util.function.DoubleSupplier rotation,
+            java.util.function.BooleanSupplier slow,
+            java.util.function.BooleanSupplier ramp) {
+        return Commands.infinite(() -> driveTeleOp(
+                        fieldX.getAsDouble(),
+                        fieldY.getAsDouble(),
+                        rotation.getAsDouble(),
+                        slow.getAsBoolean(),
+                        ramp.getAsBoolean()))
+                .requiring(this)
+                .setPriority(0)
+                .setInterruptedBehavior(com.pedropathing.ivy.behaviors.InterruptedBehavior.SUSPEND);
     }
 
-    public boolean getFusionHasPose() {
-        return poseFusion.getStateSnapshot().hasFusedPose;
+    /**
+     * Priority-1 infinite geometry aim Command. Higher priority preempts the
+     * default drive; the default suspends and resumes when this is cancelled.
+     */
+    public com.pedropathing.ivy.Command aimAndDriveCmd(
+            java.util.function.DoubleSupplier fieldX,
+            java.util.function.DoubleSupplier fieldY,
+            java.util.function.BooleanSupplier slow) {
+        return Commands.infinite(() -> aimAndDrive(
+                        applyDriveDeadband(fieldX.getAsDouble()),
+                        applyDriveDeadband(fieldY.getAsDouble()),
+                        slow.getAsBoolean()))
+                .requiring(this)
+                .setPriority(1);
     }
 
-    public double getFusionPoseXInches() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        return (state.hasFusedPose && Double.isFinite(state.fusedXInches)) ? state.fusedXInches : Double.NaN;
+    /**
+     * Priority-1 infinite fixed-angle aim Command (driver triangle).
+     */
+    public com.pedropathing.ivy.Command aimAndDriveFixedAngleCmd(
+            java.util.function.DoubleSupplier fieldX,
+            java.util.function.DoubleSupplier fieldY,
+            java.util.function.BooleanSupplier slow) {
+        return Commands.infinite(() -> aimAndDriveFixedAngle(
+                        applyDriveDeadband(fieldX.getAsDouble()),
+                        applyDriveDeadband(fieldY.getAsDouble()),
+                        slow.getAsBoolean()))
+                .requiring(this)
+                .setPriority(1);
     }
 
-    public double getFusionPoseYInches() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        return (state.hasFusedPose && Double.isFinite(state.fusedYInches)) ? state.fusedYInches : Double.NaN;
+    /**
+     * Priority-1 infinite right-trigger fixed-angle aim Command.
+     */
+    public com.pedropathing.ivy.Command aimAndDriveRightTriggerCmd(
+            java.util.function.DoubleSupplier fieldX,
+            java.util.function.DoubleSupplier fieldY,
+            java.util.function.BooleanSupplier slow) {
+        return Commands.infinite(() -> aimAndDriveRightTriggerFixedAngle(
+                        applyDriveDeadband(fieldX.getAsDouble()),
+                        applyDriveDeadband(fieldY.getAsDouble()),
+                        slow.getAsBoolean()))
+                .requiring(this)
+                .setPriority(1);
     }
 
-    public double getFusionPoseHeadingDeg() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        return (state.hasFusedPose && Double.isFinite(state.fusedHeadingRad)) ? Math.toDegrees(state.fusedHeadingRad) : Double.NaN;
+    /**
+     * One-shot Command that triggers vision-driven relocalization.
+     */
+    public com.pedropathing.ivy.Command tryRelocalizeCmd() {
+        return Commands.instant(this::tryRelocalize).requiring(this);
     }
 
-    public double getFusionDeltaXYInches() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        if (state.hasFusedPose
-                && Double.isFinite(state.odometryXInches)
-                && Double.isFinite(state.odometryYInches)) {
-            return Math.hypot(
-                    state.fusedXInches - state.odometryXInches,
-                    state.fusedYInches - state.odometryYInches);
-        }
-        return Double.NaN;
+    /**
+     * One-shot Command that resets the follower's heading to field-forward.
+     */
+    public com.pedropathing.ivy.Command resetHeadingCmd() {
+        return Commands.instant(this::resetHeadingToFieldForward).requiring(this);
     }
 
-    public double getFusionDeltaHeadingDeg() {
-        PoseFusion.State state = poseFusion.getStateSnapshot();
-        if (state.hasFusedPose
-                && Double.isFinite(state.odometryXInches)
-                && Double.isFinite(state.odometryYInches)
-                && Double.isFinite(state.odometryHeadingRad)) {
-            return Math.toDegrees(normalizeAngle(state.fusedHeadingRad - state.odometryHeadingRad));
-        }
-        return Double.NaN;
-    }
-
-    public double getFusionVisionWeight() {
-        return poseFusion.getStateSnapshot().lastVisionWeight;
-    }
-
-    public boolean getFusionVisionAccepted() {
-        return poseFusion.getStateSnapshot().lastVisionAccepted;
-    }
-
-    public double getFusionVisionErrorInches() {
-        return poseFusion.getStateSnapshot().lastVisionTranslationErrorInches;
-    }
-
-    public double getFusionVisionHeadingErrorDeg() {
-        return poseFusion.getStateSnapshot().lastVisionHeadingErrorDeg;
-    }
-
-    public double getFusionVisionRangeInches() {
-        return poseFusion.getStateSnapshot().lastVisionRangeInches;
-    }
-
-    public double getFusionVisionDecisionMargin() {
-        return poseFusion.getStateSnapshot().lastVisionDecisionMargin;
-    }
-
-    public double getFusionLastVisionAgeMs() {
-        return poseFusion.getStateSnapshot().ageOfLastVisionMs;
-    }
-
-    public double getFusionOdometryDtMs() {
-        return poseFusion.getStateSnapshot().lastOdometryDtMs;
-    }
 }

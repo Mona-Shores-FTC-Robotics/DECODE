@@ -1,16 +1,13 @@
 package org.firstinspires.ftc.teamcode.util;
 
 import com.pedropathing.geometry.Pose;
-
-import dev.nextftc.bindings.Button;
-import dev.nextftc.ftc.GamepadEx;
+import com.qualcomm.robotcore.hardware.Gamepad;
 
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.LightingSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
-import java.util.Optional;
 
 /**
  * Coordinates alliance selection by combining AprilTag detections with manual overrides bound
@@ -19,10 +16,7 @@ import java.util.Optional;
 public final class AllianceSelector {
 
     private final Alliance defaultAlliance;
-    private final Button blueOverrideButton;
-    private final Button redOverrideButton;
-    private final Button autoOverrideButton;
-    private final Button defaultButton;
+    private final Gamepad driver;
 
     private boolean manualOverride;
     private boolean visionPreferred;
@@ -36,20 +30,20 @@ public final class AllianceSelector {
     private double detectedYaw = Double.NaN;
     private VisionSubsystemLimelight.TagSnapshot lastSnapshot;
 
-    public AllianceSelector(GamepadEx driver, Alliance defaultAlliance) {
+    public AllianceSelector(Gamepad driver, Alliance defaultAlliance) {
+        this.driver = driver;
         this.defaultAlliance = defaultAlliance;
         this.selectedAlliance = defaultAlliance == null ? Alliance.UNKNOWN : defaultAlliance;
         this.visionPreferred = (defaultAlliance == null || defaultAlliance == Alliance.UNKNOWN);
+    }
 
-        blueOverrideButton = driver.dpadLeft();
-        redOverrideButton = driver.dpadRight();
-        autoOverrideButton = driver.dpadDown();
-        defaultButton = driver.dpadUp();
-
-        blueOverrideButton.whenBecomesTrue(() -> selectAllianceManually(Alliance.BLUE));
-        redOverrideButton.whenBecomesTrue(() -> selectAllianceManually(Alliance.RED));
-        autoOverrideButton.whenBecomesTrue(this::enableVisionOverride);
-        defaultButton.whenBecomesTrue(this::clearManualOverride);
+    /** Poll dpad edges (SDK 11.1 wasPressed family). Call from updateDuringInit. */
+    private void pollOverrides() {
+        if (driver == null) return;
+        if (driver.dpadLeftWasPressed())  selectAllianceManually(Alliance.BLUE);
+        if (driver.dpadRightWasPressed()) selectAllianceManually(Alliance.RED);
+        if (driver.dpadDownWasPressed())  enableVisionOverride();
+        if (driver.dpadUpWasPressed())    clearManualOverride();
     }
 
     /**
@@ -57,7 +51,7 @@ public final class AllianceSelector {
      *
      * @return snapshot data when a valid detection was found.
      */
-    public Optional<VisionSubsystemLimelight.TagSnapshot> updateFromVision(VisionSubsystemLimelight vision) {
+    public VisionSubsystemLimelight.TagSnapshot updateFromVision(VisionSubsystemLimelight vision) {
         // Once selection is locked (after Start), do not change alliance via vision
         if (selectionLocked) {
             return getLastSnapshot();
@@ -66,17 +60,16 @@ public final class AllianceSelector {
         if (vision == null) {
             clearDetection();
             refreshSelectedAlliance();
-            return Optional.empty();
+            return null;
         }
 
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = vision.findAllianceSnapshot(null);
-        if (!snapshotOpt.isPresent()) {
+        VisionSubsystemLimelight.TagSnapshot snapshot = vision.findAllianceSnapshot(null);
+        if (snapshot == null) {
             clearDetection();
             refreshSelectedAlliance();
-            return Optional.empty();
+            return null;
         }
 
-        VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
         lastSnapshot = snapshot;
 
         // Use pose based inference only
@@ -85,7 +78,7 @@ public final class AllianceSelector {
 
         // Merge with manual override and default alliance
         refreshSelectedAlliance();
-        return snapshotOpt;
+        return snapshot;
     }
 
 
@@ -133,6 +126,7 @@ public final class AllianceSelector {
      * @return The currently selected alliance
      */
     public Alliance updateDuringInit(VisionSubsystemLimelight vision, Robot robot, LightingSubsystem lighting) {
+        pollOverrides();
         updateFromVision(vision);
         applySelection(robot, lighting);
         return selectedAlliance;
@@ -199,8 +193,9 @@ public final class AllianceSelector {
         return selectedAlliance;
     }
 
-    public Optional<VisionSubsystemLimelight.TagSnapshot> getLastSnapshot() {
-        return Optional.ofNullable(lastSnapshot);
+    /** Returns the most recent vision snapshot, or null if none. */
+    public VisionSubsystemLimelight.TagSnapshot getLastSnapshot() {
+        return lastSnapshot;
     }
 
     public int getDetectedTagId() {

@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.telemetry;
 
-import android.os.SystemClock;
-
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.pedropathing.geometry.Pose;
@@ -17,6 +15,7 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.formatters.DashboardFormatter;
 import org.firstinspires.ftc.teamcode.telemetry.formatters.DriverStationFormatter;
+import org.firstinspires.ftc.teamcode.telemetry.formatters.PanelsFormatter;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
@@ -34,15 +33,13 @@ import org.firstinspires.ftc.teamcode.util.RobotState;
  */
 public class TelemetryService {
 
-    private static final long DASHBOARD_INTERVAL_MS = 50L; // 20 Hz in DEBUG mode
-
     private FtcDashboard dashboard;
     private boolean dashboardInitialized = false;
     private final DriverStationFormatter driverStationFormatter;
     private final DashboardFormatter dashboardFormatter;
+    private final PanelsFormatter panelsFormatter;
 
     private boolean sessionActive = false;
-    private long lastDashboardPacketMs = 0L;
 
     /**
      * Create a new telemetry service.
@@ -53,6 +50,7 @@ public class TelemetryService {
         this.dashboard = null;
         this.driverStationFormatter = new DriverStationFormatter();
         this.dashboardFormatter = new DashboardFormatter();
+        this.panelsFormatter = new PanelsFormatter();
     }
 
     /**
@@ -68,11 +66,28 @@ public class TelemetryService {
     }
 
     /**
-     * Prepares FullPanels for telemetry. Call once when the OpMode starts.
+     * Prepares telemetry outputs. Call once when the OpMode starts.
+     * Sends a seed packet so all Dashboard channels appear immediately
+     * without needing to run through init/play/commands first.
      */
     public void startSession() {
         if (!sessionActive) {
             sessionActive = true;
+            sendSeedPacket();
+        }
+    }
+
+    private void sendSeedPacket() {
+        if (!TelemetrySettings.shouldSendDashboardPackets()) {
+            return;
+        }
+        FtcDashboard dash = getDashboardIfNeeded();
+        if (dash == null) {
+            return;
+        }
+        TelemetryPacket seed = dashboardFormatter.createSeedPacket(TelemetrySettings.LEVEL);
+        if (seed != null) {
+            dash.sendTelemetryPacket(seed);
         }
     }
 
@@ -132,8 +147,11 @@ public class TelemetryService {
                 telemetryStartNs
         );
 
-        // FTC Dashboard packets (only in DEBUG mode)
+        // FTC Dashboard packets (only in PRACTICE/VERBOSE mode)
         publishDashboardTelemetry(data);
+
+        // Panels Telemetry + Field widgets (only in PRACTICE/VERBOSE mode)
+        publishPanelsTelemetry(data);
 
         // Driver station telemetry (skip if autonomous and driver controls hidden)
         if (dsTelemetry != null && !isAutonomous) {
@@ -142,23 +160,28 @@ public class TelemetryService {
     }
 
     /**
-     * Publish driver station telemetry based on level.
+     * Publish Panels Telemetry and Field widgets (only in PRACTICE/VERBOSE mode).
      */
-    private void publishDriverStationTelemetry(Telemetry telemetry, RobotTelemetryData data) {
-        if (TelemetrySettings.LEVEL == TelemetrySettings.TelemetryLevel.MATCH) {
-            driverStationFormatter.publishMatch(telemetry, data);
-        } else {
-            // DEBUG mode - handle page navigation from driver gamepad dpad
-            driverStationFormatter.handlePageNavigation(
-                    data.gamepad.driver.dpadUp,
-                    data.gamepad.driver.dpadDown
-            );
-            driverStationFormatter.publishDebug(telemetry, data);
+    private void publishPanelsTelemetry(RobotTelemetryData data) {
+        try {
+            panelsFormatter.publish(data, TelemetrySettings.LEVEL);
+        } catch (Exception ignored) {
+            // Panels not available on this device — safe to skip
         }
     }
 
     /**
-     * Publish FTC Dashboard telemetry (only in DEBUG mode).
+     * Publish driver station telemetry.
+     * Always sends match-level text to the DS telemetry object. In PRACTICE/VERBOSE
+     * mode the Dashboard packet carries all detailed data, so forwarding the full
+     * 7-page debug text to the DS object would flood the Dashboard Telemetry panel.
+     */
+    private void publishDriverStationTelemetry(Telemetry telemetry, RobotTelemetryData data) {
+        driverStationFormatter.publishMatch(telemetry, data);
+    }
+
+    /**
+     * Publish FTC Dashboard telemetry (only in PRACTICE/VERBOSE mode).
      */
     private void publishDashboardTelemetry(RobotTelemetryData data) {
         if (!TelemetrySettings.shouldSendDashboardPackets()) {
@@ -171,16 +194,10 @@ public class TelemetryService {
             return;
         }
 
-        long nowMs = SystemClock.uptimeMillis();
-
-        // Throttle to 20 Hz
-        if (nowMs - lastDashboardPacketMs >= DASHBOARD_INTERVAL_MS) {
-            TelemetryPacket packet = dashboardFormatter.createPacket(data, TelemetrySettings.LEVEL);
-            if (packet != null) {
-                dash.sendTelemetryPacket(packet);
-                RobotState.packet = new TelemetryPacket();
-                lastDashboardPacketMs = nowMs;
-            }
+        TelemetryPacket packet = dashboardFormatter.createPacket(data, TelemetrySettings.LEVEL);
+        if (packet != null) {
+            dash.sendTelemetryPacket(packet);
+            RobotState.packet = new TelemetryPacket();
         }
     }
 
@@ -195,19 +212,4 @@ public class TelemetryService {
         }
     }
 
-    /**
-     * @deprecated Legacy method for compatibility. Does nothing.
-     */
-    @Deprecated
-    public void updateDriverStation(Telemetry telemetry) {
-        // No-op: driver station updates are now handled directly in publishLoopTelemetry
-    }
-
-    /**
-     * @deprecated Legacy method for autonomous routine step tracking. Will be re-added if needed.
-     */
-    @Deprecated
-    public void setRoutineStepTelemetry(String stepName, double stepOrdinal) {
-        // TODO: Re-implement if autonomous routine step tracking is needed
-    }
 }

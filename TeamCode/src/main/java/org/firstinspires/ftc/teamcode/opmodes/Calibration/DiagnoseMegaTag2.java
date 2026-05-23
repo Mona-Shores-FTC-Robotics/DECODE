@@ -5,21 +5,20 @@ import static org.firstinspires.ftc.teamcode.util.RobotState.packet;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-
-import dev.nextftc.core.components.SubsystemComponent;
-import dev.nextftc.extensions.pedro.PedroComponent;
-import dev.nextftc.ftc.NextFTCOpMode;
-import dev.nextftc.ftc.components.BulkReadComponent;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Robot;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
+import org.firstinspires.ftc.teamcode.util.FieldConstants;
+
+import java.util.List;
 
 /**
  * Diagnostic OpMode to verify MegaTag2 localization accuracy.
@@ -37,7 +36,7 @@ import org.firstinspires.ftc.teamcode.util.ControlHubIdentifierUtil;
  */
 @Disabled
 @TeleOp(name = "Diagnose MegaTag2", group = "Diagnostics")
-public class DiagnoseMegaTag2 extends NextFTCOpMode {
+public class DiagnoseMegaTag2 extends OpMode {
 
     /**
      * Heading offset to add to Pedro heading before sending to Limelight.
@@ -50,16 +49,12 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     FtcDashboard dashboard;
 
     private Robot robot;
-
-    {
-        addComponents(
-                BulkReadComponent.INSTANCE,
-                new PedroComponent(Constants::createFollower)
-        );
-    }
+    private List<LynxModule> hubs;
 
     @Override
-    public void onInit() {
+    public void init() {
+        hubs = hardwareMap.getAll(LynxModule.class);
+        hubs.forEach(h -> h.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL));
         this.dashboard = FtcDashboard.getInstance();
 
         robot = new Robot(hardwareMap);
@@ -70,9 +65,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
         robot.setAlliance(Alliance.BLUE); // Default for testing
         robot.initializeForTeleOp();
 
-        addComponents(
-                new SubsystemComponent(robot.drive),
-                new SubsystemComponent(robot.vision)
+        com.pedropathing.ivy.Scheduler.reset();
+        com.pedropathing.ivy.Scheduler.schedule(
+                robot.drive.periodic(),
+                robot.vision.periodic()
         );
 
         // Enable diagnostic mode to prevent VisionSubsystem from updating heading
@@ -92,17 +88,14 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     }
 
     @Override
-    public void onStartButtonPressed() {
-//        AutoField.FieldLayout currentLayout = AutoField.layoutForAlliance(Alliance.BLUE);
-//        Pose startFarPose = currentLayout.pose(AutoField.FieldPoint.START_FAR);
-//        robot.drive.getFollower().setStartingPose(startFarPose);
-//        robot.drive.getFollower().setPose(startFarPose);
-
+    public void start() {
         // Nothing special needed on start
     }
 
     @Override
-    public void onUpdate() {
+    public void loop() {
+        for (LynxModule hub : hubs) hub.clearBulkCache();
+        com.pedropathing.ivy.Scheduler.execute();
         // Get current odometry pose (ground truth)
 
         Pose odomPose = robot.drive.getFollower().getPose();
@@ -180,9 +173,10 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
                 packet.put("Diagnostic/MT2FTC Pose y", mt2YIn);
                 packet.put("Diagnostic/MT2FTC Pose heading", Math.toRadians(mt2YawDeg));
 
-                // Convert MT2 FTC pose to Pedro
-                double mt2PedroX = mt2YIn + 72; // ftcY + halfField
-                double mt2PedroY = 72 - mt2XIn; // halfField - ftcX
+                // Convert MT2 FTC pose to Pedro (same math as PoseFrames.ftcToPedro for X/Y).
+                double halfField = FieldConstants.FIELD_WIDTH_INCHES / 2.0;
+                double mt2PedroX = mt2YIn + halfField; // ftcY + halfField
+                double mt2PedroY = halfField - mt2XIn; // halfField - ftcX
                 // Fixed 180° heading error: changed from -90° to +90° (matches VisionSubsystemLimelight)
                 double mt2PedroHeading = AngleUnit.normalizeDegrees(mt2YawDeg + 90);
 
@@ -275,7 +269,7 @@ public class DiagnoseMegaTag2 extends NextFTCOpMode {
     }
 
     @Override
-    public void onStop() {
+    public void stop() {
         if (robot != null) {
             robot.vision.setDiagnosticMode(false);
             robot.drive.stop();

@@ -5,7 +5,6 @@ import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystemLimelight;
 
-import java.util.Optional;
 
 /**
  * Shared helper for autonomous init loops.
@@ -20,6 +19,7 @@ import java.util.Optional;
  */
 public class AutoPrestartHelper {
 
+    /** Minimum time between vision-driven relocalizations during auto pre-start to avoid jitter. */
     private static final long RELOCALIZE_COOLDOWN_MS = 300L;
 
     private final Robot robot;
@@ -32,9 +32,23 @@ public class AutoPrestartHelper {
     private MotifPattern observedMotif = RobotState.getMotif();
     private Integer observedMotifTagId;
 
+    /** Expected start pose in world/Pedro coordinates (alliance-mirrored).
+     *  Used as reference for jump safeguards during init relocalization. */
+    private Pose expectedStartPose;
+
     public AutoPrestartHelper(Robot robot, AllianceSelector allianceSelector) {
         this.robot = robot;
         this.allianceSelector = allianceSelector;
+    }
+
+    /**
+     * Sets the expected start pose for jump safeguards.
+     * Call this whenever alliance changes to update the mirrored pose.
+     *
+     * @param expectedPose The expected start pose in world/Pedro coordinates (already alliance-mirrored)
+     */
+    public void setExpectedStartPose(Pose expectedPose) {
+        this.expectedStartPose = expectedPose;
     }
 
     public InitStatus update(Alliance activeAlliance) {
@@ -42,16 +56,14 @@ public class AutoPrestartHelper {
         syncHeadingForVision();
 
         // Poll Limelight once per init loop so snapshots stay fresh
-//        robot.vision.periodic();
 
         Alliance selectedAlliance = allianceSelector.updateDuringInit(robot.vision, robot, robot.lighting);
         if (robot.lighting != null) {
             robot.lighting.showSolidAlliance(selectedAlliance);
         }
-        Pose startPoseFromVision = allianceSelector.getLastSnapshot()
-                .flatMap(VisionSubsystemLimelight.TagSnapshot::getRobotPosePedroMT1)
-                .map(AutoPrestartHelper::copyPose)
-                .orElse(null);
+        VisionSubsystemLimelight.TagSnapshot lastSnap = allianceSelector.getLastSnapshot();
+        Pose mt1 = lastSnap != null ? lastSnap.getRobotPosePedroMT1() : null;
+        Pose startPoseFromVision = mt1 != null ? copyPose(mt1) : null;
 
         maybeRelocalizeFromGoalTag(activeAlliance);
         maybeDetectMotif();
@@ -77,12 +89,11 @@ public class AutoPrestartHelper {
     }
 
     private void maybeRelocalizeFromGoalTag(Alliance activeAlliance) {
-        Optional<VisionSubsystemLimelight.TagSnapshot> snapshotOpt = robot.vision.getLastSnapshot();
-        if (!snapshotOpt.isPresent()) {
+        VisionSubsystemLimelight.TagSnapshot snapshot = robot.vision.getLastSnapshot();
+        if (snapshot == null) {
             return;
         }
 
-        VisionSubsystemLimelight.TagSnapshot snapshot = snapshotOpt.get();
         if (!isGoalTag(snapshot.tagId)) {
             return;
         }
@@ -97,7 +108,10 @@ public class AutoPrestartHelper {
             return;
         }
 
-        boolean updated = robot.drive.forceRelocalizeFromVision();
+        // Use expected start pose as reference for jump safeguards.
+        // This prevents vision from wildly jumping the pose during init.
+        // If no expected pose is set, falls back to no safeguard (not recommended).
+        boolean updated = robot.drive.forceRelocalizeFromVision(expectedStartPose);
         if (!updated) {
             return;
         }
@@ -114,12 +128,12 @@ public class AutoPrestartHelper {
     }
 
     private void maybeDetectMotif() {
-        Optional<Integer> motifTag = robot.vision.findMotifTagId();
-        if (!motifTag.isPresent()) {
+        Integer motifTag = robot.vision.findMotifTagId();
+        if (motifTag == null) {
             return;
         }
 
-        int tagId = motifTag.get();
+        int tagId = motifTag;
         if (observedMotifTagId != null && observedMotifTagId == tagId && observedMotif != MotifPattern.UNKNOWN) {
             return; // Already latched
         }

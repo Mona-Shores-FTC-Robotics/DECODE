@@ -15,6 +15,11 @@ buildscript {
     }
 }
 
+
+plugins {
+    id 'com.github.ben-manes.versions' version '0.54.0'
+}
+
 // This is now required because aapt2 has to be downloaded from the
 // google() repository beginning with version 3.2 of the Android Gradle Plugin
 allprojects {
@@ -35,6 +40,12 @@ allprojects {
                 }
             }
         }
+    }
+
+    // Silence javac's "source/target 8 is obsolete" and "uses deprecated API" notes.
+    // FTC pins source/target to 8 for Control Hub compatibility; nothing actionable for us.
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs += ['-Xlint:-options', '-nowarn']
     }
 }
 

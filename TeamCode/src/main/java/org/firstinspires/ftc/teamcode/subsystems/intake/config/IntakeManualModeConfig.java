@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.subsystems.intake.config;
 
-import static org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem.IntakeMode.STOPPED;
+import static org.firstinspires.ftc.teamcode.util.IntakeMode.STOPPED;
 
 /**
  * Manual mode override configuration.

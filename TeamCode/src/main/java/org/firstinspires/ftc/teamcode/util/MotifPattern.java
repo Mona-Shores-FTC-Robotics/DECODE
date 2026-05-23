@@ -4,7 +4,16 @@ import org.firstinspires.ftc.teamcode.util.ArtifactColor;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 
 /**
- * Represents the randomized Decode motif pattern identified by AprilTags 21-23.
+ * The "motif" is the secret scoring pattern for the endgame: three obelisks must be filled
+ * with artifacts in a specific color order (Green-Purple-Purple, Purple-Green-Purple, or
+ * Purple-Purple-Green) revealed by an AprilTag on the field. Filling the obelisks in the
+ * correct order scores bonus points.
+ *
+ * The robot reads AprilTags 21–23 with vision to detect which pattern is active, then uses
+ * DECODE launcher mode to fire artifacts into the correct left/center/right lanes.
+ *
+ * "Motif tail" (0–2) accounts for artifacts already sitting in the ramp from a previous
+ * incomplete motif — see {@link #getRotatedPattern(int)} for how the rotation works.
  */
 public enum MotifPattern {
     GPP(new ArtifactColor[]{ArtifactColor.GREEN, ArtifactColor.PURPLE, ArtifactColor.PURPLE}, FieldConstants.DECODE_PATTERN_GREEN_PURPLE_PURPLE_ID),

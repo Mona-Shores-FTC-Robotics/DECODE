@@ -1,32 +1,31 @@
 package org.firstinspires.ftc.teamcode.util;
 
 /**
- * Represents the colour of an indexed artifact for lighting and automation.
+ * Color of an indexed artifact, as seen by the intake lane sensors.
+ * Used by both the intake classification logic and the lighting subsystem.
  */
 public enum ArtifactColor {
-    /** No signal / sensor error / out of range */
+    /** Sensor read with no artifact present (or sensor unreachable). */
     NONE,
-    /** Green artifact detected */
+    /** Green artifact detected. */
     GREEN,
-    /** Purple artifact detected */
+    /** Purple artifact detected. */
     PURPLE,
-    /** Unknown artifact color (legacy - kept for compatibility) */
+    /** Something is there but classification didn't pick GREEN or PURPLE.
+     *  Also overloaded by LightingSubsystem to mean "blink white" on the indicator strip. */
     UNKNOWN;
 
+    /** True for GREEN or PURPLE — i.e. we have a confident artifact color. */
     public boolean isKnown() {
-        return this != NONE && this != UNKNOWN;
+        return this == GREEN || this == PURPLE;
     }
 
-    /**
-     * Returns true if this represents an actual artifact (GREEN or PURPLE).
-     */
+    /** True if this represents an actual artifact (GREEN or PURPLE). */
     public boolean isArtifact() {
         return this == GREEN || this == PURPLE;
     }
 
-    /**
-     * Returns true if no artifact is present (NONE, BACKGROUND, or UNKNOWN).
-     */
+    /** True if no artifact is confidently present (NONE or UNKNOWN). */
     public boolean isAbsent() {
         return !isArtifact();
     }
