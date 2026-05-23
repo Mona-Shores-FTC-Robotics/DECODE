@@ -69,7 +69,7 @@ public class MichianaGateCommand {
         public static double art2X = 23.49, art2Y = 60.09;
 
         /** Main shooting zone — all shots except final Art5 return here. */
-        public static double shootZoneX = 53, shootZoneY = 87, shootZoneHeading = 134;
+        public static double shootZoneX = 51, shootZoneY = 85, shootZoneHeading = 130;
 
         /** Slanted gate approach: opens gate and collects ~3 artifacts at once. */
         public static double gateSlantX = 12.5, gateSlantY = 60, gateSlantHeading = 150;
@@ -120,14 +120,17 @@ public class MichianaGateCommand {
                 ConditionalFinalLaunchCommand.createTimerReset(),
                 preload,
 
-                // ── Art1: sweep through Art1 → slide into gate → return to shoot zone ──
+                // ── Art1: sweep through Art1; switch to MID_AUTO while driving ────
                 // Heading linearly interpolates from preloadZone heading to 270° over the Art1 path
                 Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
                                 .from(preloadZone()).to(art1())
                                 .withLinearHeadingCompletion(1.0)
                                 .build(Config.maxPathPower),
-                        robot.intake.autoSmartIntakeCmd()
+                        robot.intake.autoSmartIntakeCmd(),
+                        PresetRangeSpinCommand.create(
+                                robot.launcher, LauncherRange.MID_AUTO, false,
+                                null, null, null)
                 ),
                 new FollowPathBuilder(robot, alliance)
                         .from(art1()).to(openGate())
