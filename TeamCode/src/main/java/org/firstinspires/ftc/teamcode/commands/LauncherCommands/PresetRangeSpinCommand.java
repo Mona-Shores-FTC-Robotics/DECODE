@@ -142,9 +142,14 @@ public final class PresetRangeSpinCommand {
                 launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.midRightRpm);
                 break;
             case LONG:
-                launcher.setLaunchRpm(LauncherLane.LEFT, cfg.longLeftRpm);
-                launcher.setLaunchRpm(LauncherLane.CENTER, cfg.longCenterRpm);
-                launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.longRightRpm);
+                // LONG preset sits at the midpoint of the distance-based
+                // interpolation window — one fewer constant to tune.
+                launcher.setLaunchRpm(LauncherLane.LEFT,
+                        (cfg.longMinLeftRpm + cfg.longMaxLeftRpm) / 2.0);
+                launcher.setLaunchRpm(LauncherLane.CENTER,
+                        (cfg.longMinCenterRpm + cfg.longMaxCenterRpm) / 2.0);
+                launcher.setLaunchRpm(LauncherLane.RIGHT,
+                        (cfg.longMinRightRpm + cfg.longMaxRightRpm) / 2.0);
                 break;
             case SHORT_AUTO:
                 launcher.setLaunchRpm(LauncherLane.LEFT, cfg.shortAutoLeftRpm);

@@ -17,12 +17,9 @@ public class CommandRangeConfig {
     public double midCenterRpm;
     public double midRightRpm;
 
-    /** Long range RPMs */
-    public double longLeftRpm;
-    public double longCenterRpm;
-    public double longRightRpm;
-
-    /** Long range min/max RPMs for distance-based interpolation */
+    /** Long range min/max RPMs. The LONG preset button uses the midpoint
+     *  ((min + max) / 2); distance-based shots interpolate min → max across
+     *  the LONG zone. No separate "longLeftRpm" constant — it's derived. */
     public double longMinLeftRpm;
     public double longMinCenterRpm;
     public double longMinRightRpm;
