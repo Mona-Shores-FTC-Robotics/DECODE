@@ -31,7 +31,6 @@ public class CloseTogetherCommand {
         public double secondsOpeningGate = .4;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 6.2;
-        public double ejectTime = 1000;
     }
 
     public static class Waypoints {
@@ -185,10 +184,7 @@ public class CloseTogetherCommand {
                         .withControl(artifactsSet1Control0())
                         .withConstantHeading(270)
                         .build(config.maxPathPower),
-                        Groups.sequential(
-                                robot.intake.timedEjectCmd(config.ejectTime),
-                                robot.intake.autoSmartIntakeCmd()
-                        )
+                        robot.intake.autoSmartIntakeCmd()
                 ),
 
                 // Open Gate
@@ -223,10 +219,7 @@ public class CloseTogetherCommand {
                             .withControl(artifactsSet2Control0())
                             .withConstantHeading(270)
                             .build(config.maxPathPower),
-                    Groups.sequential(
-                        robot.intake.timedEjectCmd(config.ejectTime),
-                        robot.intake.autoSmartIntakeCmd()
-                    )
+                    robot.intake.autoSmartIntakeCmd()
                 ),
 
                 // Return and Launch Set 2
@@ -247,10 +240,7 @@ public class CloseTogetherCommand {
                                 .withControl(artifactsSet3Control0())
                                 .withConstantHeading(270)
                                 .build(config.maxPathPower),
-                        Groups.sequential(
-                                robot.intake.timedEjectCmd(config.ejectTime),
-                                robot.intake.autoSmartIntakeCmd()
-                        )
+                        robot.intake.autoSmartIntakeCmd()
                 ),
 
                 // Conditionally return and launch if time permits, otherwise go straight to park
@@ -275,10 +265,7 @@ public class CloseTogetherCommand {
                                             .withControl(nearGateControl0())
                                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                                             .build(config.maxPathPower),
-                                        Groups.sequential(
-                                                robot.intake.timedEjectCmd(config.ejectTime),
-                                                robot.intake.autoSmartIntakeCmd()
-                                        )
+                                        robot.intake.autoSmartIntakeCmd()
                                 )
                         ),
                         // If not enough time: go straight to park

@@ -33,7 +33,6 @@ public class CloseThreeAtOnceCommand {
         public double endTimeForLinearHeadingInterpolation = .8;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 6.8;
-        public double ejectTime = 100;
         /** Heading tolerance (degrees) Pedro must reach before considering a
          *  launch-position path complete. Tighter = waits longer for the
          *  heading PID to settle before the launcher fires. */

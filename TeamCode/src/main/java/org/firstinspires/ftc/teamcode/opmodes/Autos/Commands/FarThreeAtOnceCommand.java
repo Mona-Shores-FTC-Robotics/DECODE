@@ -29,7 +29,6 @@ public class FarThreeAtOnceCommand {
         public double endTimeForLinearHeadingInterpolation = .7;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.0;
-        public double ejectTime = 1000;
     }
 
     public static class Waypoints {

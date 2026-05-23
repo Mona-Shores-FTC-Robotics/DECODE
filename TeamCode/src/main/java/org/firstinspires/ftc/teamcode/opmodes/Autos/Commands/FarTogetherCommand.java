@@ -31,7 +31,6 @@ public class FarTogetherCommand {
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.0;
         public double slowPath = .75;
-        public double ejectTime = 1000;
     }
 
     public static class Waypoints {
