@@ -6,7 +6,6 @@ import com.pedropathing.paths.HeadingInterpolator;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
-
 import java.util.ArrayList;
 import java.util.List;
 import com.qualcomm.robotcore.util.Range;
@@ -15,6 +14,9 @@ import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.pedro.PedroCommands;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
+import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
+import org.firstinspires.ftc.teamcode.util.LauncherLane;
 
 public class FollowPathBuilder {
 
@@ -36,6 +38,10 @@ public class FollowPathBuilder {
     private HeadingInterpolator piecewiseInterpolator = null;
 
     private double linearInterpWeight = 0.7;
+
+    private Double fireAtT = null;
+    private LauncherSubsystem launcherForCallback = null;
+    private IntakeSubsystem intakeForCallback = null;
 
     public FollowPathBuilder(Robot robot, Alliance alliance) {
         this.robot = robot;
@@ -216,17 +222,31 @@ public class FollowPathBuilder {
             );
         }
 
+        if (fireAtT != null && launcherForCallback != null) {
+            LauncherSubsystem launcher = launcherForCallback;
+            IntakeSubsystem intake = intakeForCallback;
+            builder.addParametricCallback(fireAtT, () -> {
+                launcher.spinUpAllLanesToLaunch();
+                for (LauncherLane lane : LauncherLane.values()) {
+                    launcher.queueShot(lane);
+                }
+                if (intake != null) {
+                    intake.setGateAllowArtifacts();
+                }
+            });
+        }
 
         PathChain chain = builder.build();
 
-        if (headingConstraint != null) {
-            // Assuming your chain only has one path
+        if (timeoutMilliSec != null) {
+            Path onlyPath = chain.getPath(0);
+            onlyPath.setTimeoutConstraint(timeoutMilliSec);
+        }
+        if (headingConstraint != 0) {
             Path onlyPath = chain.getPath(0);
             onlyPath.setHeadingConstraint(headingConstraint);
         }
-
-        if (translationalConstraint != null) {
-            // Assuming your chain only has one path
+        if (translationalConstraint != 0) {
             Path onlyPath = chain.getPath(0);
             onlyPath.setTranslationalConstraint(translationalConstraint);
         }
@@ -254,4 +274,21 @@ public class FollowPathBuilder {
         return AutoField.poseForAlliance(x, y, headingDeg, alliance);
     }
 
+    public FollowPathBuilder withTimeout(double milliseconds) {
+        this.timeoutMilliSec = milliseconds;
+        return this;
+    }
+
+    /**
+     * Attaches a ParametricCallback that fires all launcher lanes when path T >= fireAtT.
+     * Must be called before build(). fireAtT should be greater than the linearInterpWeight so
+     * heading is already settled when shots queue.
+     * Uses Pedro's built-in callback system — no parallel command wrapper needed.
+     */
+    public FollowPathBuilder withFireAtT(double t, LauncherSubsystem launcher, IntakeSubsystem intake) {
+        this.fireAtT = t;
+        this.launcherForCallback = launcher;
+        this.intakeForCallback = intake;
+        return this;
+    }
 }
