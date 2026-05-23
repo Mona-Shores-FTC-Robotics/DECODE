@@ -40,8 +40,29 @@ public class MichianaGateLeaveArt1Command {
     @Configurable
     public static class Config {
         public static double maxPathPower = 0.85;
+
+        /**
+         * Fraction of the preload path over which heading linearly interpolates to its
+         * target. Heading reaches the target at this T and then holds.
+         * Must be meaningfully less than fireAtT to allow settling time.
+         */
         public static double headingInterpEnd = 0.7;
+
+        /**
+         * Path T at which the launcher fires on outbound/return legs.
+         *
+         * Two constraints must both hold at this T:
+         *   1. For withLinearHeadingCompletion paths: T must be > headingInterpEnd so
+         *      the heading controller has had time to reach and settle on its target.
+         *      (Current gap: 0.85 - 0.70 = 0.15 of path travel — watch this if either
+         *      value is tuned.)
+         *   2. For withFacingPoint paths: the heading is tracking continuously, but
+         *      faster paths mean more heading lag at any given T. If shots are
+         *      consistently off-angle, try increasing this value or reducing maxPathPower
+         *      on return legs to give the heading controller more time to settle.
+         */
         public static double fireAtT = 0.85;
+
         /** Wait at gate slant for artifacts to roll in (ms). */
         public static double gateSlantWaitMs = 750;
     }
