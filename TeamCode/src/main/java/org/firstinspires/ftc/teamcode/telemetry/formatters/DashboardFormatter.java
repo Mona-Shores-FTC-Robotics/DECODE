@@ -151,8 +151,13 @@ public class DashboardFormatter {
         packet.put("Pose/x", data.pose.poseXIn);
         packet.put("Pose/y", data.pose.poseYIn);
         packet.put("Pose/heading_deg", Math.toDegrees(data.pose.headingRad));
-        // AS-draggable live robot pose (x/y/heading triplet under one prefix).
-        RobotState.putPose("Pose/Robot", data.pose.poseXIn, data.pose.poseYIn, data.pose.headingRad);
+        // AS-draggable live robot pose. AdvantageScope's FTC field asset is in the
+        // FTC frame (origin at field center, inches) — so publish the FTC pose,
+        // not the Pedro pose (origin at blue-left corner) which would show the
+        // robot half-a-field off in the corner.
+        if (!Double.isNaN(data.pose.ftcXIn) && !Double.isNaN(data.pose.ftcYIn) && !Double.isNaN(data.pose.ftcHeadingRad)) {
+            RobotState.putPose("Pose/Robot", data.pose.ftcXIn, data.pose.ftcYIn, data.pose.ftcHeadingRad);
+        }
 
         // Vision
         packet.put("vision/has_tag", data.vision.hasTag);
