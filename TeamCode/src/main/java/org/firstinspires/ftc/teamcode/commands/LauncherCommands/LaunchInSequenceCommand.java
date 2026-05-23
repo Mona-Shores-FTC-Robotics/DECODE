@@ -73,6 +73,7 @@ public final class LaunchInSequenceCommand {
                     usedLanes.clear();
                     spinDownApplied[0] = false;
                     shotsQueued[0] = false;
+                    launcher.recordLastShotRpms();
                     intake.setGateAllowArtifacts();
                     launcher.spinUpAllLanesToLaunch();
                 })

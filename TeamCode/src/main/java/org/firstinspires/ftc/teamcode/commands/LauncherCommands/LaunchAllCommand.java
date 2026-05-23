@@ -46,6 +46,7 @@ public final class LaunchAllCommand {
                     stage[0] = Stage.WAITING;
                     queuedLanes.clear();
                     spinDownApplied[0] = false;
+                    launcher.recordLastShotRpms();
                     launcher.spinUpAllLanesToLaunch();
                     if (intake != null) intake.setGateAllowArtifacts();
                 })

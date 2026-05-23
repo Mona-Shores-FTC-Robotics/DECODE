@@ -85,6 +85,7 @@ public class LauncherSubsystem implements Subsystem {
     private final EnumMap<LauncherLane, Double> laneLaunchHoldDeadlineMs = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Double> launchRpmOverrides = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Double> idleRpmOverrides = new EnumMap<>(LauncherLane.class);
+    private final EnumMap<LauncherLane, Double> lastShotRpms = new EnumMap<>(LauncherLane.class);
     private final Deque<ShotRequest> shotQueue = new ArrayDeque<>();
     private final ElapsedTime clock = new ElapsedTime();
 
@@ -530,6 +531,20 @@ public class LauncherSubsystem implements Subsystem {
         idleRpmOverrides.clear();
     }
 
+    /**
+     * Snapshots the current launch RPM for each lane so the launcher idles at
+     * the last-used speed after the next clearOverrides() call. Call this at the
+     * start of any fire command, before clearOverrides() runs on spin-down.
+     */
+    public void recordLastShotRpms() {
+        for (LauncherLane lane : LauncherLane.values()) {
+            double rpm = launchRpmFor(lane);
+            if (rpm > 0.0) {
+                lastShotRpms.put(lane, rpm);
+            }
+        }
+    }
+
     public void debugSetLaneTargetRpm(LauncherLane lane, double rpm) {
         if (lane == null) {
             return;
@@ -802,6 +817,10 @@ public class LauncherSubsystem implements Subsystem {
         Double override = idleRpmOverrides.get(lane);
         if (override != null && override >= 0.0) {
             return override;
+        }
+        Double lastShot = lastShotRpms.get(lane);
+        if (lastShot != null && lastShot > 0.0) {
+            return lastShot;
         }
         switch (lane) {
             case LEFT:
