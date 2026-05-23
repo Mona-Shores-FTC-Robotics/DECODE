@@ -18,50 +18,58 @@ import com.pedropathing.ivy.commands.Commands;
 import com.pedropathing.ivy.groups.Groups;
 
 /**
- * Michiana Gate: 5-artifact close-side auto with gate cycling.
- *
- * All shots fire on the fly at T=fireAtT — robot never stops to shoot.
+ * Michiana Gate: 5-artifact close-side auto with on-the-fly shooting and gate cycling.
  *
  * Structure:
- *   Start → ShootZone           fire preloads on fly
- *   ShootZone → Art1 → OpenGate → ShootZone    fire Art1 set on fly
- *   ShootZone → Art2 → OpenGate → ShootZone    fire Art2 set on fly
- *   ShootZone → GateSlant → ShootZone          fire Art3 on fly
- *   ShootZone → GateSlant → ShootZone          fire Art4 on fly
- *   ShootZone → GateSlant → FinalShoot         fire Art5 on fly
- *   if ≥ minParkTime left → drive to NearGate, else stay at FinalShoot
+ *   Start → PreloadZone                           fire preloads on fly
+ *   PreloadZone → Art1 → OpenGate → ShootZone    fire Art1 set on fly (no gate wait)
+ *   ShootZone → Art2Stage → Art2 → OpenGate → ShootZone    fire Art2 set on fly
+ *   ShootZone → GateSlant → wait 750ms → ShootZone    fire Art3 on fly
+ *   ShootZone → GateSlant → wait 750ms → ShootZone    fire Art4 on fly
+ *   ShootZone → GateSlant → wait 750ms → FinalShoot   fire Art5 on fly
+ *   if ≥ minParkTime left → NearGate, else stay at FinalShoot
  */
 public class MichianaGateCommand {
 
     @Configurable
     public static class Config {
         public static double maxPathPower = 0.85;
-        /** Linear heading interpolation completion weight for start → shoot zone path. */
+        /** Linear heading completion weight for the start → preload zone path. */
         public static double headingInterpEnd = 0.7;
-        /** Return path T at which shots fire. */
+        /** Path T at which shots fire on return legs. */
         public static double fireAtT = 0.85;
-        /** Time to hold at openGate position so the gate opens (ms). */
-        public static double openGateWaitMs = 400;
-        /** Time to wait at gate slant position for artifacts to roll into intake (ms). */
-        public static double gateSlantWaitMs = 1200;
+        /** Wait at gate slant position for artifacts to roll in (ms). */
+        public static double gateSlantWaitMs = 750;
         public static double autoDurationSeconds = 30.0;
-        /** Minimum time remaining to bother driving to NearGate for parking. */
+        /** Minimum remaining time to drive to NearGate for parking. */
         public static double minParkTimeSeconds = 3.0;
     }
 
     @Configurable
     public static class Waypoints {
-        public static double startX = 26.5, startY = 130, startHeading = 0;
+        public static double startX = 29.67, startY = 127.56, startHeading = 0;
 
-        /** Robot fires from here for all shots except the final one. */
+        /** Close first-stop for firing preloads. */
+        public static double preloadZoneX = 35.57, preloadZoneY = 109.96, preloadZoneHeading = 135.5;
+
+        /** Art1 pickup — robot sweeps through here on the way to the gate. */
+        public static double art1X = 23.63, art1Y = 95.99;
+
+        /** Gate opening position (used for both Art1 and Art2 gate slides). */
+        public static double openGateX = 15.7, openGateY = 73.8, openGateHeading = 270;
+        /** Control point for Art1 → OpenGate curve. */
+        public static double openGate1CtrlX = 25.42, openGate1CtrlY = 72.87;
+        /** Control point for Art2 → OpenGate curve (different approach angle). */
+        public static double openGate2CtrlX = 22.70, openGate2CtrlY = 72.96;
+
+        /** Intermediate waypoint on the way to Art2 (curved approach from shoot zone). */
+        public static double art2StageX = 23.76, art2StageY = 70.99;
+        public static double art2StageCtrlX = 25.92, art2StageCtrlY = 84.12;
+
+        public static double art2X = 23.49, art2Y = 60.09;
+
+        /** Main shooting zone — all shots except final Art5 return here. */
         public static double shootZoneX = 53, shootZoneY = 87, shootZoneHeading = 134;
-
-        public static double art1X = 24, art1Y = 83.8;
-
-        /** Sideways slide position that physically opens the gate. */
-        public static double openGateX = 17, openGateY = 81, openGateHeading = 270;
-
-        public static double art2X = 24, art2Y = 61;
 
         /** Slanted gate approach: opens gate and collects ~3 artifacts at once. */
         public static double gateSlantX = 12.5, gateSlantY = 60, gateSlantHeading = 150;
@@ -89,7 +97,7 @@ public class MichianaGateCommand {
         double goalX = goalCenter.getX();
         double goalY = goalCenter.getY();
 
-        // ── Preloads: start → shoot zone ─────────────────────────────────────
+        // ── Preloads: start → preload zone (close first stop, fire on fly) ────
         FollowPathBuilder preloadBuilder = new FollowPathBuilder(robot, alliance);
         if (startOverride != null) {
             preloadBuilder.fromWorldCoordinates(startOverride);
@@ -98,7 +106,7 @@ public class MichianaGateCommand {
         }
         Command preload = Groups.deadline(
                 preloadBuilder
-                        .to(shootZone())
+                        .to(preloadZone())
                         .withLinearHeadingCompletion(Config.headingInterpEnd)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower),
@@ -112,51 +120,59 @@ public class MichianaGateCommand {
                 ConditionalFinalLaunchCommand.createTimerReset(),
                 preload,
 
-                // ── Art1: pick up then slide sideways into gate ───────────────
+                // ── Art1: sweep through Art1 → slide into gate → return to shoot zone ──
+                // Heading linearly interpolates from preloadZone heading to 270° over the Art1 path
                 Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
-                                .from(shootZone()).to(art1())
-                                .withConstantHeading(270)
+                                .from(preloadZone()).to(art1())
+                                .withLinearHeadingCompletion(1.0)
                                 .build(Config.maxPathPower),
                         robot.intake.autoSmartIntakeCmd()
                 ),
                 new FollowPathBuilder(robot, alliance)
                         .from(art1()).to(openGate())
+                        .withControl(openGate1Ctrl())
                         .withConstantHeading(270)
                         .build(Config.maxPathPower),
-                Commands.waitMs(Config.openGateWaitMs),
                 new FollowPathBuilder(robot, alliance)
                         .from(openGate()).to(shootZone())
                         .withFacingPoint(goalX, goalY)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower),
 
-                // ── Art2: pick up then slide sideways into gate ───────────────
+                // ── Art2: curved approach via staging point → continue to Art2 → gate → shoot ──
                 Groups.deadline(
-                        new FollowPathBuilder(robot, alliance)
-                                .from(shootZone()).to(art2())
-                                .withConstantHeading(270)
-                                .build(Config.maxPathPower),
+                        Groups.sequential(
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(shootZone()).to(art2Stage())
+                                        .withControl(art2StageCtrl())
+                                        .withLinearHeadingCompletion(1.0)
+                                        .build(Config.maxPathPower),
+                                new FollowPathBuilder(robot, alliance)
+                                        .from(art2Stage()).to(art2())
+                                        .withConstantHeading(270)
+                                        .build(Config.maxPathPower)
+                        ),
                         robot.intake.autoSmartIntakeCmd()
                 ),
                 new FollowPathBuilder(robot, alliance)
                         .from(art2()).to(openGate())
+                        .withControl(openGate2Ctrl())
                         .withConstantHeading(270)
                         .build(Config.maxPathPower),
-                Commands.waitMs(Config.openGateWaitMs),
                 new FollowPathBuilder(robot, alliance)
                         .from(openGate()).to(shootZone())
                         .withFacingPoint(goalX, goalY)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
                         .build(Config.maxPathPower),
 
-                // ── Art3: slant into gate, collect, return to shoot zone ───────
+                // ── Art3: slant gate cycle → shoot zone ───────────────────────
                 gateSlantCycle(robot, alliance, goalX, goalY, shootZone()),
 
-                // ── Art4: same pattern ────────────────────────────────────────
+                // ── Art4: slant gate cycle → shoot zone ───────────────────────
                 gateSlantCycle(robot, alliance, goalX, goalY, shootZone()),
 
-                // ── Art5: slant into gate, collect, return to final shoot spot ─
+                // ── Art5: slant gate cycle → final shoot spot ─────────────────
                 gateSlantCycle(robot, alliance, goalX, goalY, finalShoot()),
 
                 // ── Conditional park ──────────────────────────────────────────
@@ -197,8 +213,8 @@ public class MichianaGateCommand {
         return new Pose(Waypoints.startX, Waypoints.startY, Math.toRadians(Waypoints.startHeading));
     }
 
-    private static Pose shootZone() {
-        return new Pose(Waypoints.shootZoneX, Waypoints.shootZoneY, Math.toRadians(Waypoints.shootZoneHeading));
+    private static Pose preloadZone() {
+        return new Pose(Waypoints.preloadZoneX, Waypoints.preloadZoneY, Math.toRadians(Waypoints.preloadZoneHeading));
     }
 
     private static Pose art1() {
@@ -209,8 +225,28 @@ public class MichianaGateCommand {
         return new Pose(Waypoints.openGateX, Waypoints.openGateY, Math.toRadians(Waypoints.openGateHeading));
     }
 
+    private static Pose openGate1Ctrl() {
+        return new Pose(Waypoints.openGate1CtrlX, Waypoints.openGate1CtrlY, 0);
+    }
+
+    private static Pose openGate2Ctrl() {
+        return new Pose(Waypoints.openGate2CtrlX, Waypoints.openGate2CtrlY, 0);
+    }
+
+    private static Pose art2Stage() {
+        return new Pose(Waypoints.art2StageX, Waypoints.art2StageY, Math.toRadians(270));
+    }
+
+    private static Pose art2StageCtrl() {
+        return new Pose(Waypoints.art2StageCtrlX, Waypoints.art2StageCtrlY, 0);
+    }
+
     private static Pose art2() {
         return new Pose(Waypoints.art2X, Waypoints.art2Y, Math.toRadians(270));
+    }
+
+    private static Pose shootZone() {
+        return new Pose(Waypoints.shootZoneX, Waypoints.shootZoneY, Math.toRadians(Waypoints.shootZoneHeading));
     }
 
     private static Pose gateSlant() {
