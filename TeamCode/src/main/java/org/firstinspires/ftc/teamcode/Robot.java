@@ -49,6 +49,16 @@ public class Robot {
             ControlHubIdentifierUtil.setRobotName(hardwareMap, null);
         }
 
+        // The boot-time @Configurable scan loads the subsystem classes and runs their
+        // static config-field initializers (which call RobotProfile.forCurrent())
+        // BEFORE the SSID identifies the robot, caching the 20245 fallback. Now that
+        // the name is resolved, drop that cache and re-bind the static fields so both
+        // they and the constructor-injected instances below see the correct robot.
+        RobotProfile.invalidate();
+        LauncherSubsystem.reloadProfileConfigs();
+        DriveSubsystem.reloadProfileConfigs();
+        IntakeSubsystem.reloadProfileConfigs();
+
         // Resolve per-robot configs once at boot; subsystems take what they need explicitly.
         RobotProfile profile = RobotProfile.forCurrent();
 

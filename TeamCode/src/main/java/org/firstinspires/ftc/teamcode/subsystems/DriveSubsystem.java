@@ -87,6 +87,22 @@ public class DriveSubsystem {
             org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().rightTriggerFixedAngle;
 
     /**
+     * Re-binds the per-robot static config fields from {@code RobotProfile}.
+     *
+     * <p>The field initializers above run during the boot-time {@code @Configurable}
+     * scan, before the robot is identified, so they capture the 20245 fallback. Call
+     * this after {@code RobotProfile.invalidate()} once the SSID is known. The instance
+     * fields used for drive behavior come from the constructor, but these statics back
+     * the Panels tuning surface — refreshing them keeps Panels edits pointed at the same
+     * config objects the running subsystem uses.
+     */
+    public static void reloadProfileConfigs() {
+        aimAssistConfig = org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().aimAssist;
+        fixedAngleAimConfig = org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().fixedAngleAim;
+        rightTriggerFixedAngleConfig = org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().rightTriggerFixedAngle;
+    }
+
+    /**
      * Gets the robot-specific InitialPoseConfig based on RobotState.getRobotName().
      * @return initialPoseConfig19429 or initialPoseConfig20245
      */
@@ -1074,6 +1090,10 @@ public class DriveSubsystem {
      */
     private boolean forceRelocalizeFromVisionInternal(Pose referencePose) {
         long nowMs = System.currentTimeMillis();
+        if (!DriveFusionConfig.fusionVisionEnabled) {
+            recordRelocalizeSource("fusion_disabled", false, nowMs, -1);
+            return false;
+        }
         VisionSubsystemLimelight.TagSnapshot snap = vision.getLastSnapshot();
         if (snap == null) {
             recordRelocalizeSource("none", false, nowMs, -1);
@@ -1202,6 +1222,7 @@ public class DriveSubsystem {
     }
 
     private void maybeFeedVisionMeasurement() {
+        if (!DriveFusionConfig.fusionVisionEnabled) return;
         if (fusionLocalizer == null || vision == null) return;
         VisionSubsystemLimelight.TagSnapshot snap = vision.getLastSnapshot();
         if (snap == null) return;

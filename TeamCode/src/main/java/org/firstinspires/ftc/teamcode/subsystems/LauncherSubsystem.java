@@ -75,6 +75,22 @@ public class LauncherSubsystem {
     @Sorter(sort = 23) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig commandRangeConfig =
             org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().commandRange;
 
+    /**
+     * Re-binds the per-robot static config fields from {@link RobotProfile}.
+     *
+     * <p>The field initializers above run during the boot-time {@code @Configurable}
+     * scan, before the robot is identified, so they capture the 20245 fallback. Call
+     * this after {@link RobotProfile#invalidate()} once the SSID is known so these
+     * fields point at the real robot's config (this subsystem reads them directly).
+     */
+    public static void reloadProfileConfigs() {
+        flywheelConfig = RobotProfile.forCurrent().flywheel;
+        feederConfig = RobotProfile.forCurrent().feeder;
+        hoodConfig = RobotProfile.forCurrent().hood;
+        timingConfig = RobotProfile.forCurrent().timing;
+        commandRangeConfig = RobotProfile.forCurrent().commandRange;
+    }
+
     private final HardwareMap hardwareMap;
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);

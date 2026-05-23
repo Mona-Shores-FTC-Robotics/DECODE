@@ -80,6 +80,20 @@ public class IntakeSubsystem {
     /** Live lane-presence detection tuning for the active robot — see {@code util/RobotProfile.java}. */
     public static IntakeLaneSensorConfig.LanePresenceConfig lanePresenceConfig = RobotProfile.forCurrent().lanePresence;
 
+    /**
+     * Re-binds the per-robot static config fields from {@link RobotProfile}.
+     *
+     * <p>The field initializers above run during the boot-time {@code @Configurable}
+     * scan, before the robot is identified, so they capture the 20245 fallback. Call
+     * this after {@link RobotProfile#invalidate()} once the SSID is known. The instance
+     * fields used for behavior come from the constructor; refreshing these statics keeps
+     * Panels tuning pointed at the same config objects the running subsystem uses.
+     */
+    public static void reloadProfileConfigs() {
+        gateConfig = RobotProfile.forCurrent().gate;
+        lanePresenceConfig = RobotProfile.forCurrent().lanePresence;
+    }
+
     public static final class LaneSample {
         public final boolean sensorPresent;
         public final boolean distanceAvailable;

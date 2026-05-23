@@ -112,6 +112,22 @@ public final class RobotProfile {
         return local;
     }
 
+    /**
+     * Drops the cached profile so the next {@link #forCurrent()} re-resolves the
+     * robot identity from {@link RobotState#getRobotName()}.
+     *
+     * <p>Needed because the {@code @Configurable} annotation scan at app boot loads
+     * the subsystem classes — running their {@code static} config-field initializers,
+     * which call {@code forCurrent()} — <em>before</em> the WiFi SSID has identified
+     * the robot. That caches the 20245 fallback. OpMode init calls this once the
+     * SSID is known (see {@code Robot}'s constructor) so the correct robot's config
+     * is rebuilt. Pair it with each subsystem's {@code reloadProfileConfigs()} to
+     * re-bind the already-captured static field references.
+     */
+    public static void invalidate() {
+        cached = null;
+    }
+
     /** Human-readable identifier for telemetry. Marks "(default)" if unknown. */
     public static String activeName() {
         String robotName = RobotState.getRobotName();
@@ -127,7 +143,7 @@ public final class RobotProfile {
                 displayName,
                 is19429 ? feederConfig19429() : feederConfig20245(),
                 hoodConfig(),
-                flywheelConfig(),
+                is19429 ? flywheelConfig19429() : flywheelConfig20245(),
                 timingConfig(),
                 pinpointConstants(),
                 is19429 ? followerConstants19429() : followerConstants20245(),
@@ -163,13 +179,35 @@ public final class RobotProfile {
         return new LauncherTimingConfig();
     }
 
-    private static LauncherFlywheelConfig flywheelConfig() {
+    private static LauncherFlywheelConfig flywheelConfig19429() {
         LauncherFlywheelConfig config = new LauncherFlywheelConfig();
         config.flywheelLeft.reversed = false;
         config.flywheelLeft.idleRpm = 1500;
         config.flywheelLeft.kS = 0.10;
         config.flywheelLeft.kV = 0.00017;
-        config.flywheelLeft.kP = .003;
+        config.flywheelLeft.kP = .001;
+
+        config.flywheelCenter.reversed = false;
+        config.flywheelCenter.idleRpm = 1500;
+        config.flywheelCenter.kS = 0.10;
+        config.flywheelCenter.kV = 0.00017;
+        config.flywheelCenter.kP = .001;
+
+        config.flywheelRight.reversed = false;
+        config.flywheelRight.idleRpm = 1500;
+        config.flywheelRight.kS = 0.10;
+        config.flywheelRight.kV = 0.00017;
+        config.flywheelRight.kP = .001;
+        return config;
+    }
+
+    private static LauncherFlywheelConfig flywheelConfig20245() {
+        LauncherFlywheelConfig config = new LauncherFlywheelConfig();
+        config.flywheelLeft.reversed = false;
+        config.flywheelLeft.idleRpm = 1500;
+        config.flywheelLeft.kS = 0.10;
+        config.flywheelLeft.kV = 0.00017;
+        config.flywheelLeft.kP = .001;
 
         config.flywheelCenter.reversed = false;
         config.flywheelCenter.idleRpm = 1500;
@@ -210,7 +248,7 @@ public final class RobotProfile {
         config.center.pinchPosition = .87;
         config.center.firePosition  = .75;
 
-        config.left.loadPosition  = .8;
+        config.left.loadPosition  = .85;
         config.left.pinchPosition = .74;
         config.left.firePosition  = .61;
 
@@ -343,8 +381,7 @@ public final class RobotProfile {
     private static CommandRangeConfig rangeConfig19429() {
         CommandRangeConfig config = new CommandRangeConfig();
         config.shortLeftRpm = 2400;  config.shortCenterRpm = 2400;  config.shortRightRpm = 2400;
-        config.midLeftRpm = 2500;    config.midCenterRpm = 2500;    config.midRightRpm = 2500;
-        config.longLeftRpm = 2900;   config.longCenterRpm = 2900;   config.longRightRpm = 2900;
+        config.midLeftRpm = 3350;    config.midCenterRpm = 3350;    config.midRightRpm = 3350;
         config.longMinLeftRpm = 3875; config.longMinCenterRpm = 3875; config.longMinRightRpm = 3875;
         config.longMaxLeftRpm = 4000; config.longMaxCenterRpm = 4000; config.longMaxRightRpm = 4000;
         config.shortAutoLeftRpm = 2000; config.shortAutoCenterRpm = 2000; config.shortAutoRightRpm = 2000;
@@ -363,8 +400,7 @@ public final class RobotProfile {
     private static CommandRangeConfig rangeConfig20245() {
         CommandRangeConfig config = new CommandRangeConfig();
         config.shortLeftRpm = 2400;  config.shortCenterRpm = 2400;  config.shortRightRpm = 2400;
-        config.midLeftRpm = 2400;    config.midCenterRpm = 2400;    config.midRightRpm = 2400;
-        config.longLeftRpm = 2900;   config.longCenterRpm = 2900;   config.longRightRpm = 2900;
+        config.midLeftRpm = 3350;    config.midCenterRpm = 3350;    config.midRightRpm = 3350;
         config.longMinLeftRpm = 3875; config.longMinCenterRpm = 3875; config.longMinRightRpm = 3875;
         config.longMaxLeftRpm = 4000; config.longMaxCenterRpm = 4000; config.longMaxRightRpm = 4000;
         config.shortAutoLeftRpm = 1870; config.shortAutoCenterRpm = 1870; config.shortAutoRightRpm = 1870;
