@@ -69,6 +69,12 @@ public class LauncherSubsystem {
     @Sorter(sort = 22) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LauncherIdleConfig launcherIdleConfig =
             new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LauncherIdleConfig();
 
+    // Per-robot SHORT/MID/LONG/AUTO RPMs and hood positions, plus the launch
+    // timeout. Same live instance the Preset/Distance spin commands read via
+    // their rangeConfig() static methods — Panels edits flow through.
+    @Sorter(sort = 23) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig commandRangeConfig =
+            org.firstinspires.ftc.teamcode.util.RobotProfile.forCurrent().commandRange;
+
     private final HardwareMap hardwareMap;
     private final EnumMap<LauncherLane, Flywheel> flywheels = new EnumMap<>(LauncherLane.class);
     private final EnumMap<LauncherLane, Feeder> feeders = new EnumMap<>(LauncherLane.class);

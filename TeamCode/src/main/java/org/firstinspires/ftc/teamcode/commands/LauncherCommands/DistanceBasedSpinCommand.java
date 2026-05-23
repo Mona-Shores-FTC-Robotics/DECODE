@@ -87,11 +87,13 @@ public final class DistanceBasedSpinCommand {
                     feedbackTriggered[0] = false;
                     readyLossTimer.reset();
                     launcher.clearRecoveryDeadlines();
-                    CommandRangeConfig cfg = rangeConfig();
-                    launcher.setLaunchRpm(LauncherLane.LEFT, cfg.midLeftRpm);
-                    launcher.setLaunchRpm(LauncherLane.CENTER, cfg.midCenterRpm);
-                    launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.midRightRpm);
-                    launcher.setAllHoodPositions(cfg.midHoodPosition);
+                    // Do NOT seed RPM or hood with MID values here. setExecute
+                    // overwrites them on the first tick anyway (lastCommandedDistanceIn
+                    // is 0, so the 2" deadband always trips). Seeding MID forces the
+                    // launcher to abandon its current spin (e.g., a last-shot RPM held
+                    // by LauncherIdleCommand) only to immediately ramp back to the
+                    // distance-calculated value — wasted travel and a window where the
+                    // shot can fire at the wrong RPM if the operator releases quickly.
                     launcher.spinUpAllLanesToLaunch();
                 })
                 .setExecute(() -> {
@@ -238,6 +240,14 @@ public final class DistanceBasedSpinCommand {
         if (distance <= midDist) {
             double t = (distance - shortDist) / (midDist - shortDist);
             return shortRpm + t * (midRpm - shortRpm);
+        }
+        if (distance <= longMinDist) {
+            // Bridge the gap between midDist and longMinDist with a linear ramp
+            // from midRpm to longMinRpm. Without this branch the long-range
+            // formula below extrapolates backwards (negative t) and produces a
+            // bogus RPM in this zone.
+            double t = (distance - midDist) / (longMinDist - midDist);
+            return midRpm + t * (longMinRpm - midRpm);
         }
         if (distance <= longMaxDist) {
             double t = (distance - longMinDist) / (longMaxDist - longMinDist);

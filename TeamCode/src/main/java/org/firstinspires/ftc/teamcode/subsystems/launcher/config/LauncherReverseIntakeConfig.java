@@ -6,7 +6,7 @@ package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
  */
 public class LauncherReverseIntakeConfig {
     /** Power level for reverse intake (negative runs motors backward) */
-    public double reversePower = -.75;
+    public double reversePower = -.5;
 
     /**
      * RPM threshold at which hood retracts for human loading.

@@ -74,16 +74,19 @@ public class OperatorBindings {
     }
 
     private void configureGroundIntakeBindings(Robot robot, Gamepad rawOperatorGamepad) {
-        // Smart intake on right bumper: schedule new instance on press, reverse on release.
-        // Each press creates a fresh Ivy Command with its own state holder so the
-        // debounce timer starts clean.
+        // Smart intake on right bumper / right trigger. whileTrue (not onTrue)
+        // because smartIntakeCmd is an infinite Command — without an explicit
+        // cancel on release it keeps running in parallel with the onFalse
+        // PASSIVE_REVERSE and stomps the mode back to ACTIVE_FORWARD on its
+        // next tick (state machine sees isFull() == false → INTAKING).
+        // whileTrue handles the cancel automatically (see GamepadBindings.java).
+        // Each press still gets a fresh state holder via the lazy wrapper.
         bindings.when(() -> gp().right_bumper)
-                .onTrue(com.pedropathing.ivy.commands.Commands.lazy(() -> robot.intake.smartIntakeCmd(rawOperatorGamepad)))
+                .whileTrue(com.pedropathing.ivy.commands.Commands.lazy(() -> robot.intake.smartIntakeCmd(rawOperatorGamepad)))
                 .onFalse(robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE));
 
-        // Smart intake on right trigger
         bindings.when(() -> gp().right_trigger > TRIGGER_THRESHOLD)
-                .onTrue(com.pedropathing.ivy.commands.Commands.lazy(() -> robot.intake.smartIntakeCmd(rawOperatorGamepad)))
+                .whileTrue(com.pedropathing.ivy.commands.Commands.lazy(() -> robot.intake.smartIntakeCmd(rawOperatorGamepad)))
                 .onFalse(robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE));
 
         // Regular (non-smart) intake on left trigger

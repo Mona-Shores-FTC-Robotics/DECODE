@@ -168,19 +168,19 @@ public final class RobotProfile {
         config.flywheelLeft.reversed = false;
         config.flywheelLeft.idleRpm = 1500;
         config.flywheelLeft.kS = 0.10;
-        config.flywheelLeft.kV = 0.0002;
+        config.flywheelLeft.kV = 0.00017;
         config.flywheelLeft.kP = .003;
 
         config.flywheelCenter.reversed = false;
         config.flywheelCenter.idleRpm = 1500;
         config.flywheelCenter.kS = 0.10;
-        config.flywheelCenter.kV = 0.0002;
+        config.flywheelCenter.kV = 0.00017;
         config.flywheelCenter.kP = .001;
 
         config.flywheelRight.reversed = true;
         config.flywheelRight.idleRpm = 1500;
         config.flywheelRight.kS = 0.10;
-        config.flywheelRight.kV = 0.0002;
+        config.flywheelRight.kV = 0.00017;
         config.flywheelRight.kP = .001;
         return config;
     }
@@ -342,11 +342,11 @@ public final class RobotProfile {
 
     private static CommandRangeConfig rangeConfig19429() {
         CommandRangeConfig config = new CommandRangeConfig();
-        config.shortLeftRpm = 1900;  config.shortCenterRpm = 1900;  config.shortRightRpm = 1900;
+        config.shortLeftRpm = 2400;  config.shortCenterRpm = 2400;  config.shortRightRpm = 2400;
         config.midLeftRpm = 2500;    config.midCenterRpm = 2500;    config.midRightRpm = 2500;
         config.longLeftRpm = 2900;   config.longCenterRpm = 2900;   config.longRightRpm = 2900;
-        config.longMinLeftRpm = 2725; config.longMinCenterRpm = 2725; config.longMinRightRpm = 2725;
-        config.longMaxLeftRpm = 2900; config.longMaxCenterRpm = 2900; config.longMaxRightRpm = 2900;
+        config.longMinLeftRpm = 3875; config.longMinCenterRpm = 3875; config.longMinRightRpm = 3875;
+        config.longMaxLeftRpm = 4000; config.longMaxCenterRpm = 4000; config.longMaxRightRpm = 4000;
         config.shortAutoLeftRpm = 2000; config.shortAutoCenterRpm = 2000; config.shortAutoRightRpm = 2000;
         config.midAutoLeftRpm = 2400;   config.midAutoCenterRpm = 2400;   config.midAutoRightRpm = 2400;
         config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
@@ -362,11 +362,11 @@ public final class RobotProfile {
 
     private static CommandRangeConfig rangeConfig20245() {
         CommandRangeConfig config = new CommandRangeConfig();
-        config.shortLeftRpm = 1810;  config.shortCenterRpm = 1810;  config.shortRightRpm = 1810;
+        config.shortLeftRpm = 2400;  config.shortCenterRpm = 2400;  config.shortRightRpm = 2400;
         config.midLeftRpm = 2400;    config.midCenterRpm = 2400;    config.midRightRpm = 2400;
         config.longLeftRpm = 2900;   config.longCenterRpm = 2900;   config.longRightRpm = 2900;
-        config.longMinLeftRpm = 2725; config.longMinCenterRpm = 2725; config.longMinRightRpm = 2725;
-        config.longMaxLeftRpm = 2800; config.longMaxCenterRpm = 2800; config.longMaxRightRpm = 2800;
+        config.longMinLeftRpm = 3875; config.longMinCenterRpm = 3875; config.longMinRightRpm = 3875;
+        config.longMaxLeftRpm = 4000; config.longMaxCenterRpm = 4000; config.longMaxRightRpm = 4000;
         config.shortAutoLeftRpm = 1870; config.shortAutoCenterRpm = 1870; config.shortAutoRightRpm = 1870;
         config.midAutoLeftRpm = 2300;   config.midAutoCenterRpm = 2300;   config.midAutoRightRpm = 2300;
         config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
