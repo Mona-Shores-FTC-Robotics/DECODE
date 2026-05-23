@@ -1091,11 +1091,10 @@ public class DriveSubsystem {
                 return false;
             }
 
-            // Even for initial seed, apply jump check if reference provided
-            if (referencePose != null && !isPoseJumpAllowed(pedroPoseMT1, referencePose, "mt1_seed")) {
-                return false;
-            }
-
+            // Seed-from-unknown intentionally skips the jump check: the reference
+            // pose is the (untrusted) startHeadingDeg config default, so rejecting
+            // "big jumps" against it would block exactly the corrections we need
+            // when the robot is placed at a different heading than the config.
             applyRelocalizedPose(pedroPoseMT1);
             vision.markOdometryUpdated();
 

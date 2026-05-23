@@ -118,7 +118,7 @@ public class DriverBindings {
                 "Triangle: fixed-angle aim (hold)",
                 "Right trigger: park / right-trigger aim (hold)",
                 "Cross: vision relocalize",
-                "Square: heading reset to field-forward"
+                "Square: emergency heading reset (no vision — square robot to wall first)"
         };
     }
 
