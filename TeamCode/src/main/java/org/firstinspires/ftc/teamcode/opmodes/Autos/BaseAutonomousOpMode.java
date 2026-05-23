@@ -165,13 +165,17 @@ public abstract class BaseAutonomousOpMode extends OpMode {
     public final void loop() {
         for (LynxModule hub : hubs) hub.clearBulkCache();
         com.pedropathing.ivy.Scheduler.execute();
+        RobotState.setHandoffPose(robot.drive.getFollower().getPose());
         publishTelemetry();
     }
 
     @Override
     public final void stop() {
         try {
-            RobotState.setHandoffPose(robot.drive.getFollower().getPose());
+            Pose finalPose = robot.drive.getFollower().getPose();
+            if (finalPose != null && (finalPose.getX() != 0.0 || finalPose.getY() != 0.0)) {
+                RobotState.setHandoffPose(finalPose);
+            }
         } catch (Exception ignored) {}
 
         com.pedropathing.ivy.Scheduler.reset();
