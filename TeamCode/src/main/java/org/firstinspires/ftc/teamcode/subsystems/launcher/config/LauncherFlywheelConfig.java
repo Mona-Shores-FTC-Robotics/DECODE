@@ -5,7 +5,6 @@ package org.firstinspires.ftc.teamcode.subsystems.launcher.config;
  * {@code RobotProfile} — see {@code util/RobotProfile.java} for the
  * per-robot tuning.
  */
-@Configurable
 public class LauncherFlywheelConfig {
     public FlywheelParameters parameters = new FlywheelParameters();
 
