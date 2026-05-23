@@ -143,6 +143,11 @@ public final class PresetRangeSpinCommand {
                 launcher.setLaunchRpm(LauncherLane.CENTER, cfg.shortAutoCenterRpm);
                 launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.shortAutoRightRpm);
                 break;
+            case MID_AUTO:
+                launcher.setLaunchRpm(LauncherLane.LEFT, cfg.midAutoLeftRpm);
+                launcher.setLaunchRpm(LauncherLane.CENTER, cfg.midAutoCenterRpm);
+                launcher.setLaunchRpm(LauncherLane.RIGHT, cfg.midAutoRightRpm);
+                break;
             case FAR_AUTO:
                 launcher.setLaunchRpm(LauncherLane.LEFT, cfg.farAutoLeftRpm);
                 launcher.setLaunchRpm(LauncherLane.CENTER, cfg.farAutoCenterRpm);
@@ -158,6 +163,7 @@ public final class PresetRangeSpinCommand {
             case MID: return cfg.midHoodPosition;
             case LONG: return cfg.longHoodPosition;
             case SHORT_AUTO: return cfg.shortAutoHoodPosition;
+            case MID_AUTO: return cfg.midAutoHoodPosition;
             case FAR_AUTO: return cfg.farAutoHoodPosition;
             default: return cfg.midHoodPosition;
         }

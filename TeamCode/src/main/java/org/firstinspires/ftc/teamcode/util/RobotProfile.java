@@ -348,11 +348,13 @@ public final class RobotProfile {
         config.longMinLeftRpm = 2725; config.longMinCenterRpm = 2725; config.longMinRightRpm = 2725;
         config.longMaxLeftRpm = 2900; config.longMaxCenterRpm = 2900; config.longMaxRightRpm = 2900;
         config.shortAutoLeftRpm = 2000; config.shortAutoCenterRpm = 2000; config.shortAutoRightRpm = 2000;
+        config.midAutoLeftRpm = 2400;   config.midAutoCenterRpm = 2400;   config.midAutoRightRpm = 2400;
         config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
         config.shortHoodPosition = 1;
         config.midHoodPosition = 0.05;
         config.longHoodPosition = 0.0;
         config.shortAutoHoodPosition = .55;
+        config.midAutoHoodPosition = 0.1;
         config.farAutoHoodPosition = 0.0;
         config.timeoutSeconds = 3.5;
         return config;
@@ -366,11 +368,13 @@ public final class RobotProfile {
         config.longMinLeftRpm = 2725; config.longMinCenterRpm = 2725; config.longMinRightRpm = 2725;
         config.longMaxLeftRpm = 2800; config.longMaxCenterRpm = 2800; config.longMaxRightRpm = 2800;
         config.shortAutoLeftRpm = 1870; config.shortAutoCenterRpm = 1870; config.shortAutoRightRpm = 1870;
+        config.midAutoLeftRpm = 2300;   config.midAutoCenterRpm = 2300;   config.midAutoRightRpm = 2300;
         config.farAutoLeftRpm = 2725; config.farAutoCenterRpm = 2725; config.farAutoRightRpm = 2725;
         config.shortHoodPosition = .95;
         config.midHoodPosition = 0.0;
         config.longHoodPosition = 0.0;
         config.shortAutoHoodPosition = .55;
+        config.midAutoHoodPosition = 0.05;
         config.farAutoHoodPosition = 0.0;
         config.timeoutSeconds = 3.5;
         return config;

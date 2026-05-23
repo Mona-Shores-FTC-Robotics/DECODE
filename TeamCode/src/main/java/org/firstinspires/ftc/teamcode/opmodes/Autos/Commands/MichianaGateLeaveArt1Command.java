@@ -136,7 +136,7 @@ public class MichianaGateLeaveArt1Command {
                                 .build(Config.maxPathPower),
                         robot.intake.autoSmartIntakeCmd(),
                         PresetRangeSpinCommand.create(
-                                robot.launcher, LauncherRange.FAR_AUTO, false,
+                                robot.launcher, LauncherRange.MID_AUTO, false,
                                 null, null, null)
                 ),
 

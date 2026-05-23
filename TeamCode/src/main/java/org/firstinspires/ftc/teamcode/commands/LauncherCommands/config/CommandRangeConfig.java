@@ -35,6 +35,11 @@ public class CommandRangeConfig {
     public double shortAutoCenterRpm;
     public double shortAutoRightRpm;
 
+    /** Mid Auto range RPMs (close-side gate cycles, tuned separately from MID) */
+    public double midAutoLeftRpm;
+    public double midAutoCenterRpm;
+    public double midAutoRightRpm;
+
     /** Far Auto range RPMs (autonomous far shots, tuned separately from LONG) */
     public double farAutoLeftRpm;
     public double farAutoCenterRpm;
@@ -45,6 +50,7 @@ public class CommandRangeConfig {
     public double midHoodPosition;
     public double longHoodPosition;
     public double shortAutoHoodPosition;
+    public double midAutoHoodPosition;
     public double farAutoHoodPosition;
 
     /** Timeout in seconds before giving up on spin-up */

@@ -17,6 +17,9 @@ public enum LauncherRange {
     /** Short autonomous shot configuration (tuned separately from SHORT for auto) */
     SHORT_AUTO("Short Auto"),
 
+    /** Mid autonomous shot configuration (close-side gate cycles, tuned separately from MID for auto) */
+    MID_AUTO("Mid Auto"),
+
     /** Far autonomous shot configuration (tuned separately from LONG for auto) */
     FAR_AUTO("Far Auto");
 
