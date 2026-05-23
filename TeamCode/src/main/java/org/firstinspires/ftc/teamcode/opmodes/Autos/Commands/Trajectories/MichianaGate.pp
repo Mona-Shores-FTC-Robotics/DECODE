@@ -154,7 +154,7 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
       "name": "Shoot2",
@@ -173,14 +173,14 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
       "name": "GateSlant1",
       "endPoint": {
         "x": 12.5,
         "y": 60,
-        "heading": "constant",
+        "heading": "linear",
         "startDeg": 134,
         "endDeg": 150,
         "degrees": 150
@@ -192,7 +192,7 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
       "name": "Shoot3",
@@ -211,14 +211,14 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
       "name": "GateSlant2",
       "endPoint": {
         "x": 12.5,
         "y": 60,
-        "heading": "constant",
+        "heading": "linear",
         "startDeg": 134,
         "endDeg": 150,
         "degrees": 150
@@ -230,7 +230,7 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
       "name": "Shoot4",
@@ -249,14 +249,14 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
       "name": "GateSlant3",
       "endPoint": {
         "x": 12.5,
         "y": 60,
-        "heading": "constant",
+        "heading": "linear",
         "startDeg": 134,
         "endDeg": 150,
         "degrees": 150
@@ -268,7 +268,7 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
       "name": "Shoot5Final",
@@ -287,7 +287,7 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
       "name": "ParkNearGate",
@@ -306,7 +306,7 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     }
   ],
   "shapes": [],
@@ -443,5 +443,5 @@
     "pathOpacity": 1
   },
   "version": "1.2.1",
-  "timestamp": "2026-05-23T01:39:11.371Z"
+  "timestamp": "2026-05-23T02:52:22.652Z"
 }
