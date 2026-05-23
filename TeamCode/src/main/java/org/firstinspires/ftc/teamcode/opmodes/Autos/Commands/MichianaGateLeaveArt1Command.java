@@ -11,6 +11,7 @@ import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.commands.Commands;
@@ -139,9 +140,11 @@ public class MichianaGateLeaveArt1Command {
 
         return Groups.sequential(
                 ConditionalFinalLaunchCommand.createTimerReset(),
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "preload")),
                 preload,
 
-                // ── Sweep toward gate: switch to FAR_AUTO while driving ───────────
+                // ── Sweep toward gate: switch to MID_AUTO while driving ───────────
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "stageGate")),
                 Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
                                 .from(preloadZone()).to(stageGate())
@@ -155,12 +158,14 @@ public class MichianaGateLeaveArt1Command {
                 ),
 
                 // ── Open gate: straight left slide, no intake ─────────────────────
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "openGate")),
                 new FollowPathBuilder(robot, alliance)
                         .from(stageGate()).to(openGate())
                         .withConstantHeading(270)
                         .build(Config.maxPathPower),
 
-                // ── Art2: collect from just-opened gate, curved path ──────────────
+                // ── Art2: collect field artifact ──────────────────────────────────
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "art2Pickup")),
                 Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
                                 .from(openGate()).to(art2())
@@ -171,6 +176,7 @@ public class MichianaGateLeaveArt1Command {
                 ),
 
                 // ── Return and fire Art2 set on fly ───────────────────────────────
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "shoot2")),
                 new FollowPathBuilder(robot, alliance)
                         .from(art2()).to(shootZone())
                         .withControl(shoot2Ctrl())
@@ -179,11 +185,15 @@ public class MichianaGateLeaveArt1Command {
                         .build(Config.maxPathPower),
 
                 // ── Art3, Art4, Art5: gate slant cycles ───────────────────────────
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "gateSlant1")),
                 gateSlantCycle(robot, alliance),
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "gateSlant2")),
                 gateSlantCycle(robot, alliance),
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "gateSlant3")),
                 gateSlantCycle(robot, alliance),
 
                 // ── Art1 pickup: switch back to SHORT_AUTO while driving ──────────
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "art1Pickup")),
                 Groups.deadline(
                         Groups.sequential(
                                 new FollowPathBuilder(robot, alliance)
@@ -203,12 +213,15 @@ public class MichianaGateLeaveArt1Command {
                 ),
 
                 // ── Final shot: curve back toward start line, fire Art1 set on fly ─
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "finalShot")),
                 new FollowPathBuilder(robot, alliance)
                         .from(art1()).to(finalShot())
                         .withControl(finalShotCtrl())
                         .withLinearHeadingCompletion(Config.headingInterpEnd)
                         .withFireAtT(Config.fireAtT, robot.launcher, robot.intake)
-                        .build(Config.maxPathPower)
+                        .build(Config.maxPathPower),
+
+                Commands.instant(() -> RobotState.packet.put("Auto/phase", "done"))
         );
     }
 
@@ -222,7 +235,9 @@ public class MichianaGateLeaveArt1Command {
                                 .build(Config.maxPathPower),
                         robot.intake.autoSmartIntakeCmd()
                 ),
+                Commands.instant(() -> RobotState.packet.put("Auto/phase/gateSlant", "waiting")),
                 Commands.waitMs(Config.gateSlantWaitMs),
+                Commands.instant(() -> RobotState.packet.put("Auto/phase/gateSlant", "returning")),
                 new FollowPathBuilder(robot, alliance)
                         .from(gateSlant()).to(shootZone())
                         .withControl(gateSlantCtrl())
