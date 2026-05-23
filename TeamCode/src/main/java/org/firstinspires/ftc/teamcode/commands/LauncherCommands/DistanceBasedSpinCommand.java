@@ -27,6 +27,8 @@ public final class DistanceBasedSpinCommand {
 
     /** Exponential smoothing weight for the live distance reading (higher = trust new sample more, less smoothing). */
     private static final double DISTANCE_SMOOTHING_FACTOR = 0.7;
+    /** Minimum distance change (inches) required before issuing a new RPM command. Reduces motor noise from sub-inch odometry jitter. */
+    private static final double DISTANCE_DEAD_BAND_IN = 2.0;
     /** Lane is "ready" once its actual RPM reaches this fraction of the target RPM. */
     private static final double RPM_READY_THRESHOLD_PERCENT = 0.90;
 
@@ -57,6 +59,7 @@ public final class DistanceBasedSpinCommand {
         // Arrays wrap mutable values so the lambdas below can update them
         // (Java requires lambda captures to be final, so we mutate state via array slots).
         final double[] lastSmoothedDistanceIn = {0.0};
+        final double[] lastCommandedDistanceIn = {0.0};
         final boolean[] feedbackTriggered = {false};
         final ElapsedTime readyLossTimer = new ElapsedTime();
 
@@ -64,6 +67,7 @@ public final class DistanceBasedSpinCommand {
                 .setStart(() -> {
                     diagnostics.updateCount = 0;
                     lastSmoothedDistanceIn[0] = 0.0;
+                    lastCommandedDistanceIn[0] = 0.0;
                     feedbackTriggered[0] = false;
                     readyLossTimer.reset();
                     launcher.clearRecoveryDeadlines();
@@ -88,11 +92,15 @@ public final class DistanceBasedSpinCommand {
                         lastSmoothedDistanceIn[0] = smoothedDistance;
                     } else {
                         smoothedDistance = 0.0;
-                        lastSmoothedDistanceIn[0] = 0.0;
+                        // Retain lastSmoothedDistanceIn so the next valid reading smooths
+                        // from the last known distance instead of jumping to raw.
                     }
                     if (smoothedDistance > 0.0) {
-                        setRpmsForDistance(launcher, smoothedDistance);
-                        setHoodForDistance(launcher, smoothedDistance);
+                        if (Math.abs(smoothedDistance - lastCommandedDistanceIn[0]) >= DISTANCE_DEAD_BAND_IN) {
+                            setRpmsForDistance(launcher, smoothedDistance);
+                            setHoodForDistance(launcher, smoothedDistance);
+                            lastCommandedDistanceIn[0] = smoothedDistance;
+                        }
                         checkAndTriggerReadyFeedback(launcher, drive, lighting, gamepad,
                                 feedbackTriggered, readyLossTimer);
                     }
