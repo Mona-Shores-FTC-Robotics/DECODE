@@ -159,6 +159,12 @@ public abstract class BaseAutonomousOpMode extends OpMode {
             RobotState.putPose("Pose/Robot", PoseFrames.pedroToFtc(frameCenter));
         }
 
+        // Configured target start pose (frame-center, same shift as the robot/MT boxes)
+        // so setup is "drive until the MT1 box sits on the Target box."
+        Pose targetFrame = PoseFrames.shiftToFrameCenter(
+                getTargetPose(), RobotFrameConfig.frameCenterForwardIn, RobotFrameConfig.frameCenterLeftIn);
+        RobotState.putPose("Pose/Target", PoseFrames.pedroToFtc(targetFrame));
+
         updateInitTelemetry(initStatus);
         updateDriverStationTelemetry(initStatus);
         robot.telemetry.publishLoopTelemetry(
