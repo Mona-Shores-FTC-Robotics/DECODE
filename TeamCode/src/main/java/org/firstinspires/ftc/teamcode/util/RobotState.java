@@ -80,6 +80,9 @@ public class RobotState {
 
     public static TelemetryPacket packet = new TelemetryPacket();
 
+    /** Incremented each time withFireAtT fires during auto. Resets at auto start. */
+    public static int autoShotCount = 0;
+
     public static void putPose(String label, Pose pose) {
         packet.put(label + " x", pose.getX());
         packet.put(label + " y", pose.getY());

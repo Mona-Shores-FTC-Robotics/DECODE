@@ -17,6 +17,7 @@ import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.LauncherSubsystem;
 import org.firstinspires.ftc.teamcode.util.LauncherLane;
+import org.firstinspires.ftc.teamcode.util.RobotState;
 
 public class FollowPathBuilder {
 
@@ -235,6 +236,7 @@ public class FollowPathBuilder {
                 if (intake != null) {
                     intake.setGateAllowArtifacts();
                 }
+                RobotState.autoShotCount++;
             });
         }
 

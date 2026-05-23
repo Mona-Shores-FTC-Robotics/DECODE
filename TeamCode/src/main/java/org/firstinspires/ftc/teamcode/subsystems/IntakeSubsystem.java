@@ -1198,6 +1198,7 @@ public class IntakeSubsystem {
                     int artifactCount = getArtifactCount();
                     boolean isFull = artifactCount >= autoSmartIntakeConfig.fullCountThreshold || isFull();
                     boolean belowResume = artifactCount <= autoSmartIntakeConfig.resumeCountThreshold;
+                    RobotState.packet.put("intake/autoStage", stage[0].name());
                     switch (stage[0]) {
                         case FORWARD:
                             if (isFull) {

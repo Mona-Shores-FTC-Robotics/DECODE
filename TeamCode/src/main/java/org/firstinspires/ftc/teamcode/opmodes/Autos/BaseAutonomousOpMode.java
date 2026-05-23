@@ -148,6 +148,7 @@ public abstract class BaseAutonomousOpMode extends OpMode {
 
     @Override
     public final void start() {
+        RobotState.autoShotCount = 0;
         allianceSelector.lockSelection();
         modeSelector.lockSelection();
 
@@ -429,6 +430,7 @@ public abstract class BaseAutonomousOpMode extends OpMode {
                     currentPose.getX(), currentPose.getY(),
                     Math.toDegrees(currentPose.getHeading()), activeAlliance.name());
         }
+        RobotState.packet.put("Auto/shotsTotal", RobotState.autoShotCount);
         robot.telemetry.publishLoopTelemetry(
                 robot.drive, robot.launcher, robot.intake, robot.vision, robot.lighting,
                 null, gamepad1, gamepad2,
