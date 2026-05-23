@@ -30,7 +30,7 @@ public class DriveFusionConfig {
      * start pose. Init still detects alliance + motif and still displays the vision
      * pose for sanity-checking; it just doesn't apply it to the follower.
      */
-    public static boolean relocalizeDuringInit = false;
+    public static boolean relocalizeDuringInit = true;
 
     /**
      * Drop vision measurements older than this (ms) in the continuous fusion feed.

@@ -14,6 +14,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
+import org.firstinspires.ftc.teamcode.util.RobotFrameConfig;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.List;
@@ -629,7 +630,12 @@ public class VisionSubsystemLimelight {
                     ? PoseFrames.mt1ToFtc(mt1Pose) : null;
             if (candidateFtcMT1 != null && !isOriginPose(candidateFtcMT1)) {
                 this.ftcPoseMT1 = candidateFtcMT1;
-                RobotState.putPose("vision/Poses/MT1", this.ftcPoseMT1);
+                // Publish shifted to the frame center (same offset as Pose/Robot) so the
+                // AS boxes overlap exactly when vision agrees with odometry. The unshifted
+                // ftcPoseMT1/pedroPoseMT1 fields (used for fusion/relocalize) stay at the
+                // drivetrain center.
+                RobotState.putPose("vision/Poses/MT1", PoseFrames.shiftToFrameCenter(
+                        this.ftcPoseMT1, RobotFrameConfig.frameCenterForwardIn, RobotFrameConfig.frameCenterLeftIn));
                 this.pedroPoseMT1 = PoseFrames.mt1ToPedro(mt1Pose);
 
                 this.ftcYawMT1 = Math.toDegrees(ftcPoseMT1.getHeading());
@@ -651,7 +657,8 @@ public class VisionSubsystemLimelight {
                     ? PoseFrames.mt2ToFtc(mt2Pose) : null;
             if (candidateFtcMT2 != null && !isOriginPose(candidateFtcMT2)) {
                 this.ftcPoseMT2 = candidateFtcMT2;
-                RobotState.putPose("vision/Poses/MT2", this.ftcPoseMT2);
+                RobotState.putPose("vision/Poses/MT2", PoseFrames.shiftToFrameCenter(
+                        this.ftcPoseMT2, RobotFrameConfig.frameCenterForwardIn, RobotFrameConfig.frameCenterLeftIn));
                 this.pedroPoseMT2 = PoseFrames.ftcToPedro(ftcPoseMT2);
 
                 this.ftcYawMT2 = Math.toDegrees(ftcPoseMT2.getHeading());

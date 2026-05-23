@@ -2,8 +2,11 @@ package org.firstinspires.ftc.teamcode.telemetry.formatters;
 
 import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
+import org.firstinspires.ftc.teamcode.util.PoseFrames;
+import org.firstinspires.ftc.teamcode.util.RobotFrameConfig;
 import org.firstinspires.ftc.teamcode.telemetry.data.LauncherTelemetryData;
 import org.firstinspires.ftc.teamcode.telemetry.data.RobotTelemetryData;
 import org.firstinspires.ftc.teamcode.util.RobotState;
@@ -151,13 +154,7 @@ public class DashboardFormatter {
         packet.put("Pose/x", data.pose.poseXIn);
         packet.put("Pose/y", data.pose.poseYIn);
         packet.put("Pose/heading_deg", Math.toDegrees(data.pose.headingRad));
-        // AS-draggable live robot pose. AdvantageScope's FTC field asset is in the
-        // FTC frame (origin at field center, inches) — so publish the FTC pose,
-        // not the Pedro pose (origin at blue-left corner) which would show the
-        // robot half-a-field off in the corner.
-        if (!Double.isNaN(data.pose.ftcXIn) && !Double.isNaN(data.pose.ftcYIn) && !Double.isNaN(data.pose.ftcHeadingRad)) {
-            RobotState.putPose("Pose/Robot", data.pose.ftcXIn, data.pose.ftcYIn, data.pose.ftcHeadingRad);
-        }
+        publishRobotFramePose(data);
 
         // Vision
         packet.put("vision/has_tag", data.vision.hasTag);
@@ -282,6 +279,28 @@ public class DashboardFormatter {
         if (data.pose.visionPoseValid) {
             RobotState.putPose("Pose/Vision", data.pose.visionPoseXIn, data.pose.visionPoseYIn, data.pose.visionHeadingRad);
         }
+
+        publishRobotFramePose(data);
+    }
+
+    /**
+     * Publishes the AS-draggable {@code Pose/Robot} in the FTC frame, shifted from
+     * the drivetrain/odometry center to the robot's frame center (see
+     * {@link RobotFrameConfig}) so the AdvantageScope box sits on the real body
+     * instead of misrepresenting where the robot is. Visualization only.
+     */
+    private void publishRobotFramePose(RobotTelemetryData data) {
+        if (Double.isNaN(data.pose.poseXIn)
+                || Double.isNaN(data.pose.poseYIn)
+                || Double.isNaN(data.pose.headingRad)) {
+            return;
+        }
+        Pose framePedro = PoseFrames.shiftToFrameCenter(
+                new Pose(data.pose.poseXIn, data.pose.poseYIn, data.pose.headingRad),
+                RobotFrameConfig.frameCenterForwardIn,
+                RobotFrameConfig.frameCenterLeftIn);
+        Pose frameFtc = PoseFrames.pedroToFtc(framePedro);
+        RobotState.putPose("Pose/Robot", frameFtc.getX(), frameFtc.getY(), frameFtc.getHeading());
     }
 
     /**

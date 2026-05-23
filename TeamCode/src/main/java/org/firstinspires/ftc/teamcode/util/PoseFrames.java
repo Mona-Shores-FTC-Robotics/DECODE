@@ -125,4 +125,20 @@ public final class PoseFrames {
                 ? ftcToPedro(ftc)
                 : null;
     }
+
+    /**
+     * Shifts a Pedro-frame pose from the drivetrain/odometry center to the frame
+     * geometric center by ({@code forwardIn}, {@code leftIn}) in the robot's own
+     * frame (forward = toward the front, left = toward the robot's left). Heading is
+     * unchanged. Visualization only — does NOT change the control/odometry pose.
+     */
+    public static Pose shiftToFrameCenter(Pose drivetrainPedro, double forwardIn, double leftIn) {
+        if (drivetrainPedro == null) {
+            return null;
+        }
+        double h = drivetrainPedro.getHeading();
+        double dx = forwardIn * Math.cos(h) - leftIn * Math.sin(h);
+        double dy = forwardIn * Math.sin(h) + leftIn * Math.cos(h);
+        return new Pose(drivetrainPedro.getX() + dx, drivetrainPedro.getY() + dy, h);
+    }
 }

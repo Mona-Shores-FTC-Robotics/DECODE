@@ -243,6 +243,12 @@ public class FusionLocalizer implements Localizer {
     @Override
     public double getIMUHeading() { return deadReckoning.getIMUHeading(); }
 
+    /** Debug: the filter's raw fused position (before the getPose() heading override). */
+    public Pose debugCurrentPosition() { return currentPosition.copy(); }
+
+    /** Debug: the dead-reckoning (Pinpoint) pose this filter wraps. */
+    public Pose debugDeadReckoningPose() { return deadReckoning.getPose(); }
+
     @Override
     public boolean isNAN() {
         return Double.isNaN(currentPosition.getX()) || Double.isNaN(currentPosition.getY()) || Double.isNaN(currentPosition.getHeading());

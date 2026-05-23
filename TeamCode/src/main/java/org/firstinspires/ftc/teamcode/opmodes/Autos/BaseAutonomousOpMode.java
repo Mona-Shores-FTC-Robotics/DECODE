@@ -6,6 +6,7 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.Robot;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DriveSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.drive.config.DriveFusionConfig;
 import org.firstinspires.ftc.teamcode.util.Alliance;
@@ -17,6 +18,7 @@ import org.firstinspires.ftc.teamcode.util.FieldConstants;
 import org.firstinspires.ftc.teamcode.util.LauncherMode;
 import org.firstinspires.ftc.teamcode.util.LauncherModeSelector;
 import org.firstinspires.ftc.teamcode.util.PoseFrames;
+import org.firstinspires.ftc.teamcode.util.RobotFrameConfig;
 import org.firstinspires.ftc.teamcode.util.RobotState;
 
 import java.util.List;
@@ -152,7 +154,9 @@ public abstract class BaseAutonomousOpMode extends OpMode {
         // falling back to the field-center default.
         Pose initPose = robot.drive.getFollower().getPose();
         if (initPose != null) {
-            RobotState.putPose("Pose/Robot", PoseFrames.pedroToFtc(initPose));
+            Pose frameCenter = PoseFrames.shiftToFrameCenter(
+                    initPose, RobotFrameConfig.frameCenterForwardIn, RobotFrameConfig.frameCenterLeftIn);
+            RobotState.putPose("Pose/Robot", PoseFrames.pedroToFtc(frameCenter));
         }
 
         updateInitTelemetry(initStatus);
@@ -249,7 +253,45 @@ public abstract class BaseAutonomousOpMode extends OpMode {
         lastAppliedStartPosePedro = copyPose(startPose);
         robot.drive.getFollower().setStartingPose(startPose);
         robot.drive.getFollower().setPose(startPose);
+        // Pedro's PoseTracker was carrying a stray offset when seeding the
+        // FusionLocalizer (follower.getPose() reported field-center while the filter
+        // held the real seed). Force the reported pose to exactly the seed via Pedro's
+        // own offset mechanism, then refresh so dead-reckoning reflects it.
+        robot.drive.getFollower().getPoseTracker().resetOffset();
+        robot.drive.getFollower().update();
         updateExpectedStartPose();
+        publishSeedReadback(startPose);
+    }
+
+    /**
+     * Diagnostic: captures the seed we asked for vs. what the follower reports back
+     * immediately, plus the FusionLocalizer's raw filter position and the underlying
+     * Pinpoint pose. Pinpoints where a wrong init pose (e.g. field-center 72,72)
+     * actually enters: a failed setPose, the getPose() heading override, or the
+     * PoseTracker offset layer.
+     */
+    private void publishSeedReadback(Pose startPose) {
+        if (startPose != null) {
+            RobotState.packet.put("init/seed/target x", startPose.getX());
+            RobotState.packet.put("init/seed/target y", startPose.getY());
+            RobotState.packet.put("init/seed/target heading_deg", Math.toDegrees(startPose.getHeading()));
+        }
+        Pose readback = robot.drive.getFollower().getPose();
+        if (readback != null) {
+            RobotState.packet.put("init/seed/follower x", readback.getX());
+            RobotState.packet.put("init/seed/follower y", readback.getY());
+            RobotState.packet.put("init/seed/follower heading_deg", Math.toDegrees(readback.getHeading()));
+        }
+        if (Constants.activeFusionLocalizer != null) {
+            Pose fl = Constants.activeFusionLocalizer.debugCurrentPosition();
+            Pose dr = Constants.activeFusionLocalizer.debugDeadReckoningPose();
+            RobotState.packet.put("init/seed/fusionPos x", fl.getX());
+            RobotState.packet.put("init/seed/fusionPos y", fl.getY());
+            RobotState.packet.put("init/seed/fusionPos heading_deg", Math.toDegrees(fl.getHeading()));
+            RobotState.packet.put("init/seed/deadReckoning x", dr.getX());
+            RobotState.packet.put("init/seed/deadReckoning y", dr.getY());
+            RobotState.packet.put("init/seed/deadReckoning heading_deg", Math.toDegrees(dr.getHeading()));
+        }
     }
 
     private void updateExpectedStartPose() {
@@ -395,8 +437,10 @@ public abstract class BaseAutonomousOpMode extends OpMode {
             return "⚠ NO VISION - Using manual pose";
         }
 
-        long ageMs = status.relocalizePoseTimestampMs > 0L
-                ? System.currentTimeMillis() - status.relocalizePoseTimestampMs
+        // Staleness is about the vision POSE freshness (snapshot age), not whether
+        // we relocalized — init relocalization may be intentionally disabled.
+        long ageMs = status.visionPoseTimestampNs > 0L
+                ? (System.nanoTime() - status.visionPoseTimestampNs) / 1_000_000L
                 : Long.MAX_VALUE;
         if (ageMs > 2000) {
             return "⚠ VISION STALE - Move robot to see tag";

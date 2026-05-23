@@ -65,6 +65,11 @@ public class AutoPrestartHelper {
         VisionSubsystemLimelight.TagSnapshot lastSnap = allianceSelector.getLastSnapshot();
         Pose mt1 = lastSnap != null ? lastSnap.getRobotPosePedroMT1() : null;
         Pose startPoseFromVision = mt1 != null ? copyPose(mt1) : null;
+        // Freshness of the vision pose itself (not the relocalize event) — so the
+        // status line reports STALE only when vision actually stops seeing a tag,
+        // independent of whether init relocalization is enabled.
+        long visionPoseTimestampNs = (lastSnap != null && startPoseFromVision != null)
+                ? lastSnap.capturedAtNs : 0L;
 
         maybeRelocalizeFromGoalTag(activeAlliance);
         maybeDetectMotif();
@@ -72,6 +77,7 @@ public class AutoPrestartHelper {
         return new InitStatus(
                 selectedAlliance,
                 startPoseFromVision,
+                visionPoseTimestampNs,
                 lastRelocalizedPose,
                 lastRelocalizeTagId,
                 lastRelocalizePoseTimestampMs,
@@ -175,6 +181,8 @@ public class AutoPrestartHelper {
     public static final class InitStatus {
         public final Alliance alliance;
         public final Pose startPoseFromVision;
+        /** nanoTime when the vision pose was captured (0 if no vision pose). */
+        public final long visionPoseTimestampNs;
         public final Pose relocalizedPose;
         public final int relocalizeTagId;
         public final long relocalizePoseTimestampMs;
@@ -184,6 +192,7 @@ public class AutoPrestartHelper {
         public InitStatus(
                 Alliance alliance,
                 Pose startPoseFromVision,
+                long visionPoseTimestampNs,
                 Pose relocalizedPose,
                 int relocalizeTagId,
                 long relocalizePoseTimestampMs,
@@ -192,6 +201,7 @@ public class AutoPrestartHelper {
         ) {
             this.alliance = alliance;
             this.startPoseFromVision = startPoseFromVision;
+            this.visionPoseTimestampNs = visionPoseTimestampNs;
             this.relocalizedPose = relocalizedPose;
             this.relocalizeTagId = relocalizeTagId;
             this.relocalizePoseTimestampMs = relocalizePoseTimestampMs;

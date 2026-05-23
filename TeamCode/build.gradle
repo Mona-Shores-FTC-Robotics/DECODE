@@ -79,7 +79,7 @@ dependencies {
     // AdvantageScope Lite - enables AdvantageScope connection via FTC Dashboard packets
     // Temporarily disabled for practice: MATCH mode already kills the packet stream,
     // and dropping the dep removes the AS web-handler/NT4 bridge from the APK entirely.
-    // implementation("page.j5155.AdvantageScope:lite:v26.0.0")
+     implementation("page.j5155.AdvantageScope:lite:v26.0.0")
 
     testImplementation 'junit:junit:4.13.2'
 }
