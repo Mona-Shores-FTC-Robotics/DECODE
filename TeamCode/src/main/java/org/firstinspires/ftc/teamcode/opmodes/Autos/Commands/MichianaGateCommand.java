@@ -194,7 +194,7 @@ public class MichianaGateCommand {
                 Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
                                 .from(shootZone()).to(gateSlant())
-                                .withConstantHeading(Waypoints.gateSlantHeading)
+                                .withLinearHeadingCompletion(1.0)
                                 .build(Config.maxPathPower),
                         robot.intake.autoSmartIntakeCmd()
                 ),
