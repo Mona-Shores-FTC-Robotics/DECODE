@@ -10,89 +10,32 @@
     {
       "name": "Preloads",
       "endPoint": {
-        "x": 35.5714900947459,
-        "y": 109.9638242894057,
+        "x": 37.5,
+        "y": 106,
         "heading": "linear",
         "startDeg": 0,
-        "endDeg": 135.5,
+        "endDeg": 134,
         "degrees": 134
       },
-      "controlPoints": [],
+      "controlPoints": [
+        {
+          "x": 32,
+          "y": 113
+        }
+      ],
       "color": "#96559B",
       "id": "line-k5pq2c85urn",
       "waitBeforeMs": 0,
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
-      "name": "Art1",
+      "name": "StageGate",
       "endPoint": {
-        "x": 23.6343669250646,
-        "y": 95.98776916451337,
-        "heading": "linear",
-        "startDeg": 135.5,
-        "endDeg": 270,
-        "degrees": 270
-      },
-      "controlPoints": [],
-      "color": "#96559B",
-      "id": "line-imsjuvkoayf",
-      "waitBeforeMs": 0,
-      "waitAfterMs": 0,
-      "waitBeforeName": "",
-      "waitAfterName": "",
-      "locked": true
-    },
-    {
-      "name": "OpenGate1",
-      "endPoint": {
-        "x": 15.7,
-        "y": 73.8,
-        "heading": "constant",
-        "startDeg": 270,
-        "endDeg": 270,
-        "degrees": 270
-      },
-      "controlPoints": [
-        {
-          "x": 25.422049956933677,
-          "y": 72.86856158484066
-        }
-      ],
-      "color": "#96559B",
-      "id": "line-zehv56xhb4q",
-      "waitBeforeMs": 0,
-      "waitAfterMs": 0,
-      "waitBeforeName": "",
-      "waitAfterName": "",
-      "locked": true
-    },
-    {
-      "name": "Shoot1",
-      "endPoint": {
-        "x": 53,
-        "y": 87,
-        "heading": "linear",
-        "startDeg": 270,
-        "endDeg": 134,
-        "degrees": 134
-      },
-      "controlPoints": [],
-      "color": "#96559B",
-      "id": "line-m2ql985794",
-      "waitBeforeMs": 0,
-      "waitAfterMs": 0,
-      "waitBeforeName": "",
-      "waitAfterName": "",
-      "locked": true
-    },
-    {
-      "name": "Art2Stage",
-      "endPoint": {
-        "x": 23.756244616709733,
-        "y": 70.99397071490094,
+        "x": 39,
+        "y": 71,
         "heading": "linear",
         "startDeg": 134,
         "endDeg": 270,
@@ -100,8 +43,8 @@
       },
       "controlPoints": [
         {
-          "x": 25.921619293712315,
-          "y": 84.11584840654606
+          "x": 56.5,
+          "y": 84
         }
       ],
       "color": "#96559B",
@@ -110,82 +53,92 @@
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
-      "id": "mphobbm0-0e6nic",
+      "name": "OpenGate",
       "endPoint": {
-        "x": 23.48600344530577,
-        "y": 60.09194659776053,
+        "x": 15,
+        "y": 71,
         "heading": "constant",
-        "reverse": false,
-        "startDeg": 270,
-        "endDeg": 0,
+        "startDeg": 95,
+        "endDeg": 90,
         "degrees": 270
       },
       "controlPoints": [],
-      "color": "#96559B",
-      "name": "Art2",
-      "waitBeforeMs": 0,
-      "waitAfterMs": 0,
-      "waitBeforeName": "",
-      "waitAfterName": "",
-      "locked": true
-    },
-    {
-      "name": "OpenGate2",
-      "endPoint": {
-        "x": 15.7,
-        "y": 73.8,
-        "heading": "constant",
-        "startDeg": 270,
-        "endDeg": 270,
-        "degrees": 270
-      },
-      "controlPoints": [
-        {
-          "x": 22.70088285960379,
-          "y": 72.95695521102498
-        }
-      ],
       "color": "#96559B",
       "id": "line-rnrkn5cuox",
       "waitBeforeMs": 0,
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
+    },
+    {
+      "id": "mphq25ni-lkgj1j",
+      "endPoint": {
+        "x": 23,
+        "y": 59,
+        "heading": "constant",
+        "reverse": false,
+        "startDeg": 0,
+        "endDeg": 0,
+        "degrees": 270
+      },
+      "controlPoints": [
+        {
+          "x": 25,
+          "y": 72
+        }
+      ],
+      "color": "#96559B",
+      "name": "Art2",
+      "waitBeforeMs": 0,
+      "waitAfterMs": 0,
+      "waitBeforeName": "",
+      "waitAfterName": "",
+      "locked": false
     },
     {
       "name": "Shoot2",
       "endPoint": {
-        "x": 53,
-        "y": 87,
+        "x": 51,
+        "y": 85,
         "heading": "linear",
         "startDeg": 270,
-        "endDeg": 134,
+        "endDeg": 130,
         "degrees": 134
       },
-      "controlPoints": [],
+      "controlPoints": [
+        {
+          "x": 21.6,
+          "y": 44.8
+        }
+      ],
       "color": "#96559B",
       "id": "line-xrg0ie66rx",
       "waitBeforeMs": 0,
       "waitAfterMs": 0,
       "waitBeforeName": "",
       "waitAfterName": "",
-      "locked": true
+      "locked": false
     },
     {
       "name": "GateSlant1",
       "endPoint": {
         "x": 12.5,
         "y": 60,
-        "heading": "constant",
-        "startDeg": 134,
+        "heading": "linear",
+        "startDeg": 130,
         "endDeg": 150,
         "degrees": 150
       },
-      "controlPoints": [],
+      "controlPoints": [
+        {
+          "x": 42,
+          "y": 63
+        }
+      ],
       "color": "#96559B",
       "id": "line-dm3jq2npvd4",
       "waitBeforeMs": 0,
@@ -197,14 +150,19 @@
     {
       "name": "Shoot3",
       "endPoint": {
-        "x": 53,
-        "y": 87,
+        "x": 51,
+        "y": 85,
         "heading": "linear",
         "startDeg": 150,
-        "endDeg": 134,
+        "endDeg": 130,
         "degrees": 134
       },
-      "controlPoints": [],
+      "controlPoints": [
+        {
+          "x": 42,
+          "y": 63
+        }
+      ],
       "color": "#96559B",
       "id": "line-3lpktio2iof",
       "waitBeforeMs": 0,
@@ -218,12 +176,17 @@
       "endPoint": {
         "x": 12.5,
         "y": 60,
-        "heading": "constant",
-        "startDeg": 134,
+        "heading": "linear",
+        "startDeg": 130,
         "endDeg": 150,
         "degrees": 150
       },
-      "controlPoints": [],
+      "controlPoints": [
+        {
+          "x": 42,
+          "y": 63
+        }
+      ],
       "color": "#96559B",
       "id": "line-9whokyvhml",
       "waitBeforeMs": 0,
@@ -235,14 +198,19 @@
     {
       "name": "Shoot4",
       "endPoint": {
-        "x": 53.97502153316107,
-        "y": 87.7312661498708,
+        "x": 51,
+        "y": 85,
         "heading": "linear",
         "startDeg": 150,
-        "endDeg": 134,
+        "endDeg": 130,
         "degrees": 134
       },
-      "controlPoints": [],
+      "controlPoints": [
+        {
+          "x": 42,
+          "y": 63
+        }
+      ],
       "color": "#96559B",
       "id": "line-ha6zs7mrjep",
       "waitBeforeMs": 0,
@@ -256,12 +224,17 @@
       "endPoint": {
         "x": 12.5,
         "y": 60,
-        "heading": "constant",
-        "startDeg": 134,
+        "heading": "linear",
+        "startDeg": 130,
         "endDeg": 150,
         "degrees": 150
       },
-      "controlPoints": [],
+      "controlPoints": [
+        {
+          "x": 42,
+          "y": 63
+        }
+      ],
       "color": "#96559B",
       "id": "line-o9t1d0ll8m",
       "waitBeforeMs": 0,
@@ -271,16 +244,21 @@
       "locked": true
     },
     {
-      "name": "Shoot5Final",
+      "name": "Shoot5",
       "endPoint": {
-        "x": 65,
-        "y": 100,
+        "x": 51,
+        "y": 85,
         "heading": "linear",
         "startDeg": 150,
-        "endDeg": 145,
+        "endDeg": 130,
         "degrees": 145
       },
-      "controlPoints": [],
+      "controlPoints": [
+        {
+          "x": 42,
+          "y": 63
+        }
+      ],
       "color": "#96559B",
       "id": "line-kv06lcjt13",
       "waitBeforeMs": 0,
@@ -290,18 +268,66 @@
       "locked": true
     },
     {
-      "name": "ParkNearGate",
+      "id": "mphp3d0d-i3bvjk",
       "endPoint": {
-        "x": 35,
-        "y": 70.4,
+        "x": 24,
+        "y": 71,
         "heading": "linear",
-        "startDeg": 145,
-        "endDeg": 180,
-        "degrees": 180
+        "reverse": false,
+        "startDeg": 130,
+        "endDeg": 90
+      },
+      "controlPoints": [
+        {
+          "x": 42,
+          "y": 63
+        }
+      ],
+      "color": "#96559B",
+      "name": "art1stage",
+      "waitBeforeMs": 0,
+      "waitAfterMs": 0,
+      "waitBeforeName": "",
+      "waitAfterName": "",
+      "locked": true
+    },
+    {
+      "id": "mphp6w8y-5avzwt",
+      "endPoint": {
+        "x": 23.733096468561587,
+        "y": 89.68104005167963,
+        "heading": "linear",
+        "reverse": false,
+        "startDeg": 90,
+        "endDeg": 90
       },
       "controlPoints": [],
       "color": "#96559B",
-      "id": "line-kwm7ywqyd",
+      "name": "art1",
+      "waitBeforeMs": 0,
+      "waitAfterMs": 0,
+      "waitBeforeName": "",
+      "waitAfterName": "",
+      "locked": true
+    },
+    {
+      "id": "mphp4qxm-o3a1yk",
+      "endPoint": {
+        "x": 40,
+        "y": 123,
+        "heading": "linear",
+        "reverse": false,
+        "startDeg": 90,
+        "endDeg": 154
+      },
+      "controlPoints": [
+        {
+          "x": 23.2786391042205,
+          "y": 109.56804478897503
+        }
+      ],
+      "color": "#96559B",
+      "name": "finalShot",
       "waitBeforeMs": 0,
       "waitAfterMs": 0,
       "waitBeforeName": "",
@@ -317,27 +343,15 @@
     },
     {
       "kind": "path",
-      "lineId": "line-imsjuvkoayf"
-    },
-    {
-      "kind": "path",
-      "lineId": "line-zehv56xhb4q"
-    },
-    {
-      "kind": "path",
-      "lineId": "line-m2ql985794"
-    },
-    {
-      "kind": "path",
       "lineId": "line-zp96t535moh"
     },
     {
       "kind": "path",
-      "lineId": "mphobbm0-0e6nic"
+      "lineId": "line-rnrkn5cuox"
     },
     {
       "kind": "path",
-      "lineId": "line-rnrkn5cuox"
+      "lineId": "mphq25ni-lkgj1j"
     },
     {
       "kind": "path",
@@ -390,7 +404,15 @@
     },
     {
       "kind": "path",
-      "lineId": "line-kwm7ywqyd"
+      "lineId": "mphp3d0d-i3bvjk"
+    },
+    {
+      "kind": "path",
+      "lineId": "mphp6w8y-5avzwt"
+    },
+    {
+      "kind": "path",
+      "lineId": "mphp4qxm-o3a1yk"
     }
   ],
   "pathChains": [
@@ -400,9 +422,6 @@
       "color": "#96559B",
       "lineIds": [
         "line-k5pq2c85urn",
-        "line-imsjuvkoayf",
-        "line-zehv56xhb4q",
-        "line-m2ql985794",
         "line-zp96t535moh",
         "line-rnrkn5cuox",
         "line-xrg0ie66rx",
@@ -412,8 +431,10 @@
         "line-ha6zs7mrjep",
         "line-o9t1d0ll8m",
         "line-kv06lcjt13",
-        "line-kwm7ywqyd",
-        "mphobbm0-0e6nic"
+        "mphp3d0d-i3bvjk",
+        "mphp4qxm-o3a1yk",
+        "mphp6w8y-5avzwt",
+        "mphq25ni-lkgj1j"
       ]
     }
   ],
@@ -443,5 +464,5 @@
     "pathOpacity": 1
   },
   "version": "1.2.1",
-  "timestamp": "2026-05-23T01:39:11.371Z"
+  "timestamp": "2026-05-23T02:38:01.748Z"
 }
