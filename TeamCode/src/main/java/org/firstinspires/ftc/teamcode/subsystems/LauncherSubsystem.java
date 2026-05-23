@@ -14,6 +14,9 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
 import dev.nextftc.core.subsystems.Subsystem;
 
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.DistanceCalibrationConfig;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.HoodThresholdsConfig;
+import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LaunchInSequenceConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
@@ -47,6 +50,26 @@ public class LauncherSubsystem implements Subsystem {
     public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
     public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LauncherIdleConfig launcherIdleConfig =
             new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LauncherIdleConfig();
+    public static DistanceCalibrationConfig distanceCalibration = new DistanceCalibrationConfig();
+    public static HoodThresholdsConfig hoodThresholds = new HoodThresholdsConfig();
+    public static LaunchInSequenceConfig launchInSequenceConfig = new LaunchInSequenceConfig();
+    public static DistanceSpinDiagnostics distanceSpinDiagnostics = new DistanceSpinDiagnostics();
+
+    /** Milliseconds a "ready" state must be continuously lost before feedback resets. */
+    public static final double READY_LOSS_DEBOUNCE_MS = 300.0;
+
+    /** Mutable diagnostics bag written each loop by DistanceBasedSpinCommand. */
+    public static class DistanceSpinDiagnostics {
+        public int updateCount;
+        public double lastCalculatedDistanceIn;
+        public double lastLeftTargetRpm;
+        public double lastCenterTargetRpm;
+        public double lastRightTargetRpm;
+        public double lastHoodPosition;
+        public String lastSource = "none";
+        public boolean robotPoseAvailable;
+        public boolean goalPoseAvailable;
+    }
 
 //    // Robot-specific timing configs
 //    public static LauncherTimingConfig timingConfig_Robot19429 = LauncherTimingConfig.timing19429;

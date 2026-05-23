@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.commands.LauncherCommands;
 
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.CommandBuilder;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.CommandRangeConfig;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
@@ -31,6 +32,7 @@ public final class LauncherIdleCommand {
         Objects.requireNonNull(intake, "intake required");
 
         final boolean[] spinningUp = {false};
+        final ElapsedTime spinUpTimer = new ElapsedTime();
 
         return new CommandBuilder()
                 .setStart(() -> {
@@ -41,8 +43,15 @@ public final class LauncherIdleCommand {
                     boolean anyLoaded = anyLaneLoaded(intake);
                     if (anyLoaded && !spinningUp[0]) {
                         spinningUp[0] = true;
+                        spinUpTimer.reset();
                         spinUpToLastShot(launcher);
                     } else if (!anyLoaded && spinningUp[0]) {
+                        spinningUp[0] = false;
+                        applyLowIdle(launcher);
+                    } else if (spinningUp[0] &&
+                               spinUpTimer.milliseconds() > LauncherSubsystem.launcherIdleConfig.spinUpTimeoutMs) {
+                        // Jammed artifact or stuck sensor — spin back down so we don't
+                        // burn motors indefinitely. Operator can override via aim button.
                         spinningUp[0] = false;
                         applyLowIdle(launcher);
                     }
