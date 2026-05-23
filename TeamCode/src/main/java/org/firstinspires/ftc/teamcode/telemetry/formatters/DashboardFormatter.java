@@ -34,6 +34,9 @@ public class DashboardFormatter {
         seed.put("Pose/x", 0.0);
         seed.put("Pose/y", 0.0);
         seed.put("Pose/heading_deg", 0.0);
+        seed.put("Pose/Robot x", 0.0);
+        seed.put("Pose/Robot y", 0.0);
+        seed.put("Pose/Robot heading", 0.0);
         seed.put("vision/has_tag", false);
         seed.put("vision/tag_id", 0);
         seed.put("vision/range_in", 0.0);
@@ -148,6 +151,8 @@ public class DashboardFormatter {
         packet.put("Pose/x", data.pose.poseXIn);
         packet.put("Pose/y", data.pose.poseYIn);
         packet.put("Pose/heading_deg", Math.toDegrees(data.pose.headingRad));
+        // AS-draggable live robot pose (x/y/heading triplet under one prefix).
+        RobotState.putPose("Pose/Robot", data.pose.poseXIn, data.pose.poseYIn, data.pose.headingRad);
 
         // Vision
         packet.put("vision/has_tag", data.vision.hasTag);
@@ -260,27 +265,17 @@ public class DashboardFormatter {
      * Includes Pedro pose, FTC pose, and vision pose (when available).
      */
     private void addPoseData(TelemetryPacket packet, RobotTelemetryData data) {
-        // Pedro pose (primary)
-        packet.put("Pose/Pedro x", data.pose.poseXIn);
-        packet.put("Pose/Pedro y", data.pose.poseYIn);
-        packet.put("Pose/Pedro heading", data.pose.headingRad);
+        // Pedro pose (primary). putPose emits the x/y/heading triplet AdvantageScope
+        // Lite synthesises into a draggable Pose2d; degrees stays separate for graphs.
+        RobotState.putPose("Pose/Pedro", data.pose.poseXIn, data.pose.poseYIn, data.pose.headingRad);
         packet.put("Pose/Pedro degrees", Math.toDegrees(data.pose.headingRad));
 
-        // FTC pose (for compatibility)
-        if (!Double.isNaN(data.pose.ftcXIn) && !Double.isNaN(data.pose.ftcYIn)) {
-            packet.put("Pose/FTC x", data.pose.ftcXIn);
-            packet.put("Pose/FTC y", data.pose.ftcYIn);
-        }
-        if (!Double.isNaN(data.pose.ftcHeadingRad)) {
-            packet.put("Pose/FTC heading", data.pose.ftcHeadingRad);
-
+        if (!Double.isNaN(data.pose.ftcXIn) && !Double.isNaN(data.pose.ftcYIn) && !Double.isNaN(data.pose.ftcHeadingRad)) {
+            RobotState.putPose("Pose/FTC", data.pose.ftcXIn, data.pose.ftcYIn, data.pose.ftcHeadingRad);
         }
 
-        // Vision pose (when available)
         if (data.pose.visionPoseValid) {
-            packet.put("Pose/Vision x", data.pose.visionPoseXIn);
-            packet.put("Pose/Vision y", data.pose.visionPoseYIn);
-            packet.put("Pose/Vision heading", data.pose.visionHeadingRad);
+            RobotState.putPose("Pose/Vision", data.pose.visionPoseXIn, data.pose.visionPoseYIn, data.pose.visionHeadingRad);
         }
     }
 

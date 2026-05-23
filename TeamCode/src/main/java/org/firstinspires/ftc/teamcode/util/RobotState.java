@@ -81,9 +81,16 @@ public class RobotState {
     public static TelemetryPacket packet = new TelemetryPacket();
 
     public static void putPose(String label, Pose pose) {
-        packet.put(label + " x", pose.getX());
-        packet.put(label + " y", pose.getY());
-        packet.put(label + " heading", pose.getHeading());
-        packet.put(label + " heading (deg)", Math.toDegrees(pose.getHeading()));
+        putPose(label, pose.getX(), pose.getY(), pose.getHeading());
+    }
+
+    // AdvantageScope Lite auto-detects an "x" + "y" + "heading" sibling triplet
+    // as a Pose2d. A separate "heading (deg)" sibling produces a duplicate
+    // draggable pose, so degrees stay out of this helper — callers that want a
+    // degree readout publish it as a separate scalar.
+    public static void putPose(String label, double xInches, double yInches, double headingRad) {
+        packet.put(label + " x", xInches);
+        packet.put(label + " y", yInches);
+        packet.put(label + " heading", headingRad);
     }
 }
