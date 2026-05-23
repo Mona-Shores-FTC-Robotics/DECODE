@@ -21,7 +21,7 @@ The project uses the Sloth runtime (Dairy Foundation) for hot code reload. There
 
 | Command | When to use | Speed |
 |---|---|---|
-| `./gradlew :FtcRobotController:installDebug` | First deploy after a fresh APK, library/dependency change, change outside `org.firstinspires.ftc.teamcode`, or robot-day baseline | ~40s |
+| `./gradlew :TeamCode:installDebug` | First deploy after a fresh APK, library/dependency change, change outside `org.firstinspires.ftc.teamcode`, or robot-day baseline | ~40s |
 | `./gradlew :TeamCode:deploySloth` | Iterative TeamCode-only edits (subsystems, commands, opmodes, etc.) | sub-1s |
 
 `deploySloth` only swaps classes in `org.firstinspires.ftc.teamcode` and subpackages. Changes to anything else (build.gradle, libraries, FtcRobotController) require a full `installDebug`. Sloth applies the swap when the current OpMode ends — it does not interrupt a running OpMode.
