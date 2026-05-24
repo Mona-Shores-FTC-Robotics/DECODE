@@ -35,7 +35,7 @@
       "name": "StageGate",
       "endPoint": {
         "x": 39,
-        "y": 71,
+        "y": 74.75,
         "heading": "linear",
         "startDeg": 134,
         "endDeg": 270,
@@ -58,8 +58,8 @@
     {
       "name": "OpenGate",
       "endPoint": {
-        "x": 15,
-        "y": 71,
+        "x": 15.2,
+        "y": 74.75,
         "heading": "constant",
         "startDeg": 95,
         "endDeg": 90,
@@ -77,7 +77,7 @@
     {
       "id": "mphq25ni-lkgj1j",
       "endPoint": {
-        "x": 23,
+        "x": 21,
         "y": 59,
         "heading": "constant",
         "reverse": false,
@@ -126,12 +126,12 @@
     {
       "name": "GateSlant1",
       "endPoint": {
-        "x": 12.5,
-        "y": 60,
+        "x": 13.5,
+        "y": 58.5,
         "heading": "linear",
         "startDeg": 130,
-        "endDeg": 150,
-        "degrees": 150
+        "endDeg": 152,
+        "degrees": 152
       },
       "controlPoints": [
         {
@@ -153,7 +153,7 @@
         "x": 51,
         "y": 85,
         "heading": "linear",
-        "startDeg": 150,
+        "startDeg": 152,
         "endDeg": 130,
         "degrees": 134
       },
@@ -174,12 +174,12 @@
     {
       "name": "GateSlant2",
       "endPoint": {
-        "x": 12.5,
-        "y": 60,
+        "x": 13.5,
+        "y": 58.5,
         "heading": "linear",
         "startDeg": 130,
-        "endDeg": 150,
-        "degrees": 150
+        "endDeg": 152,
+        "degrees": 152
       },
       "controlPoints": [
         {
@@ -201,7 +201,7 @@
         "x": 51,
         "y": 85,
         "heading": "linear",
-        "startDeg": 150,
+        "startDeg": 152,
         "endDeg": 130,
         "degrees": 134
       },
@@ -222,12 +222,12 @@
     {
       "name": "GateSlant3",
       "endPoint": {
-        "x": 12.5,
-        "y": 60,
+        "x": 13.5,
+        "y": 58.5,
         "heading": "linear",
         "startDeg": 130,
-        "endDeg": 150,
-        "degrees": 150
+        "endDeg": 152,
+        "degrees": 152
       },
       "controlPoints": [
         {
@@ -249,7 +249,7 @@
         "x": 51,
         "y": 85,
         "heading": "linear",
-        "startDeg": 150,
+        "startDeg": 152,
         "endDeg": 130,
         "degrees": 145
       },
