@@ -91,7 +91,9 @@
       "Bash(git commit -m ' *)",
       "Bash(adb connect *)",
       "Bash(git commit -m 'Default to fixed-seed init; add Pose/Target box' -m 'relocalizeDuringInit=false: hold the configured seed during init for a *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(adb devices *)",
+      "Bash(adb logcat *)"
     ],
     "deny": [],
     "ask": []

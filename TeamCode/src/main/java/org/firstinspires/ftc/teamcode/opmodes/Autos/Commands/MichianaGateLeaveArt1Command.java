@@ -39,7 +39,7 @@ public class MichianaGateLeaveArt1Command {
 
     @Configurable
     public static class Config {
-        public static double maxPathPower = 0.85;
+        public static double maxPathPower = 0.8;
 
         /**
          * Fraction of the preload path over which heading linearly interpolates to its
@@ -61,7 +61,7 @@ public class MichianaGateLeaveArt1Command {
          *      consistently off-angle, try increasing this value or reducing maxPathPower
          *      on return legs to give the heading controller more time to settle.
          */
-        public static double fireAtT = 0.85;
+        public static double fireAtT = 0.90;
 
         /** Wait at gate slant for artifacts to roll in (ms). */
         public static double gateSlantWaitMs = 750;
@@ -76,14 +76,14 @@ public class MichianaGateLeaveArt1Command {
         public static double preloadZoneCtrlX = 32, preloadZoneCtrlY = 113;
 
         /** Staging position just right of the gate before opening it. */
-        public static double stageGateX = 39, stageGateY = 71, stageGateHeading = 270;
+        public static double stageGateX = 39, stageGateY = 74.75, stageGateHeading = 270;
         public static double stageGateCtrlX = 56.5, stageGateCtrlY = 84;
 
         /** Gate opening position — robot slides left to trigger the gate. */
-        public static double openGateX = 15, openGateY = 71, openGateHeading = 270;
+        public static double openGateX = 15.2, openGateY = 74.75, openGateHeading = 270;
 
         /** Art2 pickup — collected immediately after gate opens. */
-        public static double art2X = 23, art2Y = 59, art2Heading = 270;
+        public static double art2X = 21, art2Y = 59, art2Heading = 270;
         public static double art2CtrlX = 25, art2CtrlY = 72;
 
         /** Main shooting zone for Art2 and all gate cycle returns. */
@@ -92,7 +92,7 @@ public class MichianaGateLeaveArt1Command {
         public static double shoot2CtrlX = 21.6, shoot2CtrlY = 44.8;
 
         /** Slanted gate approach — opens gate and collects 3 artifacts. */
-        public static double gateSlantX = 12.5, gateSlantY = 60, gateSlantHeading = 150;
+public static double gateSlantX = 13.5, gateSlantY = 58.5, gateSlantHeading = 152;
         /** Shared control for all gate slant outbound and return curves. */
         public static double gateSlantCtrlX = 42, gateSlantCtrlY = 63;
 
