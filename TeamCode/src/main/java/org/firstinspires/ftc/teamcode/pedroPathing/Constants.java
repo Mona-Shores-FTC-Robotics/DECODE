@@ -48,13 +48,30 @@ public class Constants {
     // PathConstraints parameter order:
     // tValueConstraint, velocityConstraint, translationalConstraint, headingConstraint,
     // timeoutConstraint, brakingStrength, BEZIER_CURVE_SEARCH_LIMIT, brakingStart
+    //
+    // FOLLOW-UP (speed/finishing): launch paths currently complete by riding the timeoutConstraint
+    // (~450ms each) because the 0.1 ips velocityConstraint almost never trips — the robot is still
+    // drifting slightly when heading/position are already good. Loosening velocityConstraint (and/or
+    // trimming the timeout) would let paths finish on-condition and shave ~1.5s off the auto. Only
+    // do this once shots are confirmed landing — completing while still moving risks firing mid-drift.
     public static PathConstraints pathConstraints = new PathConstraints(
-            0.995, // tValueConstraint: Pedro default — end-settling starts at 99.5% of path, not 95%
+            0.97, // tValueConstraint: t the closest-point projection must reach to count as
+                  // "at path end". The projection asymptotes near a curve's end and can plateau
+                  // around .992, never crossing .995 — so paths only completed via the timeout.
+                  // .95 trips well before the asymptote. Was .995 (Pedro default).
             0.1,   // velocityConstraint: Pedro default — was 0.08
-            .1,
+            0.5,   // translationalConstraint (in): was 0.1 — unrealistically tight. The robot
+                   // settles ~0.7" out, so 0.1 was impossible to meet and forced every launch
+                   // path to ride the timeout instead of completing on-condition. 0.5" is
+                   // negligible for a multi-foot shot and lets completion be heading-gated.
             Math.toRadians(.5),
-            100, // timeoutConstraint (ms): settle window AFTER reaching path end — give the
-                 // heading PID time to pull the last few degrees in before completing.
+            450, // timeoutConstraint (ms): MAX wait after the t-gate trips for heading +
+                 // translational + velocity to converge. The path exits the INSTANT they do,
+                 // so this is a ceiling, not a fixed delay — bigger only helps on poses where
+                 // heading is slow. At 125 the timeout was firing paths off-heading before the
+                 // heading PID settled, causing missed shots. Watch PathDiag/last_holdout: if it
+                 // still reads "timeout_settle"/"heading" at launch poses, the heading isn't
+                 // converging (PID issue) — raising this further won't help, fix the PID instead.
             1.0,
             10,
             1);

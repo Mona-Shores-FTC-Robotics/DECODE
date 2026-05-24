@@ -306,12 +306,41 @@ public final class RobotProfile {
                 .drivePIDFSwitch(3)
                 .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(.02, 0, 0, 0.6, .0001))
                 .headingPIDFCoefficients(new PIDFCoefficients(.48, 0.01, .001, .0005))
-                .headingPIDFSwitch(Math.toRadians(3))
-                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(3.0, 0.0001, .001, .0003))
+                // Switch 3° → 7° → 10°. Above the switch the weak primary (P=.48) can't break
+                // in-place turning friction and STALLS (e.g. #3 parked at 7.1°, angVel≈0, right
+                // at the 7° boundary). The secondary is now well-damped (P=1.0/D=.09 settled
+                // #5/#7 cleanly), so widening its range to 10° lets it own the 7-10° stall zone.
+                .headingPIDFSwitch(Math.toRadians(10))
+                // Tuning the <3° settle regime for launch-pose accuracy:
+                //   P 3.0 → 1.5 → 1.0 → 0.7 (each step cuts overshoot; over the 10° band at full
+                //                  battery, 1.0 still over-drove and swung ±40 dps even with the
+                //                  base stopped — easing drive so D=.09 can actually damp it.
+                //                  I=.01 keeps it from stalling at the lower P.)
+                //   D .001 → .02 → .05 → .09 (under-damped at FULL battery voltage — confirmed
+                //                  fresh-pack run still swung ±22-36 dps while a sagging pack
+                //                  settled. Matches start full, so tuning for full voltage:
+                //                  D=.05 braking (~.03 power) lost to P drive (~.09); .09 to win.)
+                //   I .0001 → .01 (it was stalling ~4-5° short with ang vel ≈ 0; no integral
+                //                  authority to overcome static friction. I builds power to
+                //                  close the steady-state offset.) If it now drifts past and
+                //                  slowly swings back, that's I-windup — back I off.
+                .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(0.7, 0.01, .09, .0003))
                 .translationalPIDFCoefficients(new PIDFCoefficients(.06, 0, 0, .05))
                 .translationalPIDFSwitch(5)
-                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.1, 0.0001, .0006, .00015))
+                // Secondary (<5" regime): I .0001 → .01 closed the ~0.7" stall. D .0006 → .006
+                // → .03: position error (tErr) looks fine but the robot whips THROUGH the point
+                // at vel 2-5 ips and never stops — and that residual translation disturbs heading
+                // (when the base actually stops, vel≈0, heading settles instantly: see #3). D=.006
+                // braked only ~.01 power at 2 ips; .03 to actually arrest the velocity. If it eases
+                // in sluggishly / undershoots position, back D off.
+                .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(.1, 0.01, .03, .00015))
                 .centripetalScaling(0)
+                // FOLLOW-UP (predictive braking): likely gains here. Predictive braking IS enabled
+                // (the .predictiveBrakingCoefficients(...) builder auto-sets usePredictiveBraking=true).
+                // Coeffs are (kLinearBraking, kQuadraticFriction, P). Decelerating the approach harder
+                // — bump kLinearBraking / P here, or brakingStrength/brakingStart in Constants
+                // pathConstraints — could let the robot arrive slower and settle even faster, instead
+                // of leaning on the secondary translational D to arrest velocity at the point.
                 .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.1, 0.0655, 0.0015))
                 .mass(15.4221);
     }
@@ -396,13 +425,13 @@ public final class RobotProfile {
         CommandRangeConfig config = new CommandRangeConfig();
         // Teleop ranges:                     all-lanes RPM,  hood
         config.teleop.shortRange.set(2400, .95);
-        config.teleop.midRange.set(3350, 0.0);
+        config.teleop.midRange.set(3350, 0.1);
         config.teleop.longRange.set(3875, 4000, 0.0); // min RPM, max RPM, hood
         // Auto ranges:
-        config.auto.shortRange.set(1870, .55);
-        config.auto.midRange.set(2300, 0.05);
-        config.auto.farRange.set(2725, 0.0);
-        config.timeoutSeconds = 3.5;
+        config.auto.shortRange.set(2500, .55);
+        config.auto.midRange.set(3350, 0.1);
+        config.auto.farRange.set(3900, 0.0);
+        config.timeoutSeconds = 2.5;
         return config;
     }
 }

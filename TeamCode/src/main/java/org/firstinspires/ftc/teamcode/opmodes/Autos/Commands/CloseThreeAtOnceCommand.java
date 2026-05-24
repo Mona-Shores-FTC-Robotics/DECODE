@@ -28,9 +28,12 @@ import com.pedropathing.ivy.groups.Groups;
 public class CloseThreeAtOnceCommand {
 
     public static class Config {
-        public double maxPathPower = 0.8;
-        public double lastPathsMaxPower = 1;
-        public double endTimeForLinearHeadingInterpolation = .5;
+        public double maxPathPower = .8;
+        // Was 1.0 — the final launch (launchClose4) drove in faster than the other launches and
+        // overshot heading where they settled (#7 hErr 8.4° / angVel 29 vs #1/#3/#5 settled at
+        // 0.8 power). Matched to maxPathPower so it arrives at the same speed and settles too.
+        public double lastPathsMaxPower = .8;
+        public double endTimeForLinearHeadingInterpolation = .8;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 6.8;
         /** Heading tolerance (degrees) Pedro must reach before considering a

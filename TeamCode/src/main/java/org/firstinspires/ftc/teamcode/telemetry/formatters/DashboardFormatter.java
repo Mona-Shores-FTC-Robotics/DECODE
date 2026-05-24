@@ -126,6 +126,31 @@ public class DashboardFormatter {
             seed.put("timing/subsystems/lighting_ms", 0.0);
             seed.put("timing/subsystems/vision_ms", 0.0);
             seed.put("timing/telemetry_ms", 0.0);
+
+            // Path diagnostics — seeded so the heading-track channels appear in the tree at
+            // init, instead of only registering once a path has actually run. Populated live
+            // by DriveSubsystem#logPathDiagnostics while a path is following.
+            seed.put("PathDiag/busy", false);
+            seed.put("PathDiag/busy_ms", 0.0);
+            seed.put("PathDiag/holdout", "none");
+            seed.put("PathDiag/last_holdout", "none");
+            seed.put("PathDiag/t_value", 0.0);
+            seed.put("PathDiag/t_constraint", 0.0);
+            seed.put("PathDiag/heading_target_deg", 0.0);
+            seed.put("PathDiag/heading_current_deg", 0.0);
+            seed.put("PathDiag/heading_err_deg", 0.0);
+            seed.put("PathDiag/heading_err_signed_deg", 0.0);
+            seed.put("PathDiag/heading_constraint_deg", 0.0);
+            seed.put("PathDiag/heading_ang_vel_dps", 0.0);
+            seed.put("PathDiag/summary", "");
+            seed.put("PathDiag/completion_log", "");
+            seed.put("PathDiag/translational_err_in", 0.0);
+            seed.put("PathDiag/translational_constraint_in", 0.0);
+            seed.put("PathDiag/drive_err", 0.0);
+            seed.put("PathDiag/vel_ips", 0.0);
+            seed.put("PathDiag/vel_constraint", 0.0);
+            seed.put("PathDiag/dist_remaining_in", 0.0);
+            seed.put("PathDiag/path_completion", 0.0);
         }
 
         return seed;

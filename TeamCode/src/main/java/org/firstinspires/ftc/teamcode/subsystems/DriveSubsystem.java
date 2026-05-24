@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.RobotLog;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
@@ -242,6 +243,22 @@ public class DriveSubsystem {
 
     private double lastPeriodicMs = 0.0;
 
+    /** Nanosecond timestamp when the follower most recently became busy; -1 when idle. */
+    private long pathBusyStartNs = -1L;
+    /** Which completion term last kept the follower busy when a path finished (for post-mortem). */
+    private String lastPathHoldout = "none";
+
+    // Snapshot of the last active-path frame, used to log a completion line on the busy→idle edge.
+    private boolean pathWasBusy = false;
+    private double lastHeadingErrDeg = 0.0;
+    private double lastHeadingAngVelDps = 0.0;
+    private double lastTransErrIn = 0.0;
+    private double lastVelIps = 0.0;
+    private double lastBusyMs = 0.0;
+    /** Accumulating per-run log: one line per completed path, copy/pasteable from AdvantageScope. */
+    private final StringBuilder completionLog = new StringBuilder();
+    private int completionCount = 0;
+
     /**
      * Infinite Command that drives the Pedro follower update + vision feed each scheduler tick.
      * Scheduled once in OpMode init; runs until OpMode stop.
@@ -279,6 +296,8 @@ public class DriveSubsystem {
             }
         }
 
+        logPathDiagnostics();
+
         double lfA = getLfCurrentAmps();
         double rfA = getRfCurrentAmps();
         double lbA = getLbCurrentAmps();
@@ -292,6 +311,145 @@ public class DriveSubsystem {
 
     public double getLastPeriodicMs() {
         return lastPeriodicMs;
+    }
+
+    /**
+     * End-of-path diagnostics: answers "why is the follower still busy?" by logging each
+     * path-completion error term next to the {@link com.pedropathing.paths.PathConstraints}
+     * threshold it must drop under, plus how long the current path has been busy.
+     *
+     * <p>A path reports done ({@code isBusy()} → false) only when t-value, translational
+     * error, heading error, and velocity are all under their constraints — or the timeout
+     * settle window elapses. {@code PathDiag/holdout} names whichever term is currently the
+     * blocker, and {@code PathDiag/last_holdout} latches it at the moment the path finishes,
+     * so a stall shows up as a concrete cause rather than a guess. VERBOSE-only.
+     */
+    private void logPathDiagnostics() {
+        boolean busy = follower.isBusy();
+
+        // Track busy duration across loops regardless of telemetry level (cheap).
+        long nowNs = System.nanoTime();
+        if (busy && pathBusyStartNs < 0) {
+            pathBusyStartNs = nowNs;
+        }
+
+        if (!TelemetrySettings.isVerbose()) {
+            if (!busy) {
+                pathBusyStartNs = -1L;
+            }
+            return;
+        }
+
+        // The follower's error getters dereference the active path's ErrorCalculator, which is
+        // null when no path is loaded (idle between segments / teleop). Reading them then throws
+        // an NPE deep in Follower#getHeadingError, so bail out to a minimal idle report.
+        if (!busy || follower.getCurrentPath() == null) {
+            pathBusyStartNs = -1L;
+            // Busy→idle edge: a path just finished. Append its completion snapshot to the log.
+            if (pathWasBusy) {
+                pathWasBusy = false;
+                completionCount++;
+                String line = String.format(
+                        "#%d hErr=%.1f angVel=%.1f tErr=%.2f vel=%.2f busy=%.0f hold=%s",
+                        completionCount, lastHeadingErrDeg, lastHeadingAngVelDps,
+                        lastTransErrIn, lastVelIps, lastBusyMs, lastPathHoldout);
+                completionLog.append(line).append("\n");
+                // Mirror to logcat (grep marker "PDIAG|") so it can be pulled over adb without
+                // copying out of AdvantageScope. VERBOSE-only: this branch is already gated above.
+                RobotLog.ii("PathDiag", "PDIAG| " + line);
+            }
+            RobotState.packet.put("PathDiag/busy", false);
+            RobotState.packet.put("PathDiag/busy_ms", 0.0);
+            RobotState.packet.put("PathDiag/holdout", "none");
+            RobotState.packet.put("PathDiag/last_holdout", lastPathHoldout);
+            RobotState.packet.put("PathDiag/completion_log", completionLog.toString());
+            // No active path → no target. Publish live actual heading anyway (getHeading is safe
+            // without a path) so the heading-track channels are alive during init, with target
+            // pinned to actual so the error reads 0 until a path starts driving.
+            double idleHeadingDeg = normalizeDeg360(Math.toDegrees(follower.getHeading()));
+            RobotState.packet.put("PathDiag/heading_current_deg", idleHeadingDeg);
+            RobotState.packet.put("PathDiag/heading_target_deg", idleHeadingDeg);
+            RobotState.packet.put("PathDiag/heading_err_deg", 0.0);
+            RobotState.packet.put("PathDiag/heading_err_signed_deg", 0.0);
+            return;
+        }
+
+        com.pedropathing.paths.PathConstraints c = follower.getConstraints();
+
+        double headingErrSignedRad = follower.getHeadingError();
+        double headingErrRad = Math.abs(headingErrSignedRad);
+        // Target heading the follower is driving toward (path's heading goal at the closest point)
+        // vs. where the robot actually is — plot these two against each other in AdvantageScope to
+        // see the PID track: overshoot, oscillation, or steady-state offset.
+        double headingTargetDeg = normalizeDeg360(Math.toDegrees(follower.getClosestPointHeadingGoal()));
+        double headingCurrentDeg = normalizeDeg360(Math.toDegrees(follower.getHeading()));
+        Vector transErr = follower.getTranslationalError();
+        double transErrIn = transErr != null ? transErr.getMagnitude() : 0.0;
+        double velIps = follower.getVelocity() != null ? follower.getVelocity().getMagnitude() : 0.0;
+        double tValue = follower.getCurrentTValue();
+
+        // Thresholds (global pathConstraints; per-path heading overrides aren't reflected here).
+        double tConstraint = c.getTValueConstraint();
+        double transConstraint = c.getTranslationalConstraint();
+        double headingConstraintRad = c.getHeadingConstraint();
+        double velConstraint = c.getVelocityConstraint();
+
+        RobotState.packet.put("PathDiag/busy", busy);
+        RobotState.packet.put("PathDiag/busy_ms", busy ? (nowNs - pathBusyStartNs) / 1_000_000.0 : 0.0);
+        RobotState.packet.put("PathDiag/t_value", tValue);
+        RobotState.packet.put("PathDiag/t_constraint", tConstraint);
+        RobotState.packet.put("PathDiag/heading_target_deg", headingTargetDeg);
+        RobotState.packet.put("PathDiag/heading_current_deg", headingCurrentDeg);
+        RobotState.packet.put("PathDiag/heading_err_deg", Math.toDegrees(headingErrRad));
+        RobotState.packet.put("PathDiag/heading_err_signed_deg", Math.toDegrees(headingErrSignedRad));
+        RobotState.packet.put("PathDiag/heading_constraint_deg", Math.toDegrees(headingConstraintRad));
+        // Angular velocity (deg/s): near-zero while heading error is still large means the PID
+        // has stalled out at a steady-state offset (fix with secondary I); non-zero/swinging
+        // means it's still hunting/oscillating (fix with secondary D or lower P).
+        RobotState.packet.put("PathDiag/heading_ang_vel_dps", Math.toDegrees(follower.getAngularVelocity()));
+        RobotState.packet.put("PathDiag/translational_err_in", transErrIn);
+        RobotState.packet.put("PathDiag/translational_constraint_in", transConstraint);
+        RobotState.packet.put("PathDiag/drive_err", follower.getDriveError());
+        RobotState.packet.put("PathDiag/vel_ips", velIps);
+        RobotState.packet.put("PathDiag/vel_constraint", velConstraint);
+        RobotState.packet.put("PathDiag/dist_remaining_in", follower.getDistanceRemaining());
+        RobotState.packet.put("PathDiag/path_completion", follower.getPathCompletion());
+
+        // List ALL failing completion terms (not just the first). The follower requires every
+        // one under tolerance to complete cleanly, so reporting only the first masks the others
+        // — e.g. a barely-over translational error hiding a badly-over heading error.
+        StringBuilder sb = new StringBuilder();
+        if (tValue < tConstraint) sb.append("t_value ");
+        if (transErrIn > transConstraint) sb.append("translational ");
+        if (headingErrRad > headingConstraintRad) sb.append("heading ");
+        if (velIps > velConstraint) sb.append("velocity ");
+        // Nothing over tolerance but still busy → burning the timeout settle window.
+        String holdout = sb.length() == 0 ? "timeout_settle" : sb.toString().trim();
+        RobotState.packet.put("PathDiag/holdout", holdout);
+
+        // Remember the live blocker so it survives the busy→idle transition.
+        lastPathHoldout = holdout;
+        RobotState.packet.put("PathDiag/last_holdout", lastPathHoldout);
+
+        // Snapshot this frame so the busy→idle edge can log the completion values.
+        double busyMs = (nowNs - pathBusyStartNs) / 1_000_000.0;
+        lastHeadingErrDeg = Math.toDegrees(headingErrRad);
+        lastHeadingAngVelDps = Math.toDegrees(follower.getAngularVelocity());
+        lastTransErrIn = transErrIn;
+        lastVelIps = velIps;
+        lastBusyMs = busyMs;
+        pathWasBusy = true;
+
+        // Live one-line summary you can read/copy straight from AdvantageScope.
+        RobotState.packet.put("PathDiag/summary", String.format(
+                "hErr=%.1f angVel=%.1f tErr=%.2f vel=%.2f busy=%.0f hold=%s",
+                lastHeadingErrDeg, lastHeadingAngVelDps, transErrIn, velIps, busyMs, holdout));
+        RobotState.packet.put("PathDiag/completion_log", completionLog.toString());
+    }
+
+    /** Normalizes an angle in degrees to [0, 360) so target/actual heading plots overlay cleanly. */
+    private static double normalizeDeg360(double deg) {
+        return ((deg % 360.0) + 360.0) % 360.0;
     }
 
     public void stop() {
