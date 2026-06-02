@@ -45,6 +45,17 @@ public class FollowPathBuilder {
 
     private Double timeoutMilliSec = null;
 
+    /** Additional segments appended via .then(). Each is built into the same PathChain. */
+    private final List<SegmentSpec> additionalSegments = new ArrayList<>();
+
+    /** Whether PedroCommands.follow holds the end pose. Default true (legacy behavior). */
+    private boolean holdEnd = true;
+
+    private static class SegmentSpec {
+        Pose end;
+        final List<Pose> controlPoints = new ArrayList<>();
+    }
+
     public FollowPathBuilder(Robot robot, Alliance alliance) {
         this.robot = robot;
         this.alliance = alliance;
@@ -77,7 +88,47 @@ public class FollowPathBuilder {
     }
 
     public FollowPathBuilder withControl(Pose controlPose) {
-        this.controlPoints.add(mirror(controlPose));
+        if (additionalSegments.isEmpty()) {
+            // First segment — original behavior
+            this.controlPoints.add(mirror(controlPose));
+        } else {
+            // Route to the most recent .then() segment
+            additionalSegments.get(additionalSegments.size() - 1).controlPoints.add(mirror(controlPose));
+        }
+        return this;
+    }
+
+    /**
+     * Appends an additional segment to the path chain. The previous segment's end pose
+     * becomes this segment's start; subsequent {@link #withControl(Pose)} calls accumulate
+     * on this new segment. Multiple {@code .then()} calls extend the chain further.
+     *
+     * <p>The resulting {@link PathChain} contains all segments and is followed by Pedro
+     * as one continuous motion — the robot does NOT decelerate to 0 between segments
+     * within the chain.
+     *
+     * <p><b>Heading interpolation</b> is set ONCE per {@code build()} and applies to the
+     * whole chain (Pedro PathBuilder limitation). For chained segments that need
+     * different heading modes, split into separate {@code FollowPathBuilder.build()} calls.
+     */
+    public FollowPathBuilder then(Pose endPose) {
+        if (this.end == null) {
+            throw new IllegalStateException(
+                "Call .to(...) before .then(...) — .then() extends a chain that begins with .to().");
+        }
+        SegmentSpec spec = new SegmentSpec();
+        spec.end = mirror(endPose);
+        additionalSegments.add(spec);
+        return this;
+    }
+
+    /**
+     * Whether the follower holds position at the end of the chain. Default true
+     * (matches legacy behavior). Set false to yield control as soon as the path
+     * completes — useful when an immediately-following command will take over.
+     */
+    public FollowPathBuilder withHoldEnd(boolean hold) {
+        this.holdEnd = hold;
         return this;
     }
 
@@ -174,32 +225,22 @@ public class FollowPathBuilder {
 
     public Command build(double maxPower) {
         PathBuilder builder = robot.drive.getFollower().pathBuilder();
-        List<Pose> pts = new ArrayList<>();
-        pts.add(start);
-        pts.addAll(controlPoints);
-        pts.add(end);
 
-        if (pts.size() == 2) {
-            builder.addPath(new BezierLine(start, end));
-        } else {
-            // Keep continuity when multiple control points are supplied: each curve starts where the
-            // previous one ended, instead of jumping back to earlier controls.
-            Pose segmentStart = start;
-            for (int i = 0; i < pts.size() - 1; i++) {
-                Pose control = pts.get(i + 1);
-                Pose segmentEnd = (i + 2 < pts.size()) ? pts.get(i + 2) : end;
-                // Avoid degenerate curves when the last control equals the end point
-                if (control.equals(segmentEnd)) {
-                    builder.addPath(new BezierLine(segmentStart, segmentEnd));
-                } else {
-                    builder.addPath(new BezierCurve(segmentStart, control, segmentEnd));
-                }
-                segmentStart = segmentEnd;
-                if (segmentEnd == end) {
-                    break;
-                }
-            }
+        // ── First segment (from .from()/.to() + .withControl() calls before any .then()) ──
+        addSegmentToBuilder(builder, start, end, controlPoints);
+
+        // ── Additional segments appended via .then() ──────────────────────────────
+        Pose segStart = end;
+        for (SegmentSpec spec : additionalSegments) {
+            addSegmentToBuilder(builder, segStart, spec.end, spec.controlPoints);
+            segStart = spec.end;
         }
+
+        // ── Heading interpolation applies to the whole chain (Pedro limitation) ──
+        // For multi-segment chains, use the last segment's end for the linear endpoint.
+        Pose chainEnd = additionalSegments.isEmpty()
+                ? end
+                : additionalSegments.get(additionalSegments.size() - 1).end;
 
         if (usePiecewiseHeading) {
             builder.setHeadingInterpolation(piecewiseInterpolator);
@@ -213,7 +254,7 @@ public class FollowPathBuilder {
             // AngleUnit.normalizeRadians, so the two alliances can land on
             // different sides of the wrap for the same physical motion.
             double startHeading = start.getHeading();
-            double endHeading = end.getHeading();
+            double endHeading = chainEnd.getHeading();
             double diff = endHeading - startHeading;
             while (diff > Math.PI)  { endHeading -= 2 * Math.PI; diff = endHeading - startHeading; }
             while (diff < -Math.PI) { endHeading += 2 * Math.PI; diff = endHeading - startHeading; }
@@ -240,6 +281,10 @@ public class FollowPathBuilder {
 
         PathChain chain = builder.build();
 
+        // Constraints apply to path 0 (legacy behavior — applies to first leg of chain).
+        // For multi-segment chains where you want a constraint on the final settling
+        // pose, this would need to target chain.getPath(chain.size()-1) instead; left
+        // unchanged to avoid silently changing behavior for existing single-.to() callers.
         if (timeoutMilliSec != null) {
             Path onlyPath = chain.getPath(0);
             onlyPath.setTimeoutConstraint(timeoutMilliSec);
@@ -255,7 +300,37 @@ public class FollowPathBuilder {
 
         double clippedPower = Range.clip(maxPower, 0.0, 1.0);
 
-        return PedroCommands.follow(robot.drive.getFollower(), chain, true, clippedPower);
+        return PedroCommands.follow(robot.drive.getFollower(), chain, holdEnd, clippedPower);
+    }
+
+    /**
+     * Adds one logical segment to the PathBuilder, handling the multi-control-point
+     * Bezier-chain decomposition the same way the original single-segment build did.
+     */
+    private static void addSegmentToBuilder(PathBuilder builder, Pose segStart, Pose segEnd, List<Pose> controls) {
+        if (controls.isEmpty()) {
+            builder.addPath(new BezierLine(segStart, segEnd));
+            return;
+        }
+        List<Pose> pts = new ArrayList<>();
+        pts.add(segStart);
+        pts.addAll(controls);
+        pts.add(segEnd);
+        Pose segmentStart = segStart;
+        for (int i = 0; i < pts.size() - 1; i++) {
+            Pose control = pts.get(i + 1);
+            Pose segmentEnd = (i + 2 < pts.size()) ? pts.get(i + 2) : segEnd;
+            // Avoid degenerate curves when the last control equals the end point
+            if (control.equals(segmentEnd)) {
+                builder.addPath(new BezierLine(segmentStart, segmentEnd));
+            } else {
+                builder.addPath(new BezierCurve(segmentStart, control, segmentEnd));
+            }
+            segmentStart = segmentEnd;
+            if (segmentEnd == segEnd) {
+                break;
+            }
+        }
     }
 
     // ---------------------------
