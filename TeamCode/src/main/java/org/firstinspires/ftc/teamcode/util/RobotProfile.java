@@ -410,13 +410,13 @@ public final class RobotProfile {
     private static CommandRangeConfig rangeConfig19429() {
         CommandRangeConfig config = new CommandRangeConfig();
         // Teleop ranges:                     all-lanes RPM,  hood
-        config.teleop.shortRange.set(1900, 1);
-        config.teleop.midRange.set(2500, 0.05);
-        config.teleop.longRange.set(2725, 2900, 0.0); // min RPM, max RPM, hood
+        config.teleop.shortRange.set(2400, 1);             // RPM was 1900 (matched to 20245)
+        config.teleop.midRange.set(3350, 0.05);            // RPM was 2500 (matched to 20245)
+        config.teleop.longRange.set(3875, 4000, 0.0);      // min/max RPM was 2725/2900 (matched to 20245)
         // Auto ranges:
-        config.auto.shortRange.set(2000, .55);
-        config.auto.midRange.set(2400, 0.1);
-        config.auto.farRange.set(2725, 0.0);
+        config.auto.shortRange.set(2500, .55);             // RPM was 2000 (matched to 20245)
+        config.auto.midRange.set(3350, 0.1);               // RPM was 2400 (matched to 20245)
+        config.auto.farRange.set(3900, 0.0);               // RPM was 2725 (matched to 20245)
         config.timeoutSeconds = 3.5;
         return config;
     }

@@ -39,9 +39,9 @@
 
 
             <!-- Expansion Hub I2C (Color sensors) -->
-            <FastColorSensor name="lane_left_color" port="0" bus="0"/>
-            <FastColorSensor name="lane_center_color" port="1" bus="1"/>
-            <FastColorSensor name="lane_right_color" port="2" bus="2"/>
+<!--            <FastColorSensor name="lane_left_color" port="0" bus="0"/>-->
+<!--            <FastColorSensor name="lane_center_color" port="1" bus="1"/>-->
+<!--            <FastColorSensor name="lane_right_color" port="2" bus="2"/>-->
         </LynxModule>
     </LynxUsbDevice>
 
