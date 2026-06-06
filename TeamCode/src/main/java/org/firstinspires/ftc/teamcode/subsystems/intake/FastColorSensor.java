@@ -94,7 +94,13 @@ public class FastColorSensor extends I2cDeviceSynchDevice<I2cDeviceSynch>
 
     /** Performs a single 14-byte bulk read and caches PS + RGB values. */
     private synchronized void refresh() {
-        byte[] data = deviceClient.read(REG_DATA_START, BULK_READ_LENGTH);
+        byte[] data;
+        try {
+            data = deviceClient.read(REG_DATA_START, BULK_READ_LENGTH);
+        } catch (Exception e) {
+            // I2C failure — keep stale cached values; sensor recovers on the next REPEAT poll.
+            return;
+        }
         if (data == null || data.length < BULK_READ_LENGTH) {
             return;
         }

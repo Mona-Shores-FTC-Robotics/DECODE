@@ -42,7 +42,6 @@ import org.firstinspires.ftc.teamcode.util.CircularMovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.MovingAverageFilter;
 import org.firstinspires.ftc.teamcode.util.RobotProfile;
 import org.firstinspires.ftc.teamcode.util.RobotState;
-import org.firstinspires.ftc.teamcode.telemetry.TelemetrySettings;
 
 /**
  * Owns the intake motor, the gate servo, and the three color sensors that
@@ -750,7 +749,11 @@ public class IntakeSubsystem {
         double rawDistanceCm = Double.NaN;
         double distanceCm = Double.NaN;
         if (distanceNeeded) {
-            rawDistanceCm = distanceSensor.getDistance(DistanceUnit.CM);
+            try {
+                rawDistanceCm = distanceSensor.getDistance(DistanceUnit.CM);
+            } catch (Exception e) {
+                rawDistanceCm = Double.NaN; // treat I2C failure as no reading
+            }
             // Apply moving average filter if enabled
             if (laneSensorConfig.distanceFilter.enableFilter) {
                 MovingAverageFilter filter = laneDistanceFilters.get(lane);
@@ -777,7 +780,12 @@ public class IntakeSubsystem {
         lanePresenceState.put(lane, presenceDetected);
 
         // SINGLE I2C read for all color channels (red, green, blue, alpha)
-        NormalizedRGBA colors = colorSensor.getNormalizedColors();
+        NormalizedRGBA colors;
+        try {
+            colors = colorSensor.getNormalizedColors();
+        } catch (Exception e) {
+            return ABSENT_SAMPLE; // treat I2C failure as sensor absent
+        }
         float normalizedRed = colors.red;
         float normalizedGreen = colors.green;
         float normalizedBlue = colors.blue;
