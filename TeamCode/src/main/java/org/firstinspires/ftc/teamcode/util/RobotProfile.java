@@ -20,6 +20,7 @@ import org.firstinspires.ftc.teamcode.subsystems.intake.config.IntakeLaneSensorC
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFeederConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherFlywheelConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherHoodConfig;
+import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherReverseIntakeConfig;
 import org.firstinspires.ftc.teamcode.subsystems.launcher.config.LauncherTimingConfig;
 
 /**
@@ -50,6 +51,7 @@ public final class RobotProfile {
     public final LauncherFeederConfig feeder;
     public final LauncherHoodConfig hood;
     public final LauncherFlywheelConfig flywheel;
+    public final LauncherReverseIntakeConfig reverseIntake;
     public final LauncherTimingConfig timing;
     public final PinpointConstants pinpoint;
     public final FollowerConstants follower;
@@ -66,6 +68,7 @@ public final class RobotProfile {
             LauncherFeederConfig feeder,
             LauncherHoodConfig hood,
             LauncherFlywheelConfig flywheel,
+            LauncherReverseIntakeConfig reverseIntake,
             LauncherTimingConfig timing,
             PinpointConstants pinpoint,
             FollowerConstants follower,
@@ -80,6 +83,7 @@ public final class RobotProfile {
         this.feeder = feeder;
         this.hood = hood;
         this.flywheel = flywheel;
+        this.reverseIntake = reverseIntake;
         this.timing = timing;
         this.pinpoint = pinpoint;
         this.follower = follower;
@@ -144,6 +148,7 @@ public final class RobotProfile {
                 is19429 ? feederConfig19429() : feederConfig20245(),
                 hoodConfig(),
                 is19429 ? flywheelConfig19429() : flywheelConfig20245(),
+                is19429 ? reverseIntakeConfig19429() : reverseIntakeConfig20245(),
                 timingConfig(),
                 pinpointConstants(),
                 is19429 ? followerConstants19429() : followerConstants20245(),
@@ -220,6 +225,20 @@ public final class RobotProfile {
         config.flywheelRight.kS = 0.10;
         config.flywheelRight.kV = 0.00017;
         config.flywheelRight.kP = .001;
+        return config;
+    }
+
+    private static LauncherReverseIntakeConfig reverseIntakeConfig19429() {
+        LauncherReverseIntakeConfig config = new LauncherReverseIntakeConfig();
+        config.reversePower = -.7;
+        config.reverseRpmThreshold = 0;
+        return config;
+    }
+
+    private static LauncherReverseIntakeConfig reverseIntakeConfig20245() {
+        LauncherReverseIntakeConfig config = new LauncherReverseIntakeConfig();
+        config.reversePower = -.5;
+        config.reverseRpmThreshold = 0;
         return config;
     }
 
@@ -410,14 +429,14 @@ public final class RobotProfile {
     private static CommandRangeConfig rangeConfig19429() {
         CommandRangeConfig config = new CommandRangeConfig();
         // Teleop ranges:                     all-lanes RPM,  hood
-        config.teleop.shortRange.set(2400, 1);             // RPM was 1900 (matched to 20245)
-        config.teleop.midRange.set(3350, 0.05);            // RPM was 2500 (matched to 20245)
+        config.teleop.shortRange.set(2500, 1);             // RPM was 1900 (matched to 20245)
+        config.teleop.midRange.set(3400, 0.1);            // RPM was 2500 (matched to 20245)
         config.teleop.longRange.set(3875, 4000, 0.0);      // min/max RPM was 2725/2900 (matched to 20245)
         // Auto ranges:
-        config.auto.shortRange.set(2500, .55);             // RPM was 2000 (matched to 20245)
-        config.auto.midRange.set(3350, 0.1);               // RPM was 2400 (matched to 20245)
+        config.auto.shortRange.set(2700, .55);             // RPM was 2000 (matched to 20245)
+        config.auto.midRange.set(3400, 0.1);               // RPM was 2400 (matched to 20245)
         config.auto.farRange.set(3900, 0.0);               // RPM was 2725 (matched to 20245)
-        config.timeoutSeconds = 3.5;
+        config.timeoutSeconds = 2.5;
         return config;
     }
 

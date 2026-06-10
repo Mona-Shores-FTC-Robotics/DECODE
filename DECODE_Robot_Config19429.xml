@@ -20,7 +20,10 @@
             <Servo name="feeder_right" port="5"/>
 
             <!-- Control Hub I2C -->
-            <goBILDAPinpoint name="pinpoint" port="0" bus="1"/>
+<!--            <FastColorSensor name="lane_left_color" port="0" bus="0"/>-->
+            <goBILDAPinpoint name="pinpoint" port="1" bus="1"/>
+<!--            <FastColorSensor name="lane_right_color" port="3" bus="3"/>-->
+<!--            <FastColorSensor name="lane_center_color" port="2" bus="2"/>-->
         </LynxModule>
 
         <LynxModule name="Expansion Hub" port="2">

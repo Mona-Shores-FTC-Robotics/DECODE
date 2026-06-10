@@ -50,7 +50,7 @@ public class CloseThreeAtOnceCommand {
         // LaunchClose1
         public double launchClose1X = 36;
         public double launchClose1Y = 107.0;
-        public double launchClose1Heading = 125;
+        public double launchClose1Heading = 126;
 
         // ArtifactsSet1
         public double artifactsSet1X = 21;

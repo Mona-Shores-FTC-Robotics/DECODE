@@ -62,10 +62,10 @@ public class LauncherSubsystem {
     @Sorter(sort = 11) public static LauncherFeederConfig feederConfig = RobotProfile.forCurrent().feeder;
     @Sorter(sort = 12) public static LauncherHoodConfig hoodConfig = RobotProfile.forCurrent().hood;
     @Sorter(sort = 13) public static LauncherTimingConfig timingConfig = RobotProfile.forCurrent().timing;
+    @Sorter(sort = 14) public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = RobotProfile.forCurrent().reverseIntake;
 
     // Shared (both robots) launcher tunables.
     @Sorter(sort = 20) public static LauncherVoltageCompensationConfig voltageCompensationConfig = new LauncherVoltageCompensationConfig();
-    @Sorter(sort = 21) public static LauncherReverseIntakeConfig reverseFlywheelForHumanLoadingConfig = new LauncherReverseIntakeConfig();
     @Sorter(sort = 22) public static org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LauncherIdleConfig launcherIdleConfig =
             new org.firstinspires.ftc.teamcode.commands.LauncherCommands.config.LauncherIdleConfig();
 
@@ -87,6 +87,7 @@ public class LauncherSubsystem {
         flywheelConfig = RobotProfile.forCurrent().flywheel;
         feederConfig = RobotProfile.forCurrent().feeder;
         hoodConfig = RobotProfile.forCurrent().hood;
+        reverseFlywheelForHumanLoadingConfig = RobotProfile.forCurrent().reverseIntake;
         timingConfig = RobotProfile.forCurrent().timing;
         commandRangeConfig = RobotProfile.forCurrent().commandRange;
     }
