@@ -86,7 +86,7 @@ public final class FieldConstants {
     public static final Pose RED_GOAL_TAG_APRILTAG = aprilTagPedroFromSdk(RED_GOAL_TAG_ID);
 
     /**
-     * Looks up a tag in the FTC SDK's DECODE library and returns its position
+     * Looks up a tag in the FTC SDKs DECODE library and returns its position
      * in Pedro frame (2D, ignoring Z height). Returns null if the tag has no
      * fixed position in the database (e.g. obelisk motif tags 21–23).
      */
