@@ -31,6 +31,11 @@ public class CloseTogetherCommand {
         public double secondsOpeningGate = .4;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 6.2;
+        /** Hard cap (ms) on the gate-push move. The robot drives into the gate and may
+         *  never reach the path endpoint, so Follow's !isBusy() completion never fires —
+         *  this timeout ends the push so the auto can't hang there. Tune alongside the
+         *  openGate waypoint: enough time to reach the gate and shove it open. */
+        public double gatePushTimeoutMs = 1500;
     }
 
     public static class Waypoints {
@@ -53,12 +58,16 @@ public class CloseTogetherCommand {
         public double artifactsSet1Control0Y = 113;
 
         // OpenGate
-        public double openGateX = 17;
-        public double openGateY = 81;
+        public double openGateX = 11;
+        public double openGateY = 75;
         public double openGateHeading = 270;
 
-        public double openGateControlX = 25;
-        public double openGateControlY = 82;
+        // Control point sits BETWEEN start (24, 83.8) and the gate, on the line, so the short
+        // gate move is a smooth near-straight curve. (Was (25, 82) — to the right of the start,
+        // which hooked the Bézier backward and made the path report "done" before the robot
+        // reached the gate.) Keep it ~midway between artifactsSet1 and openGate as you tune.
+        public double openGateControlX = 17;
+        public double openGateControlY = 79;
 
         // LaunchClose2
         public double launchClose2X = 36;
@@ -162,6 +171,15 @@ public class CloseTogetherCommand {
                 // Reset timer when auto actually starts (not when command is created)
                 ConditionalFinalLaunchCommand.createTimerReset(),
 
+                // Pre-spin the flywheels to speed while stationary BEFORE the first drive.
+                // Three flywheels can't pull their startup inrush while the drive also pulls
+                // hard off the line, so spinning up during the first path browns out the
+                // launcher and it never starts. Get them up first, then move (the launcher
+                // periodic holds the RPM target for the rest of the routine).
+                PresetRangeSpinCommand.create(
+                        robot.launcher, LauncherRange.SHORT_AUTO, true,
+                        robot.drive, robot.lighting, null),
+
                 // Launch Preloads
                 Groups.deadline(
                         firstPathBuilder
@@ -187,13 +205,18 @@ public class CloseTogetherCommand {
                         robot.intake.autoSmartIntakeCmd()
                 ),
 
-                // Open Gate
-                new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet1())
-                        .to(openGate())
-                        .withControl(openGateControl())
-                        .withConstantHeading(270)
-                        .build(config.maxPathPower),
+                // Open Gate — bounded by a timeout so the gate-push can't hang the auto.
+                // The robot drives into the gate and may never reach the path endpoint, so
+                // Follow's !isBusy() completion never fires; the race timer ends it instead.
+                Groups.race(
+                        new FollowPathBuilder(robot, alliance)
+                                .from(artifactsSet1())
+                                .to(openGate())
+                                .withControl(openGateControl())
+                                .withConstantHeading(270)
+                                .build(config.maxPathPower),
+                        Commands.waitMs(config.gatePushTimeoutMs)
+                ),
 
                 Commands.waitMs(config.secondsOpeningGate * 1000.0), //Delay to open the gate
 

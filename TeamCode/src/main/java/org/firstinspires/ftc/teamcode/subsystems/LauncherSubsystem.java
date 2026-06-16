@@ -113,9 +113,23 @@ public class LauncherSubsystem {
      * Safely retrieves a motor from the hardware map. Returns null if the motor
      * is not found or the name is empty, allowing graceful degradation when
      * hardware is not connected.
+     *
+     * <p>NOTE: the flywheels are intentionally NOT wrapped in {@code CachedHardware}'s
+     * {@code CachingDcMotorEx}. They sit at a constant saturated power (≈1.0) for the
+     * whole launch, so the caching wrapper drops every repeat {@code setPower} after the
+     * first. If the hub ever zeroes the motor behind the cache's back (e.g. a brownout
+     * when the drive sags the battery in auto), the stale cache then suppresses every
+     * recovery write and the flywheel stays dead for the rest of the match. Caching
+     * saves nothing on a motor we command every loop, so we use the raw motor here.
      */
     private static DcMotorEx tryGetMotor(HardwareMap hardwareMap, String name) {
-        return org.firstinspires.ftc.teamcode.util.CachedHardware.tryMotor(hardwareMap, name);
+        if (name == null || name.isEmpty()) return null;
+        try {
+            return hardwareMap.get(DcMotorEx.class, name);
+        } catch (IllegalArgumentException ignored) {
+            // Motor not in the active config — degrade gracefully (matches CachedHardware.tryMotor).
+            return null;
+        }
     }
 
     /**

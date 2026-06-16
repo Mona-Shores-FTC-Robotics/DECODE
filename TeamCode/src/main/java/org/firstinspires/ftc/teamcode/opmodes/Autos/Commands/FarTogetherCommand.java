@@ -121,6 +121,15 @@ public class FarTogetherCommand {
                 // Reset timer when auto actually starts (not when command is created)
                 ConditionalFinalLaunchCommand.createTimerReset(),
 
+                // Pre-spin the flywheels to speed while stationary BEFORE the first drive.
+                // Three flywheels can't pull their startup inrush while the drive also pulls
+                // hard off the line, so spinning up during the first path browns out the
+                // launcher and it never starts. Get them up first, then move (the launcher
+                // periodic holds the RPM target for the rest of the routine).
+                PresetRangeSpinCommand.create(
+                        robot.launcher, LauncherRange.FAR_AUTO, true,
+                        robot.drive, robot.lighting, null),
+
                 // Launch Preloads
                 Groups.deadline(
                         firstPathBuilder
