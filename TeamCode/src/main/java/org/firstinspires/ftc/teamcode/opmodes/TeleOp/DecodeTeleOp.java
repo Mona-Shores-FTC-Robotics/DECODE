@@ -208,7 +208,9 @@ public class DecodeTeleOp extends OpMode {
 
         double timeRemaining = Math.max(0.0, TELEOP_DURATION_SEC - getRuntime());
         if (timeRemaining <= endgameConfig.decodeModeSwitchSecondsRemaining) {
-            RobotState.setLauncherMode(LauncherMode.DECODE);
+            // Color sensors down: stay in THROUGHPUT instead of switching to DECODE at endgame.
+            // Restore LauncherMode.DECODE here once the lane sensors work again.
+            RobotState.setLauncherMode(LauncherMode.THROUGHPUT);
             autoSwitchedToDecodeMode = true;
 
             // Show visual notification on lights (rainbow flash for 2 seconds)
@@ -217,7 +219,7 @@ public class DecodeTeleOp extends OpMode {
             }
 
             // Add telemetry notification
-            telemetry.addData("MODE SWITCH", "Endgame - DECODE mode active");
+            telemetry.addData("MODE SWITCH", "Endgame - THROUGHPUT (sensors down)");
             telemetry.update();
         }
     }

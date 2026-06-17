@@ -121,7 +121,9 @@ public abstract class BaseAutonomousOpMode extends OpMode {
         robot.lighting.setDriveSubsystem(robot.drive);
 
         allianceSelector = new AllianceSelector(gamepad1, Alliance.UNKNOWN);
-        modeSelector = new LauncherModeSelector(gamepad2, LauncherMode.DECODE);
+        // THROUGHPUT default while the lane color sensors are down — DECODE needs them to
+        // match the motif. Switch back to LauncherMode.DECODE once the sensors work again.
+        modeSelector = new LauncherModeSelector(gamepad2, LauncherMode.THROUGHPUT);
         activeAlliance = allianceSelector.getSelectedAlliance();
 
         onInit(); // e.g. load .pp file for Michiana

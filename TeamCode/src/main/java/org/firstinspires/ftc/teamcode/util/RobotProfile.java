@@ -449,8 +449,8 @@ public final class RobotProfile {
         // Auto ranges:
         config.auto.shortRange.set(2500, .55);
         config.auto.midRange.set(3350, 0.1);
-        config.auto.farRange.set(3900, 0.0);
-        config.timeoutSeconds = 2.5;
+        config.auto.farRange.set(3850, 0.0);
+        config.timeoutSeconds = 1.5;
         return config;
     }
 }

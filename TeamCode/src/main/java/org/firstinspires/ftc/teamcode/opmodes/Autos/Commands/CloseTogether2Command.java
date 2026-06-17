@@ -5,36 +5,44 @@ import com.pedropathing.geometry.Pose;
 import org.firstinspires.ftc.teamcode.Robot;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.ModeAwareLaunchCommand;
 import org.firstinspires.ftc.teamcode.commands.LauncherCommands.PresetRangeSpinCommand;
-import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.util.Alliance;
 import org.firstinspires.ftc.teamcode.util.FollowPathBuilder;
 import org.firstinspires.ftc.teamcode.util.IntakeMode;
 import org.firstinspires.ftc.teamcode.util.LauncherRange;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.commands.Commands;
 import com.pedropathing.ivy.groups.Groups;
 
 /**
- * Generated autonomous command from Pedro Pathing .pp file
- * Usage in OpMode:
- *   Command auto = LocalizeCommand.create(robot, activeAlliance);
- *   CommandManager.INSTANCE.scheduleCommand(auto);
- * 
+ * Close-side "together" auto, variant 2: two gate pushes, two pickup-and-shoot cycles, park.
+ *
+ * Sequence:
+ *   1. Shoot preload          (drive to launchClose1, launch)
+ *   2. Pick up artifact set 1
+ *   3. Open gate #1           (push openGate, bounded by timeout)
+ *   4. Shoot set 1            (return to launchClose2, launch)
+ *   5. Pick up artifact set 2
+ *   6. Open gate #2           (push openGate2, bounded by timeout)   <-- the added push
+ *   7. Shoot set 2            (return to launchClose3, launch)
+ *   8. Park                   (drive to nearGate)
+ *
+ * This is a copy of {@link CloseTogetherCommand} that adds the second gate push and
+ * ends after the second set (no set-3 pickup / conditional 4th launch). openGate2 is
+ * a separate, independently-tunable waypoint since it's approached from set 2.
  */
-
-public class CloseTogetherCommand {
+@Configurable
+public class CloseTogether2Command {
 
     public static class Config {
         public double maxPathPower = .80;
         public double endTimeForLinearHeadingInterpolation = .80;
         public double secondsOpeningGate = .4;
-        public double autoDurationSeconds = 30.0;
-        public double minTimeForFinalLaunchSeconds = 6.2;
-        /** Hard cap (ms) on the gate-push move. The robot drives into the gate and may
+        /** Hard cap (ms) on each gate-push move. The robot drives into the gate and may
          *  never reach the path endpoint, so Follow's !isBusy() completion never fires —
          *  this timeout ends the push so the auto can't hang there. Tune alongside the
-         *  openGate waypoint: enough time to reach the gate and shove it open. */
+         *  openGate waypoints: enough time to reach the gate and shove it open. */
         public double gatePushTimeoutMs = 1500;
     }
 
@@ -53,19 +61,13 @@ public class CloseTogetherCommand {
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
-        // Control point for segment: ArtifactsSet3
         public double artifactsSet1Control0X = 24;
         public double artifactsSet1Control0Y = 113;
 
-        // OpenGate
+        // OpenGate #1 — control sits midway between artifactsSet1 and the gate, on the line.
         public double openGateX = 11;
         public double openGateY = 75;
         public double openGateHeading = 270;
-
-        // Control point sits BETWEEN start (24, 83.8) and the gate, on the line, so the short
-        // gate move is a smooth near-straight curve. (Was (25, 82) — to the right of the start,
-        // which hooked the Bézier backward and made the path report "done" before the robot
-        // reached the gate.) Keep it ~midway between artifactsSet1 and openGate as you tune.
         public double openGateControlX = 17;
         public double openGateControlY = 79;
 
@@ -74,51 +76,42 @@ public class CloseTogetherCommand {
         public double launchClose2Y = 107;
         public double launchClose2Heading = 134.0;
 
-        public double launchClose2ControlX = 47;
-        public double launchClose2ControlY = 90;
-
         // ArtifactsSet2
-        public double artifactsSet2X = 21;
+        public double artifactsSet2X = 24;
         public double artifactsSet2Y = 61.0;
         public double artifactsSet2Heading = 270;
 
-        // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 21;
+        public double artifactsSet2Control0X = 24;
         public double artifactsSet2Control0Y = 100;
+
+        // OpenGate #2 — same physical gate, approached from set 2 (lower Y). Control sits
+        // midway between artifactsSet2 (24, 61) and the gate, on the line. Tune independently.
+        public double openGate2X = 11;
+        public double openGate2Y = 75;
+        public double openGate2Heading = 270;
+        public double openGate2ControlX = 17;
+        public double openGate2ControlY = 68;
+
+        // Gate #2 staging — sits ~5 inches off the gate toward the field (gate is at x=11,
+        // this is x=16). The robot routes through here BOTH ways: on the way in it drives
+        // here first, THEN pushes straight left into the gate (so it stops backing into it);
+        // on the way out it backs off to here off the wall, THEN rotates to launch (so it
+        // stops turning into it). Move this point to set how far / which way it goes
+        // before and after the push.
+        public double gate2StageX = 16;
+        public double gate2StageY = 75;
+        public double gate2StageHeading = 270;
 
         // LaunchClose3
         public double launchClose3X = 36;
         public double launchClose3Y = 107;
         public double launchClose3Heading = 134.0;
 
-        // Control point for segment: LaunchClose3
-        public double launchClose3Control0X = 50.5;
-        public double launchClose3Control0Y = 72;
-
-        // ArtifactsSet3
-        public double artifactsSet3X = 21;
-        public double artifactsSet3Y = 35.5;
-        public double artifactsSet3Heading = 270.0;
-
-        // Control point for segment: ArtifactsSet3
-        public double artifactsSet3Control0X = 21;
-        public double artifactsSet3Control0Y = 100;
-
-        // LaunchReleased
-        public double launchClose4X = 36;
-        public double launchClose4Y = 107;
-        public double launchClose4Heading = 134.0;
-
-        // Control point for segment: LaunchOffLine
-        public double launchClose4ControlX = 44;
-        public double launchClose4ControlY = 55;
-
-        // NearGate
+        // NearGate (park)
         public double nearGateX = 35;
         public double nearGateY = 70.4;
         public double nearGateHeading = 180.0;
 
-        // Control point for segment: NearGate
         public double nearGateControl0X = 41;
         public double nearGateControl0Y = 85;
     }
@@ -126,7 +119,7 @@ public class CloseTogetherCommand {
     public static Config config = new Config();
     public static Waypoints waypoints = new Waypoints();
 
-    private CloseTogetherCommand() {}
+    private CloseTogether2Command() {}
 
     /**
      * Gets the default start pose from waypoints (before alliance mirroring).
@@ -155,8 +148,6 @@ public class CloseTogetherCommand {
      * @return Complete autonomous command
      */
     public static Command create(Robot robot, Alliance alliance, Pose startOverride) {
-        Command autoSmartIntake = robot.intake.autoSmartIntakeCmd();
-
         // Build first path: start -> launch position
         FollowPathBuilder firstPathBuilder = new FollowPathBuilder(robot, alliance);
         if (startOverride != null) {
@@ -167,7 +158,7 @@ public class CloseTogetherCommand {
             firstPathBuilder.from(start());
         }
 
-        Command mainSequence = Groups.sequential(
+        return Groups.sequential(
                 // Reset timer when auto actually starts (not when command is created)
                 ConditionalFinalLaunchCommand.createTimerReset(),
 
@@ -180,7 +171,7 @@ public class CloseTogetherCommand {
                         robot.launcher, LauncherRange.SHORT_AUTO, true,
                         robot.drive, robot.lighting, null),
 
-                // Launch Preloads
+                // 1. Shoot preload
                 Groups.deadline(
                         firstPathBuilder
                                 .to(launchClose1())
@@ -189,25 +180,22 @@ public class CloseTogetherCommand {
                         robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE),
                         PresetRangeSpinCommand.create(
                                 robot.launcher, LauncherRange.SHORT_AUTO, true,
-                                robot.drive, robot.lighting, null) // Spin up to SHORT RPM for the whole auto
+                                robot.drive, robot.lighting, null) // Hold SHORT RPM for the whole auto
                 ),
-
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
-                // Pickup Artifact Set 1
+                // 2. Pick up artifact set 1
                 Groups.deadline(
-                    new FollowPathBuilder(robot, alliance)
-                        .from(launchClose1())
-                        .to(artifactsSet1())
-                        .withControl(artifactsSet1Control0())
-                        .withConstantHeading(270)
-                        .build(config.maxPathPower),
+                        new FollowPathBuilder(robot, alliance)
+                                .from(launchClose1())
+                                .to(artifactsSet1())
+                                .withControl(artifactsSet1Control0())
+                                .withConstantHeading(270)
+                                .build(config.maxPathPower),
                         robot.intake.autoSmartIntakeCmd()
                 ),
 
-                // Open Gate — bounded by a timeout so the gate-push can't hang the auto.
-                // The robot drives into the gate and may never reach the path endpoint, so
-                // Follow's !isBusy() completion never fires; the race timer ends it instead.
+                // 3. Open gate #1 — bounded by a timeout so the gate-push can't hang the auto.
                 Groups.race(
                         new FollowPathBuilder(robot, alliance)
                                 .from(artifactsSet1())
@@ -217,92 +205,69 @@ public class CloseTogetherCommand {
                                 .build(config.maxPathPower),
                         Commands.waitMs(config.gatePushTimeoutMs)
                 ),
+                Commands.waitMs(config.secondsOpeningGate * 1000.0), // dwell so the gate opens
 
-                Commands.waitMs(config.secondsOpeningGate * 1000.0), //Delay to open the gate
-
-                // Return and Launch Set 1 - using piecewise heading interpolation
-                // First 20%: constant 270°, then linear to launch heading
+                // 4. Shoot set 1 (return to launch; constant 270 then turn to launch heading)
                 new FollowPathBuilder(robot, alliance)
                         .from(openGate())
                         .to(launchClose2())
-                        .withPiecewiseConstantThenLinear(
-                                270,                           // Constant heading (degrees)
-                                0.2,                           // End of constant section
-                                waypoints.launchClose2Heading  // Linear end heading (degrees)
-                        )
+                        .withPiecewiseConstantThenLinear(270, 0.2, waypoints.launchClose2Heading)
                         .build(config.maxPathPower),
-
                 ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
-                // Pickup Artifact Set 2
-                Groups.deadline(
-                    new FollowPathBuilder(robot, alliance)
-                            .from(launchClose2())
-                            .to(artifactsSet2())
-                            .withControl(artifactsSet2Control0())
-                            .withConstantHeading(270)
-                            .build(config.maxPathPower),
-                    robot.intake.autoSmartIntakeCmd()
-                ),
-
-                // Return and Launch Set 2
-                new FollowPathBuilder(robot, alliance)
-                        .from(artifactsSet2())
-                        .to(launchClose3())
-                        .withControl(launchClose3Control0())
-                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                        .build(config.maxPathPower),
-
-                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
-
-                // Pickup Artifact Set 3
+                // 5. Pick up artifact set 2
                 Groups.deadline(
                         new FollowPathBuilder(robot, alliance)
-                                .from(launchClose3())
-                                .to(artifactsSet3())
-                                .withControl(artifactsSet3Control0())
+                                .from(launchClose2())
+                                .to(artifactsSet2())
+                                .withControl(artifactsSet2Control0())
                                 .withConstantHeading(270)
                                 .build(config.maxPathPower),
                         robot.intake.autoSmartIntakeCmd()
                 ),
 
-                // Conditionally return and launch if time permits, otherwise go straight to park
-                ConditionalFinalLaunchCommand.create(
-                        config.autoDurationSeconds,
-                        config.minTimeForFinalLaunchSeconds,
-                        // If enough time: return to launch, shoot, then park
-                        Groups.sequential(
-                                new FollowPathBuilder(robot, alliance)
-                                        .from(artifactsSet3())
-                                        .to(launchClose4())
-                                        .withControl(launchClose4Control())
-                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                        .build(config.maxPathPower),
+                // 6. Open gate #2 — stage off the gate first, THEN push straight left into it.
+                //    Drive to the staging point (forward, off the wall), then push left into
+                //    the gate. The push is bounded by the timeout so it can't hang. Routing
+                //    through the stage stops the robot backing straight into the gate.
+                new FollowPathBuilder(robot, alliance)
+                        .from(artifactsSet2())
+                        .to(gate2Stage())
+                        .withConstantHeading(270)
+                        .build(config.maxPathPower),
+                Groups.race(
+                        new FollowPathBuilder(robot, alliance)
+                                .from(gate2Stage())
+                                .to(openGate2())
+                                .withConstantHeading(270)
+                                .build(config.maxPathPower),
+                        Commands.waitMs(config.gatePushTimeoutMs)
+                ),
+                Commands.waitMs(config.secondsOpeningGate * 1000.0), // dwell so the gate opens
 
-                                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
+                // 7. Shoot set 2 — back off the gate to the staging point FIRST (constant
+                //    heading, pure translation off the wall), THEN rotate and return to
+                //    launch. Without the back-off the robot turns into the gate.
+                new FollowPathBuilder(robot, alliance)
+                        .from(openGate2())
+                        .to(gate2Stage())
+                        .withConstantHeading(270)
+                        .build(config.maxPathPower),
+                new FollowPathBuilder(robot, alliance)
+                        .from(gate2Stage())
+                        .to(launchClose3())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .build(config.maxPathPower),
+                ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
-                                Groups.deadline(
-                                        new FollowPathBuilder(robot, alliance)
-                                            .from(launchClose4())
-                                            .to(nearGate())
-                                            .withControl(nearGateControl0())
-                                            .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                            .build(config.maxPathPower),
-                                        robot.intake.autoSmartIntakeCmd()
-                                )
-                        ),
-                        // If not enough time: go straight to park
-                        Groups.sequential(
-                                new FollowPathBuilder(robot, alliance)
-                                        .from(artifactsSet3())
-                                        .to(nearGate())
-                                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
-                                        .build(config.maxPathPower)
-                        )
-                )
+                // 8. Park
+                new FollowPathBuilder(robot, alliance)
+                        .from(launchClose3())
+                        .to(nearGate())
+                        .withControl(nearGateControl0())
+                        .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
+                        .build(config.maxPathPower)
         );
-
-        return mainSequence;
     }
 
     private static Pose start() {
@@ -333,11 +298,6 @@ public class CloseTogetherCommand {
         return new Pose(waypoints.launchClose2X, waypoints.launchClose2Y, Math.toRadians(waypoints.launchClose2Heading));
     }
 
-    private static Pose launchClose2Control() {
-        return new Pose(waypoints.launchClose2ControlX, waypoints.launchClose2ControlY, 0);
-    }
-
-
     private static Pose artifactsSet2() {
         return new Pose(waypoints.artifactsSet2X, waypoints.artifactsSet2Y, Math.toRadians(waypoints.artifactsSet2Heading));
     }
@@ -346,37 +306,20 @@ public class CloseTogetherCommand {
         return new Pose(waypoints.artifactsSet2Control0X, waypoints.artifactsSet2Control0Y, 0);
     }
 
+    private static Pose openGate2() {
+        return new Pose(waypoints.openGate2X, waypoints.openGate2Y, Math.toRadians(waypoints.openGate2Heading));
+    }
+
+    private static Pose openGate2Control() {
+        return new Pose(waypoints.openGate2ControlX, waypoints.openGate2ControlY, 0);
+    }
+
+    private static Pose gate2Stage() {
+        return new Pose(waypoints.gate2StageX, waypoints.gate2StageY, Math.toRadians(waypoints.gate2StageHeading));
+    }
+
     private static Pose launchClose3() {
         return new Pose(waypoints.launchClose3X, waypoints.launchClose3Y, Math.toRadians(waypoints.launchClose3Heading));
-    }
-
-    private static Pose launchClose3Control0() {
-        return new Pose(waypoints.launchClose3Control0X, waypoints.launchClose3Control0Y, 0);
-    }
-
-//    private static Pose releasedArtifacts() {
-//        return new Pose(waypoints.releasedArtifactsX , waypoints.releasedArtifactsY , Math.toRadians(waypoints.releasedArtifactsHeading));
-//    }
-//
-//    private static Pose releasedArtifactsControl() {
-//        return new Pose(waypoints.releasedArtifactsControlX , waypoints.releasedArtifactsControlY , 0);
-//    }
-
-    private static Pose artifactsSet3() {
-        return new Pose(waypoints.artifactsSet3X, waypoints.artifactsSet3Y, Math.toRadians(waypoints.artifactsSet3Heading));
-    }
-
-    private static Pose artifactsSet3Control0() {
-        return new Pose(waypoints.artifactsSet3Control0X, waypoints.artifactsSet3Control0Y, 0);
-    }
-
-
-    private static Pose launchClose4() {
-        return new Pose(waypoints.launchClose4X, waypoints.launchClose4Y, Math.toRadians(waypoints.launchClose4Heading));
-    }
-
-    private static Pose launchClose4Control() {
-        return new Pose(waypoints.launchClose4ControlX, waypoints.launchClose4ControlY, 0);
     }
 
     private static Pose nearGate() {
@@ -386,5 +329,4 @@ public class CloseTogetherCommand {
     private static Pose nearGateControl0() {
         return new Pose(waypoints.nearGateControl0X, waypoints.nearGateControl0Y, 0);
     }
-
 }

@@ -31,6 +31,16 @@ public class FarTogetherCommand {
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.0;
         public double slowPath = .75;
+        /** Max time (ms) for a pickup drive before the auto gives up and moves on. Pickups
+         *  push into the wall/chute and may never reach the path endpoint, so Follow's
+         *  !isBusy() never fires — this bounds each pickup so a stuck one can't hang the auto.
+         *  Set it longer than a normal pickup drive; for wall pushes it doubles as push time. */
+        public double pickupTimeoutMs = 2000;
+        /** Heading tolerance (degrees) the robot must settle within before the launch-approach
+         *  path is considered complete (and the launcher fires). Tighter = waits longer for the
+         *  heading to lock before shooting, so it fires aimed instead of mid-rotation — same idea
+         *  as the close autos. Loosen if the launch approach ever hangs waiting to settle. */
+        public double launchHeadingConstraintDeg = 2.0;
     }
 
     public static class Waypoints {
@@ -39,38 +49,42 @@ public class FarTogetherCommand {
         public double startHeading = 90.0;
 
         // LaunchFar
-        public double launchFarX = 55;
-        public double launchFarY = 14;
+        public double launchFarX = 58;
+        public double launchFarY = 11;
         public double launchFarHeadingDeg = 110;
 
         // Artifacts at Alliance Wall)
-        public double artifactsWallX = 9;
-        public double artifactsWallY = 6.5;
+        public double artifactsWallX = 18;
+        public double artifactsWallY = 8;
         public double artifactsWallHeading = 185;
 
-        // Control point for segment: leavewall
-        public double wallControlPointX = 27.5;
-        public double wallControlPointY = 18;
+        // Control point for segment: leavewall.
+        // X is pulled OUT from the endpoint (20) toward the start so the path curves
+        // gradually into the corner instead of hooking straight down — that hook (control X ==
+        // end X) was too sharp for the follower to track, so the path never reached the
+        // endpoint and sat out the pickup timeout. Tune X (eases the turn-in) and Y (bow).
+        public double wallControlPointX = 25;
+        public double wallControlPointY = 12;
 
         // Chute Released Artifacts Try 1
-        public double releasedTry1X = 15;
-        public double releasedTry1Y = 6.5;
+        public double releasedTry1X = 20;
+        public double releasedTry1Y = 10;
         public double releasedTry1Heading = 180;
 
-        public double releasedTry1controlX = 35.3;
+        public double releasedTry1controlX = 20;
         public double releasedTry1controlY = 13.6;
 
         // Chute Released Artifacts Try 1
-        public double releasedTry2X = 9;
-        public double releasedTry2Y = 6.5;
+        public double releasedTry2X = 20;
+        public double releasedTry2Y = 10;
         public double releasedTry2Heading = 185;
 
-        public double releasedTry2controlX = 35.3;
-        public double releasedTry2controlY = 18;
+        public double releasedTry2controlX = 20;
+        public double releasedTry2controlY = 13.6;
 
         // Off Line
-        public double readyForTeleopX = 33;
-        public double readyForTeleopY = 12;
+        public double readyForTeleopX = 50;
+        public double readyForTeleopY = 15;
         public double readyForTeleopHeading = 90;
 
     }
@@ -135,6 +149,7 @@ public class FarTogetherCommand {
                         firstPathBuilder
                                 .to(launchFar())
                                 .withConstantHeading(waypoints.launchFarHeadingDeg)
+                                .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
                                 .build(config.maxPathPower),
                         robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE),
                         PresetRangeSpinCommand.create(
@@ -146,12 +161,15 @@ public class FarTogetherCommand {
 
                 // Pickup Alliance Wall Artifacts
                 Groups.deadline(
-                        new FollowPathBuilder(robot, alliance)
-                            .from(launchFar())
-                            .to(artifactsAllianceWall())
-                            .withControl(wallControl())
-                            .withConstantHeading(waypoints.artifactsWallHeading)
-                            .build(config.maxPathPower),
+                        Groups.race(
+                            new FollowPathBuilder(robot, alliance)
+                                .from(launchFar())
+                                .to(artifactsAllianceWall())
+                                .withControl(wallControl())
+                                .withConstantHeading(waypoints.artifactsWallHeading)
+                                .build(config.maxPathPower),
+                            Commands.waitMs(config.pickupTimeoutMs)
+                        ),
                         robot.intake.autoSmartIntakeCmd()
                 ),
 
@@ -168,12 +186,15 @@ public class FarTogetherCommand {
 
                 // Pickup Released Artifacts Try 1
                 Groups.deadline(
-                    new FollowPathBuilder(robot, alliance)
+                    Groups.race(
+                        new FollowPathBuilder(robot, alliance)
                             .from(launchFar())
                             .to(releasedArtifacts1())
                             .withControl(releasedArtifacts1Control0())
                             .withConstantHeading(waypoints.releasedTry1Heading)
                             .build(config.slowPath),
+                        Commands.waitMs(config.pickupTimeoutMs)
+                    ),
                         robot.intake.autoSmartIntakeCmd()
                 ),
 
@@ -189,12 +210,15 @@ public class FarTogetherCommand {
 
                 // Pickup Released Artifacts Try 2
                 Groups.deadline(
-                        new FollowPathBuilder(robot, alliance)
+                        Groups.race(
+                            new FollowPathBuilder(robot, alliance)
                                 .from(launchFar())
                                 .to(releasedArtifacts2())
                                 .withControl(releasedArtifacts2Control0())
                                 .withConstantHeading(waypoints.releasedTry2Heading)
                                 .build(config.slowPath),
+                            Commands.waitMs(config.pickupTimeoutMs)
+                        ),
                         robot.intake.autoSmartIntakeCmd()
                 ),
 

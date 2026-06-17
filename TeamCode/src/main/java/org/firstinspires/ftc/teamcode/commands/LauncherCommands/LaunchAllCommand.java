@@ -27,6 +27,17 @@ public final class LaunchAllCommand {
     // Tracks where we are in the launch sequence.
     private enum Stage { WAITING, SHOTS_QUEUED, COMPLETED }
 
+    /** Safety timeout (ms): if the launch never completes (a lane never reports ready, or a
+     *  queued shot never clears), give up after this long so an auto can't hang on the launch.
+     *  Set longer than a normal launch (spin-up + fire all lanes + recovery). */
+    public static double launchTimeoutMs = 5000;
+
+    /** Number of lanes that must reach target RPM before the launch is treated as ready: once
+     *  this many are at speed, ALL enabled lanes fire (a lane that can't quite hit target still
+     *  fires, at its current speed). With one weak flywheel, 2 means the launch no longer stalls
+     *  waiting on it. Set to 3 to require every lane (the old all-must-be-ready behavior). */
+    public static int minLanesReady = 2;
+
     private LaunchAllCommand() {}
 
     public static Command create(LauncherSubsystem launcher,
@@ -51,13 +62,36 @@ public final class LaunchAllCommand {
                     if (intake != null) intake.setGateAllowArtifacts();
                 })
                 .setExecute(() -> {
+                    // Safety timeout: if the launch never completes (a lane never reaches target
+                    // RPM, or a queued shot never clears), give up so the auto can't hang here.
+                    // Clear pending shots so they don't fire during the next move.
+                    if (stage[0] != Stage.COMPLETED && timer.milliseconds() >= launchTimeoutMs) {
+                        launcher.clearQueue();
+                        stage[0] = Stage.COMPLETED;
+                        if (spinDownAfterShot && !spinDownApplied[0]) {
+                            launcher.clearOverrides();
+                            launcher.setAllLanesToIdle();
+                            spinDownApplied[0] = true;
+                        }
+                        return;
+                    }
                     switch (stage[0]) {
-                        case WAITING:
+                        case WAITING: {
                             checkLaneReadiness(launcher, queuedLanes);
-                            if (queuedLanes.size() == LauncherLane.values().length) {
+                            if (queuedLanes.size() >= minLanesReady) {
+                                // Enough lanes at target → treat the whole launch as ready and
+                                // fire EVERY enabled lane, including one that hasn't reached target
+                                // (it still fires, at its current speed) so no shot is skipped.
+                                for (LauncherLane lane : LauncherLane.values()) {
+                                    if (launcher.getLaunchRpm(lane) > 0.0 && !queuedLanes.contains(lane)) {
+                                        launcher.queueShot(lane);
+                                        queuedLanes.add(lane);
+                                    }
+                                }
                                 stage[0] = Stage.SHOTS_QUEUED;
                             }
                             break;
+                        }
                         case SHOTS_QUEUED:
                             if (!launcher.isBusy() && launcher.getQueuedShots() == 0) {
                                 stage[0] = Stage.COMPLETED;

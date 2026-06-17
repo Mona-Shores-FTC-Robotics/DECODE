@@ -29,6 +29,16 @@ public class FarThreeAtOnceCommand {
         public double endTimeForLinearHeadingInterpolation = .7;
         public double autoDurationSeconds = 30.0;
         public double minTimeForFinalLaunchSeconds = 5.0;
+        /** Max time (ms) for a pickup drive before the auto gives up and moves on. Pickups
+         *  push into the wall/stack and may never reach the path endpoint, so Follow's
+         *  !isBusy() never fires — this bounds each pickup so a stuck one can't hang the auto.
+         *  Set it longer than a normal pickup drive; for wall pushes it doubles as push time. */
+        public double pickupTimeoutMs = 2000;
+        /** Heading tolerance (degrees) the robot must settle within before the launch-approach
+         *  path is considered complete (and the launcher fires). Tighter = waits longer for the
+         *  heading to lock before shooting, so it fires aimed instead of mid-rotation — same idea
+         *  as the close autos. Loosen if the launch approach ever hangs waiting to settle. */
+        public double launchHeadingConstraintDeg = 2.0;
     }
 
     public static class Waypoints {
@@ -42,7 +52,7 @@ public class FarThreeAtOnceCommand {
         public double launchFarHeadingDeg = 110;
 
         // Artifacts at Alliance Wall)
-        public double artifactsWallX = 9;
+        public double artifactsWallX = 15;
         public double artifactsWallY = 6.5;
         public double artifactsWallHeading = 185;
 
@@ -137,6 +147,7 @@ public class FarThreeAtOnceCommand {
                 firstPathBuilder
                         .to(launchFar())
                         .withConstantHeading(waypoints.launchFarHeadingDeg)
+                        .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
                         .build(config.maxPathPower),
                     robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE),
                     PresetRangeSpinCommand.create(
@@ -145,14 +156,18 @@ public class FarThreeAtOnceCommand {
                 ),
             ModeAwareLaunchCommand.create(robot.launcher, robot.intake, false),
 
-            // Pickup Alliance Wall Artifacts
+            // Pickup Alliance Wall Artifacts — bounded by a timeout so pushing into the wall
+            // (path never reaches its endpoint) can't hang the auto; it gives up and moves on.
             Groups.deadline(
-                new FollowPathBuilder(robot, alliance)
+                Groups.race(
+                    new FollowPathBuilder(robot, alliance)
                         .from(launchFar())
                         .to(artifactsAllianceWall())
                         .withControl(leaveControl0())
                         .withConstantHeading(waypoints.artifactsWallHeading)
                         .build(config.maxPathPower),
+                    Commands.waitMs(config.pickupTimeoutMs)
+                ),
                         Groups.sequential(
                                 robot.intake.autoSmartIntakeCmd()
                         )
@@ -170,12 +185,15 @@ public class FarThreeAtOnceCommand {
 
             // Pickup Artifact Set 3
             Groups.deadline(
-                    new FollowPathBuilder(robot, alliance)
+                    Groups.race(
+                        new FollowPathBuilder(robot, alliance)
                             .from(launchFar())
                             .to(artifactsSet3())
                             .withControl(artifactsSet3Control0())
                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                             .build(config.maxPathPower),
+                        Commands.waitMs(config.pickupTimeoutMs)
+                    ),
                     Groups.sequential(
                             robot.intake.autoSmartIntakeCmd()
                     )
@@ -192,12 +210,15 @@ public class FarThreeAtOnceCommand {
 
             // Pickup Artifact Set 2
             Groups.deadline(
-                    new FollowPathBuilder(robot, alliance)
+                    Groups.race(
+                        new FollowPathBuilder(robot, alliance)
                             .from(launchFar())
                             .withControl(artifactsSet2Control0())
                             .to(artifactsSet2())
                             .withLinearHeadingCompletion(config.endTimeForLinearHeadingInterpolation)
                             .build(config.maxPathPower),
+                        Commands.waitMs(config.pickupTimeoutMs)
+                    ),
                     Groups.sequential(
                             robot.intake.autoSmartIntakeCmd()
                     )
