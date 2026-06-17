@@ -435,7 +435,7 @@ public final class RobotProfile {
         // Auto ranges:
         config.auto.shortRange.set(2700, .55);             // RPM was 2000 (matched to 20245)
         config.auto.midRange.set(3400, 0.1);               // RPM was 2400 (matched to 20245)
-        config.auto.farRange.set(3900, 0.0);               // RPM was 2725 (matched to 20245)
+        config.auto.farRange.set(4000, 0.0);               // RPM was 2725 (matched to 20245)
         config.timeoutSeconds = 2.5;
         return config;
     }

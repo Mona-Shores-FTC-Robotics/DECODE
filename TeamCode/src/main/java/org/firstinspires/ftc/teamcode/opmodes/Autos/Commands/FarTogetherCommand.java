@@ -41,6 +41,11 @@ public class FarTogetherCommand {
          *  heading to lock before shooting, so it fires aimed instead of mid-rotation — same idea
          *  as the close autos. Loosen if the launch approach ever hangs waiting to settle. */
         public double launchHeadingConstraintDeg = 2.0;
+        /** Hard cap (ms) on the launch-approach move. The heading-settle gate above has no
+         *  natural backstop — if the heading parks just outside tolerance the path never
+         *  completes — so this fires the launch anyway after this long (a touch less aimed,
+         *  but it can never hang). Set a bit longer than a normal drive-and-settle. */
+        public double launchApproachTimeoutMs = 2500;
     }
 
     public static class Waypoints {
@@ -54,7 +59,7 @@ public class FarTogetherCommand {
         public double launchFarHeadingDeg = 110;
 
         // Artifacts at Alliance Wall)
-        public double artifactsWallX = 18;
+        public double artifactsWallX = 15;
         public double artifactsWallY = 8;
         public double artifactsWallHeading = 185;
 
@@ -63,11 +68,11 @@ public class FarTogetherCommand {
         // gradually into the corner instead of hooking straight down — that hook (control X ==
         // end X) was too sharp for the follower to track, so the path never reached the
         // endpoint and sat out the pickup timeout. Tune X (eases the turn-in) and Y (bow).
-        public double wallControlPointX = 25;
+        public double wallControlPointX = 20;
         public double wallControlPointY = 12;
 
         // Chute Released Artifacts Try 1
-        public double releasedTry1X = 20;
+        public double releasedTry1X = 15;
         public double releasedTry1Y = 10;
         public double releasedTry1Heading = 180;
 
@@ -75,7 +80,7 @@ public class FarTogetherCommand {
         public double releasedTry1controlY = 13.6;
 
         // Chute Released Artifacts Try 1
-        public double releasedTry2X = 20;
+        public double releasedTry2X = 15;
         public double releasedTry2Y = 10;
         public double releasedTry2Heading = 185;
 
@@ -83,8 +88,8 @@ public class FarTogetherCommand {
         public double releasedTry2controlY = 13.6;
 
         // Off Line
-        public double readyForTeleopX = 50;
-        public double readyForTeleopY = 15;
+        public double readyForTeleopX = 40;
+        public double readyForTeleopY = 25;
         public double readyForTeleopHeading = 90;
 
     }
@@ -146,11 +151,14 @@ public class FarTogetherCommand {
 
                 // Launch Preloads
                 Groups.deadline(
-                        firstPathBuilder
-                                .to(launchFar())
-                                .withConstantHeading(waypoints.launchFarHeadingDeg)
-                                .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
-                                .build(config.maxPathPower),
+                        Groups.race(
+                                firstPathBuilder
+                                        .to(launchFar())
+                                        .withConstantHeading(waypoints.launchFarHeadingDeg)
+                                        .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
+                                        .build(config.maxPathPower),
+                                Commands.waitMs(config.launchApproachTimeoutMs)
+                        ),
                         robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE),
                         PresetRangeSpinCommand.create(
                                 robot.launcher, LauncherRange.FAR_AUTO, true,

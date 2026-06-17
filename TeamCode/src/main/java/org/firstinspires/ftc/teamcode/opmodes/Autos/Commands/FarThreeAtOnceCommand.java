@@ -39,6 +39,11 @@ public class FarThreeAtOnceCommand {
          *  heading to lock before shooting, so it fires aimed instead of mid-rotation — same idea
          *  as the close autos. Loosen if the launch approach ever hangs waiting to settle. */
         public double launchHeadingConstraintDeg = 2.0;
+        /** Hard cap (ms) on the launch-approach move. The heading-settle gate above has no
+         *  natural backstop — if the heading parks just outside tolerance the path never
+         *  completes — so this fires the launch anyway after this long (a touch less aimed,
+         *  but it can never hang). Set a bit longer than a normal drive-and-settle. */
+        public double launchApproachTimeoutMs = 2500;
     }
 
     public static class Waypoints {
@@ -144,11 +149,14 @@ public class FarThreeAtOnceCommand {
 
                 // Launch Preloads
                 Groups.deadline(
-                firstPathBuilder
-                        .to(launchFar())
-                        .withConstantHeading(waypoints.launchFarHeadingDeg)
-                        .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
-                        .build(config.maxPathPower),
+                Groups.race(
+                        firstPathBuilder
+                                .to(launchFar())
+                                .withConstantHeading(waypoints.launchFarHeadingDeg)
+                                .withHeadingConstraint(Math.toRadians(config.launchHeadingConstraintDeg))
+                                .build(config.maxPathPower),
+                        Commands.waitMs(config.launchApproachTimeoutMs)
+                ),
                     robot.intake.setIntakeModeCmd(IntakeMode.PASSIVE_REVERSE),
                     PresetRangeSpinCommand.create(
                             robot.launcher, LauncherRange.FAR_AUTO, true,
