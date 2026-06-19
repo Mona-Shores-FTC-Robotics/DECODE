@@ -54,14 +54,14 @@ public class CloseTogether2Command {
         // LaunchClose1
         public double launchClose1X = 36;
         public double launchClose1Y = 107;
-        public double launchClose1Heading = 134;
+        public double launchClose1Heading = 140;
 
         // ArtifactsSet1 — pulled toward the wall (lower X) so the intake reaches the
         // wall-side artifact instead of clipping the row. Control shares the endpoint X
         // so the robot translates over to the wall line at the TOP, then comes straight
         // down in Y (rather than cutting the row diagonally and missing the wall one).
         public double artifactsSet1X = 21;
-        public double artifactsSet1Y = 83.8;
+        public double artifactsSet1Y = 82;
         public double artifactsSet1Heading = 270.0;
 
         public double artifactsSet1Control0X = 20;
@@ -77,7 +77,7 @@ public class CloseTogether2Command {
         // LaunchClose2
         public double launchClose2X = 36;
         public double launchClose2Y = 107;
-        public double launchClose2Heading = 134.0;
+        public double launchClose2Heading = 140;
 
         // ArtifactsSet2
         public double artifactsSet2X = 21;
@@ -108,7 +108,7 @@ public class CloseTogether2Command {
         // LaunchClose3
         public double launchClose3X = 36;
         public double launchClose3Y = 107;
-        public double launchClose3Heading = 134.0;
+        public double launchClose3Heading = 140;
 
         // NearGate (park)
         public double nearGateX = 35;

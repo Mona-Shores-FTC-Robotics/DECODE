@@ -447,7 +447,7 @@ public final class RobotProfile {
         config.teleop.midRange.set(3100, 0.1).right = 3000; // left/center 3100, right 3000
         config.teleop.longRange.set(3875, 4000, 0.0); // min RPM, max RPM, hood
         // Auto rangesCLAUDE
-        config.auto.shortRange.set(2500, .55);
+        config.auto.shortRange.set(2625, .55);
         config.auto.midRange.set(3350, 0.1);
         config.auto.farRange.set(3850, 0.0);
         config.timeoutSeconds = 1.5;
