@@ -56,20 +56,23 @@ public class CloseTogether2Command {
         public double launchClose1Y = 107;
         public double launchClose1Heading = 134;
 
-        // ArtifactsSet1
-        public double artifactsSet1X = 24;
+        // ArtifactsSet1 — pulled toward the wall (lower X) so the intake reaches the
+        // wall-side artifact instead of clipping the row. Control shares the endpoint X
+        // so the robot translates over to the wall line at the TOP, then comes straight
+        // down in Y (rather than cutting the row diagonally and missing the wall one).
+        public double artifactsSet1X = 21;
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
-        public double artifactsSet1Control0X = 24;
-        public double artifactsSet1Control0Y = 113;
+        public double artifactsSet1Control0X = 20;
+        public double artifactsSet1Control0Y = 120;
 
         // OpenGate #1 — control sits midway between artifactsSet1 and the gate, on the line.
         public double openGateX = 11;
-        public double openGateY = 75;
+        public double openGateY = 80;
         public double openGateHeading = 270;
-        public double openGateControlX = 17;
-        public double openGateControlY = 79;
+        public double openGateControlX = 20;
+        public double openGateControlY = 80;
 
         // LaunchClose2
         public double launchClose2X = 36;
@@ -77,20 +80,20 @@ public class CloseTogether2Command {
         public double launchClose2Heading = 134.0;
 
         // ArtifactsSet2
-        public double artifactsSet2X = 24;
+        public double artifactsSet2X = 21;
         public double artifactsSet2Y = 61.0;
         public double artifactsSet2Heading = 270;
 
-        public double artifactsSet2Control0X = 24;
+        public double artifactsSet2Control0X = 21;
         public double artifactsSet2Control0Y = 100;
 
         // OpenGate #2 — same physical gate, approached from set 2 (lower Y). Control sits
         // midway between artifactsSet2 (24, 61) and the gate, on the line. Tune independently.
         public double openGate2X = 11;
-        public double openGate2Y = 75;
+        public double openGate2Y = 78;
         public double openGate2Heading = 270;
         public double openGate2ControlX = 17;
-        public double openGate2ControlY = 68;
+        public double openGate2ControlY = 78;
 
         // Gate #2 staging — sits ~5 inches off the gate toward the field (gate is at x=11,
         // this is x=16). The robot routes through here BOTH ways: on the way in it drives
@@ -99,7 +102,7 @@ public class CloseTogether2Command {
         // stops turning into it). Move this point to set how far / which way it goes
         // before and after the push.
         public double gate2StageX = 16;
-        public double gate2StageY = 75;
+        public double gate2StageY = 78;
         public double gate2StageHeading = 270;
 
         // LaunchClose3

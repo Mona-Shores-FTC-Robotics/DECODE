@@ -49,25 +49,25 @@ public class CloseTogetherCommand {
         public double launchClose1Heading = 134;
 
         // ArtifactsSet1
-        public double artifactsSet1X = 24;
+        public double artifactsSet1X = 21;
         public double artifactsSet1Y = 83.8;
         public double artifactsSet1Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet1Control0X = 24;
-        public double artifactsSet1Control0Y = 113;
+        public double artifactsSet1Control0X = 20;
+        public double artifactsSet1Control0Y = 120;
 
         // OpenGate
         public double openGateX = 11;
-        public double openGateY = 75;
+        public double openGateY = 80;
         public double openGateHeading = 270;
 
         // Control point sits BETWEEN start (24, 83.8) and the gate, on the line, so the short
         // gate move is a smooth near-straight curve. (Was (25, 82) — to the right of the start,
         // which hooked the Bézier backward and made the path report "done" before the robot
         // reached the gate.) Keep it ~midway between artifactsSet1 and openGate as you tune.
-        public double openGateControlX = 17;
-        public double openGateControlY = 79;
+        public double openGateControlX = 20;
+        public double openGateControlY = 80;
 
         // LaunchClose2
         public double launchClose2X = 36;

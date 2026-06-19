@@ -50,7 +50,7 @@ public class CloseThreeAtOnceCommand {
         // LaunchClose1
         public double launchClose1X = 36;
         public double launchClose1Y = 107.0;
-        public double launchClose1Heading = 126;
+        public double launchClose1Heading = 134;
 
         // ArtifactsSet1
         public double artifactsSet1X = 21;
@@ -58,8 +58,8 @@ public class CloseThreeAtOnceCommand {
         public double artifactsSet1Heading = 270.0;
 
         // Control point for segment: ArtifactsSet3
-        public double artifactsSet1Control0X = 23;
-        public double artifactsSet1Control0Y = 113;
+        public double artifactsSet1Control0X = 20;
+        public double artifactsSet1Control0Y = 120;
 
         // LaunchClose2
         public double launchClose2X = 36;
@@ -69,10 +69,10 @@ public class CloseThreeAtOnceCommand {
         // ArtifactsSet2
         public double artifactsSet2X = 21;
         public double artifactsSet2Y = 61.0;
-        public double artifactsSet2Heading = 260;
+        public double artifactsSet2Heading = 270;
 
         // Control point for segment: ArtifactsSet2
-        public double artifactsSet2Control0X = 24;
+        public double artifactsSet2Control0X = 21;
         public double artifactsSet2Control0Y = 100;
 
         // LaunchClose3
