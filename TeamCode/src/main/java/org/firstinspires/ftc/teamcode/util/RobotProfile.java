@@ -443,10 +443,10 @@ public final class RobotProfile {
     private static CommandRangeConfig rangeConfig20245() {
         CommandRangeConfig config = new CommandRangeConfig();
         // Teleop ranges:                     all-lanes RPM,  hood
-        config.teleop.shortRange.set(2400, .95);
-        config.teleop.midRange.set(3350, 0.1);
+        config.teleop.shortRange.set(2400, .95).right = 2300; // left/center 2400, right 2300
+        config.teleop.midRange.set(3100, 0.1).right = 3000; // left/center 3100, right 3000
         config.teleop.longRange.set(3875, 4000, 0.0); // min RPM, max RPM, hood
-        // Auto ranges:
+        // Auto rangesCLAUDE
         config.auto.shortRange.set(2500, .55);
         config.auto.midRange.set(3350, 0.1);
         config.auto.farRange.set(3850, 0.0);
